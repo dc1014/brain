@@ -1,0 +1,60 @@
+{
+  "mcpServers": {
+    "google-calendar": {
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@xalia/google-calendar-mcp"
+      ],
+      "env": {
+        "GOOGLE_OAUTH_CREDENTIALS": "C:/Users/Admin/Brain/gcp-oauth.keys.json"
+      }
+    },
+    "google-drive": {
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@piotr-agier/google-drive-mcp"
+      ],
+      "env": {
+        "GOOGLE_DRIVE_OAUTH_CREDENTIALS": "C:/Users/Admin/Brain/gcp-oauth.keys.json"
+      }
+    },
+    "obsidian": {
+      "command": "node",
+      "args": [
+        "C:/Users/Admin/Brain/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js",
+        "C:/Users/Admin/Brain"
+      ]
+    },
+    "brave-search": {
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "dotenv-cli",
+        "-e",
+        "C:/Users/Admin/Brain/.env",
+        "--",
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-brave-search"
+      ]
+    },
+  "filesystem": {
+    "command": "cmd.exe",
+    "args": [
+      "/c",
+      "npx",
+      "-y",
+      "@modelcontextprotocol/server-filesystem",
+      "C:\\Users\\Admin\\Brain"
+    ]
+  }
+  }
+}

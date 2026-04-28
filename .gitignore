@@ -1,0 +1,26 @@
+# 🚨 SECRETS & API KEYS (CRITICAL)
+*.keys.json
+gcp-oauth.keys.json
+.env
+.env.local
+.github-token
+
+# 📦 NODE & DEPENDENCIES
+node_modules/
+dist/
+build/
+.next/
+out/
+
+# 🧠 OBSIDIAN LOCAL WORKSPACE STATE
+# (We keep settings, but ignore what tabs you have open)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# 💻 OS JUNK
+.DS_Store
+Thumbs.db
+
+# 🤖 AI CACHE
+.claude/
+.windsurf/
