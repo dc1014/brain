@@ -1,0 +1,43 @@
+# Ignore Version Control
+.git/
+.svn/
+
+# Ignore Node/Web Dev Dependencies
+node_modules/
+dist/
+build/
+.next/
+out/
+coverage/
+
+# Ignore AI Configs
+.claude/
+.windsurf/
+.vscode/
+
+# Ignore binary and media files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.mp4
+*.pdf
+*.zip
+*.tar.gz
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore heavy binary files that waste AI tokens
+*.pdf
+*.mp4
+*.png
+*.zip
+
+# Ignore secrets
+*.keys.json
+gcp-oauth.keys.json
+.env
+.env.local
+.github-token
