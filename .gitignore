@@ -16,6 +16,7 @@ out/
 # (We keep settings, but ignore what tabs you have open)
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
+.obsidian/plugins/obsidian-local-rest-api/
 
 # 💻 OS JUNK
 .DS_Store
