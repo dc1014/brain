@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: trufflehog
+        name: TruffleHog Secret Scanner
+        entry: .venv/Scripts/trufflehog.exe git file://. --since-commit HEAD --results=verified,unknown --fail
+        language: system
+        pass_filenames: false
