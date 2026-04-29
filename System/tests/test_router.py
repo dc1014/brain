@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock
-from System.router import run_agent, analyze_task
+from System.router import run_agent, analyze_task, mock_train_synaptic_weights
 
 
 def test_run_agent_success(mocker) -> None:  # type: ignore
@@ -55,3 +55,27 @@ def test_analyze_task_deterministic_blocks() -> None:
     assert is_valid is False
     assert "sandboxed" in reason.lower()  # <-- Added .lower() here
     assert route == "NONE"
+
+
+def test_mock_train_synaptic_weights(tmp_path, mocker) -> None:  # type: ignore
+    """Test that the mock GPU training function safely creates the correct safetensor files."""
+
+    # 1. Create a smart mock where .parent.parent equals our safe tmp_path
+    mock_path_instance = MagicMock()
+    mock_path_instance.parent.parent = tmp_path
+    mocker.patch("System.router.Path", return_value=mock_path_instance)
+
+    # 2. Run the mock training
+    facts = ["Fact 1", "Fact 2"]
+    success = mock_train_synaptic_weights("STUDIO", facts)
+
+    # 3. Verify the output
+    assert success is True
+
+    # 4. Because of our smart mock, the file will be perfectly trapped in tmp_path
+    safetensor_files = list(tmp_path.rglob("studio_adapter.safetensors"))
+    assert len(safetensor_files) == 1
+
+    content = safetensor_files[0].read_text()
+    assert "MOCK_TENSOR_DATA_FOR: STUDIO" in content
+    assert "FACTS_ENCODED: 2" in content

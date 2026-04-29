@@ -47,3 +47,8 @@ gcp-oauth.keys.json
 .env.local
 .github-token
 logs/
+
+# 🧠 SYNAPTIC MEMORY WEIGHTS (DO NOT TRACK)
+Meta/Synapses/
+*.safetensors
+*.bin

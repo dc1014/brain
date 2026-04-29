@@ -548,8 +548,36 @@ def logs(
         console.print("\n" + "=" * 50 + "\n")
 
 
+def mock_train_synaptic_weights(domain: str, facts: list[str]) -> bool:
+    """Mocks the Unsloth/LoRA GPU training process for Phase 4."""
+    import time
+
+    synapse_dir = Path(__file__).parent.parent / "Meta" / "Synapses"
+    synapse_dir.mkdir(parents=True, exist_ok=True)
+
+    adapter_file = synapse_dir / f"{domain.lower()}_adapter.safetensors"
+
+    console.print(f"[dim]⚙️ Booting virtual GPU environment for {domain}...[/dim]")
+    time.sleep(1)  # Simulate loading the base model into VRAM
+
+    console.print(f"[dim]🧠 Running Backpropagation on {len(facts)} facts...[/dim]")
+    time.sleep(2)  # Simulate the Unsloth training pulse
+
+    # Create a dummy safetensors file to represent the modified weights
+    dummy_weight_data = f"MOCK_TENSOR_DATA_FOR: {domain}\nFACTS_ENCODED: {len(facts)}"
+    adapter_file.write_text(dummy_weight_data)
+
+    return True
+
+
 @app.command()
-def sleep() -> None:
+def sleep(
+    synaptic: bool = typer.Option(
+        False,
+        "--synaptic",
+        help="Use experimental GPU weight-training instead of Markdown files.",
+    ),
+) -> None:
     """The Sleep Cycle Compactor: Distills daily logs into Long-Term Memory and archives them."""
     console.print("\n[bold blue]🌙 Initiating Sleep Cycle...[/bold blue]")
 
@@ -623,21 +651,33 @@ def sleep() -> None:
     ):
         for domain, facts in memories.items():
             if facts and isinstance(facts, list):
-                filepath = domains.get(domain.upper())
-                if filepath:
-                    # Format facts as markdown bullets
-                    bullet_facts = "\n".join([f"- {fact}" for fact in facts])
-                    result = append_safe_file(filepath, bullet_facts)
-
-                    if "SUCCESS" in result:
+                # --- PHASE 4: SYNAPTIC GPU ROUTE ---
+                if synaptic:
+                    success = mock_train_synaptic_weights(domain, facts)
+                    if success:
                         memories_saved += len(facts)
                         console.print(
-                            f"[green]✓ Injected {len(facts)} facts into {domain}[/green]"
+                            f"[green]✓ Fused {len(facts)} facts into {domain} LoRA weights.[/green]"
                         )
                     else:
-                        console.print(
-                            f"[red]✗ Failed to inject into {domain}: {result}[/red]"
-                        )
+                        console.print(f"[red]✗ GPU Training failed for {domain}.[/red]")
+
+                # --- PHASE 3: SYMBOLIC MARKDOWN ROUTE ---
+                else:
+                    filepath = domains.get(domain.upper())
+                    if filepath:
+                        bullet_facts = "\n".join([f"- {fact}" for fact in facts])
+                        result = append_safe_file(filepath, bullet_facts)
+
+                        if "SUCCESS" in result:
+                            memories_saved += len(facts)
+                            console.print(
+                                f"[green]✓ Appended {len(facts)} facts into {domain} markdown.[/green]"
+                            )
+                        else:
+                            console.print(
+                                f"[red]✗ Failed to write into {domain}: {result}[/red]"
+                            )
 
     # --- THE ARCHIVAL PROTOCOL (Log Rotation) ---
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
