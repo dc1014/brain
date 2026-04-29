@@ -548,5 +548,106 @@ def logs(
         console.print("\n" + "=" * 50 + "\n")
 
 
+@app.command()
+def sleep() -> None:
+    """The Sleep Cycle Compactor: Distills daily logs into Long-Term Memory and archives them."""
+    console.print("\n[bold blue]🌙 Initiating Sleep Cycle...[/bold blue]")
+
+    if not LOG_FILE.exists() or LOG_FILE.stat().st_size == 0:
+        console.print("[dim]No daily logs found. Brain OS is already rested.[/dim]\n")
+        return
+
+    with console.status(
+        "[bold cyan]Reading daily interactions...[/bold cyan]", spinner="dots"
+    ):
+        logs_content = LOG_FILE.read_text(encoding="utf-8")
+        log_lines = logs_content.strip().split("\n")
+        interaction_count = len(log_lines)
+
+    console.print(f"[dim]Found {interaction_count} interactions to consolidate.[/dim]")
+
+    # --- THE COMPACTION PROMPT ---
+    system_prompt = (
+        "You are the Brain OS Sleep Compactor. Your job is to read raw daily system logs and extract PERMANENT, VALUABLE facts to store in long-term memory.\n"
+        "Ignore transient tasks (e.g., 'listed a directory', 'fixed a typo', 'wrote a file').\n"
+        "Focus on: new goals, core business strategies, coding standards established, or personal preferences learned.\n\n"
+        "You MUST output your findings as a strict JSON object grouping the new facts by DOMAIN. "
+        "If a domain has no new facts, return an empty list for it.\n\n"
+        "EXPECTED JSON FORMAT:\n"
+        "{\n"
+        '  "META": ["Fact 1"],\n'
+        '  "PERSONAL": ["Fact 2"],\n'
+        '  "PROFESSIONAL": ["Fact 3"],\n'
+        '  "STUDIO": ["Fact 4"]\n'
+        "}"
+    )
+
+    console.print(
+        f"[dim]🧠 Synthesizing using Auditor Model: [bold]{AUDITOR}[/bold][/dim]"
+    )
+
+    # Update the status text slightly to be cleaner:
+    with console.status(
+        "[bold magenta]Compacting short-term memory...[/bold magenta]", spinner="dots"
+    ):
+        try:
+            response = completion(
+                model=AUDITOR,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": logs_content},
+                ],
+                response_format={"type": "json_object"},  # Forces strict JSON output
+            )
+
+            raw_result = str(response.choices[0].message.content).strip()
+            memories = json.loads(raw_result)
+
+        except Exception as e:
+            console.print(
+                f"[bold red]Sleep Cycle Interrupted (API/JSON Error):[/bold red] {str(e)}"
+            )
+            return
+
+    # --- THE MEMORY INJECTION ---
+    domains = {
+        "META": "Meta/global-memory.md",
+        "PERSONAL": "Personal/personal-memory.md",
+        "PROFESSIONAL": "Professional/professional-memory.md",
+        "STUDIO": "Studio/studio-memory.md",
+    }
+
+    memories_saved = 0
+    with console.status(
+        "[bold yellow]Injecting synapses into Vault...[/bold yellow]", spinner="dots"
+    ):
+        for domain, facts in memories.items():
+            if facts and isinstance(facts, list):
+                filepath = domains.get(domain.upper())
+                if filepath:
+                    # Format facts as markdown bullets
+                    bullet_facts = "\n".join([f"- {fact}" for fact in facts])
+                    result = append_safe_file(filepath, bullet_facts)
+
+                    if "SUCCESS" in result:
+                        memories_saved += len(facts)
+                        console.print(
+                            f"[green]✓ Injected {len(facts)} facts into {domain}[/green]"
+                        )
+                    else:
+                        console.print(
+                            f"[red]✗ Failed to inject into {domain}: {result}[/red]"
+                        )
+
+    # --- THE ARCHIVAL PROTOCOL (Log Rotation) ---
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
+    archive_path = LOG_DIR / f"archive_{timestamp}.jsonl"
+    LOG_FILE.rename(archive_path)
+
+    console.print(
+        f"\n[bold green]🌅 Sleep Cycle Complete.[/bold green] [dim]Consolidated {memories_saved} new core memories and safely archived yesterday's logs.[/dim]\n"
+    )
+
+
 if __name__ == "__main__":
     app()
