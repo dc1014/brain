@@ -41,3 +41,6 @@ Meta/
 Meta/Synapses/
 *.safetensors
 *.bin
+
+# 🔌 PRO PLUGINS (DO NOT TRACK)
+Plugins/
