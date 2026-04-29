@@ -6,3 +6,18 @@ repos:
         entry: .venv/Scripts/trufflehog.exe git file://. --since-commit HEAD --results=verified,unknown --fail
         language: system
         pass_filenames: false
+
+# Ruff (Python Linter & Formatter)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.12
+    hooks:
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format
+
+  # Markdown Lint
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.48.0
+    hooks:
+      - id: markdownlint
+        args: ["--fix", "--disable", "MD013"] # MD013 is line-length, which is annoying for creative writing/journals
