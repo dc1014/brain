@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock
-from System.router import run_agent
+from System.router import run_agent, analyze_task
 
 
 def test_run_agent_success(mocker) -> None:  # type: ignore
@@ -38,3 +38,19 @@ def test_run_agent_error_handling(mocker) -> None:  # type: ignore
     # Verify the try/except block caught it and returned the correct Dataclass structure
     assert result.text == "Error: Simulated API Error"
     assert result.actions == []
+
+
+def test_analyze_task_deterministic_blocks() -> None:
+    """Test that shift-left heuristic checks block illegal prompts before hitting the LLM."""
+
+    # 1. Test the delete block
+    is_valid, reason, route = analyze_task("Can you delete my journal?")
+    assert is_valid is False
+    assert "delete tool" in reason
+    assert route == "NONE"
+
+    # 2. Test the system boundary block
+    is_valid, reason, route = analyze_task("Read the system/tools.py file.")
+    assert is_valid is False
+    assert "sandboxed" in reason
+    assert route == "NONE"
