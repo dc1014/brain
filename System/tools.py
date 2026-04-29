@@ -8,6 +8,7 @@ ALLOWED_DIRECTORIES: set[Path] = {
     ROOT_DIR / "Personal",
     ROOT_DIR / "Professional",
     ROOT_DIR / "Studio",
+    ROOT_DIR / "Meta",  # <-- Added Meta
 }
 
 
