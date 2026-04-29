@@ -134,5 +134,45 @@ def task(
     console.print("\n[bold green]✅ Task Complete.[/bold green]\n")
 
 
+@app.command()
+def logs(
+    limit: int = typer.Option(3, help="Number of recent interactions to display."),
+) -> None:
+    """
+    View the most recent agent interactions in a human-readable format.
+    """
+    if not LOG_FILE.exists():
+        console.print("[bold red]No logs found. Run a task first![/bold red]")
+        return
+
+    # Read the file and grab the last N lines
+    with open(LOG_FILE, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    recent_lines = lines[-limit:]
+
+    console.print(
+        f"\n[bold green]📊 Showing last {len(recent_lines)} interactions:[/bold green]\n"
+    )
+
+    for line in recent_lines:
+        data = json.loads(line)
+
+        # Format the metadata
+        meta_text = f"[bold cyan]Agent:[/bold cyan] {data['agent']}\n"
+        meta_text += f"[bold cyan]Model:[/bold cyan] {data['model']}\n"
+        meta_text += f"[bold cyan]Time:[/bold cyan] {data['timestamp']}\n"
+        meta_text += f"[bold cyan]Tokens:[/bold cyan] {data.get('tokens', {})}"
+
+        # Print using Rich panels
+        console.print(
+            Panel(meta_text, title="Interaction Metadata", border_style="cyan")
+        )
+        console.print(
+            Panel(Markdown(data["response"]), title="AI Response", border_style="white")
+        )
+        console.print("\n" + "=" * 50 + "\n")
+
+
 if __name__ == "__main__":
     app()
