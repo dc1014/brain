@@ -15,6 +15,7 @@ from System.tools import (
     read_safe_file,
     list_safe_directory,
     rename_safe_file,
+    append_safe_file,
 )
 
 load_dotenv()
@@ -149,6 +150,11 @@ def run_agent(
                         action_manifest.append(
                             f"[RENAME] {args.get('old_filepath')} -> {args.get('new_filepath')}"
                         )
+                    elif func_name == "append_safe_file":
+                        result = append_safe_file(
+                            args.get("filepath", ""), args.get("content", "")
+                        )
+                        action_manifest.append(f"[APPEND] {args.get('filepath')}")
                     else:
                         result = f"ERROR: Unknown tool {func_name}"
 
@@ -353,6 +359,21 @@ def task(
                         "new_filepath": {"type": "string"},
                     },
                     "required": ["old_filepath", "new_filepath"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "append_safe_file",
+                "description": "Appends text to a file. Automatically injects before </working_memory> if present.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "filepath": {"type": "string"},
+                        "content": {"type": "string"},
+                    },
+                    "required": ["filepath", "content"],
                 },
             },
         },

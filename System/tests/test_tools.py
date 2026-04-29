@@ -1,5 +1,10 @@
 from pathlib import Path
-from System.tools import write_safe_file, read_safe_file, list_safe_directory
+from System.tools import (
+    write_safe_file,
+    read_safe_file,
+    list_safe_directory,
+    append_safe_file,
+)
 
 
 def test_write_safe_file_allowed(tmp_path: Path, mocker) -> None:  # type: ignore
@@ -26,3 +31,7 @@ def test_security_blocks(tmp_path: Path, mocker) -> None:  # type: ignore
     # Test List Block
     list_result = list_safe_directory("System")
     assert "SECURITY BLOCK" in list_result
+
+    # Test Append Block
+    append_result = append_safe_file("System/malicious.py", "print('hacked')")
+    assert "SECURITY BLOCK" in append_result
