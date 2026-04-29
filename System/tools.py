@@ -40,3 +40,45 @@ def write_safe_file(filepath: str, content: str) -> str:
 
     except Exception as e:
         return f"ERROR: Failed to write file - {str(e)}"
+
+
+def read_safe_file(filepath: str) -> str:
+    """Reads the contents of a file within the safe zones."""
+    try:
+        target_path: Path = (ROOT_DIR / filepath).resolve()
+
+        if not is_safe_path(target_path):
+            return f"SECURITY BLOCK: Access denied to read at {target_path}."
+
+        if not target_path.exists():
+            return f"ERROR: File not found at {target_path.relative_to(ROOT_DIR)}"
+
+        if not target_path.is_file():
+            return "ERROR: Target is not a file."
+
+        return target_path.read_text(encoding="utf-8")
+
+    except Exception as e:
+        return f"ERROR: Failed to read file - {str(e)}"
+
+
+def list_safe_directory(directory_path: str) -> str:
+    """Lists all files and folders inside a safe directory."""
+    try:
+        target_path: Path = (ROOT_DIR / directory_path).resolve()
+
+        if not is_safe_path(target_path):
+            return f"SECURITY BLOCK: Access denied to list directory at {target_path}."
+
+        if not target_path.exists() or not target_path.is_dir():
+            return f"ERROR: Directory not found at {target_path.relative_to(ROOT_DIR)}"
+
+        items = []
+        for item in target_path.iterdir():
+            item_type = "DIR" if item.is_dir() else "FILE"
+            items.append(f"[{item_type}] {item.name}")
+
+        return "\n".join(items) if items else "Directory is empty."
+
+    except Exception as e:
+        return f"ERROR: Failed to list directory - {str(e)}"
