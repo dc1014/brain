@@ -1,4 +1,5 @@
 import json
+import re
 import typer
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -47,11 +48,13 @@ def log_interaction(
     response_content: str,
     usage: dict[str, int],
     route: str = "UNKNOWN",
+    domain: str = "NONE",  # <-- Added Domain Tracking
 ) -> None:
     """Logs full interactions for local observability and debugging."""
     log_entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "route": route,
+        "domain": domain,  # <-- Added to log payload
         "agent": role_name,
         "model": model_string,
         "system_prompt": system_prompt,
@@ -63,13 +66,27 @@ def log_interaction(
         f.write(json.dumps(log_entry, default=str) + "\n")
 
 
-def get_global_context() -> str:
-    """Reads the global memory to inject into system prompts."""
+def get_system_context(domain: str = "NONE") -> str:
+    """Dynamically stacks Global Memory and Domain Memory to optimize token usage."""
+    context = ""
+
+    # 1. Always load Global Memory
     global_memory_path = Path(__file__).parent.parent / "Meta" / "global-memory.md"
     if global_memory_path.exists():
         memory_content = global_memory_path.read_text(encoding="utf-8")
-        return f"\n\n--- GLOBAL SYSTEM MEMORY ---\n{memory_content}\n----------------------------\n"
-    return ""
+        context += f"\n\n--- GLOBAL SYSTEM MEMORY ---\n{memory_content}\n----------------------------\n"
+
+    # 2. Conditionally load Domain Memory
+    if domain in ["PERSONAL", "PROFESSIONAL", "STUDIO"]:
+        folder_name = domain.capitalize()
+        file_name = f"{domain.lower()}-memory.md"
+        domain_memory_path = Path(__file__).parent.parent / folder_name / file_name
+
+        if domain_memory_path.exists():
+            domain_content = domain_memory_path.read_text(encoding="utf-8")
+            context += f"\n--- {domain} DOMAIN MEMORY ---\n{domain_content}\n------------------------------\n"
+
+    return context
 
 
 def run_agent(
@@ -79,19 +96,12 @@ def run_agent(
     user_prompt: str,
     tools: list[Any] | None = None,
     route: str = "UNKNOWN",
+    domain: str = "NONE",  # <-- Add domain parameter
 ) -> AgentResponse:
     try:
-        # --- AUTO-INJECTOR: GLOBAL MEMORY ---
-        global_context = get_global_context()
-        global_memory_path = Path(__file__).parent.parent / "Meta" / "global-memory.md"
-
-        if global_memory_path.exists():
-            # We silently read the memory and format it securely
-            memory_content = global_memory_path.read_text(encoding="utf-8")
-            global_context = f"\n\n--- GLOBAL SYSTEM MEMORY ---\n{memory_content}\n----------------------------\n"
-
-        # We append the memory to the hardcoded system instructions
-        full_system_prompt = system_prompt + global_context
+        # --- AUTO-INJECTOR: HIERARCHICAL CONTEXT ---
+        system_context = get_system_context(domain)
+        full_system_prompt = system_prompt + system_context
 
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": full_system_prompt},
@@ -208,6 +218,7 @@ def run_agent(
             audit_trail,
             usage_data,
             route,
+            domain,
         )  # <-- Passed the route
 
         return AgentResponse(text=final_text.strip(), actions=action_manifest)
@@ -215,21 +226,25 @@ def run_agent(
         return AgentResponse(text=f"Error: {str(e)}", actions=[])
 
 
-def analyze_task(prompt: str) -> tuple[bool, str, str, dict[str, int]]:
+def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict[str, int]]:
     """
-    Combines Pre-Flight Security and Dynamic Routing.
-    Returns: (is_valid, message, route_type, usage_data)
+    Combines Pre-Flight Security, Dynamic Routing, and Intent-based Domain Mapping.
+    Returns: (is_valid, message, route_type, domain, usage_data)
     """
     prompt_lower = prompt.lower()
     zero_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
     # --- STAGE 1: PRE-FLIGHT (Deterministic Bouncer) ---
-    forbidden_actions = ["delete", "remove", "erase", "rm "]
+    # We use regex word boundaries (\b) to prevent the "brainstorm" -> "rm" trap
+    forbidden_actions = [r"\bdelete\b", r"\bremove\b", r"\berase\b", r"\brm\b"]
     for action in forbidden_actions:
-        if action in prompt_lower:
+        if re.search(action, prompt_lower):
+            # Clean up the regex syntax for the user error message
+            clean_word = action.replace(r"\b", "")
             return (
                 False,
-                f"Hard Rule: Brain OS does not have a delete tool. You asked to '{action.strip()}'.",
+                f"Hard Rule: No delete tool. You asked to '{clean_word}'.",
+                "NONE",
                 "NONE",
                 zero_usage,
             )
@@ -239,25 +254,30 @@ def analyze_task(prompt: str) -> tuple[bool, str, str, dict[str, int]]:
         if target in prompt_lower:
             return (
                 False,
-                f"Hard Rule: Brain OS is sandboxed. You cannot target '{target}'.",
+                f"Hard Rule: Sandboxed. Cannot target '{target}'.",
+                "NONE",
                 "NONE",
                 zero_usage,
             )
 
-    # --- STAGE 2: THE ROUTER (LLM Switchboard) ---
-    global_context = get_global_context()
-
+    # --- STAGE 2: THE ROUTER & DOMAIN MAPPER (LLM Switchboard) ---
     system_prompt = (
-        "You are the Brain OS Dispatcher. Your job is to validate and route user tasks.\n"
-        "The OS ONLY has tools to list, read, write, and rename files inside Personal/, Professional/, and Studio/.\n"
-        "You also have access to the user's Global System Memory.\n\n"
-        "STEP 1 (Pre-Flight): If the task is impossible given these tools AND the memory, reply EXACTLY with: 'REJECTED: <1-sentence reason>'\n"
-        "STEP 2 (Routing): If the task is possible, assign it to ONE of these routes:\n"
-        "- ROUTE: FAST (Task requires no file system tools. e.g., 'What is my name?', 'Summarize this pasted text')\n"
-        "- ROUTE: READ_ONLY (Task only requires listing or reading files, no writing/renaming.)\n"
+        "You are the Brain OS Dispatcher. Your job is to validate, route, and assign domains to user tasks.\n"
+        "The OS ONLY has tools to list, read, write, and rename files inside Personal/, Professional/, and Studio/.\n\n"
+        "STEP 1 (Pre-Flight): If the task is impossible given these tools, reply EXACTLY with: 'REJECTED: <reason>'\n\n"
+        "STEP 2 (Routing): Assign to ONE route:\n"
+        "- ROUTE: FAST (Task requires no file system tools. e.g., 'What is my name?', 'Summarize this')\n"
+        "- ROUTE: READ_ONLY (Task only requires listing or reading files.)\n"
         "- ROUTE: COMPLEX (Task requires writing, creating, or renaming files.)\n\n"
-        "OUTPUT FORMAT: You must reply ONLY with the REJECTED or ROUTE string. No other text."
-    ) + global_context
+        "STEP 3 (Domain Context): Determine which area of the user's life this task belongs to:\n"
+        "- DOMAIN: PERSONAL (Health, journals, family, personal life)\n"
+        "- DOMAIN: PROFESSIONAL (Business, marketing, goals, career)\n"
+        "- DOMAIN: STUDIO (Coding, open-core, technical architecture, software projects)\n"
+        "- DOMAIN: NONE (General knowledge questions that do not touch the Vault)\n\n"
+        "OUTPUT FORMAT (Must be exactly 2 lines if approved):\n"
+        "ROUTE: <route>\n"
+        "DOMAIN: <domain>"
+    ) + get_system_context()
 
     try:
         response = completion(
@@ -280,14 +300,28 @@ def analyze_task(prompt: str) -> tuple[bool, str, str, dict[str, int]]:
             usage_data["total_tokens"] = int(getattr(response.usage, "total_tokens", 0))
 
         if result.startswith("REJECTED:"):
-            return False, result.replace("REJECTED:", "").strip(), "NONE", usage_data
-        elif result in ["ROUTE: FAST", "ROUTE: READ_ONLY", "ROUTE: COMPLEX"]:
-            return True, "Approved.", result.split(": ")[1], usage_data
-        else:
-            return True, "Approved (Defaulted to COMPLEX).", "COMPLEX", usage_data
+            return (
+                False,
+                result.replace("REJECTED:", "").strip(),
+                "NONE",
+                "NONE",
+                usage_data,
+            )
+
+        route = "COMPLEX"
+        domain = "NONE"
+
+        for line in result.split("\n"):
+            line = line.strip()
+            if line.startswith("ROUTE:"):
+                route = line.split("ROUTE:")[1].strip()
+            elif line.startswith("DOMAIN:"):
+                domain = line.split("DOMAIN:")[1].strip()
+
+        return True, "Approved.", route, domain, usage_data
 
     except Exception as e:
-        return False, f"Dispatcher API Error: {str(e)}", "NONE", zero_usage
+        return False, f"Dispatcher API Error: {str(e)}", "NONE", "NONE", zero_usage
 
 
 @app.command()
@@ -303,13 +337,13 @@ def task(
         "[bold yellow]🛡️ Dispatcher is analyzing the task...[/bold yellow]",
         spinner="dots",
     ):
-        is_valid, reason, route_type, dispatch_usage = analyze_task(description)
+        # FIX: We now unpack 5 variables, including 'domain'
+        is_valid, reason, route_type, domain, dispatch_usage = analyze_task(description)
 
     if not is_valid:
         console.print(
             Panel(f"[bold red]Task Rejected:[/bold red] {reason}", border_style="red")
         )
-        # FIX: Ensure rejections are logged into our telemetry
         log_interaction(
             role_name="Dispatcher (Bouncer)",
             model_string=AUDITOR,
@@ -318,11 +352,13 @@ def task(
             response_content=f"REJECTED: {reason}",
             usage=dispatch_usage,
             route="REJECTED",
+            domain="NONE",  # <-- Added domain
         )
         return
 
+    # FIX: Update the console print to show the Domain
     console.print(
-        f"[dim]✅ Pre-Flight Passed. Assigned Route: [bold]{route_type}[/bold][/dim]\n"
+        f"[dim]✅ Pre-Flight Passed. Assigned Route: [bold]{route_type}[/bold] | Domain Context: [bold cyan]{domain}[/bold cyan][/dim]\n"
     )
 
     # --- ROUTE 1: FAST (Zero-Tool Bypass) ---
