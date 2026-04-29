@@ -2,6 +2,10 @@
 .git/
 .svn/
 
+# Ignore Python tests
+__pycache__/
+.pytest_cache/
+
 # Ignore Node/Web Dev Dependencies
 node_modules/
 dist/
