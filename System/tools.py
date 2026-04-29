@@ -82,3 +82,24 @@ def list_safe_directory(directory_path: str) -> str:
 
     except Exception as e:
         return f"ERROR: Failed to list directory - {str(e)}"
+
+
+def rename_safe_file(old_filepath: str, new_filepath: str) -> str:
+    """Renames or moves a file within the safe zones."""
+    try:
+        old_path: Path = (ROOT_DIR / old_filepath).resolve()
+        new_path: Path = (ROOT_DIR / new_filepath).resolve()
+
+        if not is_safe_path(old_path) or not is_safe_path(new_path):
+            return "SECURITY BLOCK: Access denied. Both source and destination must be in safe zones."
+
+        if not old_path.exists():
+            return f"ERROR: File not found at {old_path.relative_to(ROOT_DIR)}"
+
+        new_path.parent.mkdir(parents=True, exist_ok=True)
+        old_path.rename(new_path)
+
+        return f"SUCCESS: Renamed to {new_path.relative_to(ROOT_DIR)}"
+
+    except Exception as e:
+        return f"ERROR: Failed to rename file - {str(e)}"
