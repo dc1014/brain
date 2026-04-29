@@ -1,5 +1,6 @@
 import json
 import typer
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from dotenv import load_dotenv
@@ -8,7 +9,6 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-# Import our secure sandbox tools
 from System.tools import write_safe_file, read_safe_file, list_safe_directory
 
 load_dotenv()
@@ -22,6 +22,14 @@ AUDITOR: str = "openai/gpt-4o-mini"
 LOG_DIR: Path = Path(__file__).parent.parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE: Path = LOG_DIR / "agent_interactions.jsonl"
+
+
+@dataclass
+class AgentResponse:
+    """Structured payload extraction to prevent token bloat."""
+
+    text: str
+    actions: list[str] = field(default_factory=list)
 
 
 def log_interaction(
@@ -51,7 +59,7 @@ def run_agent(
     system_prompt: str,
     user_prompt: str,
     tools: list | None = None,
-) -> str:
+) -> AgentResponse:
     try:
         kwargs = {
             "model": model_string,
@@ -66,28 +74,37 @@ def run_agent(
         response = completion(**kwargs)
         message = response.choices[0].message
         content: str = str(message.content or "")
+        action_manifest: list[str] = []
 
-        # --- DYNAMIC TOOL EXECUTION INTERCEPTOR ---
+        # --- ISOLATED TOOL EXECUTION ---
         if hasattr(message, "tool_calls") and message.tool_calls:
             console.print(f"\n[dim]⚡ {role_name} is using tools...[/dim]")
             for tool_call in message.tool_calls:
                 args = json.loads(tool_call.function.arguments)
                 func_name = tool_call.function.name
 
-                # Route the requested function to our Python code
                 if func_name == "write_safe_file":
                     result = write_safe_file(
                         args.get("filepath", ""), args.get("content", "")
                     )
+                    # Only record the metadata, not the file contents
+                    action_manifest.append(
+                        f"[WRITE] {args.get('filepath')} - {result[:30]}..."
+                    )
                 elif func_name == "read_safe_file":
                     result = read_safe_file(args.get("filepath", ""))
+                    action_manifest.append(
+                        f"[READ] {args.get('filepath')} - Extracted {len(result)} chars."
+                    )
                 elif func_name == "list_safe_directory":
                     result = list_safe_directory(args.get("directory_path", ""))
+                    action_manifest.append(
+                        f"[LIST] {args.get('directory_path')} - Found {len(result.splitlines())} items."
+                    )
                 else:
-                    result = f"ERROR: Unknown tool {func_name}"
+                    action_manifest.append(f"[ERROR] Unknown tool {func_name}")
 
                 console.print(f"[dim]🔍 Tool Executed: {func_name}[/dim]")
-                content += f"\n\n**System Action ({func_name}):**\n```\n{result}\n```"
 
         usage_data: dict = {}
         if hasattr(response, "usage") and response.usage:
@@ -97,12 +114,15 @@ def run_agent(
                 "total_tokens": getattr(response.usage, "total_tokens", 0),
             }
 
+        # Log the full audit trail for the JSONL file, but return the extracted payload
+        audit_trail = content + "\n\nACTIONS:\n" + "\n".join(action_manifest)
         log_interaction(
-            role_name, model_string, system_prompt, user_prompt, content, usage_data
+            role_name, model_string, system_prompt, user_prompt, audit_trail, usage_data
         )
-        return content
+
+        return AgentResponse(text=content, actions=action_manifest)
     except Exception as e:
-        return f"Error: {str(e)}"
+        return AgentResponse(text=f"Error: {str(e)}", actions=[])
 
 
 @app.command()
@@ -113,7 +133,6 @@ def task(
         f"\n[bold green]🚀 Initializing Life OS task:[/bold green] '{description}'\n"
     )
 
-    # --- DEFINING THE JSON SCHEMA ---
     agent_tools = [
         {
             "type": "function",
@@ -123,11 +142,8 @@ def task(
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "filepath": {
-                            "type": "string",
-                            "description": "Path relative to root. Ex: 'Professional/ideas.md'",
-                        },
-                        "content": {"type": "string", "description": "Text to write."},
+                        "filepath": {"type": "string"},
+                        "content": {"type": "string"},
                     },
                     "required": ["filepath", "content"],
                 },
@@ -140,12 +156,7 @@ def task(
                 "description": "Reads the text content of a file.",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "filepath": {
-                            "type": "string",
-                            "description": "Path relative to root. Ex: 'Professional/goals.md'",
-                        }
-                    },
+                    "properties": {"filepath": {"type": "string"}},
                     "required": ["filepath"],
                 },
             },
@@ -157,12 +168,7 @@ def task(
                 "description": "Lists all files and folders in a directory.",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "directory_path": {
-                            "type": "string",
-                            "description": "Path relative to root. Ex: 'Professional'",
-                        }
-                    },
+                    "properties": {"directory_path": {"type": "string"}},
                     "required": ["directory_path"],
                 },
             },
@@ -174,31 +180,50 @@ def task(
     with console.status(
         "[bold cyan]Worker (Claude) is thinking...[/bold cyan]", spinner="dots"
     ):
-        claude_draft: str = run_agent(
+        claude_draft: AgentResponse = run_agent(
             "Worker (Claude)", WORKER, worker_system, description, tools=agent_tools
+        )
+
+    # Format what is shown in the terminal
+    display_draft = claude_draft.text
+    if claude_draft.actions:
+        display_draft += "\n\n**Actions Taken:**\n" + "\n".join(
+            [f"- {a}" for a in claude_draft.actions]
         )
 
     console.print(
         Panel(
-            Markdown(claude_draft),
+            Markdown(display_draft),
             title="[bold cyan]Worker (Claude)'s Draft & Actions[/bold cyan]",
             border_style="cyan",
         )
     )
 
-    orchestrator_system: str = "You are the central orchestrator of a Life OS. Review the worker's plan and actions. Summarize it into a final, polished executive summary."
+    # --- PAYLOAD EXTRACTION ---
+    # We strictly limit what Gemini sees to save thousands of tokens
+    orchestrator_system: str = "You are the central orchestrator of a Life OS. Review the worker's plan and the metadata of the files it touched. Summarize it into a final, polished executive summary."
+
+    orchestrator_prompt: str = (
+        f"Worker Thoughts:\n{claude_draft.text}\n\nActions Taken (Metadata Only):\n"
+    )
+    orchestrator_prompt += (
+        "\n".join(claude_draft.actions) if claude_draft.actions else "None."
+    )
 
     with console.status(
         "[bold magenta]Orchestrator (Gemini) is thinking...[/bold magenta]",
         spinner="dots",
     ):
-        final_output: str = run_agent(
-            "Orchestrator (Gemini)", ORCHESTRATOR, orchestrator_system, claude_draft
+        final_output: AgentResponse = run_agent(
+            "Orchestrator (Gemini)",
+            ORCHESTRATOR,
+            orchestrator_system,
+            orchestrator_prompt,
         )
 
     console.print(
         Panel(
-            Markdown(final_output),
+            Markdown(final_output.text),
             title="[bold magenta]Orchestrator (Gemini)'s Synthesis[/bold magenta]",
             border_style="magenta",
         )
