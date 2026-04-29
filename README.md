@@ -1,9 +1,8 @@
-# 🧠 Brain OS: The Multi-Agent Life Operating System
+# 🧠 Brain OS
 
-Welcome to the open-core engine of Brain OS. This is not just a Personal Knowledge Management (PKM) tool; it is a fully local multi-agent AI framework designed to orchestrate your life, your business, and your creative pursuits.
+Welcome to the open-core engine of Brain OS.
 
 ## 🌟 The Philosophy (Open-Core)
-Brain OS operates on a strict boundary between **The Engine** (Public/Shareable) and **The Fuel** (Private/Vaulted). 
 * The system architecture, API routers, and AI prompts are open-source. 
 * Your personal data, journals, codebase, and business IP remain 100% local and secured.
 
