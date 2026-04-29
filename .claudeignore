@@ -46,3 +46,4 @@ gcp-oauth.keys.json
 .env
 .env.local
 .github-token
+logs/
