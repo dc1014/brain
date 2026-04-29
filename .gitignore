@@ -12,6 +12,10 @@ build/
 .next/
 out/
 
+# Python stuff
+__pycache__/
+.pytest_cache/
+
 # 🧠 OBSIDIAN LOCAL WORKSPACE STATE
 # (We keep settings, but ignore what tabs you have open)
 .obsidian/workspace.json
