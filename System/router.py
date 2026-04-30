@@ -263,8 +263,8 @@ def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict[str, int]]:
     # --- STAGE 2: THE ROUTER & DOMAIN MAPPER (LLM Switchboard) ---
     system_prompt = (
         "You are the Brain OS Dispatcher. Your job is to validate, route, and assign domains to user tasks.\n"
-        "The OS ONLY has tools to list, read, write, and rename files inside Personal/, Professional/, and Studio/.\n\n"
-        "STEP 1 (Pre-Flight): If the task is impossible given these tools, reply EXACTLY with: 'REJECTED: <reason>'\n\n"
+        "The OS ONLY has tools to list, read, write (which creates new files), append, and rename files inside Personal/, Professional/, and Studio/.\n\n"
+        "STEP 1 (Pre-Flight): If the task is fundamentally impossible because it requires external tools (e.g., sending emails, browsing the live web, controlling smart home devices), reply EXACTLY with: 'REJECTED: <reason>'. Do NOT reject a task just because it is complex or lacks context; the Worker agent will figure that out.\n\n"
         "STEP 2 (Routing): Assign to ONE route:\n"
         "- ROUTE: FAST (Task requires no file system tools. e.g., 'What is my name?', 'Summarize this')\n"
         "- ROUTE: READ_ONLY (Task only requires listing or reading files.)\n"
