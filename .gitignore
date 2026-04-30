@@ -5,6 +5,7 @@ gcp-oauth.keys.json
 .env.local
 .github-token
 logs/
+.claude.json
 
 # 📦 NODE & DEPENDENCIES
 node_modules/
