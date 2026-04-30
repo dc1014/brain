@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import typer
 from dataclasses import dataclass, field
@@ -23,9 +24,35 @@ load_dotenv()
 app = typer.Typer(help="Brain OS: The Multi-Agent Life Operating System")
 console = Console()
 
-ORCHESTRATOR: str = "gemini/gemini-2.5-flash"
-WORKER: str = "anthropic/claude-haiku-4-5"
-AUDITOR: str = "openai/gpt-4o-mini"
+# --- MODEL FLEXIBILITY (Zero-Config Fallbacks) ---
+# Detect which keys the user has actually provided in their .env
+has_openai = bool(os.getenv("OPENAI_API_KEY"))
+has_anthropic = bool(os.getenv("ANTHROPIC_API_KEY"))
+has_gemini = bool(os.getenv("GEMINI_API_KEY"))
+
+# Determine a fallback model if they only provided one or two keys
+fallback_model = None
+if has_openai:
+    fallback_model = "openai/gpt-4o-mini"
+elif has_anthropic:
+    fallback_model = "anthropic/claude-haiku-4-5"
+elif has_gemini:
+    fallback_model = "gemini/gemini-2.5-flash"
+
+# Assign Models: Use the Trinity if the key exists, otherwise degrade gracefully to the fallback
+ORCHESTRATOR: str = (
+    "gemini/gemini-2.5-flash"
+    if has_gemini
+    else (fallback_model or "gemini/gemini-2.5-flash")
+)
+WORKER: str = (
+    "anthropic/claude-haiku-4-5"
+    if has_anthropic
+    else (fallback_model or "anthropic/claude-haiku-4-5")
+)
+AUDITOR: str = (
+    "openai/gpt-4o-mini" if has_openai else (fallback_model or "openai/gpt-4o-mini")
+)
 
 LOG_DIR: Path = Path(__file__).parent.parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
