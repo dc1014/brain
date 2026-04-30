@@ -1,0 +1,28 @@
+# 🧠 Brain OS: The Multi-Agent Life Operating System
+
+Welcome to the open-core engine of Brain OS. This is not just a Personal Knowledge Management (PKM) tool; it is a fully local multi-agent AI framework designed to orchestrate your life, your business, and your creative pursuits.
+
+## 🌟 The Philosophy (Open-Core)
+Brain OS operates on a strict boundary between **The Engine** (Public/Shareable) and **The Fuel** (Private/Vaulted). 
+* The system architecture, API routers, and AI prompts are open-source. 
+* Your personal data, journals, codebase, and business IP remain 100% local and secured.
+
+## 🏗️ Architecture
+This system uses a **Multi-Agent Trinity** powered by `uv` and `LiteLLM`:
+1. **The Orchestrator (Gemini):** Analyzes intent, breaks down tasks, and synthesizes final outputs.
+2. **The Worker (Claude):** Performs the heavy lifting, deep structured thinking, and file generation.
+3. **The Auditor (ChatGPT):** Reviews code, challenges blind spots, and ensures logic holds up.
+
+## 🚀 Quick Start Guide
+
+### 1. Prerequisites
+* Install Python 3.12+
+* Install `uv` (The blazingly fast Python package manager)
+* Install Git
+
+### 2. Installation
+Clone the core engine and lock in the dependencies:
+```bash
+git clone https://github.com/yourusername/brain.git
+cd brain
+uv sync
