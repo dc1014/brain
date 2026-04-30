@@ -1,4 +1,7 @@
+import json
 import typer
+from datetime import datetime, timezone
+from pathlib import Path
 from dotenv import load_dotenv
 from litellm import completion  # type: ignore
 from rich.console import Console
@@ -17,11 +20,39 @@ ORCHESTRATOR: str = "gemini/gemini-2.5-flash"
 WORKER: str = "anthropic/claude-haiku-4-5"
 AUDITOR: str = "openai/gpt-4o-mini"
 
+# Setup Logging Architecture
+LOG_DIR: Path = Path(__file__).parent.parent / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+LOG_FILE: Path = LOG_DIR / "agent_interactions.jsonl"
+
+
+def log_interaction(
+    role_name: str,
+    model_string: str,
+    system_prompt: str,
+    user_prompt: str,
+    response_content: str,
+    usage: dict,
+) -> None:
+    """Silently append a structured JSON log for every agent interaction."""
+    log_entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "agent": role_name,
+        "model": model_string,
+        "system_prompt": system_prompt,
+        "user_prompt": user_prompt,
+        "response": response_content,
+        "tokens": usage,
+    }
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        # default=str ensures any unexpected custom objects don't crash the logger
+        f.write(json.dumps(log_entry, default=str) + "\n")
+
 
 def run_agent(
     role_name: str, model_string: str, system_prompt: str, user_prompt: str
 ) -> str:
-    # Notice we removed the hardcoded print() here because Typer handles the loading spinners now!
+    """Core function to ping the LLM APIs and log the results."""
     try:
         response = completion(
             model=model_string,
@@ -30,7 +61,23 @@ def run_agent(
                 {"role": "user", "content": user_prompt},
             ],
         )
-        return str(response.choices[0].message.content)
+        content: str = str(response.choices[0].message.content)
+
+        # Extract standard token usage cleanly for JSON logs
+        usage_data: dict = {}
+        if hasattr(response, "usage") and response.usage:
+            usage_data = {
+                "prompt_tokens": getattr(response.usage, "prompt_tokens", 0),
+                "completion_tokens": getattr(response.usage, "completion_tokens", 0),
+                "total_tokens": getattr(response.usage, "total_tokens", 0),
+            }
+
+        # Write the audit trail
+        log_interaction(
+            role_name, model_string, system_prompt, user_prompt, content, usage_data
+        )
+
+        return content
     except Exception as e:
         return f"Error: {str(e)}"
 

@@ -4,6 +4,7 @@ gcp-oauth.keys.json
 .env
 .env.local
 .github-token
+logs/
 
 # 📦 NODE & DEPENDENCIES
 node_modules/
@@ -29,3 +30,4 @@ Thumbs.db
 # 🤖 AI CACHE
 .claude/
 .windsurf/
+
