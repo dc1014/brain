@@ -550,7 +550,7 @@ def logs(
 
 def trigger_synaptic_plugin(domain: str, facts: list[str]) -> bool:
     """
-    Hooks into the Pro Synaptic GPU Engine if installed.
+    Hooks into the GPU if installed.
     Returns True if weights were updated, False if we should fallback to Markdown.
     """
     plugin_path = Path(__file__).parent.parent / "Plugins" / "synaptic_engine.py"
@@ -559,13 +559,11 @@ def trigger_synaptic_plugin(domain: str, facts: list[str]) -> bool:
         console.print(
             "[dim yellow]⚠️ Synaptic Engine not found. Falling back to Tier 1 Markdown Memory.[/dim yellow]"
         )
-        console.print(
-            "[dim]💡 (To enable Tier 2 GPU Memory, install the Synaptic Pro plugin).[/dim]"
-        )
+        console.print("[dim]💡 (To enable Tier 2 GPU Memory, do it yourself).[/dim]")
         return False
 
-    # In the future, we dynamically import and call the plugin here.
-    # For now, if the file exists, we assume the plugin handled it.
+    # In the future, we get GPU support.
+    # For now, if the file exists, we assume it's right.
     console.print(f"[dim]⚙️ Booting Synaptic Pro engine for {domain}...[/dim]")
     return True
 
@@ -684,6 +682,67 @@ def sleep(
 
     console.print(
         f"\n[bold green]🌅 Sleep Cycle Complete.[/bold green] [dim]Consolidated {memories_saved} new core memories and safely archived yesterday's logs.[/dim]\n"
+    )
+
+
+@app.command()
+def init() -> None:
+    """Automated zero-friction onboarding: Builds the Vault and foundational memory files."""
+    console.print("\n[bold blue]🚀 Initializing Brain OS Vault...[/bold blue]")
+
+    root_dir = Path(__file__).parent.parent
+
+    # --- 1. BUILD DIRECTORIES ---
+    directories = ["Personal", "Professional", "Studio", "Meta", "Plugins", "logs"]
+    for dir_name in directories:
+        dir_path = root_dir / dir_name
+        if not dir_path.exists():
+            dir_path.mkdir(parents=True, exist_ok=True)
+            console.print(f"[green]✓ Created directory:[/green] {dir_name}/")
+        else:
+            console.print(f"[dim]✓ Directory exists:[/dim] {dir_name}/")
+
+    # --- 2. BUILD FOUNDATIONAL MEMORY FILES ---
+    memories = {
+        "Meta/global-memory.md": (
+            "# Brain OS: Global Memory\n\n"
+            "<user_persona>\n"
+            "- Name: User\n"
+            "- Role: Architect\n"
+            "- Focus: Building an open-source Life OS\n"
+            "</user_persona>\n\n"
+            "<operating_principles>\n"
+            "- Prioritize Shift-Left engineering.\n"
+            "- Maintain zero-waste token economics.\n"
+            "</operating_principles>\n\n"
+            "<working_memory>\n"
+            "- Brain OS successfully initialized.\n"
+            "</working_memory>\n"
+        ),
+        "Personal/personal-memory.md": "# Personal Memory\n\n<working_memory>\n</working_memory>\n",
+        "Professional/professional-memory.md": "# Professional Memory\n\n<working_memory>\n</working_memory>\n",
+        "Studio/studio-memory.md": "# Studio Memory\n\n<working_memory>\n</working_memory>\n",
+    }
+
+    for file_path, content in memories.items():
+        full_path = root_dir / file_path
+        if not full_path.exists():
+            full_path.write_text(content, encoding="utf-8")
+            console.print(f"[green]✓ Created file:[/green] {file_path}")
+        else:
+            console.print(f"[dim]✓ File exists:[/dim] {file_path}")
+
+    # --- 3. AUTO-COPY ENV TEMPLATE ---
+    env_example = root_dir / ".env.example"
+    env_file = root_dir / ".env"
+
+    if env_example.exists() and not env_file.exists():
+        env_file.write_text(env_example.read_text(encoding="utf-8"), encoding="utf-8")
+        console.print("[green]✓ Created file:[/green] .env (Copied from template)")
+
+    console.print("\n[bold green]✅ Initialization Complete![/bold green]")
+    console.print(
+        '[dim]Next steps: Add your API keys to the .env file and run:[/dim] uv run System/router.py task "Who am I?"\n'
     )
 
 

@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock
-from System.router import run_agent, analyze_task, trigger_synaptic_plugin
+from System.router import run_agent, analyze_task, trigger_synaptic_plugin, init
 
 
 def test_run_agent_success(mocker) -> None:  # type: ignore
@@ -62,3 +62,34 @@ def test_synaptic_plugin_installed(mocker) -> None:  # type: ignore
 
     success = trigger_synaptic_plugin("STUDIO", ["Fact 1"])
     assert success is True  # Should return True to skip Markdown
+
+
+def test_init_command_creates_vault(tmp_path, mocker) -> None:  # type: ignore
+    """Test that the init command successfully builds the vault directories and foundational files."""
+
+    # 1. Mock the root_dir dynamically so it targets our safe pytest temp directory
+    mock_path_instance = MagicMock()
+    mock_path_instance.parent.parent = tmp_path
+    mocker.patch("System.router.Path", return_value=mock_path_instance)
+
+    # 2. Create a dummy .env.example in the temp directory so the copy logic can be tested
+    dummy_env = tmp_path / ".env.example"
+    dummy_env.write_text("MOCK_KEY=123")
+
+    # 3. Execute the initialization
+    init()
+
+    # 4. Verify Directories were created
+    assert (tmp_path / "Personal").exists()
+    assert (tmp_path / "Professional").exists()
+    assert (tmp_path / "Studio").exists()
+    assert (tmp_path / "Meta").exists()
+    assert (tmp_path / "logs").exists()
+
+    # 5. Verify Foundational Files were created
+    assert (tmp_path / "Meta/global-memory.md").exists()
+    assert (tmp_path / "Studio/studio-memory.md").exists()
+
+    # 6. Verify .env was successfully copied from the template
+    assert (tmp_path / ".env").exists()
+    assert (tmp_path / ".env").read_text() == "MOCK_KEY=123"
