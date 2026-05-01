@@ -2,6 +2,7 @@ import json
 import os
 import re
 import typer
+import yaml  # type: ignore
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,35 +25,15 @@ load_dotenv()
 app = typer.Typer(help="Brain OS: The Multi-Agent Life Operating System")
 console = Console()
 
-# --- MODEL FLEXIBILITY (Zero-Config Fallbacks) ---
-# Detect which keys the user has actually provided in their .env
-has_openai = bool(os.getenv("OPENAI_API_KEY"))
-has_anthropic = bool(os.getenv("ANTHROPIC_API_KEY"))
-has_gemini = bool(os.getenv("GEMINI_API_KEY"))
-
-# Determine a fallback model if they only provided one or two keys
-fallback_model = None
-if has_openai:
-    fallback_model = "openai/gpt-4o-mini"
-elif has_anthropic:
-    fallback_model = "anthropic/claude-haiku-4-5"
-elif has_gemini:
-    fallback_model = "gemini/gemini-2.5-flash"
-
-# Assign Models: Use the Trinity if the key exists, otherwise degrade gracefully to the fallback
-ORCHESTRATOR: str = (
-    "gemini/gemini-2.5-flash"
-    if has_gemini
-    else (fallback_model or "gemini/gemini-2.5-flash")
-)
-WORKER: str = (
-    "anthropic/claude-haiku-4-5"
-    if has_anthropic
-    else (fallback_model or "anthropic/claude-haiku-4-5")
-)
-AUDITOR: str = (
-    "openai/gpt-4o-mini" if has_openai else (fallback_model or "openai/gpt-4o-mini")
-)
+# --- SHIFT-LEFT: SECURE CONFIG LOADING ---
+# yaml.safe_load() prevents arbitrary code execution vulnerabilities
+CONFIG_PATH = Path(__file__).parent / "agents.yaml"
+try:
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        AGENT_CONFIG = yaml.safe_load(f)
+except Exception as e:
+    console.print(f"[bold red]Fatal Error loading agents.yaml:[/bold red] {e}")
+    exit(1)
 
 LOG_DIR: Path = Path(__file__).parent.parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
@@ -61,8 +42,6 @@ LOG_FILE: Path = LOG_DIR / "agent_interactions.jsonl"
 
 @dataclass
 class AgentResponse:
-    """Structured payload extraction to prevent token bloat."""
-
     text: str
     actions: list[str] = field(default_factory=list)
 
@@ -75,13 +54,12 @@ def log_interaction(
     response_content: str,
     usage: dict[str, int],
     route: str = "UNKNOWN",
-    domain: str = "NONE",  # <-- Added Domain Tracking
+    domain: str = "NONE",
 ) -> None:
-    """Logs full interactions for local observability and debugging."""
     log_entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "route": route,
-        "domain": domain,  # <-- Added to log payload
+        "domain": domain,
         "agent": role_name,
         "model": model_string,
         "system_prompt": system_prompt,
@@ -93,25 +71,28 @@ def log_interaction(
         f.write(json.dumps(log_entry, default=str) + "\n")
 
 
-def get_system_context(domain: str = "NONE") -> str:
-    """Dynamically stacks Global Memory and Domain Memory to optimize token usage."""
+def get_system_context(
+    requested_contexts: list[str], current_domain: str = "NONE"
+) -> str:
+    """Dynamically loads specific canonical folders as defined in the YAML route."""
     context = ""
+    root_dir = Path(__file__).parent.parent
 
-    # 1. Always load Global Memory
-    global_memory_path = Path(__file__).parent.parent / "Meta" / "global-memory.md"
-    if global_memory_path.exists():
-        memory_content = global_memory_path.read_text(encoding="utf-8")
-        context += f"\n\n--- GLOBAL SYSTEM MEMORY ---\n{memory_content}\n----------------------------\n"
+    for req in requested_contexts:
+        target_folder = current_domain if req == "Domain" else req.upper()
+        if target_folder == "META":
+            path = root_dir / "Meta" / "global-memory.md"
+        elif target_folder in ["PERSONAL", "PROFESSIONAL", "STUDIO"]:
+            path = (
+                root_dir
+                / target_folder.capitalize()
+                / f"{target_folder.lower()}-memory.md"
+            )
+        else:
+            continue
 
-    # 2. Conditionally load Domain Memory
-    if domain in ["PERSONAL", "PROFESSIONAL", "STUDIO"]:
-        folder_name = domain.capitalize()
-        file_name = f"{domain.lower()}-memory.md"
-        domain_memory_path = Path(__file__).parent.parent / folder_name / file_name
-
-        if domain_memory_path.exists():
-            domain_content = domain_memory_path.read_text(encoding="utf-8")
-            context += f"\n--- {domain} DOMAIN MEMORY ---\n{domain_content}\n------------------------------\n"
+        if path.exists():
+            context += f"\n\n--- {target_folder} MEMORY ---\n{path.read_text(encoding='utf-8')}\n------------------------------\n"
 
     return context
 
@@ -123,31 +104,20 @@ def run_agent(
     user_prompt: str,
     tools: list[Any] | None = None,
     route: str = "UNKNOWN",
-    domain: str = "NONE",  # <-- Add domain parameter
+    domain: str = "NONE",
 ) -> AgentResponse:
     try:
-        # --- AUTO-INJECTOR: HIERARCHICAL CONTEXT ---
-        system_context = get_system_context(domain)
-        full_system_prompt = system_prompt + system_context
-
         messages: list[dict[str, Any]] = [
-            {"role": "system", "content": full_system_prompt},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
-
         action_manifest: list[str] = []
         final_text: str = ""
-
-        # MyPy fix: explicitly type these as integers
         total_prompt: int = 0
         total_comp: int = 0
 
         for step in range(5):
-            # MyPy fix: explicitly type kwargs
-            kwargs: dict[str, Any] = {
-                "model": model_string,
-                "messages": messages,
-            }
+            kwargs: dict[str, Any] = {"model": model_string, "messages": messages}
             if tools:
                 kwargs["tools"] = tools
 
@@ -158,7 +128,6 @@ def run_agent(
                 total_prompt += int(getattr(response.usage, "prompt_tokens", 0))
                 total_comp += int(getattr(response.usage, "completion_tokens", 0))
 
-            # MyPy fix: explicitly type message_dict
             message_dict: dict[str, Any] = {"role": "assistant"}
 
             if message.content:
@@ -166,7 +135,6 @@ def run_agent(
                 final_text += str(message.content) + "\n"
 
             if hasattr(message, "tool_calls") and message.tool_calls:
-                # Ruff fix: Break up the long line so it doesn't violate length rules
                 processed_tools = []
                 for t in message.tool_calls:
                     if hasattr(t, "model_dump"):
@@ -185,7 +153,6 @@ def run_agent(
 
                 for tool_call in message.tool_calls:
                     args = json.loads(tool_call.function.arguments)
-                    # MyPy fix: cast these to strings explicitly
                     func_name = str(tool_call.function.name)
                     tool_id = str(tool_call.id)
 
@@ -216,7 +183,6 @@ def run_agent(
                         result = f"ERROR: Unknown tool {func_name}"
 
                     console.print(f"[dim]🔍 Tool Executed: {func_name}[/dim]")
-
                     messages.append(
                         {
                             "role": "tool",
@@ -225,7 +191,6 @@ def run_agent(
                             "content": str(result),
                         }
                     )
-
                 continue
             else:
                 break
@@ -235,7 +200,6 @@ def run_agent(
             "completion_tokens": total_comp,
             "total_tokens": total_prompt + total_comp,
         }
-
         audit_trail = final_text + "\n\nACTIONS:\n" + "\n".join(action_manifest)
         log_interaction(
             role_name,
@@ -246,7 +210,7 @@ def run_agent(
             usage_data,
             route,
             domain,
-        )  # <-- Passed the route
+        )
 
         return AgentResponse(text=final_text.strip(), actions=action_manifest)
     except Exception as e:
@@ -254,19 +218,13 @@ def run_agent(
 
 
 def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict[str, int]]:
-    """
-    Combines Pre-Flight Security, Dynamic Routing, and Intent-based Domain Mapping.
-    Returns: (is_valid, message, route_type, domain, usage_data)
-    """
     prompt_lower = prompt.lower()
     zero_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
-    # --- STAGE 1: PRE-FLIGHT (Deterministic Bouncer) ---
-    # We use regex word boundaries (\b) to prevent the "brainstorm" -> "rm" trap
+    # PRE-FLIGHT (Deterministic Bouncer)
     forbidden_actions = [r"\bdelete\b", r"\bremove\b", r"\berase\b", r"\brm\b"]
     for action in forbidden_actions:
         if re.search(action, prompt_lower):
-            # Clean up the regex syntax for the user error message
             clean_word = action.replace(r"\b", "")
             return (
                 False,
@@ -287,28 +245,13 @@ def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict[str, int]]:
                 zero_usage,
             )
 
-    # --- STAGE 2: THE ROUTER & DOMAIN MAPPER (LLM Switchboard) ---
-    system_prompt = (
-        "You are the Brain OS Dispatcher. Your job is to validate, route, and assign domains to user tasks.\n"
-        "The OS ONLY has tools to list, read, write (which creates new files), append, and rename files inside Personal/, Professional/, and Studio/.\n\n"
-        "STEP 1 (Pre-Flight): If the task is fundamentally impossible because it requires external tools (e.g., sending emails, browsing the live web, controlling smart home devices), reply EXACTLY with: 'REJECTED: <reason>'. Do NOT reject a task just because it is complex or lacks context; the Worker agent will figure that out.\n\n"
-        "STEP 2 (Routing): Assign to ONE route:\n"
-        "- ROUTE: FAST (Task requires no file system tools. e.g., 'What is my name?', 'Summarize this')\n"
-        "- ROUTE: READ_ONLY (Task only requires listing or reading files.)\n"
-        "- ROUTE: COMPLEX (Task requires writing, creating, or renaming files.)\n\n"
-        "STEP 3 (Domain Context): Determine which area of the user's life this task belongs to:\n"
-        "- DOMAIN: PERSONAL (Health, journals, family, personal life)\n"
-        "- DOMAIN: PROFESSIONAL (Business, marketing, goals, career)\n"
-        "- DOMAIN: STUDIO (Coding, open-core, technical architecture, software projects)\n"
-        "- DOMAIN: NONE (General knowledge questions that do not touch the Vault)\n\n"
-        "OUTPUT FORMAT (Must be exactly 2 lines if approved):\n"
-        "ROUTE: <route>\n"
-        "DOMAIN: <domain>"
-    ) + get_system_context()
+    # DYNAMIC DISPATCHER
+    dispatcher_cfg = AGENT_CONFIG["agents"]["dispatcher"]
+    system_prompt = dispatcher_cfg["system_prompt"] + get_system_context(["Meta"])
 
     try:
         response = completion(
-            model=AUDITOR,
+            model=AGENT_CONFIG["models"][dispatcher_cfg["model"]],
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
@@ -337,7 +280,6 @@ def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict[str, int]]:
 
         route = "COMPLEX"
         domain = "NONE"
-
         for line in result.split("\n"):
             line = line.strip()
             if line.startswith("ROUTE:"):
@@ -359,12 +301,10 @@ def task(
         f"\n[bold green]🚀 Initializing Life OS task:[/bold green] '{description}'\n"
     )
 
-    # --- DISPATCHER (Pre-Flight + Routing) ---
     with console.status(
         "[bold yellow]🛡️ Dispatcher is analyzing the task...[/bold yellow]",
         spinner="dots",
     ):
-        # FIX: We now unpack 5 variables, including 'domain'
         is_valid, reason, route_type, domain, dispatch_usage = analyze_task(description)
 
     if not is_valid:
@@ -372,44 +312,20 @@ def task(
             Panel(f"[bold red]Task Rejected:[/bold red] {reason}", border_style="red")
         )
         log_interaction(
-            role_name="Dispatcher (Bouncer)",
-            model_string=AUDITOR,
-            system_prompt="Dispatcher Routing Logic + Global Memory",
-            user_prompt=description,
-            response_content=f"REJECTED: {reason}",
-            usage=dispatch_usage,
-            route="REJECTED",
-            domain="NONE",  # <-- Added domain
+            "Dispatcher (Bouncer)",
+            AGENT_CONFIG["models"]["gpt_mini"],
+            "Dispatcher Logic",
+            description,
+            f"REJECTED: {reason}",
+            dispatch_usage,
+            "REJECTED",
+            "NONE",
         )
         return
 
-    # FIX: Update the console print to show the Domain
     console.print(
         f"[dim]✅ Pre-Flight Passed. Assigned Route: [bold]{route_type}[/bold] | Domain Context: [bold cyan]{domain}[/bold cyan][/dim]\n"
     )
-
-    # --- ROUTE 1: FAST (Zero-Tool Bypass) ---
-    if route_type == "FAST":
-        with console.status(
-            "[bold magenta]Orchestrator (Gemini) is answering directly...[/bold magenta]",
-            spinner="dots",
-        ):
-            response = run_agent(
-                "Orchestrator (Gemini)",
-                ORCHESTRATOR,
-                "You are a fast, helpful Life OS assistant. Answer the user directly.",
-                description,
-                route=route_type,  # <-- Add this
-            )
-        console.print(
-            Panel(
-                Markdown(response.text),
-                title="[bold magenta]FAST Response[/bold magenta]",
-                border_style="magenta",
-            )
-        )
-        console.print("\n[bold green]✅ Task Complete.[/bold green]\n")
-        return
 
     # --- TOOL DEFINITIONS ---
     base_tools = [
@@ -417,7 +333,7 @@ def task(
             "type": "function",
             "function": {
                 "name": "read_safe_file",
-                "description": "Reads the text content of a file.",
+                "description": "Reads file text.",
                 "parameters": {
                     "type": "object",
                     "properties": {"filepath": {"type": "string"}},
@@ -429,7 +345,7 @@ def task(
             "type": "function",
             "function": {
                 "name": "list_safe_directory",
-                "description": "Lists all files and folders in a directory.",
+                "description": "Lists files/folders.",
                 "parameters": {
                     "type": "object",
                     "properties": {"directory_path": {"type": "string"}},
@@ -438,13 +354,12 @@ def task(
             },
         },
     ]
-
     write_tools = [
         {
             "type": "function",
             "function": {
                 "name": "write_safe_file",
-                "description": "Writes content to a file. Allowed zones: Personal/, Professional/, Studio/.",
+                "description": "Writes file.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -459,7 +374,7 @@ def task(
             "type": "function",
             "function": {
                 "name": "rename_safe_file",
-                "description": "Renames a file.",
+                "description": "Renames file.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -474,7 +389,7 @@ def task(
             "type": "function",
             "function": {
                 "name": "append_safe_file",
-                "description": "Appends text to a file. Automatically injects before </working_memory> if present.",
+                "description": "Appends to file.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -486,67 +401,80 @@ def task(
             },
         },
     ]
+    available_tools = {"base": base_tools, "write": write_tools}
 
-    # --- ROUTE 2 & 3: READ_ONLY and COMPLEX ---
-    if route_type == "READ_ONLY":
-        agent_tools = base_tools
-        worker_system = "You are a read-only system explorer. Use your tools to find information. You CANNOT write files."
-    else:  # COMPLEX
-        agent_tools = base_tools + write_tools
-        worker_system = "You are a highly structured system engineer. Break this task down into a clear plan. Use your tools to read, explore, or write files as necessary."
+    # --- EXECUTE DECLARATIVE PIPELINE ---
+    pipeline = AGENT_CONFIG["routes"].get(route_type, [])
+    current_payload = description
 
-    with console.status(
-        "[bold cyan]Worker (Claude) is thinking...[/bold cyan]", spinner="dots"
-    ):
-        claude_draft = run_agent(
-            "Worker (Claude)",
-            WORKER,
-            worker_system,
-            description,
-            tools=agent_tools,
-            route=route_type,
-        )  # <-- Add this
+    for step in pipeline:
+        agent_cfg = AGENT_CONFIG["agents"][step["agent"]]
 
-    display_draft = claude_draft.text
-    if claude_draft.actions:
-        display_draft += "\n\n**Actions Taken:**\n" + "\n".join(
-            [f"- {a}" for a in claude_draft.actions]
+        # --- ZERO-CONFIG MODEL FALLBACK ---
+        desired_model_key = agent_cfg["model"]
+        env_key_map = {
+            "gpt_mini": "OPENAI_API_KEY",
+            "claude_haiku": "ANTHROPIC_API_KEY",
+            "gemini_flash": "GEMINI_API_KEY",
+        }
+
+        # Check if they have the key for the requested model
+        if os.getenv(env_key_map.get(desired_model_key, "")):
+            model_str = AGENT_CONFIG["models"][desired_model_key]
+        else:
+            # Fallback to whatever API key they actually provided
+            if os.getenv("OPENAI_API_KEY"):
+                model_str = AGENT_CONFIG["models"]["gpt_mini"]
+            elif os.getenv("ANTHROPIC_API_KEY"):
+                model_str = AGENT_CONFIG["models"]["claude_haiku"]
+            elif os.getenv("GEMINI_API_KEY"):
+                model_str = AGENT_CONFIG["models"]["gemini_flash"]
+            else:
+                model_str = AGENT_CONFIG["models"][
+                    desired_model_key
+                ]  # Will error out in litellm, which is expected if no keys exist
+
+        # Build Tools array dynamically based on YAML
+        active_tools = []
+        for t_group in step.get("tools", []):
+            active_tools.extend(available_tools.get(t_group, []))
+
+        # Build Context dynamically based on YAML
+        full_system_prompt = agent_cfg["system_prompt"] + get_system_context(
+            step.get("context", []), domain
         )
 
-    console.print(
-        Panel(
-            Markdown(display_draft),
-            title="[bold cyan]Worker (Claude)'s Draft & Actions[/bold cyan]",
-            border_style="cyan",
+        with console.status(
+            f"[bold cyan]{agent_cfg['name']} is thinking...[/bold cyan]", spinner="dots"
+        ):
+            step_result = run_agent(
+                role_name=agent_cfg["name"],
+                model_string=model_str,
+                system_prompt=full_system_prompt,
+                user_prompt=current_payload,
+                tools=active_tools if active_tools else None,
+                route=route_type,
+                domain=domain,
+            )
+
+        # Print Output
+        display_text = step_result.text
+        if step_result.actions:
+            display_text += "\n\n**Actions Taken:**\n" + "\n".join(
+                [f"- {a}" for a in step_result.actions]
+            )
+
+        console.print(
+            Panel(
+                Markdown(display_text),
+                title=f"[bold cyan]{agent_cfg['name']}[/bold cyan]",
+                border_style="cyan",
+            )
         )
-    )
 
-    # --- PAYLOAD EXTRACTION ---
-    orchestrator_system = "You are the central orchestrator of a Life OS. Review the worker's plan and the metadata of the files it touched. Summarize it into a final, polished executive summary."
-    orchestrator_prompt = (
-        f"Worker Thoughts:\n{claude_draft.text}\n\nActions Taken:\n"
-        + ("\n".join(claude_draft.actions) if claude_draft.actions else "None.")
-    )
+        # Hand-off Pipeline Payload
+        current_payload = f"Original Task: {description}\n\nPrevious Agent ({agent_cfg['name']}) Output:\n{step_result.text}\n\nActions Taken:\n{step_result.actions}"
 
-    with console.status(
-        "[bold magenta]Orchestrator (Gemini) is thinking...[/bold magenta]",
-        spinner="dots",
-    ):
-        final_output = run_agent(
-            "Orchestrator (Gemini)",
-            ORCHESTRATOR,
-            orchestrator_system,
-            orchestrator_prompt,
-            route=route_type,
-        )  # <-- Add this
-
-    console.print(
-        Panel(
-            Markdown(final_output.text),
-            title="[bold magenta]Orchestrator (Gemini)'s Synthesis[/bold magenta]",
-            border_style="magenta",
-        )
-    )
     console.print("\n[bold green]✅ Task Complete.[/bold green]\n")
 
 
@@ -575,26 +503,6 @@ def logs(
         console.print("\n" + "=" * 50 + "\n")
 
 
-def trigger_synaptic_plugin(domain: str, facts: list[str]) -> bool:
-    """
-    Hooks into the GPU if installed.
-    Returns True if weights were updated, False if we should fallback to Markdown.
-    """
-    plugin_path = Path(__file__).parent.parent / "Plugins" / "synaptic_engine.py"
-
-    if not plugin_path.exists():
-        console.print(
-            "[dim yellow]⚠️ Synaptic Engine not found. Falling back to Tier 1 Markdown Memory.[/dim yellow]"
-        )
-        console.print("[dim]💡 (To enable Tier 2 GPU Memory, do it yourself).[/dim]")
-        return False
-
-    # In the future, we get GPU support.
-    # For now, if the file exists, we assume it's right.
-    console.print(f"[dim]⚙️ Booting Synaptic Pro engine for {domain}...[/dim]")
-    return True
-
-
 @app.command()
 def sleep(
     synaptic: bool = typer.Option(
@@ -603,9 +511,7 @@ def sleep(
         help="Use experimental GPU weight-training instead of Markdown files.",
     ),
 ) -> None:
-    """The Sleep Cycle Compactor: Distills daily logs into Long-Term Memory and archives them."""
     console.print("\n[bold blue]🌙 Initiating Sleep Cycle...[/bold blue]")
-
     if not LOG_FILE.exists() or LOG_FILE.stat().st_size == 0:
         console.print("[dim]No daily logs found. Brain OS is already rested.[/dim]\n")
         return
@@ -615,100 +521,60 @@ def sleep(
     ):
         logs_content = LOG_FILE.read_text(encoding="utf-8")
         log_lines = logs_content.strip().split("\n")
-        interaction_count = len(log_lines)
+    console.print(f"[dim]Found {len(log_lines)} interactions to consolidate.[/dim]")
 
-    console.print(f"[dim]Found {interaction_count} interactions to consolidate.[/dim]")
-
-    # --- THE COMPACTION PROMPT ---
     system_prompt = (
-        "You are the Brain OS Sleep Compactor. Your job is to read raw daily system logs and extract PERMANENT, VALUABLE facts to store in long-term memory.\n"
-        "Ignore transient tasks (e.g., 'listed a directory', 'fixed a typo', 'wrote a file').\n"
-        "Focus on: new goals, core business strategies, coding standards established, or personal preferences learned.\n\n"
-        "You MUST output your findings as a strict JSON object grouping the new facts by DOMAIN. "
-        "If a domain has no new facts, return an empty list for it.\n\n"
-        "EXPECTED JSON FORMAT:\n"
-        "{\n"
-        '  "META": ["Fact 1"],\n'
-        '  "PERSONAL": ["Fact 2"],\n'
-        '  "PROFESSIONAL": ["Fact 3"],\n'
-        '  "STUDIO": ["Fact 4"]\n'
-        "}"
+        "You are the Brain OS Sleep Compactor. Extract PERMANENT, VALUABLE facts from these logs.\n"
+        'EXPECTED JSON FORMAT:\n{\n  "META": ["Fact 1"],\n  "PERSONAL": ["Fact 2"],\n  "PROFESSIONAL": ["Fact 3"],\n  "STUDIO": ["Fact 4"]\n}'
     )
 
-    console.print(
-        f"[dim]🧠 Synthesizing using Auditor Model: [bold]{AUDITOR}[/bold][/dim]"
-    )
-
-    # Update the status text slightly to be cleaner:
     with console.status(
         "[bold magenta]Compacting short-term memory...[/bold magenta]", spinner="dots"
     ):
         try:
+            # We hardcode the Auditor here as it guarantees JSON output
             response = completion(
-                model=AUDITOR,
+                model=AGENT_CONFIG["models"]["gpt_mini"],
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": logs_content},
                 ],
-                response_format={"type": "json_object"},  # Forces strict JSON output
+                response_format={"type": "json_object"},
             )
-
-            raw_result = str(response.choices[0].message.content).strip()
-            memories = json.loads(raw_result)
-
+            memories = json.loads(str(response.choices[0].message.content).strip())
         except Exception as e:
             console.print(
                 f"[bold red]Sleep Cycle Interrupted (API/JSON Error):[/bold red] {str(e)}"
             )
             return
 
-    # --- THE MEMORY INJECTION ---
     domains = {
         "META": "Meta/global-memory.md",
         "PERSONAL": "Personal/personal-memory.md",
         "PROFESSIONAL": "Professional/professional-memory.md",
         "STUDIO": "Studio/studio-memory.md",
     }
-
     memories_saved = 0
+
     with console.status(
         "[bold yellow]Injecting synapses into Vault...[/bold yellow]", spinner="dots"
     ):
         for domain, facts in memories.items():
             if facts and isinstance(facts, list):
-                # --- PHASE 4: SYNAPTIC GPU ROUTE (Attempt) ---
-                if synaptic:
-                    success = trigger_synaptic_plugin(domain, facts)
-                    if success:
-                        memories_saved += len(facts)
-                        console.print(
-                            f"[green]✓ Fused {len(facts)} facts into {domain} LoRA weights.[/green]"
-                        )
-                        continue  # Skip the markdown route!
-
-                # --- PHASE 3: TIER 1 SYMBOLIC MARKDOWN ROUTE (Fallback/Default) ---
                 filepath = domains.get(domain.upper())
                 if filepath:
                     bullet_facts = "\n".join([f"- {fact}" for fact in facts])
                     result = append_safe_file(filepath, bullet_facts)
-
                     if "SUCCESS" in result:
                         memories_saved += len(facts)
                         console.print(
                             f"[green]✓ Appended {len(facts)} facts into {domain} markdown.[/green]"
                         )
-                    else:
-                        console.print(
-                            f"[red]✗ Failed to write into {domain}: {result}[/red]"
-                        )
 
-    # --- THE ARCHIVAL PROTOCOL (Log Rotation) ---
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
-    archive_path = LOG_DIR / f"archive_{timestamp}.jsonl"
-    LOG_FILE.rename(archive_path)
-
+    LOG_FILE.rename(LOG_DIR / f"archive_{timestamp}.jsonl")
     console.print(
-        f"\n[bold green]🌅 Sleep Cycle Complete.[/bold green] [dim]Consolidated {memories_saved} new core memories and safely archived yesterday's logs.[/dim]\n"
+        f"\n[bold green]🌅 Sleep Cycle Complete.[/bold green] [dim]Consolidated {memories_saved} new core memories.[/dim]\n"
     )
 
 
@@ -716,12 +582,9 @@ def sleep(
 def init() -> None:
     """Automated zero-friction onboarding: Builds the Vault and foundational memory files."""
     console.print("\n[bold blue]🚀 Initializing Brain OS Vault...[/bold blue]")
-
     root_dir = Path(__file__).parent.parent
 
-    # --- 1. BUILD DIRECTORIES ---
-    directories = ["Personal", "Professional", "Studio", "Meta", "Plugins", "logs"]
-    for dir_name in directories:
+    for dir_name in ["Personal", "Professional", "Studio", "Meta", "Plugins", "logs"]:
         dir_path = root_dir / dir_name
         if not dir_path.exists():
             dir_path.mkdir(parents=True, exist_ok=True)
@@ -729,28 +592,12 @@ def init() -> None:
         else:
             console.print(f"[dim]✓ Directory exists:[/dim] {dir_name}/")
 
-    # --- 2. BUILD FOUNDATIONAL MEMORY FILES ---
     memories = {
-        "Meta/global-memory.md": (
-            "# Brain OS: Global Memory\n\n"
-            "<user_persona>\n"
-            "- Name: User\n"
-            "- Role: Architect\n"
-            "- Focus: Building an open-source Life OS\n"
-            "</user_persona>\n\n"
-            "<operating_principles>\n"
-            "- Prioritize Shift-Left engineering.\n"
-            "- Maintain zero-waste token economics.\n"
-            "</operating_principles>\n\n"
-            "<working_memory>\n"
-            "- Brain OS successfully initialized.\n"
-            "</working_memory>\n"
-        ),
+        "Meta/global-memory.md": "# Brain OS: Global Memory\n\n<user_persona>\n- Name: User\n</user_persona>\n\n<working_memory>\n- Brain OS successfully initialized.\n</working_memory>\n",
         "Personal/personal-memory.md": "# Personal Memory\n\n<working_memory>\n</working_memory>\n",
         "Professional/professional-memory.md": "# Professional Memory\n\n<working_memory>\n</working_memory>\n",
         "Studio/studio-memory.md": "# Studio Memory\n\n<working_memory>\n</working_memory>\n",
     }
-
     for file_path, content in memories.items():
         full_path = root_dir / file_path
         if not full_path.exists():
@@ -759,18 +606,12 @@ def init() -> None:
         else:
             console.print(f"[dim]✓ File exists:[/dim] {file_path}")
 
-    # --- 3. AUTO-COPY ENV TEMPLATE ---
-    env_example = root_dir / ".env.example"
-    env_file = root_dir / ".env"
-
+    env_example, env_file = root_dir / ".env.example", root_dir / ".env"
     if env_example.exists() and not env_file.exists():
         env_file.write_text(env_example.read_text(encoding="utf-8"), encoding="utf-8")
         console.print("[green]✓ Created file:[/green] .env (Copied from template)")
 
-    console.print("\n[bold green]✅ Initialization Complete![/bold green]")
-    console.print(
-        '[dim]Next steps: Add your API keys to the .env file and run:[/dim] uv run System/router.py task "Who am I?"\n'
-    )
+    console.print("\n[bold green]✅ Initialization Complete![/bold green]\n")
 
 
 if __name__ == "__main__":
