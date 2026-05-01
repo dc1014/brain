@@ -1,1 +1,9 @@
-{}
+{
+  "useMarkdownLinks": true,
+  "userIgnoreFilters": [
+    "node_modules/",
+    ".git",
+    ".venv",
+    "__pycache__"
+  ]
+}
