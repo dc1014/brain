@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock
 from System.router import run_agent, analyze_task, init
+from pathlib import Path
+from System.tools import bootstrap_project, execute_command
 
 
 def test_run_agent_success(mocker) -> None:  # type: ignore
@@ -75,3 +77,41 @@ def test_init_command_creates_vault(tmp_path, mocker) -> None:  # type: ignore
     # 6. Verify .env was successfully copied from the template
     assert (tmp_path / ".env").exists()
     assert (tmp_path / ".env").read_text() == "MOCK_KEY=123"
+
+
+def test_bootstrap_security_block(tmp_path: Path, mocker) -> None:  # type: ignore
+    """Test that projects cannot be bootstrapped outside allowed zones."""
+    mocker.patch("System.tools.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
+
+    # Try to clone into the root directory directly
+    result = bootstrap_project("../../malicious_project")
+    assert "SECURITY BLOCK" in result
+
+
+def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # type: ignore
+    """Test that command execution is sandboxed and respects HITL."""
+    mocker.patch("System.tools.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
+
+    studio_dir = tmp_path / "Studio" / "TestProject"
+    studio_dir.mkdir(parents=True)
+
+    # 1. Test Security Boundary
+    block_result = execute_command("ls", "../../")
+    assert "SECURITY BLOCK" in block_result
+
+    # 2. Test HITL Rejection
+    # Mock the rich Confirm.ask to simulate a user pressing 'n'
+    mocker.patch("System.tools.Confirm.ask", return_value=False)
+    deny_result = execute_command("ls", "Studio/TestProject")
+    assert "SECURITY BLOCK: User explicitly denied" in deny_result
+
+    # 3. Test Execution Approval
+    mocker.patch("System.tools.Confirm.ask", return_value=True)
+    mock_subprocess = mocker.patch("System.tools.subprocess.run")
+    mock_subprocess.return_value.returncode = 0
+
+    approve_result = execute_command("ls", "Studio/TestProject")
+    assert "SUCCESS" in approve_result
+    mock_subprocess.assert_called_once()

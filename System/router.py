@@ -19,6 +19,8 @@ from System.tools import (
     list_safe_directory,
     rename_safe_file,
     append_safe_file,
+    bootstrap_project,  # <-- Added
+    execute_command,  # <-- Added
 )
 
 load_dotenv()
@@ -179,6 +181,22 @@ def run_agent(
                             args.get("filepath", ""), args.get("content", "")
                         )
                         action_manifest.append(f"[APPEND] {args.get('filepath')}")
+                    # --- NEW TOOLS ---
+                    elif func_name == "bootstrap_project":
+                        url = args.get(
+                            "template_url", "https://github.com/dc1014/forge.git"
+                        )
+                        result = bootstrap_project(args.get("project_name", ""), url)
+                        action_manifest.append(
+                            f"[BOOTSTRAP] {args.get('project_name')}"
+                        )
+                    elif func_name == "execute_command":
+                        result = execute_command(
+                            args.get("command", ""), args.get("directory_path", "")
+                        )
+                        action_manifest.append(
+                            f"[EXECUTE] {args.get('command')} in {args.get('directory_path')}"
+                        )
                     else:
                         result = f"ERROR: Unknown tool {func_name}"
 
@@ -328,6 +346,7 @@ def task(
     )
 
     # --- TOOL DEFINITIONS ---
+    # --- TOOL DEFINITIONS ---
     base_tools = [
         {
             "type": "function",
@@ -401,7 +420,46 @@ def task(
             },
         },
     ]
-    available_tools = {"base": base_tools, "write": write_tools}
+    execute_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "bootstrap_project",
+                "description": "Clones a project archetype into Studio.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "project_name": {"type": "string"},
+                        "template_url": {
+                            "type": "string",
+                            "description": "Optional Git URL, defaults to Forge",
+                        },
+                    },
+                    "required": ["project_name"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "execute_command",
+                "description": "Runs a terminal command. DO NOT EXPECT OUTPUT in the response. Check the file system after it runs to see side effects.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {"type": "string"},
+                        "directory_path": {"type": "string"},
+                    },
+                    "required": ["command", "directory_path"],
+                },
+            },
+        },
+    ]
+    available_tools = {
+        "base": base_tools,
+        "write": write_tools,
+        "execute": execute_tools,
+    }
 
     # --- EXECUTE DECLARATIVE PIPELINE ---
     pipeline = AGENT_CONFIG["routes"].get(route_type, [])

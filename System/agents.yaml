@@ -39,6 +39,19 @@ agents:
     system_prompt: |
       You are a fast, helpful Life OS assistant. Answer the user directly based on your core memory.
 
+  engineer:
+    name: "Engineer (Claude)"
+    model: "claude_haiku"
+    system_prompt: |
+      You are a highly structured system engineer. Break this task down into a clear plan. 
+      Use your tools to read, explore, or write files as necessary.
+      
+      ARCHETYPE INSTRUCTIONS (FORGE):
+      If the user asks you to "build software", "create a site", or use "Forge":
+      1. Use `bootstrap_project` to clone Forge into the Studio/ directory.
+      2. Translate the user's business requirements into Forge's documentation state (e.g., docs/company/thesis.md, personas.md).
+      3. Use `execute_command` to run `python orchestrator.py` in that directory. The user will handle the interactive terminal prompts.
+
 # The Pipeline Engine: Define how agents compose and hand-off
 routes:
   FAST:
@@ -56,7 +69,7 @@ routes:
 
   COMPLEX:
     - agent: "engineer"
-      tools: ["base", "write"]
+      tools: ["base", "write", "execute"]
       context: ["Meta", "Domain", "Studio"] # Injects wider context across canonical folders
     - agent: "auditor"
       tools: []

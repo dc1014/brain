@@ -77,6 +77,11 @@ Brain logs every token, prompt, and action for perfect local observability.
 uv run System/router.py logs --limit 3
 ```
 
+### ⚡ Autonomous Execution & HITL (Forge)
+Brain is capable of spawning and orchestrating other software engines (like `create-react-app` or autonomous builders like `Forge`).
+Because letting an AI run terminal commands is dangerous, Brain enforces **Human-in-the-Loop (HITL)**. Before Brain executes a shell command on your behalf, it will pause the terminal and explicitly ask for your permission:
+`Brain OS wants to run: 'python orchestrator.py'. Allow? (Y/n)`
+
 ### 🌙 The Sleep Cycle Compactor (Memory Synthesis)
 At the end of the day, command the OS to sleep. The Auditor will read your daily `logs/agent_interactions.jsonl`, extract permanent high-value facts (strategies, preferences, coding rules), inject them directly into your Markdown memory files, and safely rotate/archive the logs.
 ```bash
