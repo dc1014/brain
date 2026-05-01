@@ -502,18 +502,18 @@ def task(
             step.get("context", []), domain
         )
 
-        with console.status(
-            f"[bold cyan]{agent_cfg['name']} is thinking...[/bold cyan]", spinner="dots"
-        ):
-            step_result = run_agent(
-                role_name=agent_cfg["name"],
-                model_string=model_str,
-                system_prompt=full_system_prompt,
-                user_prompt=current_payload,
-                tools=active_tools if active_tools else None,
-                route=route_type,
-                domain=domain,
-            )
+        # Removed the status spinner to allow Confirm.ask() and subprocess I/O to access stdin/stdout safely
+        console.print(f"\n[bold cyan]⏳ {agent_cfg['name']} is working...[/bold cyan]")
+
+        step_result = run_agent(
+            role_name=agent_cfg["name"],
+            model_string=model_str,
+            system_prompt=full_system_prompt,
+            user_prompt=current_payload,
+            tools=active_tools if active_tools else None,
+            route=route_type,
+            domain=domain,
+        )
 
         # Print Output
         display_text = step_result.text
