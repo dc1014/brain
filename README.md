@@ -11,7 +11,7 @@ Brain uses **Shift-Left Engineering** and **The Unix Philosophy** as a generaliz
 ---
 
 ## 🌟 Core Philosophy
-1. **Own Your Brain:** Your Brain and everything in it - data (Vault), journals, art, code, and business IP - is yours. All personal folders are aggressively `.gitignore`d.
+1. **Own Your Brain:** Your Brain and everything in it - data (Vault), journals, art, code, and business IP - is yours. All personal folders are `.gitignore`d.
 2. **Zero-Waste Token Economics:** Context limits are respected. The system dynamically extracts payloads and drops intermediate reasoning steps to keep context loops lean.
 3. **Open-Source & UNIX-Native:** Everything is a file. The routing system, API logic, memory structures, and prompts are 100% open-source and run entirely on your machine.
 
