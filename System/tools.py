@@ -248,6 +248,7 @@ def operate_forge(project_name: str, instruction: str) -> str:
             cwd=str(target_path),
             capture_output=True,
             text=True,
+            encoding="utf-8",
         )
 
         # 5. OBSERVABILITY: Harvest Telemetry & Status
