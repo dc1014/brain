@@ -99,3 +99,38 @@ def test_adr_safety_blocks() -> None:
         "Studio/Project/old.md", "Studio/Project/docs/adr/002-test.md"
     )
     assert "SECURITY BLOCK" in rename_res_2
+
+
+def test_operate_forge_security(tmp_path, monkeypatch) -> None:
+    """Ensure operate_forge enforces path safety and HITL approvals."""
+    from System.tools import operate_forge
+    import System.tools as tools
+    from pathlib import Path
+
+    # 1. Test Path Traversal Block
+    res_path = operate_forge("../../../Windows", "Build stuff")
+    assert "SECURITY BLOCK" in res_path
+
+    # Mock the safe path using a real, OS-resolved temporary directory
+    mock_root = tmp_path.resolve()
+    monkeypatch.setattr(tools, "ROOT_DIR", mock_root)
+    monkeypatch.setattr(tools, "is_safe_path", lambda x: True)
+
+    # 2. Test Missing Engine Block
+    res_missing = operate_forge("Empty-Project", "Build stuff")
+    assert "ERROR: Forge engine not found" in res_missing
+
+    # 3. Test HITL Denial Block
+    # Create the dummy directory and file so it passes the .exists() check
+    dummy_project = mock_root / "Studio" / "Mock-Project"
+    dummy_project.mkdir(parents=True)
+    (dummy_project / "orchestrator.py").touch()
+
+    # Mock the user pressing 'n' on the prompt
+    monkeypatch.setattr(tools.Confirm, "ask", lambda *args, **kwargs: False)
+
+    # Prevent the test from actually trying to write handoff.md
+    monkeypatch.setattr(Path, "write_text", lambda *args, **kwargs: None)
+
+    res_denied = operate_forge("Mock-Project", "Build stuff")
+    assert "SECURITY BLOCK: User explicitly denied" in res_denied

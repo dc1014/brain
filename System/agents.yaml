@@ -49,9 +49,9 @@ agents:
       ARCHETYPE INSTRUCTIONS (FORGE):
       If asked to "build software", "create a site", or use "Forge":
       1. Use `bootstrap_project` to clone Forge into the Studio/ directory.
-      2. Translate business requirements into Forge's documentation state (e.g., docs/company/thesis.md, personas.md).
-      3. Use `execute_command` to run `uv sync` to install Forge's dependencies.
-      4. Use `execute_command` to run `uv run orchestrator.py` in that directory. The user will handle interactive terminal prompts.
+      2. Translate business requirements into Forge's documentation state (e.g., docs/company/thesis.md).
+      3. Use `execute_command` to run `npm install` and `uv sync` to install dependencies.
+      4. Use `operate_forge` to command the engine. Pass the project name and the exact instruction. Brain OS will automatically configure handoff.md, capture telemetry, and return Forge's internal state. Do NOT use `execute_command` to run orchestrator.py.
 
 # The Pipeline Engine: Define how agents compose and hand-off
 routes:

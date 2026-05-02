@@ -184,7 +184,8 @@ def run_agent(
                     # --- NEW TOOLS ---
                     elif func_name == "bootstrap_project":
                         url = args.get(
-                            "template_url", "https://github.com/dc1014/forge.git"
+                            "template_url",
+                            "https://github.com/mrdanielcasper/forge.git",
                         )
                         result = bootstrap_project(args.get("project_name", ""), url)
                         action_manifest.append(
@@ -451,6 +452,27 @@ def task(
                         "directory_path": {"type": "string"},
                     },
                     "required": ["command", "directory_path"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "operate_forge",
+                "description": "Operates a Forge archetype project securely. Use this INSTEAD of execute_command to run Forge. Automatically handles handoff.md and retrieves telemetry.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "project_name": {
+                            "type": "string",
+                            "description": "The exact name of the project folder in Studio/ (e.g., 'Brain-Website').",
+                        },
+                        "instruction": {
+                            "type": "string",
+                            "description": "The natural language instruction or pipeline command (e.g., '[START: Engineering] Build the React site').",
+                        },
+                    },
+                    "required": ["project_name", "instruction"],
                 },
             },
         },
