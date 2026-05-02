@@ -21,6 +21,7 @@ from System.tools import (
     append_safe_file,
     bootstrap_project,  # <-- Added
     execute_command,  # <-- Added
+    operate_forge,
 )
 
 load_dotenv()
@@ -124,6 +125,16 @@ def run_agent(
                 kwargs["tools"] = tools
 
             response = completion(**kwargs)
+
+            # --- SHIFT-LEFT: SAFETY FILTER CATCH ---
+            # If a provider (like Gemini) blocks the prompt due to safety filters,
+            # it returns an empty choices array. We must catch this gracefully.
+            if not getattr(response, "choices", None) or len(response.choices) == 0:
+                return AgentResponse(
+                    text="API SECURITY BLOCK: The LLM provider returned an empty response. This usually means its internal safety filters were triggered by words like 'execute', 'shell', or 'terminate'.",
+                    actions=action_manifest,
+                )
+
             message = response.choices[0].message
 
             if hasattr(response, "usage") and response.usage:
@@ -197,6 +208,13 @@ def run_agent(
                         )
                         action_manifest.append(
                             f"[EXECUTE] {args.get('command')} in {args.get('directory_path')}"
+                        )
+                    elif func_name == "operate_forge":
+                        result = operate_forge(
+                            args.get("project_name", ""), args.get("instruction", "")
+                        )
+                        action_manifest.append(
+                            f"[OPERATE_FORGE] {args.get('project_name')}"
                         )
                     else:
                         result = f"ERROR: Unknown tool {func_name}"
