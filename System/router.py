@@ -179,20 +179,21 @@ def run_agent(
         return AgentResponse(text=f"Error: {str(e)}", actions=[])
 
 
-def pre_flight_check(prompt: str) -> tuple[bool, str]:
+def analyze_task(prompt: str) -> tuple[bool, str, str]:
     """
-    Shift-Left validation to prevent impossible or dangerous tasks
-    from burning expensive agent tokens.
+    Combines Pre-Flight Security (The Bouncer) and Dynamic Routing (The Switchboard).
+    Returns: (is_valid, message, route_type)
     """
     prompt_lower = prompt.lower()
 
-    # 1. Deterministic Layer (Zero-Cost Hard Rules)
+    # --- STAGE 1: PRE-FLIGHT (Deterministic Bouncer) ---
     forbidden_actions = ["delete", "remove", "erase", "rm "]
     for action in forbidden_actions:
         if action in prompt_lower:
             return (
                 False,
                 f"Hard Rule: Brain OS does not have a delete tool. You asked to '{action.strip()}'.",
+                "NONE",
             )
 
     forbidden_targets = ["system/", ".env", "tools.py", "router.py"]
@@ -201,16 +202,19 @@ def pre_flight_check(prompt: str) -> tuple[bool, str]:
             return (
                 False,
                 f"Hard Rule: Brain OS is sandboxed. You cannot target '{target}'.",
+                "NONE",
             )
 
-    # 2. Indeterministic Layer (LLM Auditor)
+    # --- STAGE 2: THE ROUTER (LLM Switchboard) ---
     system_prompt = (
-        "You are the Pre-Flight Auditor for a sandboxed AI Life OS. "
-        "The OS ONLY has tools to list, read, write, and rename files inside the "
-        "'Personal', 'Professional', and 'Studio' directories. "
-        "Evaluate the user's prompt. Can this task be physically completed with the current tools and boundaries?\n"
-        "If YES, reply exactly and ONLY with the word 'APPROVED'.\n"
-        "If NO, reply with a 1-sentence explanation of why it is impossible."
+        "You are the Brain OS Dispatcher. Your job is to validate and route user tasks.\n"
+        "The OS ONLY has tools to list, read, write, and rename files inside Personal/, Professional/, and Studio/.\n\n"
+        "STEP 1 (Pre-Flight): If the task is impossible given these tools, reply EXACTLY with: 'REJECTED: <1-sentence reason>'\n"
+        "STEP 2 (Routing): If the task is possible, assign it to ONE of these routes:\n"
+        "- ROUTE: FAST (Task requires no file system tools. e.g., 'Summarize this pasted text' or 'What is 2+2?')\n"
+        "- ROUTE: READ_ONLY (Task only requires listing or reading files, no writing/renaming.)\n"
+        "- ROUTE: COMPLEX (Task requires writing, creating, or renaming files.)\n\n"
+        "OUTPUT FORMAT: You must reply ONLY with the REJECTED or ROUTE string. No other text."
     )
 
     try:
@@ -221,15 +225,18 @@ def pre_flight_check(prompt: str) -> tuple[bool, str]:
                 {"role": "user", "content": prompt},
             ],
         )
-        result = str(response.choices[0].message.content).strip()
+        result = str(response.choices[0].message.content).strip().upper()
 
-        if result.upper().startswith("APPROVED"):
-            return True, "Approved."
+        if result.startswith("REJECTED:"):
+            return False, result.replace("REJECTED:", "").strip(), "NONE"
+        elif result in ["ROUTE: FAST", "ROUTE: READ_ONLY", "ROUTE: COMPLEX"]:
+            return True, "Approved.", result.split(": ")[1]
         else:
-            return False, f"Auditor Block: {result}"
+            # Fallback if the LLM hallucinates the format
+            return True, "Approved (Defaulted to COMPLEX).", "COMPLEX"
 
     except Exception as e:
-        return False, f"Auditor API Error: {str(e)}"
+        return False, f"Dispatcher API Error: {str(e)}", "NONE"
 
 
 @app.command()
@@ -240,11 +247,12 @@ def task(
         f"\n[bold green]🚀 Initializing Life OS task:[/bold green] '{description}'\n"
     )
 
+    # --- DISPATCHER (Pre-Flight + Routing) ---
     with console.status(
-        "[bold yellow]🛡️ Running Pre-Flight Security Check...[/bold yellow]",
+        "[bold yellow]🛡️ Dispatcher is analyzing the task...[/bold yellow]",
         spinner="dots",
     ):
-        is_valid, reason = pre_flight_check(description)
+        is_valid, reason, route_type = analyze_task(description)
 
     if not is_valid:
         console.print(
@@ -252,24 +260,34 @@ def task(
         )
         return
 
-    console.print("[dim]✅ Pre-Flight Passed.[/dim]\n")
+    console.print(
+        f"[dim]✅ Pre-Flight Passed. Assigned Route: [bold]{route_type}[/bold][/dim]\n"
+    )
 
-    agent_tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": "write_safe_file",
-                "description": "Writes content to a file. Allowed zones: Personal/, Professional/, Studio/.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "filepath": {"type": "string"},
-                        "content": {"type": "string"},
-                    },
-                    "required": ["filepath", "content"],
-                },
-            },
-        },
+    # --- ROUTE 1: FAST (Zero-Tool Bypass) ---
+    if route_type == "FAST":
+        with console.status(
+            "[bold magenta]Orchestrator (Gemini) is answering directly...[/bold magenta]",
+            spinner="dots",
+        ):
+            response = run_agent(
+                "Orchestrator (Gemini)",
+                ORCHESTRATOR,
+                "You are a fast, helpful Life OS assistant. Answer the user directly.",
+                description,
+            )
+        console.print(
+            Panel(
+                Markdown(response.text),
+                title="[bold magenta]FAST Response[/bold magenta]",
+                border_style="magenta",
+            )
+        )
+        console.print("\n[bold green]✅ Task Complete.[/bold green]\n")
+        return
+
+    # --- TOOL DEFINITIONS ---
+    base_tools = [
         {
             "type": "function",
             "function": {
@@ -294,6 +312,24 @@ def task(
                 },
             },
         },
+    ]
+
+    write_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "write_safe_file",
+                "description": "Writes content to a file. Allowed zones: Personal/, Professional/, Studio/.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "filepath": {"type": "string"},
+                        "content": {"type": "string"},
+                    },
+                    "required": ["filepath", "content"],
+                },
+            },
+        },
         {
             "type": "function",
             "function": {
@@ -311,16 +347,21 @@ def task(
         },
     ]
 
-    worker_system: str = "You are a highly structured system engineer. Break this task down into a clear plan. Use your tools to read, explore, or write files as necessary."
+    # --- ROUTE 2 & 3: READ_ONLY and COMPLEX ---
+    if route_type == "READ_ONLY":
+        agent_tools = base_tools
+        worker_system = "You are a read-only system explorer. Use your tools to find information. You CANNOT write files."
+    else:  # COMPLEX
+        agent_tools = base_tools + write_tools
+        worker_system = "You are a highly structured system engineer. Break this task down into a clear plan. Use your tools to read, explore, or write files as necessary."
 
     with console.status(
         "[bold cyan]Worker (Claude) is thinking...[/bold cyan]", spinner="dots"
     ):
-        claude_draft: AgentResponse = run_agent(
+        claude_draft = run_agent(
             "Worker (Claude)", WORKER, worker_system, description, tools=agent_tools
         )
 
-    # Format what is shown in the terminal
     display_draft = claude_draft.text
     if claude_draft.actions:
         display_draft += "\n\n**Actions Taken:**\n" + "\n".join(
@@ -336,21 +377,17 @@ def task(
     )
 
     # --- PAYLOAD EXTRACTION ---
-    # We strictly limit what Gemini sees to save thousands of tokens
-    orchestrator_system: str = "You are the central orchestrator of a Life OS. Review the worker's plan and the metadata of the files it touched. Summarize it into a final, polished executive summary."
-
-    orchestrator_prompt: str = (
-        f"Worker Thoughts:\n{claude_draft.text}\n\nActions Taken (Metadata Only):\n"
-    )
-    orchestrator_prompt += (
-        "\n".join(claude_draft.actions) if claude_draft.actions else "None."
+    orchestrator_system = "You are the central orchestrator of a Life OS. Review the worker's plan and the metadata of the files it touched. Summarize it into a final, polished executive summary."
+    orchestrator_prompt = (
+        f"Worker Thoughts:\n{claude_draft.text}\n\nActions Taken:\n"
+        + ("\n".join(claude_draft.actions) if claude_draft.actions else "None.")
     )
 
     with console.status(
         "[bold magenta]Orchestrator (Gemini) is thinking...[/bold magenta]",
         spinner="dots",
     ):
-        final_output: AgentResponse = run_agent(
+        final_output = run_agent(
             "Orchestrator (Gemini)",
             ORCHESTRATOR,
             orchestrator_system,
