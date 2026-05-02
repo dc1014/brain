@@ -40,11 +40,9 @@ Personal/
 Professional/
 Studio/
 Meta/
+Media/
 
 # 🧠 SYNAPTIC MEMORY WEIGHTS (DO NOT TRACK)
 Meta/Synapses/
 *.safetensors
 *.bin
-
-# 🔌 PRO PLUGINS (DO NOT TRACK)
-Plugins/

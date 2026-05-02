@@ -134,3 +134,37 @@ def test_operate_forge_security(tmp_path, monkeypatch) -> None:
 
     res_denied = operate_forge("Mock-Project", "Build stuff")
     assert "SECURITY BLOCK: User explicitly denied" in res_denied
+
+
+def test_copy_safe_file_security(tmp_path: Path, mocker) -> None:  # type: ignore
+    """Ensure copy_safe_file blocks path traversal and protects ADRs."""
+    from System.tools import copy_safe_file
+
+    mocker.patch("System.tools.ROOT_DIR", tmp_path)
+    mocker.patch(
+        "System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Media", tmp_path / "Studio"}
+    )
+
+    # Setup dummy source file
+    media_dir = tmp_path / "Media"
+    media_dir.mkdir()
+    source_file = media_dir / "logo.png"
+    source_file.write_text("dummy binary data")
+
+    # 1. Test Valid Copy
+    result = copy_safe_file("Media/logo.png", "Studio/logo.png")
+    assert "SUCCESS" in result
+    assert (tmp_path / "Studio/logo.png").exists()
+
+    # 2. Test Path Traversal Security Block
+    block_result = copy_safe_file("Media/logo.png", "../../Windows/System32/hacked.png")
+    assert "SECURITY BLOCK" in block_result
+
+    # 3. Test ADR Protection
+    adr_dir = tmp_path / "Studio" / "adr"
+    adr_dir.mkdir(parents=True)
+    adr_file = adr_dir / "001-architecture.md"
+    adr_file.write_text("secret architecture")
+
+    adr_block = copy_safe_file("Studio/adr/001-architecture.md", "Studio/stolen.md")
+    assert "SECURITY BLOCK: Cannot copy ADRs." in adr_block
