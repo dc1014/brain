@@ -128,6 +128,44 @@ routes:
 ## 🛡️ Security & Sandboxing
 The Worker agent is completely sandboxed. It can only execute explicit Python tools (`write_safe_file`, `read_safe_file`, `list_safe_directory`, `append_safe_file`) scoped strictly to your vault directories. Attempts to traverse directories (`../`), access `.env`, or write to the system kernel are mathematically blocked at the tool layer.
 
+## 🏭 Forge: The Factory Floor
+Brain OS acts as the Project Manager, but it delegates application builds to **Forge**—a deterministic, ATDD-driven React/Python template that lives in your `Studio/` directory.
+
+### 1. Installing Forge
+Brain OS manages the complete scaffolding and dependency hydration (Shift-Left) for new Forge projects. To spin up a new application:
+```bash
+uv run System/router.py task "Use bootstrap_project to create a new project called 'My-App' using the Forge template."
+```
+*Note: `bootstrap_project` automatically clones the repository, renames the remote to `upstream`, and runs `npm install` and `uv sync`.*
+
+### 2. Updating Forge from Remote
+Because Brain OS renames the original Forge repository remote to `upstream` during installation, you can easily pull the latest architectural updates from the master Forge template without overwriting your custom app code:
+```bash
+uv run System/router.py task "Run execute_command to 'git fetch upstream' and 'git merge upstream/main' inside Studio/My-App"
+```
+
+### 3. Prompting Forge (Ticket-Driven Delegation)
+**Never play the "Telephone Game"** by passing dense, multi-step requirements directly into the `operate_forge` command prompt. Instead, use the real-world PM workflow: write a ticket, and tell the engineer to read the ticket.
+
+**The Best-Practice Workflow:**
+1. **Stage Assets:** Use Brain OS to move any images from `Media/` to the Forge `public/` directory.
+2. **Write the Ticket:** Instruct Brain OS to write the requirements into `Studio/My-App/docs/product/current_run.md`.
+3. **Dispatch the Worker:** Run `operate_forge` with a minimal instruction.
+
+**Example CEO Command:**
+> `COMPLEX TASK: Step 1. Overwrite Studio/My-App/docs/product/current_run.md. Write: "Target: src/web/components/Hero.tsx. Requirement: Add an img tag pointing to /logo.png and a GitHub CTA button." Step 2. Run operate_forge with: "[START: Engineering] Read current_run.md. Refactor the target file to perfectly match the requirement. Follow ATDD. Output ROUTING: [Ops]."`
+
+*For overly complex refactors, use the "Payload Drop" method: Have Brain OS write the complete raw code to `docs/product/payload.txt`, and instruct Forge to simply copy-paste it into the target file.*
+
+### 4. Debugging Forge (The Ghost in the Machine)
+If Forge reports `Exit Code 0 (Success)` but your browser does not reflect the changes, **do not assume the system is broken.** You are likely experiencing AI Attention Collapse or a "Ghost File" (where the AI successfully wrote the code, but to a hallucinated/orphaned file path).
+
+**The Debug Protocol:**
+1. **Check Telemetry:** Open `Studio/My-App/docs/ops/telemetry.jsonl`. This file contains the exact, unedited JSON payload the AI executed.
+2. **Verify Paths:** Check if the AI wrote to `src/web/Hero.tsx` instead of `src/web/components/Hero.tsx`.
+3. **Check the Router:** Ensure the AI didn't accidentally update `main.tsx` to point to a dead file.
+4. **Fix via Brain:** Instruct Brain OS to delete the orphaned files and fix the imports in your router.
+
 ## 🤝 Contributing
 Contributions to the core routing engine and API layers are welcome. 
 Please ensure all tests pass before submitting a PR:
