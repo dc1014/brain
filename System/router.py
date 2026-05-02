@@ -8,8 +8,14 @@ from litellm import completion  # type: ignore
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
+from typing import Any
 
-from System.tools import write_safe_file, read_safe_file, list_safe_directory
+from System.tools import (
+    write_safe_file,
+    read_safe_file,
+    list_safe_directory,
+    rename_safe_file,
+)
 
 load_dotenv()
 app = typer.Typer(help="Brain OS: The Multi-Agent Life Operating System")
@@ -58,69 +64,117 @@ def run_agent(
     model_string: str,
     system_prompt: str,
     user_prompt: str,
-    tools: list | None = None,
+    tools: list[Any] | None = None,
 ) -> AgentResponse:
     try:
-        kwargs = {
-            "model": model_string,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-        }
-        if tools:
-            kwargs["tools"] = tools
+        # MyPy fix: explicitly declare the types inside this list of dictionaries
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
 
-        response = completion(**kwargs)
-        message = response.choices[0].message
-        content: str = str(message.content or "")
         action_manifest: list[str] = []
+        final_text: str = ""
 
-        # --- ISOLATED TOOL EXECUTION ---
-        if hasattr(message, "tool_calls") and message.tool_calls:
-            console.print(f"\n[dim]⚡ {role_name} is using tools...[/dim]")
-            for tool_call in message.tool_calls:
-                args = json.loads(tool_call.function.arguments)
-                func_name = tool_call.function.name
+        # MyPy fix: explicitly type these as integers
+        total_prompt: int = 0
+        total_comp: int = 0
 
-                if func_name == "write_safe_file":
-                    result = write_safe_file(
-                        args.get("filepath", ""), args.get("content", "")
-                    )
-                    # Only record the metadata, not the file contents
-                    action_manifest.append(
-                        f"[WRITE] {args.get('filepath')} - {result[:30]}..."
-                    )
-                elif func_name == "read_safe_file":
-                    result = read_safe_file(args.get("filepath", ""))
-                    action_manifest.append(
-                        f"[READ] {args.get('filepath')} - Extracted {len(result)} chars."
-                    )
-                elif func_name == "list_safe_directory":
-                    result = list_safe_directory(args.get("directory_path", ""))
-                    action_manifest.append(
-                        f"[LIST] {args.get('directory_path')} - Found {len(result.splitlines())} items."
-                    )
-                else:
-                    action_manifest.append(f"[ERROR] Unknown tool {func_name}")
-
-                console.print(f"[dim]🔍 Tool Executed: {func_name}[/dim]")
-
-        usage_data: dict = {}
-        if hasattr(response, "usage") and response.usage:
-            usage_data = {
-                "prompt_tokens": getattr(response.usage, "prompt_tokens", 0),
-                "completion_tokens": getattr(response.usage, "completion_tokens", 0),
-                "total_tokens": getattr(response.usage, "total_tokens", 0),
+        for step in range(5):
+            # MyPy fix: explicitly type kwargs
+            kwargs: dict[str, Any] = {
+                "model": model_string,
+                "messages": messages,
             }
+            if tools:
+                kwargs["tools"] = tools
 
-        # Log the full audit trail for the JSONL file, but return the extracted payload
-        audit_trail = content + "\n\nACTIONS:\n" + "\n".join(action_manifest)
+            response = completion(**kwargs)
+            message = response.choices[0].message
+
+            if hasattr(response, "usage") and response.usage:
+                total_prompt += int(getattr(response.usage, "prompt_tokens", 0))
+                total_comp += int(getattr(response.usage, "completion_tokens", 0))
+
+            # MyPy fix: explicitly type message_dict
+            message_dict: dict[str, Any] = {"role": "assistant"}
+
+            if message.content:
+                message_dict["content"] = message.content
+                final_text += str(message.content) + "\n"
+
+            if hasattr(message, "tool_calls") and message.tool_calls:
+                # Ruff fix: Break up the long line so it doesn't violate length rules
+                processed_tools = []
+                for t in message.tool_calls:
+                    if hasattr(t, "model_dump"):
+                        processed_tools.append(t.model_dump())
+                    else:
+                        processed_tools.append(t)
+                message_dict["tool_calls"] = processed_tools
+
+            messages.append(message_dict)
+
+            if hasattr(message, "tool_calls") and message.tool_calls:
+                if step == 0:
+                    console.print(
+                        f"\n[dim]⚡ {role_name} is thinking and acting...[/dim]"
+                    )
+
+                for tool_call in message.tool_calls:
+                    args = json.loads(tool_call.function.arguments)
+                    # MyPy fix: cast these to strings explicitly
+                    func_name = str(tool_call.function.name)
+                    tool_id = str(tool_call.id)
+
+                    if func_name == "write_safe_file":
+                        result = write_safe_file(
+                            args.get("filepath", ""), args.get("content", "")
+                        )
+                        action_manifest.append(f"[WRITE] {args.get('filepath')}")
+                    elif func_name == "read_safe_file":
+                        result = read_safe_file(args.get("filepath", ""))
+                        action_manifest.append(f"[READ] {args.get('filepath')}")
+                    elif func_name == "list_safe_directory":
+                        result = list_safe_directory(args.get("directory_path", ""))
+                        action_manifest.append(f"[LIST] {args.get('directory_path')}")
+                    elif func_name == "rename_safe_file":
+                        result = rename_safe_file(
+                            args.get("old_filepath", ""), args.get("new_filepath", "")
+                        )
+                        action_manifest.append(
+                            f"[RENAME] {args.get('old_filepath')} -> {args.get('new_filepath')}"
+                        )
+                    else:
+                        result = f"ERROR: Unknown tool {func_name}"
+
+                    console.print(f"[dim]🔍 Tool Executed: {func_name}[/dim]")
+
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "name": func_name,
+                            "tool_call_id": tool_id,
+                            "content": str(result),
+                        }
+                    )
+
+                continue
+            else:
+                break
+
+        usage_data = {
+            "prompt_tokens": total_prompt,
+            "completion_tokens": total_comp,
+            "total_tokens": total_prompt + total_comp,
+        }
+
+        audit_trail = final_text + "\n\nACTIONS:\n" + "\n".join(action_manifest)
         log_interaction(
             role_name, model_string, system_prompt, user_prompt, audit_trail, usage_data
         )
 
-        return AgentResponse(text=content, actions=action_manifest)
+        return AgentResponse(text=final_text.strip(), actions=action_manifest)
     except Exception as e:
         return AgentResponse(text=f"Error: {str(e)}", actions=[])
 
@@ -170,6 +224,21 @@ def task(
                     "type": "object",
                     "properties": {"directory_path": {"type": "string"}},
                     "required": ["directory_path"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "rename_safe_file",
+                "description": "Renames a file.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "old_filepath": {"type": "string"},
+                        "new_filepath": {"type": "string"},
+                    },
+                    "required": ["old_filepath", "new_filepath"],
                 },
             },
         },
