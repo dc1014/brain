@@ -73,3 +73,29 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
     approve_result = execute_command("ls", "Studio/TestProject")
     assert "SUCCESS" in approve_result
     mock_subprocess.assert_called_once()
+
+
+def test_adr_safety_blocks() -> None:
+    """Ensure the AI cannot autonomously write, append, or rename ADR files."""
+    from System.tools import append_safe_file, rename_safe_file, write_safe_file
+
+    # Test Write Block
+    write_res = write_safe_file("Studio/Project/docs/adr/001-test.md", "data")
+    assert "SECURITY BLOCK" in write_res
+
+    # Test Append Block
+    append_res = append_safe_file("Studio/Project/docs/adr/001-test.md", "data")
+    assert "SECURITY BLOCK" in append_res
+
+    # Test Rename (Move existing ADR out) Block
+    rename_res_1 = rename_safe_file(
+        "Studio/Project/docs/adr/001-test.md", "Studio/Project/new.md"
+    )
+    assert "SECURITY BLOCK" in rename_res_1
+    assert "Cannot modify, move, or create ADRs" in rename_res_1
+
+    # Test Rename (Move random file into ADR folder) Block
+    rename_res_2 = rename_safe_file(
+        "Studio/Project/old.md", "Studio/Project/docs/adr/002-test.md"
+    )
+    assert "SECURITY BLOCK" in rename_res_2

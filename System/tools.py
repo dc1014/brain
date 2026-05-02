@@ -87,14 +87,15 @@ def rename_safe_file(old_filepath: str, new_filepath: str) -> str:
 
         if not is_safe_path(old_path) or not is_safe_path(new_path):
             return "SECURITY BLOCK: Access denied. Source and dest must be safe."
-        if not old_path.exists():
-            return f"ERROR: File not found at {old_path.relative_to(ROOT_DIR)}"
 
-        # SHIFT-LEFT SAFETY: Check both the source and destination for the 'adr' folder
+        # SHIFT-LEFT SAFETY: Check both source and destination to prevent ADR tampering/creation.
+        # This MUST happen before checking file existence to ensure absolute blocking.
         if "adr" in old_path.parts or "adr" in new_path.parts:
             return "SECURITY BLOCK: Cannot modify, move, or create ADRs. Human approval required."
 
-        # Proceed with safe rename
+        if not old_path.exists():
+            return f"ERROR: File not found at {old_path.relative_to(ROOT_DIR)}"
+
         new_path.parent.mkdir(parents=True, exist_ok=True)
         old_path.rename(new_path)
         return f"SUCCESS: Renamed to {new_path.relative_to(ROOT_DIR)}"
@@ -103,31 +104,28 @@ def rename_safe_file(old_filepath: str, new_filepath: str) -> str:
 
 
 def append_safe_file(filepath: str, content: str) -> str:
-    """Appends content safely, injecting before </working_memory> if present."""
+    """Appends content to a file safely, blocking writes outside the sandbox."""
     try:
         target_path: Path = (ROOT_DIR / filepath).resolve()
         if not is_safe_path(target_path):
             return f"SECURITY BLOCK: Access denied to append at {target_path}."
 
+        # SHIFT-LEFT SAFETY: Block any modification to Architectural Decision Records
         if "adr" in target_path.parts:
             return f"SECURITY BLOCK: Cannot modify ADRs. Human approval required for {filepath}."
 
-        if not target_path.exists():
-            target_path.parent.mkdir(parents=True, exist_ok=True)
-            target_path.write_text(content + "\n", encoding="utf-8")
-            return f"SUCCESS: File appended at {target_path.relative_to(ROOT_DIR)}"
-
-        current_text = target_path.read_text(encoding="utf-8")
-        if "</working_memory>" in current_text:
-            new_text = current_text.replace(
-                "</working_memory>", f"{content}\n</working_memory>"
-            )
-            target_path.write_text(new_text, encoding="utf-8")
-            return f"SUCCESS: Content injected into {target_path.relative_to(ROOT_DIR)}"
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        # Check if the file currently exists and ensure it ends with a newline
+        prefix = ""
+        if target_path.exists():
+            with open(target_path, encoding="utf-8") as f:
+                current_content = f.read()
+                if current_content and not current_content.endswith("\n"):
+                    prefix = "\n"
 
         with open(target_path, "a", encoding="utf-8") as f:
-            f.write("\n" + content + "\n")
-        return f"SUCCESS: Content appended to {target_path.relative_to(ROOT_DIR)}"
+            f.write(prefix + content + "\n")
+        return f"SUCCESS: Appended to {target_path.relative_to(ROOT_DIR)}"
     except Exception as e:
         return f"ERROR: Failed to append to file - {str(e)}"
 
@@ -149,7 +147,14 @@ def bootstrap_project(
             text=True,
         )
         if result.returncode == 0:
-            # Shift-Left: Automatically initialize the .env file so the AI doesn't have to
+            # SHIFT-LEFT: Rename 'origin' to 'upstream' to enable seamless Forge engine updates
+            subprocess.run(
+                ["git", "remote", "rename", "origin", "upstream"],
+                cwd=str(target_path),
+                capture_output=True,
+            )
+
+            # Automatically initialize the .env file so the AI doesn't have to
             env_example = target_path / ".env.example"
             env_target = target_path / ".env"
             if env_example.exists() and not env_target.exists():
