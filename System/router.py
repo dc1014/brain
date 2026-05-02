@@ -179,6 +179,59 @@ def run_agent(
         return AgentResponse(text=f"Error: {str(e)}", actions=[])
 
 
+def pre_flight_check(prompt: str) -> tuple[bool, str]:
+    """
+    Shift-Left validation to prevent impossible or dangerous tasks
+    from burning expensive agent tokens.
+    """
+    prompt_lower = prompt.lower()
+
+    # 1. Deterministic Layer (Zero-Cost Hard Rules)
+    forbidden_actions = ["delete", "remove", "erase", "rm "]
+    for action in forbidden_actions:
+        if action in prompt_lower:
+            return (
+                False,
+                f"Hard Rule: Brain OS does not have a delete tool. You asked to '{action.strip()}'.",
+            )
+
+    forbidden_targets = ["system/", ".env", "tools.py", "router.py"]
+    for target in forbidden_targets:
+        if target in prompt_lower:
+            return (
+                False,
+                f"Hard Rule: Brain OS is sandboxed. You cannot target '{target}'.",
+            )
+
+    # 2. Indeterministic Layer (LLM Auditor)
+    system_prompt = (
+        "You are the Pre-Flight Auditor for a sandboxed AI Life OS. "
+        "The OS ONLY has tools to list, read, write, and rename files inside the "
+        "'Personal', 'Professional', and 'Studio' directories. "
+        "Evaluate the user's prompt. Can this task be physically completed with the current tools and boundaries?\n"
+        "If YES, reply exactly and ONLY with the word 'APPROVED'.\n"
+        "If NO, reply with a 1-sentence explanation of why it is impossible."
+    )
+
+    try:
+        response = completion(
+            model=AUDITOR,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ],
+        )
+        result = str(response.choices[0].message.content).strip()
+
+        if result.upper().startswith("APPROVED"):
+            return True, "Approved."
+        else:
+            return False, f"Auditor Block: {result}"
+
+    except Exception as e:
+        return False, f"Auditor API Error: {str(e)}"
+
+
 @app.command()
 def task(
     description: str = typer.Argument(..., help="The task you want the AI to perform."),
@@ -186,6 +239,20 @@ def task(
     console.print(
         f"\n[bold green]🚀 Initializing Life OS task:[/bold green] '{description}'\n"
     )
+
+    with console.status(
+        "[bold yellow]🛡️ Running Pre-Flight Security Check...[/bold yellow]",
+        spinner="dots",
+    ):
+        is_valid, reason = pre_flight_check(description)
+
+    if not is_valid:
+        console.print(
+            Panel(f"[bold red]Task Rejected:[/bold red] {reason}", border_style="red")
+        )
+        return
+
+    console.print("[dim]✅ Pre-Flight Passed.[/dim]\n")
 
     agent_tools = [
         {
