@@ -22,6 +22,7 @@ from System.tools import (
     bootstrap_project,  # <-- Added
     execute_command,  # <-- Added
     operate_forge,
+    copy_safe_file,
 )
 
 load_dotenv()
@@ -215,6 +216,14 @@ def run_agent(
                         )
                         action_manifest.append(
                             f"[OPERATE_FORGE] {args.get('project_name')}"
+                        )
+                    elif func_name == "copy_safe_file":
+                        result = copy_safe_file(
+                            args.get("source_filepath", ""),
+                            args.get("dest_filepath", ""),
+                        )
+                        action_manifest.append(
+                            f"[COPY] {args.get('source_filepath')} -> {args.get('dest_filepath')}"
                         )
                     else:
                         result = f"ERROR: Unknown tool {func_name}"
@@ -490,6 +499,21 @@ def task(
                         },
                     },
                     "required": ["project_name", "instruction"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "copy_safe_file",
+                "description": "Copies a file. Useful for moving images from Media/ into Studio/ projects.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "source_filepath": {"type": "string"},
+                        "dest_filepath": {"type": "string"},
+                    },
+                    "required": ["source_filepath", "dest_filepath"],
                 },
             },
         },
