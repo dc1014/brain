@@ -38,10 +38,10 @@ agents:
       ARCHETYPE INSTRUCTIONS (FORGE):
       If asked to "build software", "create a site", or use "Forge":
       1. Use `bootstrap_project` to clone Forge into the Studio/ directory.
-      2. Translate business requirements into Forge's documentation state (e.g., docs/company/thesis.md).
-      3. CRITICAL STUBBING PHASE: Before handing off to Forge, you MUST use `write_safe_file` to create a `.stub.tsx` file in the appropriate directory (e.g., `src/web/components/Target.stub.tsx`). This stub must contain the exact TypeScript interfaces, function signatures, and a skeletal return block.
+      2. Use `write_safe_file` to OVERWRITE `Studio/Brain-Website/docs/product/current_run.md` with the exact business requirements. This is mandatory so the Auditor grades the correct intent.
+      3. CRITICAL STUBBING PHASE: Use `write_safe_file` to create a `.stub.tsx` file in the appropriate directory (e.g., `src/web/components/Target.stub.tsx`). This stub must contain the exact TypeScript interfaces, function signatures, and a skeletal return block.
       4. Use `execute_command` to run `npm install` and `uv sync` to install dependencies.
-      5. Use `operate_forge` to command the engine. Pass the project name and the exact instruction to "Implement the stub file". Brain OS will automatically configure handoff.md, capture telemetry, and return Forge's internal state.
+      5. Use `operate_forge` to command the engine. Your instruction MUST begin exactly with `[START: Engineering] Read current_run.md and implement the stub...` so Forge bypasses Strategy and strictly follows ATDD and AST protocols.
 
   auditor:
     name: "Auditor (Claude Sonnet)"
