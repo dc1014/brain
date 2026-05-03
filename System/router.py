@@ -63,18 +63,38 @@ def log_interaction(
         f.write(json.dumps(log_entry, default=str) + "\n")
 
 
+def get_global_context() -> str:
+    """Reads the global memory to inject into system prompts."""
+    global_memory_path = Path(__file__).parent.parent / "Meta" / "global-memory.md"
+    if global_memory_path.exists():
+        memory_content = global_memory_path.read_text(encoding="utf-8")
+        return f"\n\n--- GLOBAL SYSTEM MEMORY ---\n{memory_content}\n----------------------------\n"
+    return ""
+
+
 def run_agent(
     role_name: str,
     model_string: str,
     system_prompt: str,
     user_prompt: str,
     tools: list[Any] | None = None,
-    route: str = "UNKNOWN",  # <-- Added route parameter
+    route: str = "UNKNOWN",
 ) -> AgentResponse:
     try:
-        # MyPy fix: explicitly declare the types inside this list of dictionaries
+        # --- AUTO-INJECTOR: GLOBAL MEMORY ---
+        global_context = get_global_context()
+        global_memory_path = Path(__file__).parent.parent / "Meta" / "global-memory.md"
+
+        if global_memory_path.exists():
+            # We silently read the memory and format it securely
+            memory_content = global_memory_path.read_text(encoding="utf-8")
+            global_context = f"\n\n--- GLOBAL SYSTEM MEMORY ---\n{memory_content}\n----------------------------\n"
+
+        # We append the memory to the hardcoded system instructions
+        full_system_prompt = system_prompt + global_context
+
         messages: list[dict[str, Any]] = [
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": full_system_prompt},
             {"role": "user", "content": user_prompt},
         ]
 
@@ -195,12 +215,13 @@ def run_agent(
         return AgentResponse(text=f"Error: {str(e)}", actions=[])
 
 
-def analyze_task(prompt: str) -> tuple[bool, str, str]:
+def analyze_task(prompt: str) -> tuple[bool, str, str, dict[str, int]]:
     """
-    Combines Pre-Flight Security (The Bouncer) and Dynamic Routing (The Switchboard).
-    Returns: (is_valid, message, route_type)
+    Combines Pre-Flight Security and Dynamic Routing.
+    Returns: (is_valid, message, route_type, usage_data)
     """
     prompt_lower = prompt.lower()
+    zero_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
     # --- STAGE 1: PRE-FLIGHT (Deterministic Bouncer) ---
     forbidden_actions = ["delete", "remove", "erase", "rm "]
@@ -210,6 +231,7 @@ def analyze_task(prompt: str) -> tuple[bool, str, str]:
                 False,
                 f"Hard Rule: Brain OS does not have a delete tool. You asked to '{action.strip()}'.",
                 "NONE",
+                zero_usage,
             )
 
     forbidden_targets = ["system/", ".env", "tools.py", "router.py"]
@@ -219,19 +241,23 @@ def analyze_task(prompt: str) -> tuple[bool, str, str]:
                 False,
                 f"Hard Rule: Brain OS is sandboxed. You cannot target '{target}'.",
                 "NONE",
+                zero_usage,
             )
 
     # --- STAGE 2: THE ROUTER (LLM Switchboard) ---
+    global_context = get_global_context()
+
     system_prompt = (
         "You are the Brain OS Dispatcher. Your job is to validate and route user tasks.\n"
-        "The OS ONLY has tools to list, read, write, and rename files inside Personal/, Professional/, and Studio/.\n\n"
-        "STEP 1 (Pre-Flight): If the task is impossible given these tools, reply EXACTLY with: 'REJECTED: <1-sentence reason>'\n"
+        "The OS ONLY has tools to list, read, write, and rename files inside Personal/, Professional/, and Studio/.\n"
+        "You also have access to the user's Global System Memory.\n\n"
+        "STEP 1 (Pre-Flight): If the task is impossible given these tools AND the memory, reply EXACTLY with: 'REJECTED: <1-sentence reason>'\n"
         "STEP 2 (Routing): If the task is possible, assign it to ONE of these routes:\n"
-        "- ROUTE: FAST (Task requires no file system tools. e.g., 'Summarize this pasted text' or 'What is 2+2?')\n"
+        "- ROUTE: FAST (Task requires no file system tools. e.g., 'What is my name?', 'Summarize this pasted text')\n"
         "- ROUTE: READ_ONLY (Task only requires listing or reading files, no writing/renaming.)\n"
         "- ROUTE: COMPLEX (Task requires writing, creating, or renaming files.)\n\n"
         "OUTPUT FORMAT: You must reply ONLY with the REJECTED or ROUTE string. No other text."
-    )
+    ) + global_context
 
     try:
         response = completion(
@@ -243,16 +269,25 @@ def analyze_task(prompt: str) -> tuple[bool, str, str]:
         )
         result = str(response.choices[0].message.content).strip().upper()
 
+        usage_data = zero_usage.copy()
+        if hasattr(response, "usage") and response.usage:
+            usage_data["prompt_tokens"] = int(
+                getattr(response.usage, "prompt_tokens", 0)
+            )
+            usage_data["completion_tokens"] = int(
+                getattr(response.usage, "completion_tokens", 0)
+            )
+            usage_data["total_tokens"] = int(getattr(response.usage, "total_tokens", 0))
+
         if result.startswith("REJECTED:"):
-            return False, result.replace("REJECTED:", "").strip(), "NONE"
+            return False, result.replace("REJECTED:", "").strip(), "NONE", usage_data
         elif result in ["ROUTE: FAST", "ROUTE: READ_ONLY", "ROUTE: COMPLEX"]:
-            return True, "Approved.", result.split(": ")[1]
+            return True, "Approved.", result.split(": ")[1], usage_data
         else:
-            # Fallback if the LLM hallucinates the format
-            return True, "Approved (Defaulted to COMPLEX).", "COMPLEX"
+            return True, "Approved (Defaulted to COMPLEX).", "COMPLEX", usage_data
 
     except Exception as e:
-        return False, f"Dispatcher API Error: {str(e)}", "NONE"
+        return False, f"Dispatcher API Error: {str(e)}", "NONE", zero_usage
 
 
 @app.command()
@@ -268,11 +303,21 @@ def task(
         "[bold yellow]🛡️ Dispatcher is analyzing the task...[/bold yellow]",
         spinner="dots",
     ):
-        is_valid, reason, route_type = analyze_task(description)
+        is_valid, reason, route_type, dispatch_usage = analyze_task(description)
 
     if not is_valid:
         console.print(
             Panel(f"[bold red]Task Rejected:[/bold red] {reason}", border_style="red")
+        )
+        # FIX: Ensure rejections are logged into our telemetry
+        log_interaction(
+            role_name="Dispatcher (Bouncer)",
+            model_string=AUDITOR,
+            system_prompt="Dispatcher Routing Logic + Global Memory",
+            user_prompt=description,
+            response_content=f"REJECTED: {reason}",
+            usage=dispatch_usage,
+            route="REJECTED",
         )
         return
 
