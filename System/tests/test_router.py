@@ -27,6 +27,7 @@ def test_run_agent_success(mocker) -> None:  # type: ignore
 
 def test_run_agent_error_handling(mocker) -> None:  # type: ignore
     """Test that the agent gracefully catches and returns API errors."""
+    mocker.patch("System.router.log_interaction")
     mock_completion = mocker.patch("System.router.completion")
 
     # Force the API to throw a simulated timeout or quota error

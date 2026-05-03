@@ -45,9 +45,11 @@ def log_interaction(
     user_prompt: str,
     response_content: str,
     usage: dict,
+    route: str = "UNKNOWN",  # <-- Added route parameter
 ) -> None:
     log_entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "route": route,  # <-- Added route to dictionary
         "agent": role_name,
         "model": model_string,
         "system_prompt": system_prompt,
@@ -65,6 +67,7 @@ def run_agent(
     system_prompt: str,
     user_prompt: str,
     tools: list[Any] | None = None,
+    route: str = "UNKNOWN",  # <-- Added route parameter
 ) -> AgentResponse:
     try:
         # MyPy fix: explicitly declare the types inside this list of dictionaries
@@ -171,8 +174,14 @@ def run_agent(
 
         audit_trail = final_text + "\n\nACTIONS:\n" + "\n".join(action_manifest)
         log_interaction(
-            role_name, model_string, system_prompt, user_prompt, audit_trail, usage_data
-        )
+            role_name,
+            model_string,
+            system_prompt,
+            user_prompt,
+            audit_trail,
+            usage_data,
+            route,
+        )  # <-- Passed the route
 
         return AgentResponse(text=final_text.strip(), actions=action_manifest)
     except Exception as e:
@@ -275,6 +284,7 @@ def task(
                 ORCHESTRATOR,
                 "You are a fast, helpful Life OS assistant. Answer the user directly.",
                 description,
+                route=route_type,  # <-- Add this
             )
         console.print(
             Panel(
@@ -359,8 +369,13 @@ def task(
         "[bold cyan]Worker (Claude) is thinking...[/bold cyan]", spinner="dots"
     ):
         claude_draft = run_agent(
-            "Worker (Claude)", WORKER, worker_system, description, tools=agent_tools
-        )
+            "Worker (Claude)",
+            WORKER,
+            worker_system,
+            description,
+            tools=agent_tools,
+            route=route_type,
+        )  # <-- Add this
 
     display_draft = claude_draft.text
     if claude_draft.actions:
@@ -392,7 +407,8 @@ def task(
             ORCHESTRATOR,
             orchestrator_system,
             orchestrator_prompt,
-        )
+            route=route_type,
+        )  # <-- Add this
 
     console.print(
         Panel(
