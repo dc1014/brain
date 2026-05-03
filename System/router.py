@@ -44,12 +44,13 @@ def log_interaction(
     system_prompt: str,
     user_prompt: str,
     response_content: str,
-    usage: dict,
-    route: str = "UNKNOWN",  # <-- Added route parameter
+    usage: dict[str, int],
+    route: str = "UNKNOWN",
 ) -> None:
+    """Logs full interactions for local observability and debugging."""
     log_entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "route": route,  # <-- Added route to dictionary
+        "route": route,
         "agent": role_name,
         "model": model_string,
         "system_prompt": system_prompt,
