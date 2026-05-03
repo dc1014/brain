@@ -103,3 +103,39 @@ def rename_safe_file(old_filepath: str, new_filepath: str) -> str:
 
     except Exception as e:
         return f"ERROR: Failed to rename file - {str(e)}"
+
+
+def append_safe_file(filepath: str, content: str) -> str:
+    """
+    Appends content to a file safely.
+    If it detects a </working_memory> tag, it smartly injects the content right before it.
+    """
+    try:
+        target_path: Path = (ROOT_DIR / filepath).resolve()
+
+        if not is_safe_path(target_path):
+            return f"SECURITY BLOCK: Access denied to append at {target_path}."
+
+        if not target_path.exists():
+            # If the file doesn't exist yet, just write it normally
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(content + "\n", encoding="utf-8")
+            return f"SUCCESS: File created and appended at {target_path.relative_to(ROOT_DIR)}"
+
+        # The Shift-Left "Smart Inject" Logic
+        current_text = target_path.read_text(encoding="utf-8")
+
+        if "</working_memory>" in current_text:
+            new_text = current_text.replace(
+                "</working_memory>", f"{content}\n</working_memory>"
+            )
+            target_path.write_text(new_text, encoding="utf-8")
+            return f"SUCCESS: Content smartly injected into <working_memory> at {target_path.relative_to(ROOT_DIR)}"
+        else:
+            # Fallback standard append
+            with open(target_path, "a", encoding="utf-8") as f:
+                f.write("\n" + content + "\n")
+            return f"SUCCESS: Content appended to the end of {target_path.relative_to(ROOT_DIR)}"
+
+    except Exception as e:
+        return f"ERROR: Failed to append to file - {str(e)}"
