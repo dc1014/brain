@@ -20,3 +20,18 @@ repos:
     hooks:
       - id: mypy
         args: ["--ignore-missing-imports"]
+
+# --- MONOREPO HOOKS: FORGE SUB-PROJECTS ---
+  - repo: local
+    hooks:
+      - id: forge-biome
+        name: Forge Biome Linter (Studio/*)
+        entry: bash -c 'for d in Studio/*; do if [ -d "$d" ] && [ -f "$d/biome.json" ]; then echo "Linting $d..." && (cd "$d" && npx @biomejs/biome check --write .); fi; done'
+        language: system
+        pass_filenames: false
+
+      - id: forge-vitest
+        name: Forge Vitest Evals (Studio/*)
+        entry: bash -c 'for d in Studio/*; do if [ -d "$d" ] && [ -f "$d/package.json" ]; then echo "Testing $d..." && (cd "$d" && npm run test); fi; done'
+        language: system
+        pass_filenames: false
