@@ -531,120 +531,117 @@ def task(
     pipeline = AGENT_CONFIG["routes"].get(route_type, [])
     current_payload = description
 
-    for step in pipeline:
-        # --- EXECUTE DECLARATIVE PIPELINE ---
-        pipeline = list(AGENT_CONFIG["routes"].get(route_type, []))
-        current_payload = description
-        eval_retries = 0
-        MAX_RETRIES = 2
+    # --- EXECUTE DECLARATIVE PIPELINE ---
+    pipeline = list(AGENT_CONFIG["routes"].get(route_type, []))
+    current_payload = description
+    eval_retries = 0
+    MAX_RETRIES = 2
 
-        # SHIFT-LEFT: Initialize Pipeline Metrics
-        total_pipeline_tokens = 0
-        agents_invoked = []
+    # SHIFT-LEFT: Initialize Pipeline Metrics
+    total_pipeline_tokens = 0
+    agents_invoked = []
 
-        while len(pipeline) > 0:
-            step = pipeline.pop(0)
-            agent_cfg = AGENT_CONFIG["agents"][step["agent"]]
+    while len(pipeline) > 0:
+        step = pipeline.pop(0)
+        agent_cfg = AGENT_CONFIG["agents"][step["agent"]]
 
-            # --- ZERO-CONFIG MODEL FALLBACK ---
-            desired_model_key = agent_cfg["model"]
-            env_key_map = {
-                "gpt_mini": "OPENAI_API_KEY",
-                "claude_haiku": "ANTHROPIC_API_KEY",
-                "gemini_flash": "GEMINI_API_KEY",
-                "claude_sonnet": "ANTHROPIC_API_KEY",
-            }
+        # --- ZERO-CONFIG MODEL FALLBACK ---
+        desired_model_key = agent_cfg["model"]
+        env_key_map = {
+            "gpt_mini": "OPENAI_API_KEY",
+            "claude_haiku": "ANTHROPIC_API_KEY",
+            "gemini_flash": "GEMINI_API_KEY",
+            "claude_sonnet": "ANTHROPIC_API_KEY",
+        }
 
-            if os.getenv(env_key_map.get(desired_model_key, "")):
-                model_str = AGENT_CONFIG["models"][desired_model_key]
+        if os.getenv(env_key_map.get(desired_model_key, "")):
+            model_str = AGENT_CONFIG["models"][desired_model_key]
+        else:
+            if os.getenv("OPENAI_API_KEY"):
+                model_str = AGENT_CONFIG["models"]["gpt_mini"]
+            elif os.getenv("ANTHROPIC_API_KEY"):
+                model_str = AGENT_CONFIG["models"]["claude_haiku"]
+            elif os.getenv("GEMINI_API_KEY"):
+                model_str = AGENT_CONFIG["models"]["gemini_flash"]
             else:
-                if os.getenv("OPENAI_API_KEY"):
-                    model_str = AGENT_CONFIG["models"]["gpt_mini"]
-                elif os.getenv("ANTHROPIC_API_KEY"):
-                    model_str = AGENT_CONFIG["models"]["claude_haiku"]
-                elif os.getenv("GEMINI_API_KEY"):
-                    model_str = AGENT_CONFIG["models"]["gemini_flash"]
-                else:
-                    model_str = AGENT_CONFIG["models"][desired_model_key]
+                model_str = AGENT_CONFIG["models"][desired_model_key]
 
-            # Build Tools and Context dynamically
-            active_tools = []
-            for t_group in step.get("tools", []):
-                active_tools.extend(available_tools.get(t_group, []))
+        # Build Tools and Context dynamically
+        active_tools = []
+        for t_group in step.get("tools", []):
+            active_tools.extend(available_tools.get(t_group, []))
 
-            full_system_prompt = agent_cfg["system_prompt"] + get_system_context(
-                step.get("context", []), domain
+        full_system_prompt = agent_cfg["system_prompt"] + get_system_context(
+            step.get("context", []), domain
+        )
+
+        console.print(f"\n[bold cyan]⏳ {agent_cfg['name']} is working...[/bold cyan]")
+
+        step_result = run_agent(
+            role_name=agent_cfg["name"],
+            model_string=model_str,
+            system_prompt=full_system_prompt,
+            user_prompt=current_payload,
+            tools=active_tools if active_tools else None,
+            route=route_type,
+            domain=domain,
+        )
+
+        # Update Metrics
+        total_pipeline_tokens += step_result.usage.get("total_tokens", 0)
+        agents_invoked.append(agent_cfg["name"])
+
+        # Print Output
+        display_text = step_result.text
+        if step_result.actions:
+            display_text += "\n\n**Actions Taken:**\n" + "\n".join(
+                [f"- {a}" for a in step_result.actions]
             )
 
-            console.print(
-                f"\n[bold cyan]⏳ {agent_cfg['name']} is working...[/bold cyan]"
+        console.print(
+            Panel(
+                Markdown(display_text),
+                title=f"[bold cyan]{agent_cfg['name']}[/bold cyan]",
+                border_style="cyan",
             )
+        )
 
-            step_result = run_agent(
-                role_name=agent_cfg["name"],
-                model_string=model_str,
-                system_prompt=full_system_prompt,
-                user_prompt=current_payload,
-                tools=active_tools if active_tools else None,
-                route=route_type,
-                domain=domain,
-            )
-
-            # Update Metrics
-            total_pipeline_tokens += step_result.usage.get("total_tokens", 0)
-            agents_invoked.append(agent_cfg["name"])
-
-            # Print Output
-            display_text = step_result.text
-            if step_result.actions:
-                display_text += "\n\n**Actions Taken:**\n" + "\n".join(
-                    [f"- {a}" for a in step_result.actions]
+        # --- LAYER 2 EVALUATION LOOP ---
+        if step["agent"] == "auditor" and "[GRADE: FAIL]" in step_result.text:
+            if eval_retries < MAX_RETRIES:
+                console.print(
+                    "\n[bold red]❌ Audit Failed! Routing back to Engineer for autonomous fix...[/bold red]\n"
                 )
 
-            console.print(
-                Panel(
-                    Markdown(display_text),
-                    title=f"[bold cyan]{agent_cfg['name']}[/bold cyan]",
-                    border_style="cyan",
+                pipeline.insert(
+                    0,
+                    {
+                        "agent": "auditor",
+                        "tools": ["base", "write"],
+                        "context": ["Meta", "Domain", "Studio"],
+                    },
                 )
-            )
+                pipeline.insert(
+                    0,
+                    {
+                        "agent": "engineer",
+                        "tools": ["base", "write", "execute"],
+                        "context": ["Meta", "Domain", "Studio"],
+                    },
+                )
 
-            # --- LAYER 2 EVALUATION LOOP ---
-            if step["agent"] == "auditor" and "[GRADE: FAIL]" in step_result.text:
-                if eval_retries < MAX_RETRIES:
-                    console.print(
-                        "\n[bold red]❌ Audit Failed! Routing back to Engineer for autonomous fix...[/bold red]\n"
-                    )
+                # Preserve the original task context so the Engineer doesn't get lost
+                current_payload = f"Original Task: {description}\n\nCRITICAL - AUDIT FAILED. Read the critique, fix the code, and redeploy:\n\n{step_result.text}"
+                eval_retries += 1
+                continue
+            else:
+                console.print(
+                    "\n[bold red]🛑 CIRCUIT BREAKER: Max eval retries reached. Halting pipeline.[/bold red]\n"
+                )
+                break
 
-                    pipeline.insert(
-                        0,
-                        {
-                            "agent": "auditor",
-                            "tools": ["base", "write"],
-                            "context": ["Meta", "Domain", "Studio"],
-                        },
-                    )
-                    pipeline.insert(
-                        0,
-                        {
-                            "agent": "engineer",
-                            "tools": ["base", "write", "execute"],
-                            "context": ["Meta", "Domain", "Studio"],
-                        },
-                    )
-
-                    # Preserve the original task context so the Engineer doesn't get lost
-                    current_payload = f"Original Task: {description}\n\nCRITICAL - AUDIT FAILED. Read the critique, fix the code, and redeploy:\n\n{step_result.text}"
-                    eval_retries += 1
-                    continue
-                else:
-                    console.print(
-                        "\n[bold red]🛑 CIRCUIT BREAKER: Max eval retries reached. Halting pipeline.[/bold red]\n"
-                    )
-                    break
-
-            # Hand-off Pipeline Payload (Normal flow)
-            current_payload = f"Original Task: {description}\n\nPrevious Agent ({agent_cfg['name']}) Output:\n{step_result.text}\n\nActions Taken:\n{step_result.actions}"
+        # Hand-off Pipeline Payload (Normal flow)
+        current_payload = f"Original Task: {description}\n\nPrevious Agent ({agent_cfg['name']}) Output:\n{step_result.text}\n\nActions Taken:\n{step_result.actions}"
 
         # --- PIPELINE DIAGNOSTICS DISPLAY ---
         agent_summary = ", ".join(
