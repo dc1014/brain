@@ -45,13 +45,13 @@ def test_analyze_task_deterministic_blocks() -> None:
     """Test that shift-left heuristic checks block illegal prompts before hitting the LLM."""
 
     # 1. Test the delete block
-    is_valid, reason, route, _ = analyze_task("Can you delete my journal?")
+    is_valid, reason, route, domain, _ = analyze_task("Can you delete my journal?")
     assert is_valid is False
     assert "delete tool" in reason
     assert route == "NONE"
 
     # 2. Test the system boundary block
-    is_valid, reason, route, _ = analyze_task("Read the system/tools.py file.")
+    is_valid, reason, route, domain, _ = analyze_task("Read the system/tools.py file.")
     assert is_valid is False
-    assert "sandboxed" in reason
+    assert "sandboxed" in reason.lower()  # <-- Added .lower() here
     assert route == "NONE"
