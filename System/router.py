@@ -122,11 +122,14 @@ def run_agent(
         total_comp: int = 0
 
         for step in range(15):
-            # --- SHIFT-LEFT: CONTEXT SLIDING WINDOW ---
-            # Keep the System Prompt (index 0) and only the last 6 message exchanges.
-            # This prevents infinite token-snowballing on complex, multi-step tasks.
+            # --- SHIFT-LEFT: SMART CONTEXT SLIDING WINDOW ---
             if len(messages) > 7:
-                pruned_messages = [messages[0]] + messages[-6:]
+                window = messages[-6:]
+                # ANTHROPIC CRASH FIX: Never orphan a 'tool' message.
+                # If our slice starts with a tool result, drop it until we hit a valid assistant/user message.
+                while window and window[0].get("role") == "tool":
+                    window.pop(0)
+                pruned_messages = [messages[0]] + window
             else:
                 pruned_messages = messages
 
@@ -273,8 +276,28 @@ def run_agent(
         return AgentResponse(
             text=final_text.strip(), actions=action_manifest, usage=usage_data
         )
+
     except Exception as e:
-        return AgentResponse(text=f"Error: {str(e)}", actions=[])
+        # SHIFT-LEFT: Graceful API Failure Logging
+        error_msg = f"API/Execution Error: {str(e)}"
+        usage_data = {
+            "prompt_tokens": total_prompt,
+            "completion_tokens": total_comp,
+            "total_tokens": total_prompt + total_comp,
+        }
+
+        log_interaction(
+            role_name,
+            model_string,
+            system_prompt,
+            user_prompt,
+            error_msg,
+            usage_data,
+            route,
+            domain,
+        )
+
+        return AgentResponse(text=error_msg, actions=action_manifest, usage=usage_data)
 
 
 def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict[str, int]]:
