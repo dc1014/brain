@@ -36,3 +36,8 @@ Personal/
 Professional/
 Studio/
 Meta/
+
+# 🧠 SYNAPTIC MEMORY WEIGHTS (DO NOT TRACK)
+Meta/Synapses/
+*.safetensors
+*.bin
