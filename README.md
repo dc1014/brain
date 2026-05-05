@@ -4,9 +4,9 @@
 ![Architecture](https://img.shields.io/badge/Architecture-Multi--Agent-purple.svg)
 ![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)
 
-Brain is an open-source "Second Brain" and semi-autonomous agent ecosystem. It bridges the gap between your local file system, unstructured thoughts, LLM reasoning engines, and MCP servers while being as safe as I can make it and minimizing token usage.
+Brain is an open-source "Second Brain" and semi-autonomous agent ecosystem. It bridges the gap between your local file system, unstructured thoughts, LLM reasoning engines, and MCP servers while being as safe as I can make it and minimizing token usage. Obsidian is used as the primary UI interface for viewing content in Brain, while Claude + MCP are how Brain acts. Brain is open, though, so bring your own "whatever."
 
- Brain uses **Shift-Left Engineering** and **The Unix Philosophy** as a generalized principle. Everything is a file so you can see and change everything. It utilizes a deterministic router to bound the AI, pre-calculate execution tracks, and strictly sandboxed file operations. It is designed to be fast, token-optimized, observable, highly secure, and copletely open.
+Brain uses **Shift-Left Engineering** and **The Unix Philosophy** as a generalized principle. Everything is a file so you can see and change everything. It utilizes a deterministic router to bound the AI, pre-calculate execution tracks, and strictly sandbox file operations. It is designed to be fast, token-optimized, observable, highly secure, and completely open.
 
 ---
 
@@ -14,6 +14,7 @@ Brain is an open-source "Second Brain" and semi-autonomous agent ecosystem. It b
 1. **Own Your Brain:** Your Brain and everything in it - data (Vault), journals, art, code, and business IP - is yours. All personal folders are aggressively `.gitignore`d.
 2. **Zero-Waste Token Economics:** Context limits are respected. The system dynamically extracts payloads and drops intermediate reasoning steps to keep context loops lean.
 3. **Open-Source & UNIX-Native:** Everything is a file. The routing system, API logic, memory structures, and prompts are 100% open-source and run entirely on your machine.
+
 ---
 
 ## 🏗️ Architecture
@@ -21,13 +22,10 @@ Brain is an open-source "Second Brain" and semi-autonomous agent ecosystem. It b
 ### 1. The Deterministic Router (Shift-Left Bouncer)
 Before an expensive agent ever boots up, a high-speed Auditor model intercepts the prompt. It enforces hard security rules (e.g., blocking `rm` commands or access to system files) and calculates the **Intent Domain** and **Execution Route** (`FAST`, `READ_ONLY`, or `COMPLEX`).
 
-### 2. The Multi-Agent Trinity
-Powered by `uv` and `LiteLLM`, the OS orchestrates three specialized models:
-* **The Auditor:** The Bouncer. Evaluates prompts, assigns domain context (Personal, Professional, Studio), and runs the nightly memory compaction.
-* **The Worker:** The Engineer. Given sandboxed tools, it explores directories, reads files, and writes code/markdown safely.
-* **The Orchestrator:** The Synthesizer. Reviews the Worker's draft and actions, compiling them into polished executive summaries.
+### 2. Declarative Agent Pipelines
+Unlike heavy frameworks with hardcoded agent logic, Brain is driven by a single, human-readable YAML file (`System/agents.yaml`). The Python engine handles the loops and tool executions, but the intelligence—who the agents are, what models they use, and how they hand off tasks—is completely declarative.
 
-*(Note: Brain features a **Zero-Config Fallback**. Supply keys for Anthropic, Google, and OpenAI to use the full Trinity, or supply just ONE key and the system will gracefully map all roles to that single model).*
+*(Note: Brain features a **Zero-Config Fallback**. Supply keys for Anthropic, Google, and OpenAI to use a full Trinity of specialized models, or supply just ONE key and the system will gracefully map all roles to that single API).*
 
 ### 3. Hierarchical Context Engineering
 The OS dynamically stacks memory. It always injects `Meta/global-memory.md` (your core identity), but uses intent-mapping to selectively inject `Personal/`, `Professional/`, or `Studio/` memory based on the active task, saving massive amounts of tokens.
@@ -87,6 +85,41 @@ uv run System/router.py sleep
 
 ---
 
+## ⚙️ Customizing Agents & Pipelines
+
+You never need to touch Python code to change how Brain thinks. Everything is controlled via `System/agents.yaml`.
+
+**Swap Models Instantly:** Want to use local models or different providers? Just update the `models` block (LiteLLM supports 100+ providers, including Ollama):
+```yaml
+models:
+  primary_worker: "anthropic/claude-3-5-haiku-latest"
+  local_researcher: "ollama/llama3"
+```
+
+**Edit Prompts & Roles:** Rewrite the Bouncer's rules or the Engineer's system prompt in plain text:
+```yaml
+agents:
+  engineer:
+    name: "Engineer (Claude)"
+    model: "primary_worker"
+    system_prompt: |
+      You are a highly structured system engineer...
+```
+
+**Compose Execution Pipelines:** Define exactly who runs, what tools they get, and what memory context they read during a route:
+```yaml
+routes:
+  COMPLEX:
+    - agent: "engineer"
+      tools: ["base", "write"]
+      context: ["Meta", "Domain", "Studio"]
+    - agent: "auditor"
+      tools: []
+      context: ["Meta", "Domain"]
+```
+
+---
+
 ## 🛡️ Security & Sandboxing
 The Worker agent is completely sandboxed. It can only execute explicit Python tools (`write_safe_file`, `read_safe_file`, `list_safe_directory`, `append_safe_file`) scoped strictly to your vault directories. Attempts to traverse directories (`../`), access `.env`, or write to the system kernel are mathematically blocked at the tool layer.
 
@@ -99,4 +132,4 @@ uv run ruff check .
 ```
 
 ---
-*Brain — Designed for humans. Executed by agents.*
+*Brain OS — Designed for humans to collaborate safely with AI.*

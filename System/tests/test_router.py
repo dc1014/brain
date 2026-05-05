@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock
-from System.router import run_agent, analyze_task, trigger_synaptic_plugin, init
+from System.router import run_agent, analyze_task, init
 
 
 def test_run_agent_success(mocker) -> None:  # type: ignore
@@ -36,7 +36,7 @@ def test_analyze_task_deterministic_blocks() -> None:
     # 1. Test the delete block
     is_valid, reason, route, domain, _ = analyze_task("Can you delete my journal?")
     assert is_valid is False
-    assert "delete tool" in reason
+    assert "delete tool" in reason.lower()
     assert route == "NONE"
 
     # 2. Test the system boundary block
@@ -44,24 +44,6 @@ def test_analyze_task_deterministic_blocks() -> None:
     assert is_valid is False
     assert "sandboxed" in reason.lower()
     assert route == "NONE"
-
-
-def test_synaptic_plugin_missing(mocker) -> None:  # type: ignore
-    """Test that the engine gracefully falls back when the Pro plugin is missing."""
-    # Directly patch the 'exists' method to simulate the missing plugin
-    mocker.patch("System.router.Path.exists", return_value=False)
-
-    success = trigger_synaptic_plugin("STUDIO", ["Fact 1"])
-    assert success is False  # Should return False to trigger Markdown fallback
-
-
-def test_synaptic_plugin_installed(mocker) -> None:  # type: ignore
-    """Test that the engine routes to the GPU when the Pro plugin is installed."""
-    # Directly patch the 'exists' method to simulate the installed plugin
-    mocker.patch("System.router.Path.exists", return_value=True)
-
-    success = trigger_synaptic_plugin("STUDIO", ["Fact 1"])
-    assert success is True  # Should return True to skip Markdown
 
 
 def test_init_command_creates_vault(tmp_path, mocker) -> None:  # type: ignore
