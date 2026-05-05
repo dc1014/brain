@@ -17,6 +17,15 @@ base:
           query: { type: "string" }
           directory_path: { type: "string" }
         required: ["query", "directory_path"]
+  - type: "function"
+    function:
+      name: "analyze_safe_syntax"
+      description: "Runs a read-only local linter (like ruff for Python) to check for syntax errors or undefined variables without executing the code. Bypasses human-in-the-loop. Use this IMMEDIATELY after writing a script to verify it compiles."
+      parameters:
+        type: "object"
+        properties:
+          filepath: { type: "string" }
+        required: ["filepath"]
 
 write:
   - type: "function"

@@ -402,3 +402,34 @@ def search_safe_directory(query: str, directory_path: str) -> str:
         + "\n".join(results)
         + f"\n\n{telemetry}"
     )
+
+
+def analyze_safe_syntax(filepath: str) -> str:
+    """Runs a read-only local linter against a file to check for syntax errors."""
+    target_path = (ROOT_DIR / filepath).resolve()
+
+    # SHIFT-LEFT SECURITY: Always check authorization BEFORE existence
+    if not is_safe_path(target_path):
+        return f"SECURITY BLOCK: Cannot lint outside allowed directories. Attempted to access {target_path}"
+
+    if not target_path.exists():
+        return f"ERROR: File '{filepath}' does not exist."
+
+    # Only lint supported file types
+    if target_path.suffix == ".py":
+        try:
+            # Run ruff check without modifying the file (--no-cache to avoid ghost state)
+            result = subprocess.run(
+                ["uv", "run", "ruff", "check", "--no-cache", str(target_path)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode == 0:
+                return f"✅ Linter passed for {filepath}. No syntax errors found."
+            else:
+                return f"❌ Linter found errors in {filepath}:\n{result.stdout}\n{result.stderr}"
+        except Exception as e:
+            return f"ERROR: Failed to run linter subprocess. Details: {e}"
+    else:
+        return f"WARNING: Syntax analysis for {target_path.suffix} files is not yet implemented. Only .py files are currently supported."
