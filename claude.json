@@ -2,24 +2,14 @@
   "mcpServers": {
     "google-calendar": {
       "command": "cmd.exe",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@xalia/google-calendar-mcp"
-      ],
+      "args": ["/c", "npx", "-y", "@xalia/google-calendar-mcp"],
       "env": {
         "GOOGLE_OAUTH_CREDENTIALS": "C:/Users/Admin/Brain/gcp-oauth.keys.json"
       }
     },
     "google-drive": {
       "command": "cmd.exe",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@piotr-agier/google-drive-mcp"
-      ],
+      "args": ["/c", "npx", "-y", "@piotr-agier/google-drive-mcp"],
       "env": {
         "GOOGLE_DRIVE_OAUTH_CREDENTIALS": "C:/Users/Admin/Brain/gcp-oauth.keys.json"
       }
@@ -34,27 +24,8 @@
     "brave-search": {
       "command": "cmd.exe",
       "args": [
-        "/c",
-        "npx",
-        "-y",
-        "dotenv-cli",
-        "-e",
-        "C:/Users/Admin/Brain/.env",
-        "--",
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-brave-search"
+        "/c", "npx", "-y", "dotenv-cli", "-e", "C:/Users/Admin/Brain/.env", "--", "npx", "-y", "@modelcontextprotocol/server-brave-search"
       ]
-    },
-  "filesystem": {
-    "command": "cmd.exe",
-    "args": [
-      "/c",
-      "npx",
-      "-y",
-      "@modelcontextprotocol/server-filesystem",
-      "C:\\Users\\Admin\\Brain"
-    ]
-  }
+    }
   }
 }
