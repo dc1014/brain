@@ -159,19 +159,31 @@ def sleep(
 
     memories_saved = 0
 
-    with console.status(
-        "[bold yellow]Injecting synapses into Vault...[/bold yellow]", spinner="dots"
-    ):
-        for domain, facts in memories.items():
-            if facts and isinstance(facts, list):
-                filepath = domains.get(domain.upper())
-                if filepath:
-                    bullet_facts = "\n".join([f"- {fact}" for fact in facts])
-                    result = append_safe_file(filepath, bullet_facts)
-                    if "SUCCESS" in result:
-                        memories_saved += len(facts)
+    # Remove the status spinner here so it doesn't swallow our multi-line terminal prints
+    console.print("\n[bold yellow]🧠 Injecting synapses into Vault...[/bold yellow]")
+    for domain, facts in memories.items():
+        if facts and isinstance(facts, list):
+            filepath = domains.get(domain.upper())
+            if filepath:
+                bullet_facts = "\n".join([f"- {fact}" for fact in facts])
+                result = append_safe_file(filepath, bullet_facts)
+                if "SUCCESS" in result:
+                    memories_saved += len(facts)
+                    console.print(f"\n[green]✓ {domain} MEMORY UPDATED:[/green]")
+
+                    for fact in facts:
+                        # Token Economics: 1 Token ≈ 4 characters
+                        token_cost = max(1, len(fact) // 4)
+
+                        # Extract just the first sentence for a clean terminal display
+                        first_sentence = (
+                            fact.split(". ")[0] + "." if ". " in fact else fact
+                        )
+                        if len(first_sentence) > 80:
+                            first_sentence = first_sentence[:77] + "..."
+
                         console.print(
-                            f"[green]✓ Appended {len(facts)} facts into {domain} markdown.[/green]"
+                            f"  [dim]└─ {first_sentence} (Context Weight: ~{token_cost} tokens)[/dim]"
                         )
 
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
