@@ -1,7 +1,9 @@
 from unittest.mock import MagicMock
-from System.llm import run_agent  # <-- NEW: Imported from llm
-from System.router import analyze_task, init  # <-- Kept in router
 from pathlib import Path
+
+from System.llm import run_agent
+from System.runtime import analyze_task
+from System.cli import init
 from System.tools import bootstrap_project, execute_command
 
 
@@ -57,7 +59,7 @@ def test_init_command_creates_vault(tmp_path, mocker) -> None:  # type: ignore
     # 1. Mock the root_dir dynamically so it targets our safe pytest temp directory
     mock_path_instance = MagicMock()
     mock_path_instance.parent.parent = tmp_path
-    mocker.patch("System.router.Path", return_value=mock_path_instance)
+    mocker.patch("System.cli.Path", return_value=mock_path_instance)
 
     # 2. Create a dummy .env.example in the temp directory so the copy logic can be tested
     dummy_env = tmp_path / ".env.example"
@@ -121,14 +123,13 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
 def test_run_os_retry_circuit_breaker(mocker) -> None:  # type: ignore
     """Test that the pipeline immediately aborts if user denies autonomous retry."""
 
-    # 1. Mock analyze_task to return a valid route
+    # 1. Update: Mock analyze_task in runtime
     mocker.patch(
-        "System.router.analyze_task",
+        "System.runtime.analyze_task",
         return_value=(True, "Approved", "FORGE", "STUDIO", {"total_tokens": 10}),
     )
 
-    # 2. Mock run_agent to simulate the Auditor failing the evaluation
-    from System.llm import AgentResponse  # <-- CHANGED: Imported from llm
+    from System.llm import AgentResponse
 
     def mock_run_agent_side_effect(*args, **kwargs):
         role_name = kwargs.get("role_name", args[0] if len(args) > 0 else "")
@@ -137,27 +138,23 @@ def test_run_os_retry_circuit_breaker(mocker) -> None:  # type: ignore
                 text="[GRADE: FAIL] The code has hallucinations.",
                 usage={"total_tokens": 50},
             )
-        # For the Architect/Engineer
         return AgentResponse(
             text="Here is the generated code.", usage={"total_tokens": 50}
         )
 
-    mocker.patch("System.router.run_agent", side_effect=mock_run_agent_side_effect)
+    # 2. Update: Mock run_agent in runtime
+    mocker.patch("System.runtime.run_agent", side_effect=mock_run_agent_side_effect)
 
-    # 3. Mock the HITL prompts!
-    # - The first input is 'y' for the initial Pre-Flight Auth.
-    # - The second input is 'n' for the Autonomous Retry Auth.
     mocker.patch("builtins.input", side_effect=["y", "n"])
 
-    # 4. Spy on the console.print
-    mock_print = mocker.patch("System.router.console.print")
+    # 3. Update: Spy on console.print in runtime
+    mock_print = mocker.patch("System.runtime.console.print")
 
-    # 5. Run OS
-    from System.router import task
+    # 4. Update: Call task from cli
+    from System.cli import task
 
     task("FORGE TASK: Test retry circuit breaker")
 
-    # 6. Verify the pipeline broke and printed the specific abort message
     abort_called = any(
         "User declined autonomous retry" in str(call.args[0])
         for call in mock_print.call_args_list

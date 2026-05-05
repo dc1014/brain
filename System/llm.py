@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+import yaml  # type: ignore
 
 from litellm import completion  # type: ignore
 from rich.console import Console
@@ -61,25 +62,25 @@ def log_interaction(
 def get_system_context(
     requested_contexts: list[str], current_domain: str = "NONE"
 ) -> str:
-    """Dynamically loads specific canonical folders as defined in the YAML route."""
+    """Dynamically loads specific canonical folders as defined in the YAML config."""
     context = ""
     root_dir = Path(__file__).parent.parent
+    memory_config_path = Path(__file__).parent / "config" / "memory.yaml"
+
+    try:
+        with open(memory_config_path, "r", encoding="utf-8") as f:
+            memory_map = yaml.safe_load(f).get("domains", {})
+    except Exception:
+        memory_map = {}
 
     for req in requested_contexts:
         target_folder = current_domain if req == "Domain" else req.upper()
-        if target_folder == "META":
-            path = root_dir / "Meta" / "global-memory.md"
-        elif target_folder in ["PERSONAL", "PROFESSIONAL", "STUDIO"]:
-            path = (
-                root_dir
-                / target_folder.capitalize()
-                / f"{target_folder.lower()}-memory.md"
-            )
-        else:
-            continue
+        rel_path = memory_map.get(target_folder)
 
-        if path.exists():
-            context += f"\n\n--- {target_folder} MEMORY ---\n{path.read_text(encoding='utf-8')}\n------------------------------\n"
+        if rel_path:
+            path = root_dir / rel_path
+            if path.exists():
+                context += f"\n\n--- {target_folder} MEMORY ---\n{path.read_text(encoding='utf-8')}\n------------------------------\n"
 
     return context
 
