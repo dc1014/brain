@@ -49,27 +49,31 @@ def test_bootstrap_security_block(tmp_path: Path, mocker) -> None:  # type: igno
 
 
 def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # type: ignore
-    """Ensure shell execution respects directory bounds and requires user confirmation."""
+    """Test that command execution is sandboxed and respects strict HITL."""
     mocker.patch("System.tools.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
 
     studio_dir = tmp_path / "Studio" / "TestProject"
     studio_dir.mkdir(parents=True)
 
-    # 1. Test directory escape block
+    # 1. Test Security Boundary
     block_result = execute_command("ls", "../../")
     assert "SECURITY BLOCK" in block_result
 
-    # 2. Test user denial (HITL)
-    mocker.patch("System.tools.Confirm.ask", return_value=False)
+    # 2. Test HITL Strict Rejection (Standard 'n')
+    mocker.patch("builtins.input", return_value="n")
     deny_result = execute_command("ls", "Studio/TestProject")
-    assert "SECURITY BLOCK" in deny_result
+    assert "SECURITY BLOCK: User explicitly denied" in deny_result
 
-    # 3. Test approved execution
-    mocker.patch("System.tools.Confirm.ask", return_value=True)
+    # 2.5 Test HITL Strict Rejection (Unrecognized garbage input)
+    mocker.patch("builtins.input", return_value="garbage_input")
+    unrecognized_result = execute_command("ls", "Studio/TestProject")
+    assert "SECURITY BLOCK: User explicitly denied" in unrecognized_result
+
+    # 3. Test Execution Approval (Standard 'y')
+    mocker.patch("builtins.input", return_value="y")
     mock_subprocess = mocker.patch("System.tools.subprocess.run")
     mock_subprocess.return_value.returncode = 0
-
     approve_result = execute_command("ls", "Studio/TestProject")
     assert "SUCCESS" in approve_result
     mock_subprocess.assert_called_once()
@@ -126,8 +130,8 @@ def test_operate_forge_security(tmp_path, monkeypatch) -> None:
     dummy_project.mkdir(parents=True)
     (dummy_project / "orchestrator.py").touch()
 
-    # Mock the user pressing 'n' on the prompt
-    monkeypatch.setattr(tools.Confirm, "ask", lambda *args, **kwargs: False)
+    # --- SHIFT-LEFT FIX: Mock standard input instead of rich.Confirm ---
+    monkeypatch.setattr("builtins.input", lambda *args, **kwargs: "n")
 
     # Prevent the test from actually trying to write handoff.md
     monkeypatch.setattr(Path, "write_text", lambda *args, **kwargs: None)

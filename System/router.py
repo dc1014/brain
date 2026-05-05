@@ -252,6 +252,22 @@ def run_agent(
                             "content": str(result),
                         }
                     )
+
+                    # --- SHIFT-LEFT: SECURITY CIRCUIT BREAKER ---
+                    if str(result).startswith("SECURITY BLOCK"):
+                        final_text += f"\n\n[SYSTEM HALT] {result}"
+                        action_manifest.append(
+                            "[HALTED] Security clearance denied by user."
+                        )
+                        return AgentResponse(
+                            text=final_text.strip(),
+                            actions=action_manifest,
+                            usage={
+                                "prompt_tokens": total_prompt,
+                                "completion_tokens": total_comp,
+                                "total_tokens": total_prompt + total_comp,
+                            },
+                        )
                 continue
             else:
                 break
@@ -407,8 +423,31 @@ def task(
         return
 
     console.print(
-        f"[dim]✅ Pre-Flight Passed. Assigned Route: [bold]{route_type}[/bold] | Domain Context: [bold cyan]{domain}[/bold cyan][/dim]\n"
+        f"[dim]✅ Pre-Flight Passed. Assigned Route: [bold]{route_type}[/bold] | Domain Context: [bold cyan]{domain}[/bold cyan][/dim]"
     )
+
+    # --- SHIFT-LEFT: TOKEN ECONOMICS AUTHORIZATION ---
+    pipeline = list(AGENT_CONFIG["routes"].get(route_type, []))
+    agents_to_run = [step["agent"] for step in pipeline]
+
+    console.print("\n[bold yellow]⚠️  PIPELINE AUTHORIZATION[/bold yellow]")
+    console.print(
+        f"This task requires the [bold]{route_type}[/bold] route, which will wake up:"
+    )
+    console.print(f"[bold cyan]{' -> '.join(agents_to_run)}[/bold cyan]")
+
+    try:
+        auth = (
+            input("\nAuthorize AI execution and token spend? [y/N]: ").strip().lower()
+        )
+    except (EOFError, KeyboardInterrupt):
+        auth = "n"
+
+    if auth not in ["y", "yes"]:
+        console.print(
+            "\n[bold red]🛑 Task Aborted: User declined pipeline execution.[/bold red]\n"
+        )
+        return
 
     # --- TOOL DEFINITIONS ---
     base_tools = [
@@ -575,6 +614,7 @@ def task(
     # SHIFT-LEFT: Initialize Pipeline Metrics
     total_pipeline_tokens = 0
     agents_invoked = []
+    pipeline_aborted = False
 
     while len(pipeline) > 0:
         step = pipeline.pop(0)
@@ -641,12 +681,43 @@ def task(
             )
         )
 
+        # --- SHIFT-LEFT: FATAL ERROR CIRCUIT BREAKERS ---
+        if "[SYSTEM HALT]" in step_result.text:
+            console.print(
+                "\n[bold red]🛑 PIPELINE ABORTED: Security clearance denied by user.[/bold red]"
+            )
+            pipeline_aborted = True
+            break
+
+        if "API/Execution Error:" in step_result.text:
+            console.print(
+                "\n[bold red]🛑 PIPELINE ABORTED: Fatal API or Execution Error.[/bold red]"
+            )
+            pipeline_aborted = True
+            break
+
         # --- LAYER 2 EVALUATION LOOP ---
         if step["agent"] == "auditor" and "[GRADE: FAIL]" in step_result.text:
             if eval_retries < MAX_RETRIES:
                 console.print(
-                    "\n[bold red]❌ Audit Failed! Routing back to Engineer for autonomous fix...[/bold red]\n"
+                    "\n[bold red]❌ Audit Failed! The Architect needs to fix the implementation.[/bold red]\n"
                 )
+
+                # --- SHIFT-LEFT: RETRY AUTHORIZATION ---
+                try:
+                    retry_auth = (
+                        input("Authorize autonomous retry? [Y/n]: ").strip().lower()
+                    )
+                except (EOFError, KeyboardInterrupt):
+                    retry_auth = "n"
+
+                if retry_auth in ["n", "no"]:
+                    console.print(
+                        "\n[bold red]🛑 Task Aborted: User declined autonomous retry.[/bold red]\n"
+                    )
+                    pipeline_aborted = True
+                    break
+                # ---------------------------------------
 
                 pipeline.insert(
                     0,
@@ -659,13 +730,13 @@ def task(
                 pipeline.insert(
                     0,
                     {
-                        "agent": "engineer",
+                        "agent": "architect",  # <-- FIXED: Was previously 'engineer'
                         "tools": ["base", "write", "execute"],
                         "context": ["Meta", "Domain", "Studio"],
                     },
                 )
 
-                # Preserve the original task context so the Engineer doesn't get lost
+                # Preserve the original task context so the Architect doesn't get lost
                 current_payload = f"Original Task: {description}\n\nCRITICAL - AUDIT FAILED. Read the critique, fix the code, and redeploy:\n\n{step_result.text}"
                 eval_retries += 1
                 continue
@@ -673,13 +744,13 @@ def task(
                 console.print(
                     "\n[bold red]🛑 CIRCUIT BREAKER: Max eval retries reached. Halting pipeline.[/bold red]\n"
                 )
+                pipeline_aborted = True
                 break
 
         # Hand-off Pipeline Payload (Normal flow)
         current_payload = f"Original Task: {description}\n\nPrevious Agent ({agent_cfg['name']}) Output:\n{step_result.text}\n\nActions Taken:\n{step_result.actions}"
 
     # --- PIPELINE DIAGNOSTICS DISPLAY ---
-    # (Notice this is now safely OUTSIDE the while loop!)
     agent_summary = ", ".join(
         [f"{agent} (x{agents_invoked.count(agent)})" for agent in set(agents_invoked)]
     )
@@ -695,7 +766,24 @@ def task(
             border_style="green",
         )
     )
-    console.print("\n[bold green]✅ Task Complete.[/bold green]\n")
+
+    # SHIFT-LEFT: Graceful Abort Logging
+    root_dir = Path(__file__).parent.parent
+    log_dir = root_dir / "logs"
+    state_path = log_dir / "pipeline_state.md"
+
+    if pipeline_aborted:
+        console.print("\n[bold red]🛑 Task Aborted.[/bold red]\n")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        with open(state_path, "w", encoding="utf-8") as f:
+            f.write(
+                "STATUS: ABORTED\nREASON: Pipeline hit a critical circuit breaker (Security Halt, API Failure, or Max Retries).\n"
+            )
+    else:
+        console.print("\n[bold green]✅ Task Complete.[/bold green]\n")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        with open(state_path, "w", encoding="utf-8") as f:
+            f.write("STATUS: COMPLETE\nREASON: Terminal state reached.\n")
 
 
 @app.command()
