@@ -2,21 +2,21 @@ base:
   - type: "function"
     function:
       name: "read_safe_file"
-      description: "Reads file text."
-      parameters:
-        type: "object"
-        properties:
-          filepath: { type: "string" }
-        required: ["filepath"]
+      # ...
   - type: "function"
     function:
       name: "list_safe_directory"
-      description: "Lists files/folders."
+      # ...
+  - type: "function"
+    function:
+      name: "search_safe_directory"
+      description: "Recursively searches a directory for a specific string (e.g., a concept in notes, a variable name, or a markdown header). Returns exact file paths and performance metrics."
       parameters:
         type: "object"
         properties:
+          query: { type: "string" }
           directory_path: { type: "string" }
-        required: ["directory_path"]
+        required: ["query", "directory_path"]
 
 write:
   - type: "function"

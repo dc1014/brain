@@ -172,3 +172,36 @@ def test_copy_safe_file_security(tmp_path: Path, mocker) -> None:  # type: ignor
 
     adr_block = copy_safe_file("Studio/adr/001-architecture.md", "Studio/stolen.md")
     assert "SECURITY BLOCK: Cannot copy ADRs." in adr_block
+
+
+def test_search_safe_directory_security_and_metrics(tmp_path: Path, mocker) -> None:  # type: ignore
+    """Ensure search_safe_directory finds text, respects the sandbox, and returns telemetry."""
+    from System.tools import search_safe_directory
+
+    mocker.patch("System.tools.ROOT_DIR", tmp_path)
+    mocker.patch(
+        "System.tools.ALLOWED_DIRECTORIES",
+        {tmp_path / "Studio", tmp_path / "Professional"},
+    )
+
+    # Setup dummy project
+    studio_dir = tmp_path / "Studio" / "Project"
+    studio_dir.mkdir(parents=True)
+
+    target_file = studio_dir / "marketing.md"
+    target_file.write_text("The Open-Core model is our primary strategy.")
+
+    node_modules = studio_dir / "node_modules"
+    node_modules.mkdir()
+    ignored_file = node_modules / "docs.md"
+    ignored_file.write_text("Open-Core")
+
+    # 1. Test Valid Search & Metrics
+    result = search_safe_directory("Open-Core", "Studio/Project")
+    assert "marketing.md" in result
+    assert "node_modules" not in result
+    assert "[Telemetry: Scanned" in result  # PROVE telemetry is injected
+
+    # 2. Test Path Traversal Security Block
+    block_result = search_safe_directory("password", "../../Windows")
+    assert "SECURITY BLOCK" in block_result
