@@ -1,5 +1,6 @@
 import json
 import typer
+import subprocess
 import yaml  # type: ignore
 from datetime import datetime, timezone
 from pathlib import Path
@@ -196,6 +197,7 @@ def sleep(
 @app.command()
 def init() -> None:
     console.print("\n[bold blue]🚀 Initializing Brain OS Vault...[/bold blue]")
+    # 1. ROOT DIR IS DEFINED HERE
     root_dir = Path(__file__).parent.parent
 
     for dir_name in ["Personal", "Professional", "Studio", "Meta", "Media", "logs"]:
@@ -225,6 +227,52 @@ def init() -> None:
         env_file.write_text(env_example.read_text(encoding="utf-8"), encoding="utf-8")
         console.print("[green]✓ Created file:[/green] .env (Copied from template)")
 
+    # --- 2. SHIFT-LEFT: AUTONOMOUS GIT HOOK SYNCHRONIZATION MUST GO HERE ---
+    console.print("\n[bold blue]🔗 Synchronizing Repository Hooks...[/bold blue]")
+
+    # Recursively search for any Git repositories inside the Brain OS root
+    for git_dir in root_dir.rglob(".git"):
+        if not git_dir.is_dir():
+            continue
+
+        repo_root = git_dir.parent
+        hook_dir = repo_root / "scripts" / "githooks"
+
+        # If the repository has a custom githooks folder (like Forge), wire it up!
+        if hook_dir.exists():
+            try:
+                # Tell Git to use the custom folder
+                subprocess.run(
+                    ["git", "config", "core.hooksPath", "scripts/githooks"],
+                    cwd=repo_root,
+                    capture_output=True,
+                    check=False,
+                )
+
+                # Force the pre-commit file to be executable (crucial for Windows/Linux interoperability)
+                pre_commit_file = hook_dir / "pre-commit"
+                if pre_commit_file.exists():
+                    subprocess.run(
+                        [
+                            "git",
+                            "update-index",
+                            "--chmod=+x",
+                            "scripts/githooks/pre-commit",
+                        ],
+                        cwd=repo_root,
+                        capture_output=True,
+                        check=False,
+                    )
+
+                console.print(
+                    f"[green]✓ Secured Git hooks for repository:[/green] {repo_root.name}"
+                )
+            except Exception as e:
+                console.print(
+                    f"[dim]⚠️ Failed to wire hooks for {repo_root.name}: {e}[/dim]"
+                )
+
+    # 3. FINAL PRINT
     console.print("\n[bold green]✅ Initialization Complete![/bold green]\n")
 
 

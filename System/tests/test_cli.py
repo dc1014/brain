@@ -215,3 +215,53 @@ def test_sleep_command_observability(mocker, tmp_path) -> None:  # type: ignore
         "└─ Brain OS now supports Token Truncation." in text and "~14 tokens" in text
         for text in printed_texts
     )
+
+
+def test_init_autonomous_git_hooks(mocker, tmp_path) -> None:  # type: ignore
+    """Ensure the init command automatically discovers repositories and wires up git hooks."""
+    from System.cli import init
+
+    # 1. Point Brain OS's root directory to our isolated test sandbox
+    cli_path = tmp_path / "System" / "cli.py"
+    cli_path.parent.mkdir(parents=True)
+    mocker.patch("System.cli.__file__", str(cli_path))
+
+    # 2. Build a fake repository structure that matches Forge
+    fake_repo = tmp_path / "Studio" / "FakeForge"
+    (fake_repo / ".git").mkdir(parents=True)
+
+    fake_hooks_dir = fake_repo / "scripts" / "githooks"
+    fake_hooks_dir.mkdir(parents=True)
+    (fake_hooks_dir / "pre-commit").touch()
+
+    # 3. Intercept subprocess to prevent actual git commands from running
+    mock_subprocess = mocker.patch("System.cli.subprocess.run")
+    mock_print = mocker.patch("System.cli.console.print")
+
+    # 4. Run the initialization sequence
+    init()
+
+    # 5. Assertions
+    assert mock_subprocess.call_count == 2
+
+    # Check that Git Config was called correctly
+    call_1_args, call_1_kwargs = mock_subprocess.call_args_list[0]
+    assert call_1_args[0] == ["git", "config", "core.hooksPath", "scripts/githooks"]
+    assert call_1_kwargs["cwd"] == fake_repo
+
+    # Check that the chmod executable command was called
+    call_2_args, call_2_kwargs = mock_subprocess.call_args_list[1]
+    assert call_2_args[0] == [
+        "git",
+        "update-index",
+        "--chmod=+x",
+        "scripts/githooks/pre-commit",
+    ]
+    assert call_2_kwargs["cwd"] == fake_repo
+
+    # Verify the user is notified
+    printed_texts = [
+        str(call.args[0]) for call in mock_print.call_args_list if call.args
+    ]
+    assert any("Secured Git hooks for repository" in text for text in printed_texts)
+    assert any("FakeForge" in text for text in printed_texts)
