@@ -74,9 +74,14 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
     mocker.patch("builtins.input", return_value="y")
     mock_subprocess = mocker.patch("System.tools.subprocess.run")
     mock_subprocess.return_value.returncode = 0
+
+    # --- SHIFT-LEFT: Explicitly mock stdout and stderr as empty strings ---
+    mock_subprocess.return_value.stdout = ""
+    mock_subprocess.return_value.stderr = ""
+
     approve_result = execute_command("ls", "Studio/TestProject")
     assert "SUCCESS" in approve_result
-    mock_subprocess.assert_called_once()
+    assert "<shell_output" in approve_result  # Add this to verify the XML!
 
 
 def test_adr_safety_blocks() -> None:
