@@ -35,6 +35,9 @@ def write_safe_file(filepath: str, content: str) -> str:
         target_path: Path = (ROOT_DIR / filepath).resolve()
         if not is_safe_path(target_path):
             return f"SECURITY BLOCK: Access denied to write at {target_path}."
+        # SHIFT-LEFT SAFETY: Block any modification to Architectural Decision Records
+        if "adr" in target_path.parts:
+            return f"SECURITY BLOCK: Cannot modify Architectural Decision Records. Human approval required for {filepath}."
 
         target_path.parent.mkdir(parents=True, exist_ok=True)
         target_path.write_text(content, encoding="utf-8")
