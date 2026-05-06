@@ -37,7 +37,7 @@ def write_safe_file(filepath: str, content: str) -> str:
             return f"SECURITY BLOCK: Access denied to write at {target_path}."
         # SHIFT-LEFT SAFETY: Block any modification to Architectural Decision Records
         if "adr" in target_path.parts:
-            return f"SECURITY BLOCK: Cannot modify Architectural Decision Records. Human approval required for {filepath}."
+            return f"SECURITY BLOCK: Cannot modify ADRs. Human approval required for {filepath}."
 
         target_path.parent.mkdir(parents=True, exist_ok=True)
         target_path.write_text(content, encoding="utf-8")
@@ -90,6 +90,11 @@ def rename_safe_file(old_filepath: str, new_filepath: str) -> str:
         if not old_path.exists():
             return f"ERROR: File not found at {old_path.relative_to(ROOT_DIR)}"
 
+        # SHIFT-LEFT SAFETY: Check both the source and destination for the 'adr' folder
+        if "adr" in old_path.parts or "adr" in new_path.parts:
+            return "SECURITY BLOCK: Cannot modify, move, or create ADRs. Human approval required."
+
+        # Proceed with safe rename
         new_path.parent.mkdir(parents=True, exist_ok=True)
         old_path.rename(new_path)
         return f"SUCCESS: Renamed to {new_path.relative_to(ROOT_DIR)}"
@@ -103,6 +108,9 @@ def append_safe_file(filepath: str, content: str) -> str:
         target_path: Path = (ROOT_DIR / filepath).resolve()
         if not is_safe_path(target_path):
             return f"SECURITY BLOCK: Access denied to append at {target_path}."
+
+        if "adr" in target_path.parts:
+            return f"SECURITY BLOCK: Cannot modify ADRs. Human approval required for {filepath}."
 
         if not target_path.exists():
             target_path.parent.mkdir(parents=True, exist_ok=True)
