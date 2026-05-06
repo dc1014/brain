@@ -124,7 +124,7 @@ def append_safe_file(filepath: str, content: str) -> str:
 def bootstrap_project(
     project_name: str, template_url: str = "https://github.com/dc1014/forge.git"
 ) -> str:
-    """Clones a project archetype into the Studio directory."""
+    """Clones a project archetype into the Studio directory and initializes it."""
     try:
         target_path: Path = (ROOT_DIR / "Studio" / project_name).resolve()
         if not is_safe_path(target_path):
@@ -138,6 +138,14 @@ def bootstrap_project(
             text=True,
         )
         if result.returncode == 0:
+            # Shift-Left: Automatically initialize the .env file so the AI doesn't have to
+            env_example = target_path / ".env.example"
+            env_target = target_path / ".env"
+            if env_example.exists() and not env_target.exists():
+                env_target.write_text(
+                    env_example.read_text(encoding="utf-8"), encoding="utf-8"
+                )
+
             return f"SUCCESS: Bootstrapped at {target_path.relative_to(ROOT_DIR)}"
         return f"ERROR: Git clone failed - {result.stderr}"
     except Exception as e:
