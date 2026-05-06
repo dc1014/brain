@@ -1,3 +1,4 @@
+import json
 import subprocess
 from pathlib import Path
 from rich.console import Console
@@ -203,3 +204,83 @@ def execute_command(command: str, directory_path: str) -> str:
         return f"ERROR: Command failed with exit code {result.returncode}."
     except Exception as e:
         return f"ERROR: Failed to execute command - {str(e)}"
+
+
+def operate_forge(project_name: str, instruction: str) -> str:
+    """Operates a Forge instance securely via handoff.md and returns its telemetry."""
+    try:
+        target_path: Path = (ROOT_DIR / "Studio" / project_name).resolve()
+
+        # 1. SHIFT-LEFT SAFETY: Path Traversal & Sandbox Check
+        if not is_safe_path(target_path):
+            return (
+                f"SECURITY BLOCK: Access denied. {target_path} is outside safe zones."
+            )
+
+        orchestrator_path = target_path / "orchestrator.py"
+        if not orchestrator_path.exists():
+            return f"ERROR: Forge engine not found at {orchestrator_path.relative_to(ROOT_DIR)}."
+
+        # 2. STATE PREPARATION: Write the instruction deterministically
+        ops_dir = target_path / "docs" / "ops"
+        ops_dir.mkdir(parents=True, exist_ok=True)
+        handoff_path = ops_dir / "handoff.md"
+        handoff_path.write_text(f"PROMPT: {instruction}\n", encoding="utf-8")
+
+        # 3. SHIFT-LEFT SAFETY: Human-in-the-Loop Authorization
+        console.print(
+            "\n[bold red]⚠️  SECURITY ALERT: FORGE OPERATION REQUESTED[/bold red]"
+        )
+        is_approved = Confirm.ask(
+            f"[yellow]Brain OS wants to command Forge for project:[/yellow] '{project_name}'\n"
+            f"[yellow]Instruction:[/yellow] '{instruction}'\n"
+            f"[bold]Allow execution?[/bold]"
+        )
+
+        if not is_approved:
+            return "SECURITY BLOCK: User explicitly denied Forge operation."
+
+        console.print(f"[dim]Booting Forge engine for '{project_name}'...[/dim]\n")
+
+        # 4. EXECUTION: shell=False completely eliminates shell injection vectors
+        result = subprocess.run(
+            ["uv", "run", "orchestrator.py"],
+            cwd=str(target_path),
+            capture_output=True,
+            text=True,
+        )
+
+        # 5. OBSERVABILITY: Harvest Telemetry & Status
+        telemetry_path = ops_dir / "telemetry.jsonl"
+        telemetry_data = "No telemetry emitted."
+        if telemetry_path.exists():
+            with open(telemetry_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+                if lines:
+                    try:
+                        t_json = json.loads(lines[-1])
+                        telemetry_data = f"Last Agent: {t_json.get('agent')} | Tokens: {t_json.get('prompt_tokens')} | Latency: {t_json.get('latency_s')}s"
+                    except json.JSONDecodeError:
+                        telemetry_data = "Telemetry parsing failed."
+
+        handoff_status = (
+            handoff_path.read_text(encoding="utf-8").strip()
+            if handoff_path.exists()
+            else "No state."
+        )
+
+        # 6. RETURN: Highly structured data for the Brain OS LLM
+        summary = (
+            f"FORGE EXECUTION COMPLETE (Exit Code {result.returncode})\n\n"
+            f"--- TELEMETRY ---\n{telemetry_data}\n\n"
+            f"--- HANDOFF STATE ---\n{handoff_status}\n\n"
+            f"--- ENGINE STDOUT (TAIL) ---\n{result.stdout[-1500:] if result.stdout else 'No output.'}\n"
+        )
+
+        if result.returncode != 0:
+            summary += f"\n--- ERROR STDERR ---\n{result.stderr[-1000:]}"
+
+        return summary
+
+    except Exception as e:
+        return f"ERROR: Failed to operate Forge - {str(e)}"
