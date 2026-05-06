@@ -4,7 +4,7 @@ from pathlib import Path
 from rich.console import Console
 import shutil
 import time
-from System.ast_parser import extract_python_signatures
+from System.ast_parser import extract_signatures
 
 # Define the absolute root of the Brain OS
 ROOT_DIR: Path = Path(__file__).parent.parent.resolve()
@@ -69,7 +69,7 @@ def read_safe_file(filepath: str) -> str:
 
 
 def read_file_signatures(filepath: str) -> str:
-    """Reads a Python file and returns only its class and function signatures (AST stubs)."""
+    """Reads a code file and returns only its class and function signatures (AST stubs)."""
     try:
         target_path: Path = (ROOT_DIR / filepath).resolve()
 
@@ -81,13 +81,13 @@ def read_file_signatures(filepath: str) -> str:
         if not target_path.is_file():
             return "ERROR: Target is not a file."
 
-        # 2. File Type Guard (We only have a Python parser for now)
-        if target_path.suffix != ".py":
-            return f"ERROR: AST stubbing currently only supports .py files. Provided: {target_path.suffix}"
+        # 2. File Type Guard
+        valid_exts = {".py", ".ts", ".tsx", ".js", ".jsx"}
+        if target_path.suffix not in valid_exts:
+            return f"ERROR: AST stubbing currently only supports {', '.join(valid_exts)} files. Provided: {target_path.suffix}"
 
-        # 3. AST Extraction
-        content = target_path.read_text(encoding="utf-8")
-        stubs = extract_python_signatures(content)
+        # 3. AST Extraction (Using the new universal parser)
+        stubs = extract_signatures(str(target_path))
 
         # 4. XML Framing for Prompt Caching
         return (
