@@ -24,5 +24,10 @@ fi
 echo "⚡ Syncing OS dependencies..."
 uv sync
 
+# Force vault initialization to ensure Obsidian paths exist
+uv run System/cli.py init
+
+
 echo ""
 echo "🚀 Brain OS is ready! Run: uv run python System/cli.py 'Your prompt here'"
+

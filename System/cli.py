@@ -1,7 +1,9 @@
 import json
+import re
 import typer
 import subprocess
 import yaml  # type: ignore
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from rich.console import Console
@@ -9,6 +11,12 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from litellm import completion  # type: ignore
 
+# --- SHIFT-LEFT: CROSS-PLATFORM ENCODING FIX ---
+if sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore
+# ---------------------------------------------
+
+# --- RESTORED IMPORTS ---
 from System.llm import LOG_FILE, LOG_DIR, log_interaction
 from System.runtime import analyze_task, execute_pipeline
 from System.tools import append_safe_file
@@ -28,6 +36,11 @@ except Exception as e:
 @app.command()
 def task(
     description: str = typer.Argument(..., help="The task you want the AI to perform."),
+    obsidian: bool = typer.Option(
+        False,
+        "--obsidian",
+        help="Route task to the Pending Queue instead of terminal execution.",
+    ),
 ) -> None:
     console.print(
         f"\n[bold green]🚀 Initializing Life OS task:[/bold green] '{description}'\n"
@@ -59,6 +72,29 @@ def task(
         f"[dim]✅ Pre-Flight Passed. Assigned Route: [bold]{route_type}[/bold] | Domain Context: [bold cyan]{domain}[/bold cyan][/dim]"
     )
 
+    # --- THE HANDOFF PROTOCOL (OBSIDIAN UI) ---
+    if obsidian:
+        pending_file = Path(__file__).parent.parent / "System" / "Pending_Actions.md"
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+        ticket = (
+            f"\n### ⏳ Pending Task: {route_type}\n"
+            f"**Logged:** {timestamp} | **Domain:** `{domain}`\n"
+            f"**Prompt:** {description}\n"
+            f"- [ ] **Status:** PENDING EXECUTION\n"
+            f"---\n"
+        )
+
+        # Append mode ('a') stacks the tasks safely
+        with open(pending_file, "a", encoding="utf-8") as f:
+            f.write(ticket)
+
+        console.print(
+            "[bold green]✅ Task safely queued in System/Pending_Actions.md[/bold green]"
+        )
+        return  # Exit safely before executing!
+
+    # --- STANDARD TERMINAL EXECUTION ---
     pipeline = list(AGENT_CONFIG["routes"].get(route_type, []))
     agents_to_run = [step["agent"] for step in pipeline]
 
@@ -81,8 +117,52 @@ def task(
         )
         return
 
-    # SHIFT-LEFT: Handoff to Process Manager
     execute_pipeline(description, route_type, domain)
+
+
+@app.command()
+def execute_pending() -> None:
+    """Reads the Pending_Actions.md queue, executes all tasks sequentially, and clears the file."""
+    pending_file = Path(__file__).parent.parent / "System" / "Pending_Actions.md"
+
+    if not pending_file.exists() or pending_file.stat().st_size == 0:
+        console.print("[yellow]No pending tasks found in queue.[/yellow]")
+        return
+
+    content = pending_file.read_text(encoding="utf-8")
+
+    # Extract all the queued descriptions using Regex
+    tasks_to_run = re.findall(r"\*\*Prompt:\*\* (.*)", content)
+
+    if not tasks_to_run:
+        console.print("[red]Could not parse any valid tasks from the file.[/red]")
+        return
+
+    console.print(
+        f"[bold green]🚀 Found {len(tasks_to_run)} pending tasks. Executing sequence...[/bold green]"
+    )
+
+    for idx, task_desc in enumerate(tasks_to_run, 1):
+        console.print(
+            f"\n[bold blue]--- Executing Task {idx}/{len(tasks_to_run)} ---[/bold blue]"
+        )
+
+        # Re-analyze to ensure context is perfectly fresh before execution
+        is_valid, reason, route_type, domain, _ = analyze_task(task_desc)
+        if is_valid:
+            execute_pipeline(task_desc, route_type, domain)
+        else:
+            console.print(
+                f"[bold red]Task failed pre-flight validation:[/bold red] {reason}"
+            )
+
+    # THE WIPE: Overwrite the file with 'w' to reset it back to a clean state
+    pending_file.write_text(
+        "# ⚠️ Pending Execution Queue\n\n*Queue is currently empty.*\n", encoding="utf-8"
+    )
+    console.print(
+        "\n[bold green]✅ Queue executed and cleared successfully![/bold green]"
+    )
 
 
 @app.command()

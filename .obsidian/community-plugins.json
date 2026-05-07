@@ -1,4 +1,9 @@
 [
-  "obsidian-local-rest-api",
-  "homepage"
+  "homepage",
+  "obsidian-git",
+  "dataview",
+  "calendar",
+  "templater-obsidian",
+  "obsidian-shell-commands",
+  "obsidian-shellcommands"
 ]

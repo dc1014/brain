@@ -17,6 +17,8 @@ out/
 # Python stuff
 __pycache__/
 .pytest_cache/
+.venv
+.ruff_cache
 
 # 🧠 OBSIDIAN LOCAL WORKSPACE STATE
 # (We keep settings, but ignore what tabs you have open)
@@ -63,3 +65,19 @@ Meta/Synapses/
 .obsidian/core-plugins-migration.json
 .trash/
 .coverage
+
+# --- Obsidian Workspace & Privacy ---
+# Ignore workspace layouts
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/workspace-*
+.obsidian/graph.json
+
+# Ignore all plugin data (protects API keys)
+.obsidian/plugins/*/data.json
+
+# EXCEPTION: Track Shell Commands config so the UI works out-of-the-box!
+!.obsidian/plugins/obsidian-shellcommands/data.json
+
+# OS State & Queues
+System/Pending_Actions.md
