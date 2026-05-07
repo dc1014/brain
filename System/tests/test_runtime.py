@@ -1,3 +1,4 @@
+import os
 from unittest.mock import MagicMock
 from System.runtime import analyze_task
 
@@ -71,3 +72,44 @@ def test_analyze_task_api_error(mocker) -> None:  # type: ignore
     assert "Dispatcher API Error" in reason
     assert "Anthropic API is down" in reason
     assert route == "NONE"
+
+
+def test_auditor_headless_retry_bypass(mocker):
+    """Test that the headless flag auto-approves an Auditor retry without pausing."""
+    from System.llm import AgentResponse
+
+    # 1. Mock Dispatcher
+    mocker.patch(
+        "System.runtime.analyze_task",
+        return_value=(True, "Approved", "FORGE", "STUDIO", {"total_tokens": 10}),
+    )
+
+    # 2. Mock Agent to FAIL on the first try, but PASS on the retry
+    call_count = {"auditor": 0}
+
+    def mock_run_agent_side_effect(*args, **kwargs):
+        role_name = kwargs.get("role_name", args[0] if len(args) > 0 else "")
+        if "Auditor" in role_name:
+            call_count["auditor"] += 1
+            if call_count["auditor"] == 1:
+                return AgentResponse(text="[GRADE: FAIL] Try again.", usage={})
+            return AgentResponse(text="[GRADE: PASS] Good.", usage={})
+        return AgentResponse(text="Here is code.", usage={})
+
+    mocker.patch("System.runtime.run_agent", side_effect=mock_run_agent_side_effect)
+
+    # 3. Set Headless Flag
+    mocker.patch.dict(os.environ, {"BRAIN_OS_HEADLESS": "1"})
+
+    # 4. Crash if it asks for input
+    mocker.patch(
+        "builtins.input", side_effect=Exception("HITL prompt was not bypassed!")
+    )
+
+    # 5. Execute
+    from System.runtime import execute_pipeline
+
+    execute_pipeline("Test retry", "FORGE", "STUDIO")
+
+    # Assert it called the auditor twice (initial + retry) without crashing on input()
+    assert call_count["auditor"] == 2

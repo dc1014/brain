@@ -194,12 +194,19 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
                     "\n[bold red]❌ Audit Failed! The Architect needs to fix the implementation.[/bold red]\n"
                 )
 
-                try:
-                    retry_auth = (
-                        input("Authorize autonomous retry? [Y/n]: ").strip().lower()
+                # --- SHIFT-LEFT: Headless UI Override ---
+                if os.environ.get("BRAIN_OS_HEADLESS") == "1":
+                    console.print(
+                        "[dim]Headless mode active: Auto-authorizing retry...[/dim]"
                     )
-                except (EOFError, KeyboardInterrupt):
-                    retry_auth = "n"
+                    retry_auth = "y"
+                else:
+                    try:
+                        retry_auth = (
+                            input("Authorize autonomous retry? [Y/n]: ").strip().lower()
+                        )
+                    except (EOFError, KeyboardInterrupt):
+                        retry_auth = "n"
 
                 if retry_auth in ["n", "no"]:
                     console.print(

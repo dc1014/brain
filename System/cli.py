@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import typer
 import subprocess
@@ -123,7 +124,11 @@ def task(
 @app.command()
 def execute_pending() -> None:
     """Reads the Pending_Actions.md queue, executes all tasks sequentially, and clears the file."""
+    # Tell downstream modules we are in a pre-approved headless UI state
+    os.environ["BRAIN_OS_HEADLESS"] = "1"
+
     pending_file = Path(__file__).parent.parent / "System" / "Pending_Actions.md"
+    # ... the rest of the function remains identical
 
     if not pending_file.exists() or pending_file.stat().st_size == 0:
         console.print("[yellow]No pending tasks found in queue.[/yellow]")
