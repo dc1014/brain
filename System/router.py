@@ -365,7 +365,6 @@ def task(
     )
 
     # --- TOOL DEFINITIONS ---
-    # --- TOOL DEFINITIONS ---
     base_tools = [
         {
             "type": "function",
@@ -682,7 +681,8 @@ def init() -> None:
     console.print("\n[bold blue]🚀 Initializing Brain OS Vault...[/bold blue]")
     root_dir = Path(__file__).parent.parent
 
-    for dir_name in ["Personal", "Professional", "Studio", "Meta", "Plugins", "logs"]:
+    # SHIFT-LEFT: Added "Media" to the automated creation list
+    for dir_name in ["Personal", "Professional", "Studio", "Meta", "Media", "logs"]:
         dir_path = root_dir / dir_name
         if not dir_path.exists():
             dir_path.mkdir(parents=True, exist_ok=True)

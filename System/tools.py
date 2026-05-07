@@ -14,6 +14,7 @@ ALLOWED_DIRECTORIES: set[Path] = {
     ROOT_DIR / "Professional",
     ROOT_DIR / "Studio",
     ROOT_DIR / "Meta",
+    ROOT_DIR / "Media",  # <-- The universal binary blob store
 }
 
 console = Console()
@@ -300,3 +301,27 @@ def operate_forge(project_name: str, instruction: str) -> str:
 
     except Exception as e:
         return f"ERROR: Failed to operate Forge - {str(e)}"
+
+
+def copy_safe_file(source_filepath: str, dest_filepath: str) -> str:
+    """Copies a file from one safe location to another."""
+    try:
+        source_path: Path = (ROOT_DIR / source_filepath).resolve()
+        dest_path: Path = (ROOT_DIR / dest_filepath).resolve()
+
+        if not is_safe_path(source_path) or not is_safe_path(dest_path):
+            return "SECURITY BLOCK: Access denied. Source and dest must be safe."
+        if not source_path.exists():
+            return (
+                f"ERROR: Source file not found at {source_path.relative_to(ROOT_DIR)}"
+            )
+
+        # SHIFT-LEFT SAFETY: Protect ADRs
+        if "adr" in source_path.parts or "adr" in dest_path.parts:
+            return "SECURITY BLOCK: Cannot copy ADRs."
+
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_path, dest_path)
+        return f"SUCCESS: Copied to {dest_path.relative_to(ROOT_DIR)}"
+    except Exception as e:
+        return f"ERROR: Failed to copy file - {str(e)}"
