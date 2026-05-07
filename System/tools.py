@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 from rich.console import Console
 from rich.prompt import Confirm
+import shutil
 
 # Define the absolute root of the Brain OS
 ROOT_DIR: Path = Path(__file__).parent.parent.resolve()
@@ -132,9 +133,9 @@ def append_safe_file(filepath: str, content: str) -> str:
 
 
 def bootstrap_project(
-    project_name: str, template_url: str = "https://github.com/dc1014/forge.git"
+    project_name: str, template_url: str = "https://github.com/mrdanielcasper/forge.git"
 ) -> str:
-    """Clones a project archetype into the Studio directory and initializes it."""
+    """Clones a project archetype into the Studio directory and initializes dependencies."""
     try:
         target_path: Path = (ROOT_DIR / "Studio" / project_name).resolve()
         if not is_safe_path(target_path):
@@ -142,20 +143,20 @@ def bootstrap_project(
         if target_path.exists():
             return f"ERROR: Directory exists at {target_path.relative_to(ROOT_DIR)}"
 
+        # 1. Clone the Repo
         result = subprocess.run(
             ["git", "clone", template_url, str(target_path)],
             capture_output=True,
             text=True,
         )
+
         if result.returncode == 0:
-            # SHIFT-LEFT: Rename 'origin' to 'upstream' to enable seamless Forge engine updates
+            # 2. Rename Remote
             subprocess.run(
-                ["git", "remote", "rename", "origin", "upstream"],
-                cwd=str(target_path),
-                capture_output=True,
+                ["git", "remote", "rename", "origin", "upstream"], cwd=str(target_path)
             )
 
-            # Automatically initialize the .env file so the AI doesn't have to
+            # 3. Setup Env
             env_example = target_path / ".env.example"
             env_target = target_path / ".env"
             if env_example.exists() and not env_target.exists():
@@ -163,7 +164,24 @@ def bootstrap_project(
                     env_example.read_text(encoding="utf-8"), encoding="utf-8"
                 )
 
-            return f"SUCCESS: Bootstrapped at {target_path.relative_to(ROOT_DIR)}"
+            # --- SHIFT-LEFT DEVEX: Auto-Hydrate Dependencies ---
+            console.print(f"[dim]Hydrating dependencies for {project_name}...[/dim]")
+
+            # Resolve cross-platform paths safely
+            npm_path = shutil.which("npm")
+            uv_path = shutil.which("uv")
+
+            if uv_path:
+                subprocess.run(
+                    [uv_path, "sync"], cwd=str(target_path), capture_output=True
+                )
+            if npm_path:
+                subprocess.run(
+                    [npm_path, "install"], cwd=str(target_path), capture_output=True
+                )
+
+            return f"SUCCESS: Bootstrapped and hydrated at {target_path.relative_to(ROOT_DIR)}"
+
         return f"ERROR: Git clone failed - {result.stderr}"
     except Exception as e:
         return f"ERROR: Failed to bootstrap project - {str(e)}"
