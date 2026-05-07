@@ -119,6 +119,25 @@ def run_agent(
             else:
                 pruned_messages = messages
 
+            # --- SHIFT-LEFT: DYNAMIC API KEY FALLBACK ---
+            # If the config requests Anthropic, but the user only has OpenAI, seamlessly downgrade.
+            import os
+
+            _has_anthropic = bool(os.environ.get("ANTHROPIC_API_KEY"))
+            _has_openai = bool(os.environ.get("OPENAI_API_KEY"))
+
+            if (
+                "anthropic" in model_string.lower()
+                and not _has_anthropic
+                and _has_openai
+            ):
+                if step == 0:  # Only print the warning on the first step of the chain
+                    console.print(
+                        "[yellow]⚠️  Anthropic key missing. Automatically falling back to OpenAI (gpt-4o).[/yellow]"
+                    )
+                model_string = "openai/gpt-4o"
+            # ---------------------------------------------
+
             kwargs: dict[str, Any] = {
                 "model": model_string,
                 "messages": pruned_messages,

@@ -34,32 +34,38 @@ The OS dynamically stacks memory. It always injects `Meta/global-memory.md` (you
 
 ## 🚀 Quick Start Guide
 
-### Prerequisites
-* **Python 3.12+**
-* **[uv](https://github.com/astral-sh/uv):** The blazingly fast Python package manager.
+### 1. Bootstrapping the OS
+Brain OS uses a fast, automated setup script to install dependencies (like `uv`) and configure your environment.
 
-### 1. Clone & Install
-Clone the core engine and lock in the dependencies:
+**Mac / Linux Users:**
+Open your terminal and run:
 ```bash
-git clone [https://github.com/yourusername/brain.git](https://github.com/yourusername/brain.git)
-cd brain
-uv sync
+./setup.sh
 ```
 
-### 2. Configure Environment
-Copy the example environment file:
-```bash
-cp .env.example .env
+**Windows Users:**
+Open PowerShell and run:
+```powershell
+./setup.ps1
 ```
-Populate `.env` with your API keys. (You can start with just an `OPENAI_API_KEY` to test the system).
 
-### 3. Vault Initialization
+### 2. API Keys
+The setup script created a `.env` file in your directory. Open it and add your API keys. 
+*Note: Brain OS defaults to Anthropic's Claude 3.5. If you only have an `OPENAI_API_KEY`, don't worry—the OS will automatically detect this and safely route your tasks to GPT-4o.*
+
+### 3. Mounting the UI (Obsidian)
+Brain OS uses the local file system as its database, but writing raw markdown in VS Code is clunky. **Obsidian is the official UI for Brain OS.**
+
+1. Download and install [Obsidian](https://obsidian.md/).
+2. Open Obsidian and click **"Open Folder as Vault"**.
+3. Select the `brain` repository folder you just cloned.
+4. *Magic:* Because the `.obsidian` folder is included in this repository, Obsidian will automatically load the Brain OS theme, layout, and community plugins!
+
+### 4. Vault Initialization
 Because Brain is privacy-first, your personal data directories are ignored in git. Build your safe vault structure and foundational memory files instantly:
 ```bash
-uv run System/router.py init
+uv run System/cli.py init
 ```
-
----
 
 ## 💻 Usage & Commands
 
