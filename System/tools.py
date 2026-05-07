@@ -246,9 +246,6 @@ def operate_forge(project_name: str, instruction: str) -> str:
         result = subprocess.run(
             ["uv", "run", "orchestrator.py"],
             cwd=str(target_path),
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
         )
 
         # 5. OBSERVABILITY: Harvest Telemetry & Status
@@ -275,11 +272,11 @@ def operate_forge(project_name: str, instruction: str) -> str:
             f"FORGE EXECUTION COMPLETE (Exit Code {result.returncode})\n\n"
             f"--- TELEMETRY ---\n{telemetry_data}\n\n"
             f"--- HANDOFF STATE ---\n{handoff_status}\n\n"
-            f"--- ENGINE STDOUT (TAIL) ---\n{result.stdout[-1500:] if result.stdout else 'No output.'}\n"
+            f"--- ENGINE STDOUT ---\n(Streamed live to user terminal. Rely on Telemetry and Handoff State above.)\n"
         )
 
         if result.returncode != 0:
-            summary += f"\n--- ERROR STDERR ---\n{result.stderr[-1000:]}"
+            summary += "\n--- ERROR ---\nForge execution failed. Please check the live terminal output for the exact stack trace."
 
         return summary
 
