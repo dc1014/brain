@@ -2,7 +2,7 @@
 
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg)
 ![Architecture](https://img.shields.io/badge/Architecture-Multi--Agent-purple.svg)
-![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)
+![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
 Brain is an open-source "Second Brain" and semi-autonomous agent ecosystem. Think of it as the child of Open Claw and the "Second Brain" Obsidian + Claude setup everyone raves about (while adding Windows + Gemini + ChatGPT support). It bridges the gap between your local file system, unstructured thoughts, LLM reasoning engines, and MCP servers while being as safe as technically possible and minimizing token usage.
 
