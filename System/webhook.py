@@ -26,31 +26,35 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 from rich.console import Console  # noqa: E402
 
+import litellm as _litellm  # noqa: E402
 import System.runtime as rt  # noqa: E402
 import System.llm as _llm_mod  # noqa: E402
 from System.runtime import execute_pipeline  # noqa: E402
 from System.llm import get_system_context  # noqa: E402
 
-# Patch the completion binding inside System.llm so execute_pipeline uses stream=False.
-# We do this here (after import) so it replaces the module-level name that run_agent resolves.
-import litellm as _litellm  # noqa: E402
+# Meridian proxy always streams regardless of stream=False in the request body.
+# Adapter: consume the SSE stream and rebuild a sync-style ModelResponse so
+# run_agent's code path (response.choices[0].message.content) works unchanged.
 _orig_completion = _litellm.completion
 
 
-def _no_stream_completion(*args, **kwargs):
-    kwargs["stream"] = False
-    return _orig_completion(*args, **kwargs)
+def _streaming_adapter(*args, **kwargs):
+    """Force streaming, collect chunks, return a standard ModelResponse."""
+    kwargs.pop("stream", None)
+    stream = _orig_completion(*args, stream=True, **kwargs)
+    chunks = list(stream)
+    return _litellm.stream_chunk_builder(chunks)
 
 
-_llm_mod.completion = _no_stream_completion  # type: ignore
+_llm_mod.completion = _streaming_adapter  # type: ignore
 
 CONFIG_PATH = Path(__file__).parent / "config" / "agents.yaml"
 with open(CONFIG_PATH) as f:
     _AGENT_CONFIG = yaml.safe_load(f)
 
 # Meridian proxy config
-_MERIDIAN_BASE = os.getenv("ANTHROPIC_BASE_URL", "http://localhost:3456")
-_MERIDIAN_KEY = os.getenv("ANTHROPIC_API_KEY", "sk-sable")
+_MERIDIAN_BASE = os.getenv("ANTHROPIC_BASE_URL", "https://api.anthropic.com")
+_MERIDIAN_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 _DISPATCHER_MODEL = "claude-haiku-4-5"
 
 
