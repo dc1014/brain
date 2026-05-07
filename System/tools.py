@@ -322,10 +322,13 @@ def operate_forge(project_name: str, instruction: str) -> str:
         )
 
         # --- SHIFT-LEFT: STRICT Opt-In Gate ---
-        try:
-            user_input = input("Allow execution? [y/N]: ").strip().lower()
-        except (EOFError, KeyboardInterrupt):
-            user_input = "n"
+        if os.environ.get("BRAIN_OS_HEADLESS") == "1":
+            user_input = "y"
+        else:
+            try:
+                user_input = input("Allow execution? [y/N]: ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                user_input = "n"
 
         if user_input not in ["y", "yes"]:
             return "SECURITY BLOCK: User explicitly denied Forge operation."

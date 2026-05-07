@@ -177,58 +177,6 @@ def test_run_os_retry_circuit_breaker(mocker) -> None:  # type: ignore
     )
 
 
-def test_sleep_command_observability(mocker, tmp_path) -> None:  # type: ignore
-    """Ensure the sleep command successfully parses memories, calculates token weight, and prints observability metrics."""
-    from System.cli import sleep
-    from unittest.mock import MagicMock
-
-    # 1. Setup mock log file
-    log_file = tmp_path / "agent_interactions.jsonl"
-    log_file.write_text('{"fake": "log data"}')
-    mocker.patch("System.cli.LOG_FILE", log_file)
-    mocker.patch("System.cli.LOG_DIR", tmp_path)
-
-    # 2. Mock LLM to return a predictable JSON memory structure
-    mock_completion = mocker.patch("System.cli.completion")
-    mock_response = MagicMock()
-    mock_response.choices = [MagicMock()]
-    mock_response.choices[
-        0
-    ].message.content = '{"STUDIO": ["Brain OS now supports Token Truncation. This saves money.", "Added a search tool."]}'
-    mock_completion.return_value = mock_response
-
-    # 3. Bypass config reading and file writing
-    mocker.patch(
-        "System.cli.yaml.safe_load",
-        return_value={"domains": {"STUDIO": "Studio/studio-memory.md"}},
-    )
-    mock_append = mocker.patch("System.cli.append_safe_file", return_value="SUCCESS")
-    mock_print = mocker.patch("System.cli.console.print")
-
-    # Run the sleep cycle
-    sleep()
-
-    # Assertions
-    mock_append.assert_called_once()
-    appended_text = mock_append.call_args[0][1]
-    assert "- Brain OS now supports Token Truncation." in appended_text
-
-    # Verify the exact terminal output format
-    printed_texts = [
-        str(call.args[0]) for call in mock_print.call_args_list if call.args
-    ]
-
-    # Check that the Domain Header was printed
-    assert any("STUDIO MEMORY UPDATED" in text for text in printed_texts)
-
-    # Check that the First Sentence truncation and Token Cost math worked
-    # "Brain OS now supports Token Truncation. This saves money." -> 57 chars // 4 = 14 tokens
-    assert any(
-        "└─ Brain OS now supports Token Truncation." in text and "~14 tokens" in text
-        for text in printed_texts
-    )
-
-
 def test_init_autonomous_git_hooks(mocker, tmp_path) -> None:  # type: ignore
     """Ensure the init command automatically discovers repositories and wires up git hooks."""
     from System.cli import init

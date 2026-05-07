@@ -25,7 +25,7 @@ echo "⚡ Syncing OS dependencies..."
 uv sync
 
 # Force vault initialization to ensure Obsidian paths exist
-uv run System/cli.py init
+uv run python System/cli.py init
 
 
 echo ""

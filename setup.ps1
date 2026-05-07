@@ -23,6 +23,6 @@ Write-Host "⚡ Syncing OS dependencies..." -ForegroundColor Cyan
 uv sync
 
 # Force vault initialization to ensure Obsidian paths exist
-uv run System/cli.py init
+uv run python System/cli.py init
 
 Write-Host "`n🚀 Brain OS is ready! Run: uv run python System/cli.py 'Your prompt here'" -ForegroundColor Green
