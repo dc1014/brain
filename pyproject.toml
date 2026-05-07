@@ -15,6 +15,9 @@ dependencies = [
     "tree-sitter-typescript>=0.23.2",
     "tree-sitter-javascript>=0.25.0",
     "pytest-cov>=7.1.0",
+    "fastapi>=0.136.1",
+    "uvicorn[standard]>=0.46.0",
+    "httpx>=0.28.1",
 ]
 
 [dependency-groups]
