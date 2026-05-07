@@ -1,6 +1,6 @@
 # 🧠 Brain OS Control Room
 
-Welcome to your Second Brain. 
+Welcome to your Second Brain.
 
 ## 🏭 The Factory Floor (Forge)
 *Active AI-driven applications.*
@@ -19,4 +19,3 @@ Welcome to your Second Brain.
 ---
 **💡 Pro Tip:** *To issue a command to Brain OS, write your ticket in a markdown file, open your terminal, and run:*
 `uv run System/cli.py task "Read my ticket at Personal/Scratchpad/ticket.md and execute it."
-

@@ -17,8 +17,8 @@
     "obsidian": {
       "command": "npx",
       "args": [
-        "-y", 
-        "@modelcontextprotocol/server-filesystem", 
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
         "<YOUR_ABSOLUTE_PATH_TO_BRAIN>"
       ]
     },

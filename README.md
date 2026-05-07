@@ -50,7 +50,7 @@ Open PowerShell and run:
 ```
 
 ### 2. API Keys
-The setup script created a `.env` file in your directory. Open it and add your API keys. 
+The setup script created a `.env` file in your directory. Open it and add your API keys.
 *Note: Brain OS defaults to Anthropic's Claude 3.5. If you only have an `OPENAI_API_KEY`, don't worry—the OS will automatically detect this and safely route your tasks to GPT-4o.*
 
 ### 3. Mounting the UI (Obsidian)
@@ -75,13 +75,13 @@ Brain OS uses the local file system as its database, but **Obsidian** is its off
 When you open the vault, you will land on `Home.md`. This is your OS Dashboard. It provides instantaneous links to your active Forge projects (`Studio/`), your scratchpad, and your system logs.
 
 ### 2. The Media Quarantine
-By default, pasting images into markdown clutters the root directory. Brain OS prevents this. 
+By default, pasting images into markdown clutters the root directory. Brain OS prevents this.
 When you paste an image or PDF into any file in Obsidian, it is automatically routed to `Media/Attachments/`.
 * **The Forge Workflow:** If you want an AI to use an image in a web app, do not put the image in the web app folder. Drop it into Obsidian, then command the OS: `"Copy Media/Attachments/image.png to Studio/My-App/public/logo.png"`.
 
 ### 3. The Clean Knowledge Graph
-Obsidian's Graph View is powerful, but indexing `node_modules` and Python caches ruins it. 
-* Brain OS uses hidden `userIgnoreFilters` to completely banish build files and dependencies from Obsidian's index. 
+Obsidian's Graph View is powerful, but indexing `node_modules` and Python caches ruins it.
+* Brain OS uses hidden `userIgnoreFilters` to completely banish build files and dependencies from Obsidian's index.
 * To filter out raw code files from your graph, open the Graph Settings and set the search filter to: `-path:Studio`
 
 ### 4. Running Commands Natively (Zero Alt-Tab)
@@ -92,7 +92,7 @@ You do not need to open a separate terminal to command Brain OS. The vault is pr
 
 ## 💻 Usage & Commands
 
-Brain operates via a unified CLI router. 
+Brain operates via a unified CLI router.
 
 ### Execute a Task
 The system will auto-route, assign domains, and spin up the necessary agents safely inside your vault.
@@ -196,7 +196,7 @@ If Forge reports `Exit Code 0 (Success)` but your browser does not reflect the c
 4. **Fix via Brain:** Instruct Brain OS to delete the orphaned files and fix the imports in your router.
 
 ## 🤝 Contributing
-Contributions to the core routing engine and API layers are welcome. 
+Contributions to the core routing engine and API layers are welcome.
 Please ensure all tests pass before submitting a PR:
 ```bash
 uv run pytest System/tests/

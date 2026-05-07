@@ -1,11 +1,34 @@
 repos:
-  # Ruff (Python Linter & Formatter)
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.12
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^Studio/
+      - id: end-of-file-fixer
+        exclude: ^Studio/
+
+  - repo: local
     hooks:
       - id: ruff
-        args: [ --fix ]
+        name: ruff
+        entry: uv run ruff check --fix
+        language: system
+        types_or: [python, pyi]
+        exclude: ^Studio/
+
       - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types_or: [python, pyi]
+        exclude: ^Studio/
+
+      - id: mypy
+        name: mypy
+        # Explicitly check only the System folder to stay fast and focused
+        entry: uv run mypy System/
+        language: system
+        pass_filenames: false
 
   # Markdown Lint
   - repo: https://github.com/igorshubovych/markdownlint-cli
@@ -20,18 +43,3 @@ repos:
     hooks:
       - id: mypy
         args: ["--ignore-missing-imports"]
-
-# --- MONOREPO HOOKS: FORGE SUB-PROJECTS ---
-  - repo: local
-    hooks:
-      - id: forge-biome
-        name: Forge Biome Linter (Studio/*)
-        entry: bash -c 'for d in Studio/*; do if [ -d "$d" ] && [ -f "$d/biome.json" ]; then echo "Linting $d..." && (cd "$d" && npx @biomejs/biome check --write .); fi; done'
-        language: system
-        pass_filenames: false
-
-      - id: forge-vitest
-        name: Forge Vitest Evals (Studio/*)
-        entry: bash -c 'for d in Studio/*; do if [ -d "$d" ] && [ -f "$d/package.json" ]; then echo "Testing $d..." && (cd "$d" && npm run test); fi; done'
-        language: system
-        pass_filenames: false

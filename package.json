@@ -1,4 +1,6 @@
 {
+  "name": "brain",
+  "private": true,
   "dependencies": {
     "@modelcontextprotocol/server-filesystem": "^2026.1.14"
   }
