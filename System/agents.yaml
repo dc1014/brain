@@ -21,26 +21,6 @@ agents:
       ROUTE: <route>
       DOMAIN: <domain>
 
-  engineer:
-    name: "Engineer (Claude)"
-    model: "claude_haiku"
-    system_prompt: |
-      You are a highly structured system engineer. Break this task down into a clear plan. Use your tools to read, explore, or write files as necessary.
-
-  auditor:
-    name: "Auditor (GPT)"
-    model: "gpt_mini"
-    system_prompt: |
-      You are the Chief Auditor and LLM-as-a-Judge for Brain OS. Your job is to ruthlessly grade the Engineer's work to ensure Zero-Debt execution.
-      
-      When reviewing a Forge deployment, you must:
-      1. Use `read_safe_file` to read the original ticket to understand the required intent (e.g., Studio/Brain-Website/docs/product/current_run.md).
-      2. Use `read_safe_file` to read Forge's actual execution record (e.g., Studio/Brain-Website/docs/ops/telemetry.jsonl). Look at the last entry to see what file paths Forge *actually* wrote to.
-      3. Compare the Intent (ticket) vs State (telemetry paths and payload).
-      
-      Did the Engineer write to hallucinated or orphaned paths? Did they drop requirements? 
-      Output a strict [GRADE: PASS] or [GRADE: FAIL], followed by a bulleted mathematical proof of why. Do not be polite.
-
   fast_responder:
     name: "Responder (Gemini)"
     model: "gemini_flash"
@@ -61,12 +41,26 @@ agents:
       3. Use `execute_command` to run `npm install` and `uv sync` to install dependencies.
       4. Use `operate_forge` to command the engine. Pass the project name and the exact instruction. Brain OS will automatically configure handoff.md, capture telemetry, and return Forge's internal state. Do NOT use `execute_command` to run orchestrator.py.
 
+  auditor:
+    name: "Auditor (GPT)"
+    model: "gpt_mini"
+    system_prompt: |
+      You are the Chief Auditor and LLM-as-a-Judge for Brain OS. Your job is to ruthlessly grade the Engineer's work to ensure Zero-Debt execution.
+      
+      When reviewing a Forge deployment, you must:
+      1. Use `read_safe_file` to read the original ticket to understand the required intent (e.g., Studio/Brain-Website/docs/product/current_run.md).
+      2. Use `read_safe_file` to read Forge's actual execution record (e.g., Studio/Brain-Website/docs/ops/telemetry.jsonl). Look at the last entry to see what file paths Forge *actually* wrote to.
+      3. Compare the Intent (ticket) vs State (telemetry paths and payload).
+      
+      Did the Engineer write to hallucinated or orphaned paths? Did they drop requirements? 
+      Output a strict [GRADE: PASS] or [GRADE: FAIL], followed by a bulleted mathematical proof of why. Do not be polite.
+
 # The Pipeline Engine: Define how agents compose and hand-off
 routes:
   FAST:
     - agent: "fast_responder"
       tools: []
-      context: ["Meta", "Domain"] # Dynamically pulls the assigned domain
+      context: ["Meta", "Domain"]
 
   READ_ONLY:
     - agent: "engineer"
@@ -76,10 +70,10 @@ routes:
       tools: []
       context: ["Meta"]
 
-COMPLEX:
+  COMPLEX:
     - agent: "engineer"
       tools: ["base", "write", "execute"]
       context: ["Meta", "Domain", "Studio"]
     - agent: "auditor"
-      tools: ["base"] # <-- SHIFT-LEFT: Give the Auditor read access to the file system
+      tools: ["base"]
       context: ["Meta", "Domain", "Studio"]
