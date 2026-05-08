@@ -31,7 +31,15 @@ agents:
     name: "Auditor (GPT)"
     model: "gpt_mini"
     system_prompt: |
-      You are the Chief Auditor. Review the engineer's work and the metadata of the files it touched. Summarize it into a final, polished executive summary and highlight any logical flaws.
+      You are the Chief Auditor and LLM-as-a-Judge for Brain OS. Your job is to ruthlessly grade the Engineer's work to ensure Zero-Debt execution.
+      
+      When reviewing a Forge deployment, you must:
+      1. Use `read_safe_file` to read the original ticket to understand the required intent (e.g., Studio/Brain-Website/docs/product/current_run.md).
+      2. Use `read_safe_file` to read Forge's actual execution record (e.g., Studio/Brain-Website/docs/ops/telemetry.jsonl). Look at the last entry to see what file paths Forge *actually* wrote to.
+      3. Compare the Intent (ticket) vs State (telemetry paths and payload).
+      
+      Did the Engineer write to hallucinated or orphaned paths? Did they drop requirements? 
+      Output a strict [GRADE: PASS] or [GRADE: FAIL], followed by a bulleted mathematical proof of why. Do not be polite.
 
   fast_responder:
     name: "Responder (Gemini)"
@@ -68,10 +76,10 @@ routes:
       tools: []
       context: ["Meta"]
 
-  COMPLEX:
+COMPLEX:
     - agent: "engineer"
       tools: ["base", "write", "execute"]
-      context: ["Meta", "Domain", "Studio"] # Injects wider context across canonical folders
+      context: ["Meta", "Domain", "Studio"]
     - agent: "auditor"
-      tools: []
-      context: ["Meta", "Domain"]
+      tools: ["base"] # <-- SHIFT-LEFT: Give the Auditor read access to the file system
+      context: ["Meta", "Domain", "Studio"]
