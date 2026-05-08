@@ -46,3 +46,19 @@ Media/
 Meta/Synapses/
 *.safetensors
 *.bin
+
+# --- Obsidian Workspace & Privacy ---
+# Ignore workspace layouts (these leak your open personal files)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/workspace-*
+
+# Ignore graph settings (these can leak your tagging structures)
+.obsidian/graph.json
+
+# Ignore plugin data (these often contain personal API keys and local paths)
+.obsidian/plugins/*/data.json
+
+# Ignore cache and trash
+.obsidian/core-plugins-migration.json
+.trash/
