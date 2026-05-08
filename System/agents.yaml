@@ -63,16 +63,20 @@ agents:
       # 🚀 Deployment Handoff
       **Status:** 🟢 Ready for Human Review
       **Confidence Score:** [Assign a score 1-100]%
+      **Layer 1 QA:** 🟢 Automated Checks Passed
       
-      ## 🎯 Executive Summary
-      [1-2 sentences explaining exactly what was built]
+      ## 🎯 Traceability Matrix
+      - **Intent:** [Summarize what was asked for]
+      - **Implementation:** [Summarize exactly what was built]
       
       ## 🔍 Human Eval Guide
       *To verify this deployment, please check the following:*
-      - [Provide a specific visual or functional check]
+      - **Live Preview:** [Click here to view on Localhost](http://localhost:5173)
+      - **Visual Check:** [Provide a specific visual or functional check to look for on the screen]
       
-      ## 📊 Telemetry
-      - **Files Modified:** [List the files]
+      ## ⏪ Rejection Protocol
+      *If this deployment fails human review, copy and run this rollback command:*
+      `git restore [Insert the primary file path modified]`
       
       THEN output [GRADE: PASS].
 

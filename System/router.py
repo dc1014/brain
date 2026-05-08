@@ -48,6 +48,7 @@ LOG_FILE: Path = LOG_DIR / "agent_interactions.jsonl"
 class AgentResponse:
     text: str
     actions: list[str] = field(default_factory=list)
+    usage: dict[str, int] = field(default_factory=dict)
 
 
 def log_interaction(
@@ -258,7 +259,9 @@ def run_agent(
             domain,
         )
 
-        return AgentResponse(text=final_text.strip(), actions=action_manifest)
+        return AgentResponse(
+            text=final_text.strip(), actions=action_manifest, usage=usage_data
+        )
     except Exception as e:
         return AgentResponse(text=f"Error: {str(e)}", actions=[])
 
@@ -529,11 +532,15 @@ def task(
     current_payload = description
 
     for step in pipeline:
-        # SHIFT-LEFT: Dynamic queue allows the Auditor to autonomously reject and retry
+        # --- EXECUTE DECLARATIVE PIPELINE ---
         pipeline = list(AGENT_CONFIG["routes"].get(route_type, []))
         current_payload = description
         eval_retries = 0
         MAX_RETRIES = 2
+
+        # SHIFT-LEFT: Initialize Pipeline Metrics
+        total_pipeline_tokens = 0
+        agents_invoked = []
 
         while len(pipeline) > 0:
             step = pipeline.pop(0)
@@ -545,7 +552,7 @@ def task(
                 "gpt_mini": "OPENAI_API_KEY",
                 "claude_haiku": "ANTHROPIC_API_KEY",
                 "gemini_flash": "GEMINI_API_KEY",
-                "claude_sonnet": "ANTHROPIC_API_KEY",  # <-- ADD THIS LINE!
+                "claude_sonnet": "ANTHROPIC_API_KEY",
             }
 
             if os.getenv(env_key_map.get(desired_model_key, "")):
@@ -583,6 +590,10 @@ def task(
                 domain=domain,
             )
 
+            # Update Metrics
+            total_pipeline_tokens += step_result.usage.get("total_tokens", 0)
+            agents_invoked.append(agent_cfg["name"])
+
             # Print Output
             display_text = step_result.text
             if step_result.actions:
@@ -604,12 +615,12 @@ def task(
                     console.print(
                         "\n[bold red]❌ Audit Failed! Routing back to Engineer for autonomous fix...[/bold red]\n"
                     )
-                    # Re-queue the Engineer and Auditor
+
                     pipeline.insert(
                         0,
                         {
                             "agent": "auditor",
-                            "tools": ["base"],
+                            "tools": ["base", "write"],
                             "context": ["Meta", "Domain", "Studio"],
                         },
                     )
@@ -622,7 +633,7 @@ def task(
                         },
                     )
 
-                    # SHIFT-LEFT: Preserve the original task context so the Engineer doesn't get lost
+                    # Preserve the original task context so the Engineer doesn't get lost
                     current_payload = f"Original Task: {description}\n\nCRITICAL - AUDIT FAILED. Read the critique, fix the code, and redeploy:\n\n{step_result.text}"
                     eval_retries += 1
                     continue
@@ -635,6 +646,25 @@ def task(
             # Hand-off Pipeline Payload (Normal flow)
             current_payload = f"Original Task: {description}\n\nPrevious Agent ({agent_cfg['name']}) Output:\n{step_result.text}\n\nActions Taken:\n{step_result.actions}"
 
+        # --- PIPELINE DIAGNOSTICS DISPLAY ---
+        agent_summary = ", ".join(
+            [
+                f"{agent} (x{agents_invoked.count(agent)})"
+                for agent in set(agents_invoked)
+            ]
+        )
+        diagnostics = (
+            f"[bold cyan]Agents Invoked:[/bold cyan] {agent_summary}\n"
+            f"[bold cyan]Eval Loops (Retries):[/bold cyan] {eval_retries}\n"
+            f"[bold cyan]Total Tokens Burned:[/bold cyan] {total_pipeline_tokens:,}"
+        )
+        console.print(
+            Panel(
+                diagnostics,
+                title="[bold green]📊 Pipeline Diagnostics[/bold green]",
+                border_style="green",
+            )
+        )
         console.print("\n[bold green]✅ Task Complete.[/bold green]\n")
 
 
