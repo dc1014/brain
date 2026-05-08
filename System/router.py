@@ -545,6 +545,7 @@ def task(
                 "gpt_mini": "OPENAI_API_KEY",
                 "claude_haiku": "ANTHROPIC_API_KEY",
                 "gemini_flash": "GEMINI_API_KEY",
+                "claude_sonnet": "ANTHROPIC_API_KEY",  # <-- ADD THIS LINE!
             }
 
             if os.getenv(env_key_map.get(desired_model_key, "")):

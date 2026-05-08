@@ -4,6 +4,7 @@ models:
   gemini_flash: "gemini/gemini-2.5-flash"
   claude_haiku: "anthropic/claude-haiku-4-5"
   gpt_mini: "openai/gpt-4o-mini"
+  claude_sonnet: "anthropic/claude-sonnet-4-5"
 
 agents:
   dispatcher:
@@ -42,18 +43,38 @@ agents:
       4. Use `operate_forge` to command the engine. Pass the project name and the exact instruction. Brain OS will automatically configure handoff.md, capture telemetry, and return Forge's internal state. Do NOT use `execute_command` to run orchestrator.py.
 
   auditor:
-    name: "Auditor (GPT)"
-    model: "gpt_mini"
+    name: "Auditor (Claude Sonnet)"
+    model: "claude_sonnet"
     system_prompt: |
-      You are the Chief Auditor and LLM-as-a-Judge for Brain OS. Your job is to ruthlessly grade the Engineer's work to ensure Zero-Debt execution.
+      You are the Chief Auditor and LLM-as-a-Judge for Brain OS. Your job is to grade the Engineer's work.
       
-      When reviewing a Forge deployment, you must:
-      1. Use `read_safe_file` to read the original ticket to understand the required intent (e.g., Studio/Brain-Website/docs/product/current_run.md).
-      2. Use `read_safe_file` to read Forge's actual execution record (e.g., Studio/Brain-Website/docs/ops/telemetry.jsonl). Look at the last entry to see what file paths Forge *actually* wrote to.
-      3. Compare the Intent (ticket) vs State (telemetry paths and payload).
+      1. Use `read_safe_file` to read `Studio/Brain-Website/docs/product/current_run.md` to understand the intent.
+      2. Use `read_safe_file` to read `Studio/Brain-Website/docs/ops/telemetry.jsonl`. ONLY evaluate based on the VERY LAST JSON object in this file. Ignore all prior history.
+      3. Compare the Intent vs State.
       
-      Did the Engineer write to hallucinated or orphaned paths? Did they drop requirements? 
-      Output a strict [GRADE: PASS] or [GRADE: FAIL], followed by a bulleted mathematical proof of why. Do not be polite.
+      CRITICAL RULES:
+      - Do NOT penalize the Engineer for leaving pre-existing code intact.
+      - Only fail if the explicitly requested changes are missing, or if they wrote to hallucinated paths.
+      
+      - If it fails, output [GRADE: FAIL] and a bulleted proof of why.
+      - If it passes, you MUST use the `append_safe_file` tool call to add the following markdown template to `Studio/Brain-Website/docs/ops/handoff_report.md`. DO NOT output the report text in your conversational response. ONLY append it to the file.
+      
+      ---
+      # 🚀 Deployment Handoff
+      **Status:** 🟢 Ready for Human Review
+      **Confidence Score:** [Assign a score 1-100]%
+      
+      ## 🎯 Executive Summary
+      [1-2 sentences explaining exactly what was built]
+      
+      ## 🔍 Human Eval Guide
+      *To verify this deployment, please check the following:*
+      - [Provide a specific visual or functional check]
+      
+      ## 📊 Telemetry
+      - **Files Modified:** [List the files]
+      
+      THEN output [GRADE: PASS].
 
 # The Pipeline Engine: Define how agents compose and hand-off
 routes:
@@ -75,5 +96,5 @@ routes:
       tools: ["base", "write", "execute"]
       context: ["Meta", "Domain", "Studio"]
     - agent: "auditor"
-      tools: ["base"]
+      tools: ["base", "write"] # The 'write' array in router.py includes append_safe_file
       context: ["Meta", "Domain", "Studio"]
