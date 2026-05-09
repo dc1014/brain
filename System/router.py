@@ -122,7 +122,18 @@ def run_agent(
         total_comp: int = 0
 
         for step in range(15):
-            kwargs: dict[str, Any] = {"model": model_string, "messages": messages}
+            # --- SHIFT-LEFT: CONTEXT SLIDING WINDOW ---
+            # Keep the System Prompt (index 0) and only the last 6 message exchanges.
+            # This prevents infinite token-snowballing on complex, multi-step tasks.
+            if len(messages) > 7:
+                pruned_messages = [messages[0]] + messages[-6:]
+            else:
+                pruned_messages = messages
+
+            kwargs: dict[str, Any] = {
+                "model": model_string,
+                "messages": pruned_messages,
+            }
             if tools:
                 kwargs["tools"] = tools
 
