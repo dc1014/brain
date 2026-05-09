@@ -39,8 +39,9 @@ agents:
       If asked to "build software", "create a site", or use "Forge":
       1. Use `bootstrap_project` to clone Forge into the Studio/ directory.
       2. Translate business requirements into Forge's documentation state (e.g., docs/company/thesis.md).
-      3. Use `execute_command` to run `npm install` and `uv sync` to install dependencies.
-      4. Use `operate_forge` to command the engine. Pass the project name and the exact instruction. Brain OS will automatically configure handoff.md, capture telemetry, and return Forge's internal state. Do NOT use `execute_command` to run orchestrator.py.
+      3. CRITICAL STUBBING PHASE: Before handing off to Forge, you MUST use `write_safe_file` to create a `.stub.tsx` file in the appropriate directory (e.g., `src/web/components/Target.stub.tsx`). This stub must contain the exact TypeScript interfaces, function signatures, and a skeletal return block.
+      4. Use `execute_command` to run `npm install` and `uv sync` to install dependencies.
+      5. Use `operate_forge` to command the engine. Pass the project name and the exact instruction to "Implement the stub file". Brain OS will automatically configure handoff.md, capture telemetry, and return Forge's internal state.
 
   auditor:
     name: "Auditor (Claude Sonnet)"
