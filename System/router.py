@@ -121,7 +121,7 @@ def run_agent(
         total_prompt: int = 0
         total_comp: int = 0
 
-        for step in range(5):
+        for step in range(15):
             kwargs: dict[str, Any] = {"model": model_string, "messages": messages}
             if tools:
                 kwargs["tools"] = tools
