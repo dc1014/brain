@@ -532,6 +532,7 @@ def task(
     current_payload = description
 
     # --- EXECUTE DECLARATIVE PIPELINE ---
+    # --- EXECUTE DECLARATIVE PIPELINE ---
     pipeline = list(AGENT_CONFIG["routes"].get(route_type, []))
     current_payload = description
     eval_retries = 0
@@ -643,26 +644,24 @@ def task(
         # Hand-off Pipeline Payload (Normal flow)
         current_payload = f"Original Task: {description}\n\nPrevious Agent ({agent_cfg['name']}) Output:\n{step_result.text}\n\nActions Taken:\n{step_result.actions}"
 
-        # --- PIPELINE DIAGNOSTICS DISPLAY ---
-        agent_summary = ", ".join(
-            [
-                f"{agent} (x{agents_invoked.count(agent)})"
-                for agent in set(agents_invoked)
-            ]
+    # --- PIPELINE DIAGNOSTICS DISPLAY ---
+    # (Notice this is now safely OUTSIDE the while loop!)
+    agent_summary = ", ".join(
+        [f"{agent} (x{agents_invoked.count(agent)})" for agent in set(agents_invoked)]
+    )
+    diagnostics = (
+        f"[bold cyan]Agents Invoked:[/bold cyan] {agent_summary}\n"
+        f"[bold cyan]Eval Loops (Retries):[/bold cyan] {eval_retries}\n"
+        f"[bold cyan]Total Tokens Burned:[/bold cyan] {total_pipeline_tokens:,}"
+    )
+    console.print(
+        Panel(
+            diagnostics,
+            title="[bold green]📊 Pipeline Diagnostics[/bold green]",
+            border_style="green",
         )
-        diagnostics = (
-            f"[bold cyan]Agents Invoked:[/bold cyan] {agent_summary}\n"
-            f"[bold cyan]Eval Loops (Retries):[/bold cyan] {eval_retries}\n"
-            f"[bold cyan]Total Tokens Burned:[/bold cyan] {total_pipeline_tokens:,}"
-        )
-        console.print(
-            Panel(
-                diagnostics,
-                title="[bold green]📊 Pipeline Diagnostics[/bold green]",
-                border_style="green",
-            )
-        )
-        console.print("\n[bold green]✅ Task Complete.[/bold green]\n")
+    )
+    console.print("\n[bold green]✅ Task Complete.[/bold green]\n")
 
 
 @app.command()
