@@ -536,7 +536,7 @@ def task(
     pipeline = list(AGENT_CONFIG["routes"].get(route_type, []))
     current_payload = description
     eval_retries = 0
-    MAX_RETRIES = 2
+    MAX_RETRIES = 1
 
     # SHIFT-LEFT: Initialize Pipeline Metrics
     total_pipeline_tokens = 0
