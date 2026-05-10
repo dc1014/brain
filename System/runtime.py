@@ -128,7 +128,8 @@ def get_resolved_model(desired_model_key: str, is_exhausted: bool) -> str:
 
 def execute_pipeline(description: str, route_type: str, domain: str) -> None:
     from System.organs.vestibular import commit_transaction, restore_balance
-    import concurrent.futures
+    from System.llm import run_agent_async
+    import asyncio
 
     commit_transaction()
 
@@ -158,68 +159,67 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
         if "swarm" in step:
             swarm_steps = step["swarm"]
             console.print(
-                f"\\n[bold magenta]🧠 Prefrontal Cortex: Spawning swarm of {len(swarm_steps)} agents in parallel...[/bold magenta]"
+                f"\n[bold magenta]🧠 Prefrontal Cortex: Spawning swarm of {len(swarm_steps)} agents in parallel...[/bold magenta]"
             )
 
             swarm_outputs = []
 
-            def execute_swarm_agent(sub_step: dict):
-                a_cfg = AGENT_CONFIG["agents"][sub_step["agent"]]
-                model_str = get_resolved_model(a_cfg["model"], is_exhausted)
+            async def _execute_swarm_batch():
+                async def _task(sub_step):
+                    a_cfg = AGENT_CONFIG["agents"][sub_step["agent"]]
+                    model_str = get_resolved_model(a_cfg["model"], is_exhausted)
 
-                active_tools = []
-                for t_group in sub_step.get("tools", []):
-                    active_tools.extend(available_tools.get(t_group, []))
+                    active_tools = []
+                    for t_group in sub_step.get("tools", []):
+                        active_tools.extend(available_tools.get(t_group, []))
 
-                full_sys_prompt = a_cfg["system_prompt"] + get_system_context(
-                    sub_step.get("context", []), domain, prompt=current_payload
-                )
-
-                res = run_agent(
-                    role_name=a_cfg["name"],
-                    model_string=model_str,
-                    system_prompt=full_sys_prompt,
-                    user_prompt=current_payload,
-                    tools=active_tools if active_tools else None,
-                    route=route_type,
-                    domain=domain,
-                )
-                return a_cfg["name"], res
-
-            # Execute sub-agents concurrently using native threads
-            with concurrent.futures.ThreadPoolExecutor(
-                max_workers=len(swarm_steps)
-            ) as executor:
-                futures = [executor.submit(execute_swarm_agent, s) for s in swarm_steps]
-                for future in concurrent.futures.as_completed(futures):
-                    agent_name, step_result = future.result()
-
-                    step_tokens = step_result.usage.get("total_tokens", 0)
-                    total_pipeline_tokens += step_tokens
-                    log_metabolism(step_tokens)
-                    agents_invoked.append(agent_name)
-
-                    display_text = step_result.text
-                    if step_result.actions:
-                        display_text += "\\n\\n**Actions Taken:**\\n" + "\\n".join(
-                            [f"- {a}" for a in step_result.actions]
-                        )
-
-                    console.print(
-                        Panel(
-                            Markdown(display_text),
-                            title=f"[bold magenta]🐝 {agent_name} (Swarm Node)[/bold magenta]",
-                            border_style="magenta",
-                        )
+                    full_sys_prompt = a_cfg["system_prompt"] + get_system_context(
+                        sub_step.get("context", []), domain, prompt=current_payload
                     )
-                    swarm_outputs.append(
-                        f"--- {agent_name} Output ---\\n{step_result.text}\\nActions: {step_result.actions}"
+
+                    res = await run_agent_async(
+                        role_name=a_cfg["name"],
+                        model_string=model_str,
+                        system_prompt=full_sys_prompt,
+                        user_prompt=current_payload,
+                        tools=active_tools if active_tools else None,
+                        route=route_type,
+                        domain=domain,
                     )
+                    return a_cfg["name"], res
+
+                return await asyncio.gather(*[_task(s) for s in swarm_steps])
+
+            # Execute sub-agents concurrently using asyncio
+            swarm_results = asyncio.run(_execute_swarm_batch())
+
+            for agent_name, step_result in swarm_results:
+                step_tokens = step_result.usage.get("total_tokens", 0)
+                total_pipeline_tokens += step_tokens
+                log_metabolism(step_tokens)
+                agents_invoked.append(agent_name)
+
+                display_text = step_result.text
+                if step_result.actions:
+                    display_text += "\n\n**Actions Taken:**\n" + "\n".join(
+                        [f"- {a}" for a in step_result.actions]
+                    )
+
+                console.print(
+                    Panel(
+                        Markdown(display_text),
+                        title=f"[bold magenta]🐝 {agent_name} (Swarm Node)[/bold magenta]",
+                        border_style="magenta",
+                    )
+                )
+                swarm_outputs.append(
+                    f"--- {agent_name} Output ---\n{step_result.text}\nActions: {step_result.actions}"
+                )
 
             # Synthesize swarm output for the next linear stage (e.g., QA Auditor)
             current_payload = (
-                f"Original Task: {description}\\n\\nSwarm Operations Complete:\\n"
-                + "\\n\\n".join(swarm_outputs)
+                f"Original Task: {description}\n\nSwarm Operations Complete:\n"
+                + "\n\n".join(swarm_outputs)
             )
             continue
 
