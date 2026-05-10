@@ -1,5 +1,6 @@
 import os
 import re
+import ast
 from pathlib import Path
 from rich.console import Console
 
@@ -70,3 +71,69 @@ def validate_execution_path(target_path: str) -> tuple[bool, str]:
         return True, str(requested_path)
     except Exception as e:
         return False, f"PATH VALIDATION ERROR: {str(e)}"
+
+
+# --- NEW: THE AST MEMBRANE ---
+class ToxinDetector(ast.NodeVisitor):
+    def __init__(self):
+        self.is_toxic = False
+        self.threat_reason = ""
+        # The lethal imports an autonomous agent should NEVER need for basic logic
+        self.forbidden_modules = {"os", "subprocess", "sys", "pty", "shutil", "socket"}
+
+    def visit_Import(self, node):
+        for alias in node.names:
+            if alias.name.split(".")[0] in self.forbidden_modules:
+                self.is_toxic = True
+                self.threat_reason = (
+                    f"AST MEMBRANE BLOCK: Malicious import detected '{alias.name}'."
+                )
+        self.generic_visit(node)
+
+    def visit_ImportFrom(self, node):
+        if node.module and node.module.split(".")[0] in self.forbidden_modules:
+            self.is_toxic = True
+            self.threat_reason = (
+                f"AST MEMBRANE BLOCK: Malicious from-import detected '{node.module}'."
+            )
+        self.generic_visit(node)
+
+    def visit_Call(self, node):
+        # Prevent dynamic import obfuscation like __import__("os") or eval/exec
+        if isinstance(node.func, ast.Name):
+            if node.func.id in {"eval", "exec", "__import__", "compile"}:
+                self.is_toxic = True
+                self.threat_reason = f"AST MEMBRANE BLOCK: Forbidden dynamic execution function '{node.func.id}' detected."
+        self.generic_visit(node)
+
+
+def scan_python_ast(filepath: str) -> tuple[bool, str]:
+    """
+    The AST Membrane.
+    Reads a target Python file and blocks execution if it contains lethal OS-level imports.
+    """
+    try:
+        path = Path(filepath)
+        if not path.exists() or path.suffix != ".py":
+            return True, ""  # Not a python file, pass to next layer
+
+        code = path.read_text(encoding="utf-8")
+        tree = ast.parse(code)
+
+        detector = ToxinDetector()
+        detector.visit(tree)
+
+        if detector.is_toxic:
+            console.print(
+                "\n[bold red]🛑 AST Membrane Triggered: Blocked execution of toxic Python script.[/bold red]"
+            )
+            return False, detector.threat_reason
+
+        return True, ""
+    except SyntaxError:
+        return (
+            False,
+            "AST MEMBRANE ERROR: Script contains invalid Python syntax and cannot be analyzed.",
+        )
+    except Exception as e:
+        return False, f"AST MEMBRANE ERROR: Could not analyze file. {str(e)}"

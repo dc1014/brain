@@ -1,5 +1,4 @@
 import json
-import difflib
 from pathlib import Path
 from rich.console import Console
 
@@ -37,12 +36,12 @@ def get_gut_reaction(prompt: str) -> tuple | None:
     if not cache:
         return None
 
-    # Use Python's built-in SequenceMatcher to find a >90% similarity match instantly
-    matches = difflib.get_close_matches(prompt.lower(), cache.keys(), n=1, cutoff=0.90)
+    # SHIFT-LEFT: Exact O(1) Hash Matching.
+    # We reject heuristics. If it's not a byte-for-byte identical request, we do not cache.
+    normalized_prompt = prompt.strip().lower()
 
-    if matches:
-        match = matches[0]
-        data = cache[match]
+    if normalized_prompt in cache:
+        data = cache[normalized_prompt]
 
         # 🛡️ THE PATCH: Invalidate cache for mutating/execution routes
         if data["route_type"] in FORBIDDEN_CACHE_ROUTES:
@@ -52,7 +51,7 @@ def get_gut_reaction(prompt: str) -> tuple | None:
             return None
 
         console.print(
-            f"[bold green]🦠 Enteric Reflex Triggered: Bypassing Dispatcher. Gut routing matches '{match}'.[/bold green]"
+            "[bold green]🦠 Enteric Reflex Triggered: Bypassing Dispatcher. Gut routing exact match found.[/bold green]"
         )
 
         # Return the exact tuple structure expected by analyze_task, but with 0 token usage
@@ -77,7 +76,7 @@ def save_gut_reaction(
 
     # We only cache successful, safe routing decisions
     if is_valid and route_type not in FORBIDDEN_CACHE_ROUTES:
-        cache[prompt.lower()] = {
+        cache[prompt.strip().lower()] = {
             "is_valid": is_valid,
             "reason": reason,
             "route_type": route_type,

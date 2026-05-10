@@ -69,3 +69,37 @@ def test_bbb_validate_execution_path(monkeypatch, tmp_path):
     )
     assert not is_safe
     assert "PATH TRAVERSAL" in reason
+
+
+def test_ast_membrane_blocks_lethal_imports(tmp_path):
+    from System.organs.blood_brain_barrier import scan_python_ast
+
+    toxic_file = tmp_path / "toxic.py"
+    toxic_file.write_text("import os\nos.system('rm -rf /')")
+
+    is_safe, reason = scan_python_ast(str(toxic_file))
+    assert not is_safe
+    assert "AST MEMBRANE BLOCK" in reason
+    assert "'os'" in reason
+
+
+def test_ast_membrane_blocks_dynamic_execution(tmp_path):
+    from System.organs.blood_brain_barrier import scan_python_ast
+
+    toxic_file = tmp_path / "toxic.py"
+    toxic_file.write_text("eval('print(1)')")
+
+    is_safe, reason = scan_python_ast(str(toxic_file))
+    assert not is_safe
+    assert "AST MEMBRANE BLOCK" in reason
+    assert "'eval'" in reason
+
+
+def test_ast_membrane_allows_safe_logic(tmp_path):
+    from System.organs.blood_brain_barrier import scan_python_ast
+
+    safe_file = tmp_path / "safe.py"
+    safe_file.write_text("import math\nprint(math.pi)")
+
+    is_safe, reason = scan_python_ast(str(safe_file))
+    assert is_safe

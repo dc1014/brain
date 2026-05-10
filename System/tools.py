@@ -262,7 +262,21 @@ def execute_command(command: str, directory_path: str) -> str:
     if not is_safe_command:
         return f"<shell_output>\n<stderr>\n{command_result}\n</stderr>\n</shell_output>"
 
-    # 3. HITL Check
+    # 3. SHIFT-LEFT: AST MEMBRANE (Payload inspection)
+    try:
+        from System.organs.blood_brain_barrier import scan_python_ast
+
+        args = shlex.split(command)
+        for arg in args:
+            if arg.endswith(".py"):
+                script_path = os.path.join(path_result, arg)
+                is_safe_ast, ast_reason = scan_python_ast(script_path)
+                if not is_safe_ast:
+                    return f"<shell_output>\n<stderr>\n{ast_reason}\n</stderr>\n</shell_output>"
+    except ValueError:
+        pass  # shlex parsing error will be caught later
+
+    # 4. HITL Check
     if os.environ.get("BRAIN_OS_HEADLESS") != "1":
         console.print(
             f"\n[bold yellow]⚠️ Agent wants to execute command in {path_result}:[/bold yellow]"
