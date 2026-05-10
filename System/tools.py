@@ -242,83 +242,54 @@ def bootstrap_project(
 
 
 def execute_command(command: str, directory_path: str) -> str:
-    """
-    Executes a shell command. Yields I/O to terminal for HITL downstream processes.
-    Enforces Shift-Left explicit approval before execution.
-    """
-    try:
-        target_path: Path = (ROOT_DIR / directory_path).resolve()
-        if not is_safe_path(target_path):
-            return f"SECURITY BLOCK: Access denied to execute in {target_path}."
-        if not target_path.exists() or not target_path.is_dir():
-            return f"ERROR: Directory not found at {target_path.relative_to(ROOT_DIR)}"
+    """Runs a terminal command strictly within the BBB Sandbox and demands Human Approval."""
+    from System.organs.blood_brain_barrier import validate_execution_path
+    from System.organs.amygdala import scan_command
+    import subprocess
+    import os
+    from rich.console import Console
 
-        # --- 🩸 BLOOD-BRAIN BARRIER: Supply Chain Defense ---
-        from System.organs.blood_brain_barrier import inspect_toxins
+    console = Console()
 
-        is_safe_blood, barrier_reason = inspect_toxins(command)
-        if not is_safe_blood:
-            return barrier_reason
-        # ----------------------------------------------------
+    # 1. SHIFT-LEFT: Sandbox Enforcement
+    is_safe_path, path_result = validate_execution_path(directory_path)
+    if not is_safe_path:
+        return path_result
 
-        console.print("\n[bold red]⚠️  SECURITY ALERT: EXECUTION REQUESTED[/bold red]")
+    # 2. SHIFT-LEFT: Semantic Intent Check
+    is_safe_command, command_result = scan_command(command)
+    if not is_safe_command:
+        return command_result
+
+    # 3. THE MISSING PIECE: Human-In-The-Loop (HITL) Check
+    if os.environ.get("BRAIN_OS_HEADLESS") != "1":
         console.print(
-            f"[yellow]Brain OS wants to run:[/yellow] '{command}'\n"
-            f"[yellow]in directory:[/yellow] '{target_path.relative_to(ROOT_DIR)}'"
+            f"\n[bold yellow]⚠️ Agent wants to execute command in {path_result}:[/bold yellow]"
         )
+        console.print(f"[cyan]{command}[/cyan]")
+        try:
+            auth = input("Allow execution? [y/N]: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            auth = "n"
 
-        # ... (The rest of your HITL y/N prompt and execution remains exactly the same) ...
-
-        # --- SHIFT-LEFT: STRICT Opt-In Gate ---
-        if os.environ.get("BRAIN_OS_HEADLESS") == "1":
-            user_input = "y"
-        else:
-            try:
-                user_input = input("Allow execution? [y/N]: ").strip().lower()
-            except (EOFError, KeyboardInterrupt):
-                user_input = "n"
-
-        if user_input not in ["y", "yes"]:
+        if auth not in ["y", "yes"]:
             return "SECURITY BLOCK: User explicitly denied command execution."
 
-        console.print(f"[dim]Executing '{command}'...[/dim]\n")
-
-        # 1. Execute and capture output so Microglia can analyze tracebacks, XML framing and attention
+    # 4. Execution
+    try:
         result = subprocess.run(
-            command, shell=True, cwd=target_path, capture_output=True, text=True
+            command,
+            shell=True,
+            cwd=path_result,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
-
-        console.print(
-            f"\n[dim]Execution completed with exit code {result.returncode}[/dim]"
-        )
-
-        # Extract output cleanly
-        output = result.stdout.strip() if result.stdout else ""
-        error = result.stderr.strip() if result.stderr else ""
-        combined = output
-        if error:
-            combined += f"\nSTDERR:\n{error}"
-
-        # 2. Check for injury (Non-zero exit code)
-        if result.returncode != 0:
-            # --- 🦠 MICROGLIA TRIGGER (Immune System) ---
-            from System.organs.microglia import trigger_immune_response
-
-            healed, new_output = trigger_immune_response(
-                command, error, str(target_path)
-            )
-
-            if healed:
-                return f'<shell_output command="{command} (HEALED BY MICROGLIA)">\n{new_output}\n</shell_output>'
-            else:
-                return f'<shell_error command="{command}">\n{combined}\n--- MICROGLIA FAILURE ---\n{new_output}\n</shell_error>'
-
-        # 3. Return successful output if no injury occurred
-        return f'<shell_output command="{command}">\n{combined if combined else "SUCCESS"}\n</shell_output>'
+        return f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
     except subprocess.TimeoutExpired:
         return "ERROR: Command timed out after 60 seconds."
     except Exception as e:
-        return f"ERROR: Command execution failed - {str(e)}"
+        return f"EXECUTION ERROR: {str(e)}"
 
 
 def operate_forge(project_name: str, instruction: str) -> str:

@@ -51,3 +51,21 @@ def test_bbb_allows_safe_commands_when_asleep():
     for cmd in safe_commands:
         is_safe, _ = inspect_toxins(cmd)
         assert is_safe is True
+
+
+def test_bbb_validate_execution_path(monkeypatch, tmp_path):
+    from System.organs.blood_brain_barrier import validate_execution_path
+
+    monkeypatch.setattr("System.organs.blood_brain_barrier.ROOT_DIR", tmp_path)
+
+    safe_dir = tmp_path / "Studio" / "MyProject"
+    safe_dir.mkdir(parents=True)
+
+    is_safe, _ = validate_execution_path(str(safe_dir))
+    assert is_safe
+
+    is_safe, reason = validate_execution_path(
+        str(tmp_path / "Studio" / ".." / ".." / "etc" / "passwd")
+    )
+    assert not is_safe
+    assert "PATH TRAVERSAL" in reason

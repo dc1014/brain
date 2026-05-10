@@ -98,36 +98,43 @@ def test_bootstrap_security_block(tmp_path: Path, mocker) -> None:  # type: igno
 def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # type: ignore
     """Test that command execution is sandboxed and respects HITL."""
     mocker.patch("System.tools.ROOT_DIR", tmp_path)
+    mocker.patch("System.organs.blood_brain_barrier.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
 
+    # <-- ADD THIS LINE: Bypass the LLM network call in the test environment
+    mocker.patch("System.organs.amygdala.scan_command", return_value=(True, "Safe"))
+
     studio_dir = tmp_path / "Studio" / "TestProject"
-    studio_dir.mkdir(parents=True)
+    studio_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. Test Security Boundary
     block_result = execute_command("ls", "../../")
-    assert "SECURITY BLOCK" in block_result
+    assert "PATH TRAVERSAL BLOCKED" in block_result
 
-    # 2. Test HITL Strict Rejection (Standard 'n' or unrecognized input)
+    # 2. Test HITL Strict Rejection
     mocker.patch("builtins.input", return_value="n")
-    deny_result = execute_command("ls", "Studio/TestProject")
+    mocker.patch.dict("os.environ", {"BRAIN_OS_HEADLESS": "0"}, clear=True)
+
+    # Pass the exact path so subprocess finds the temp directory
+    deny_result = execute_command("ls", str(studio_dir))
     assert "SECURITY BLOCK: User explicitly denied" in deny_result
 
     # 3. Test Execution Approval (Standard 'y')
     mocker.patch("builtins.input", return_value="y")
-    mock_subprocess = mocker.patch(
-        "System.cli.subprocess.run"
-    )  # NOTE: In test_cli, it patches System.cli.subprocess.run, or System.tools depending on your import!
 
     # If your test_cli.py imports execute_command from System.tools, use:
     mock_subprocess = mocker.patch("System.tools.subprocess.run")
 
     mock_subprocess.return_value.returncode = 0
-    mock_subprocess.return_value.stdout = ""
+    mock_subprocess.return_value.stdout = "mock_ls_output"
     mock_subprocess.return_value.stderr = ""
 
-    approve_result = execute_command("ls", "Studio/TestProject")
-    assert "SUCCESS" in approve_result
-    assert "<shell_output" in approve_result
+    # FIX: Pass the absolute path variable, just like in Step 2!
+    approve_result = execute_command("ls", str(studio_dir))
+
+    # FIX: Assert the new data contract
+    assert "STDOUT:" in approve_result
+    assert "mock_ls_output" in approve_result
 
 
 def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:  # type: ignore

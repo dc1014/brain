@@ -1,5 +1,6 @@
 import os
 import re
+from pathlib import Path
 from rich.console import Console
 
 console = Console()
@@ -40,3 +41,32 @@ def inspect_toxins(command: str) -> tuple[bool, str]:
             )
 
     return True, ""
+
+
+# --- NEW: PATH VALIDATION SANDBOX ---
+ROOT_DIR = Path(__file__).parent.parent.parent.resolve()
+
+
+def validate_execution_path(target_path: str) -> tuple[bool, str]:
+    """Ensures execution directories are strictly within approved sandboxes."""
+    try:
+        requested_path = Path(target_path).resolve()
+
+        if not str(requested_path).startswith(str(ROOT_DIR)):
+            return (
+                False,
+                "PATH TRAVERSAL BLOCKED: Attempted to execute outside the OS Root.",
+            )
+
+        safe_zones = ["Studio", "Personal", "Professional"]
+        is_in_safe_zone = any(zone in requested_path.parts for zone in safe_zones)
+
+        if not is_in_safe_zone:
+            return (
+                False,
+                f"SANDBOX BLOCKED: Execution is strictly limited to {safe_zones}.",
+            )
+
+        return True, str(requested_path)
+    except Exception as e:
+        return False, f"PATH VALIDATION ERROR: {str(e)}"

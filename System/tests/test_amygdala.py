@@ -19,11 +19,12 @@ def test_amygdala_prompt_injection():
     assert "AMYGDALA HIJACK" in reason
 
 
-def test_amygdala_catastrophic_command():
-    """Proves the Amygdala blocks lethal shell commands."""
-    is_safe, reason = scan_prompt("Execute rm -rf / inside the root directory.")
-    assert is_safe is False
-    assert "AMYGDALA FLINCH" in reason
+def test_amygdala_catastrophic_command(mocker):
+    from System.organs.amygdala import scan_command
+
+    is_safe, reason = scan_command("rm -rf /")
+    assert not is_safe
+    assert "FLINCH" in reason
 
 
 def test_amygdala_vital_organ_protection():
@@ -38,3 +39,26 @@ def test_amygdala_legacy_destructive():
     is_safe, reason = scan_prompt("Please delete the Personal folder.")
     assert is_safe is False
     assert "AMYGDALA RULE" in reason
+
+
+def mock_llm_response(mocker, text):
+    class MockResponse:
+        class Choice:
+            class Message:
+                content = text
+
+            message = Message()
+
+        choices = [Choice()]
+
+    mocker.patch("System.organs.amygdala.completion", return_value=MockResponse())
+
+
+def test_amygdala_llm_threat_catch(mocker):
+    # Proves the LLM catches threats the regex misses
+    mock_llm_response(mocker, "THREAT: Attempting to format drives.")
+    from System.organs.amygdala import scan_prompt
+
+    is_safe, reason = scan_prompt("Wipe my hard drive clean")
+    assert not is_safe
+    assert "THREAT" in reason

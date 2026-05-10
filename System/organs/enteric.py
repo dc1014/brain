@@ -7,6 +7,15 @@ console = Console()
 ROOT_DIR = Path(__file__).parent.parent.parent
 GUT_MEMORY_FILE = ROOT_DIR / "System" / "config" / "gut_memory.json"
 
+# SHIFT-LEFT SECURITY: Routes that are too dangerous to cache based on semantic similarity
+FORBIDDEN_CACHE_ROUTES = [
+    "FORGE",
+    "SWARM",
+    "EXECUTE",
+    "SUBCONSCIOUS_FORAGE",
+    "SUBCONSCIOUS_DAYDREAM",
+]
+
 
 def _ensure_gut():
     """Initializes the Enteric memory bank."""
@@ -34,6 +43,14 @@ def get_gut_reaction(prompt: str) -> tuple | None:
     if matches:
         match = matches[0]
         data = cache[match]
+
+        # 🛡️ THE PATCH: Invalidate cache for mutating/execution routes
+        if data["route_type"] in FORBIDDEN_CACHE_ROUTES:
+            console.print(
+                f"[dim yellow]🧠 Enteric Bypass: Route '{data['route_type']}' is too dangerous to cache. Forcing active LLM cognition.[/dim yellow]"
+            )
+            return None
+
         console.print(
             f"[bold green]🦠 Enteric Reflex Triggered: Bypassing Dispatcher. Gut routing matches '{match}'.[/bold green]"
         )
@@ -58,13 +75,13 @@ def save_gut_reaction(
     with open(GUT_MEMORY_FILE, "r", encoding="utf-8") as f:
         cache = json.load(f)
 
-    # Cache the routing logic
-    cache[prompt.lower()] = {
-        "is_valid": is_valid,
-        "reason": reason,
-        "route_type": route_type,
-        "domain": domain,
-    }
-
-    with open(GUT_MEMORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(cache, f, indent=2)
+    # We only cache successful, safe routing decisions
+    if is_valid and route_type not in FORBIDDEN_CACHE_ROUTES:
+        cache[prompt.lower()] = {
+            "is_valid": is_valid,
+            "reason": reason,
+            "route_type": route_type,
+            "domain": domain,
+        }
+        with open(GUT_MEMORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache, f, indent=2)
