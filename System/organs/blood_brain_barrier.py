@@ -10,14 +10,11 @@ console = Console()
 def inspect_toxins(command: str) -> tuple[bool, str]:
     """
     The Blood-Brain Barrier.
-    Prevents the autonomous installation of external packages during headless/dream states
-    to protect against supply-chain poisoning and remote code execution.
+    Prevents the autonomous installation of external packages during headless/dream states.
     """
-    # If a human is actively at the keyboard (not headless), the BBB lets the human decide.
     if os.environ.get("BRAIN_OS_HEADLESS") != "1":
         return True, ""
 
-    # List of toxic patterns that reach out to the internet to download and execute code
     toxin_patterns = [
         r"\bnpm\s+(i|install|add)\b",
         r"\byarn\s+(add)\b",
@@ -26,7 +23,7 @@ def inspect_toxins(command: str) -> tuple[bool, str]:
         r"\buv\s+(add|pip\s+install)\b",
         r"\bbrew\s+install\b",
         r"\bapt(-get)?\s+install\b",
-        r"\bcurl\b.*\|.*\b(bash|sh)\b",  # Curl-to-bash scripts
+        r"\bcurl\b.*\|.*\b(bash|sh)\b",
         r"\bwget\b.*\|.*\b(bash|sh)\b",
     ]
 
@@ -44,7 +41,6 @@ def inspect_toxins(command: str) -> tuple[bool, str]:
     return True, ""
 
 
-# --- NEW: PATH VALIDATION SANDBOX ---
 ROOT_DIR = Path(__file__).parent.parent.parent.resolve()
 
 
@@ -137,3 +133,22 @@ def scan_python_ast(filepath: str) -> tuple[bool, str]:
         )
     except Exception as e:
         return False, f"AST MEMBRANE ERROR: Could not analyze file. {str(e)}"
+
+
+def scan_python_ast_string(code: str) -> tuple[bool, str]:
+    """Scans raw Python strings (like inline -c commands) for lethal imports."""
+    try:
+        tree = ast.parse(code)
+        detector = ToxinDetector()
+        detector.visit(tree)
+
+        if detector.is_toxic:
+            console.print(
+                "\n[bold red]🛑 AST Membrane Triggered: Blocked execution of toxic inline Python script.[/bold red]"
+            )
+            return False, detector.threat_reason
+        return True, ""
+    except SyntaxError:
+        return False, "AST MEMBRANE ERROR: Inline script contains invalid syntax."
+    except Exception as e:
+        return False, f"AST MEMBRANE ERROR: Could not analyze inline script. {str(e)}"

@@ -103,3 +103,41 @@ def test_ast_membrane_allows_safe_logic(tmp_path):
 
     is_safe, reason = scan_python_ast(str(safe_file))
     assert is_safe
+
+
+def test_bbb_ast_membrane_safe_file(tmp_path):
+    from System.organs.blood_brain_barrier import scan_python_ast
+
+    safe_script = tmp_path / "safe.py"
+    safe_script.write_text("print('hello world')", encoding="utf-8")
+
+    is_safe, _ = scan_python_ast(str(safe_script))
+    assert is_safe
+
+
+def test_bbb_ast_membrane_toxic_file(tmp_path):
+    from System.organs.blood_brain_barrier import scan_python_ast
+
+    toxic_script = tmp_path / "toxic.py"
+    # Agent tries to import os to break out
+    toxic_script.write_text("import os\nos.system('rm -rf /')", encoding="utf-8")
+
+    is_safe, reason = scan_python_ast(str(toxic_script))
+    assert not is_safe
+    assert "AST MEMBRANE BLOCK" in reason
+
+
+def test_bbb_ast_membrane_safe_string():
+    from System.organs.blood_brain_barrier import scan_python_ast_string
+
+    is_safe, _ = scan_python_ast_string("x = 1 + 1; print(x)")
+    assert is_safe
+
+
+def test_bbb_ast_membrane_toxic_string():
+    from System.organs.blood_brain_barrier import scan_python_ast_string
+
+    # Agent tries to use dynamic imports inline to bypass regex
+    is_safe, reason = scan_python_ast_string("__import__('subprocess').Popen('ls')")
+    assert not is_safe
+    assert "AST MEMBRANE BLOCK" in reason

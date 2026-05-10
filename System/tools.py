@@ -262,17 +262,40 @@ def execute_command(command: str, directory_path: str) -> str:
     if not is_safe_command:
         return f"<shell_output>\n<stderr>\n{command_result}\n</stderr>\n</shell_output>"
 
-    # 3. SHIFT-LEFT: AST MEMBRANE (Payload inspection)
+    # 3. SHIFT-LEFT: AST MEMBRANE & BINARY WHITELIST (Payload inspection)
     try:
         from System.organs.blood_brain_barrier import scan_python_ast
 
         args = shlex.split(command)
-        for arg in args:
-            if arg.endswith(".py"):
-                script_path = os.path.join(path_result, arg)
-                is_safe_ast, ast_reason = scan_python_ast(script_path)
-                if not is_safe_ast:
-                    return f"<shell_output>\n<stderr>\n{ast_reason}\n</stderr>\n</shell_output>"
+        if args:
+            binary = args[0].lower()
+
+            # We only allow the agent to autonomously execute Python or Node scripts.
+            # Executing 'bash' or 'sh' directly bypasses our membrane.
+            if binary in ["bash", "sh", "zsh", "powershell", "pwsh", "cmd"]:
+                return "<shell_output>\n<stderr>\nSECURITY BLOCK: Executing raw shell binaries is forbidden. Write Python scripts instead.\n</stderr>\n</shell_output>"
+
+            if binary in ["python", "python3", "py"]:
+                # Catch inline execution: python -c "import os..."
+                if "-c" in args:
+                    c_index = args.index("-c")
+                    if len(args) > c_index + 1:
+                        inline_code = args[c_index + 1]
+                        from System.organs.blood_brain_barrier import (
+                            scan_python_ast_string,
+                        )
+
+                        is_safe_ast, ast_reason = scan_python_ast_string(inline_code)
+                        if not is_safe_ast:
+                            return f"<shell_output>\n<stderr>\n{ast_reason}\n</stderr>\n</shell_output>"
+
+                # Catch file execution: python script.py
+                for arg in args[1:]:
+                    if arg.endswith(".py"):
+                        script_path = os.path.join(path_result, arg)
+                        is_safe_ast, ast_reason = scan_python_ast(script_path)
+                        if not is_safe_ast:
+                            return f"<shell_output>\n<stderr>\n{ast_reason}\n</stderr>\n</shell_output>"
     except ValueError:
         pass  # shlex parsing error will be caught later
 

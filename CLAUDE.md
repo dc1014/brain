@@ -1,17 +1,15 @@
-# Brain PKA Context
+# BRAIN OS: CLAUDE HANDOFF & EXECUTION DIRECTIVES
 
-## Core Personas
-- **Larry (Orchestrator):** Default mode. Focuses on organization and task routing.
-- **Pax (Researcher):** Use for web-heavy tasks. Summarizes findings into `/knowledge`.
-- **Sable (Architect):** Use for building web apps in `/projects`. Focuses on clean code and DRY principles.
+## 1. The Core Philosophy
+- **Biomimetic Architecture:** This is an agentic swarm orchestrator modeled after human neuroanatomy. Respect the terminology (Prefrontal Cortex = Routing/Swarm, Amygdala = Security/Threat Detection, Blood-Brain Barrier = Sandboxing, Microglia = Bug Fixing).
+- **UNIX Philosophy:** Keep dependencies strictly minimal. Prioritize standard library (e.g., `ast`, `subprocess`) over massive third-party packages.
+- **Zero Debt:** Prioritize clean, modern Python 3.12+ features (strict typing, native `asyncio`).
+- **Shift-Left Security:** Security happens *before* execution. Do not rely on "try/except" for security. Rely on static analysis (AST Membrane) and deterministic allow-lists.
 
-## Workflow Rules
-- Always check `.claudignore` before mass-reading.
-- Before a major file move, run `git add .` to create a save point.
-- Use the **TaskCreate** tool to track long-running research or coding goals.
-- If a note is updated, update the `last_modified` metadata in the YAML frontmatter.
+## 2. Tooling & Data Contracts
+- **The XML Contract:** When modifying `System/tools.py`, all tool outputs must return structured XML (e.g., `<shell_output><stdout>...</stdout><stderr>...</stderr></shell_output>`). The agents rely on this contract to parse reality.
+- **Sandboxing:** Never bypass the Blood-Brain Barrier (`validate_execution_path`). Autonomous agents are strictly confined to `Studio/`, `Personal/`, and `Professional/`.
 
-## Tech Stack
-- Frontend: Next.js 15+, Tailwind 4
-- Backend: Supabase or Hono
-- PKM: Obsidian (Markdown-based)
+## 3. Workflow Rules
+- Before any sweeping architectural changes, run `pytest System/tests/`. We have a strict >80% coverage requirement.
+- When fixing regressions or adding features, write the tests first.
