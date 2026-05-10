@@ -1,8 +1,6 @@
-import os
-import sys
 import json
-import signal
 import subprocess
+import shlex
 from pathlib import Path
 from rich.console import Console
 
@@ -12,49 +10,14 @@ STATE_FILE = (
 )
 
 
-def is_process_alive(pid: int) -> bool:
-    """The Necrophage: Cross-platform check to see if a PID is actually alive."""
-    if sys.platform == "win32":
-        try:
-            output = subprocess.check_output(
-                f'tasklist /FI "PID eq {pid}" /NH', shell=True, text=True
-            )
-            return str(pid) in output
-        except Exception:
-            return False
-    else:
-        try:
-            os.kill(pid, 0)
-            return True
-        except OSError:
-            return False
-
-
-def _load_and_heal_state() -> dict:
-    """Loads state and autonomously purges any zombie PIDs (processes that crashed)."""
-    state = {}
+def _load_state() -> dict:
     if STATE_FILE.exists():
         try:
             with open(STATE_FILE, "r", encoding="utf-8") as f:
-                state = json.load(f)
+                return json.load(f)
         except Exception:
-            pass
-
-    healed_state = {}
-    zombies_cleared = 0
-    for name, info in state.items():
-        if is_process_alive(info["pid"]):
-            healed_state[name] = info
-        else:
-            zombies_cleared += 1
-
-    if zombies_cleared > 0:
-        _save_state(healed_state)
-        console.print(
-            f"[dim yellow]🧹 Proprioception: Cleared {zombies_cleared} zombie process(es) from motor state.[/dim yellow]"
-        )
-
-    return healed_state
+            return {}
+    return {}
 
 
 def _save_state(state: dict) -> None:
@@ -63,97 +26,112 @@ def _save_state(state: dict) -> None:
         json.dump(state, f, indent=2)
 
 
+# FIX 1: Add the | None to satisfy Mypy
 def start_process(name: str, command: str, cwd: str | None = None) -> str:
-    """Spawns a background process safely, blocked by the Amygdala."""
+    """Starts a long-running background process securely."""
     from System.organs.amygdala import scan_command
+    from System.organs.blood_brain_barrier import validate_execution_path
+    from System.tools import ROOT_DIR
 
-    is_safe, threat_reason = scan_command(command)
-    if not is_safe:
-        console.print(
-            f"[bold red]🛑 AMYGDALA BLOCK: Attempted to run forbidden background command: {command}[/bold red]"
-        )
-        return threat_reason
+    # Amygdala Threat Scan
+    is_safe_command, reason = scan_command(command)
+    if not is_safe_command:
+        return reason
 
-    state = _load_and_heal_state()
+    # Default to a safe zone (Studio) instead of ROOT_DIR
+    target_cwd = cwd if cwd else str(ROOT_DIR / "Studio")
+    is_safe_path, safe_cwd = validate_execution_path(target_cwd)
+    if not is_safe_path:
+        return safe_cwd
+
+    state = _load_state()
     if name in state:
-        return f"PROPRIOCEPTION BLOCK: Process '{name}' is already running (PID {state[name]['pid']}). You MUST stop it before restarting."
+        return f"ERROR: Process '{name}' is already running. Please stop it first."
 
+    # 3. Secure Execution (shell=False + shlex parsing)
     try:
-        # SHIFT-LEFT TYPE SAFETY: Explicitly separate the OS calls so Mypy can analyze them
-        if sys.platform == "win32":
-            process = subprocess.Popen(
-                command,
-                shell=True,
-                cwd=cwd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,  # type: ignore
-            )
-        else:
-            process = subprocess.Popen(
-                command,
-                shell=True,
-                cwd=cwd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                preexec_fn=os.setsid,  # type: ignore
-            )
-
-        import time
-
-        time.sleep(0.5)
-        if process.poll() is not None:
-            return f"FATAL ERROR: The command '{command}' crashed immediately after starting. Check for syntax errors or port collisions."
-
-        state[name] = {"pid": process.pid, "command": command, "cwd": cwd or "root"}
-        _save_state(state)
-
-        console.print(
-            f"[dim magenta]🤸 Proprioception: Flexed '{name}' in background (PID {process.pid})[/dim magenta]"
+        args = shlex.split(command)
+        process = subprocess.Popen(
+            args,
+            shell=False,
+            cwd=safe_cwd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
-        return f"SUCCESS: Started '{name}' in the background with PID {process.pid}."
+
+        state[name] = {"pid": process.pid, "command": command, "cwd": safe_cwd}
+        _save_state(state)
+        return (
+            f"SUCCESS: Process '{name}' started with PID {process.pid} in {safe_cwd}."
+        )
     except Exception as e:
-        return f"FATAL MOTOR ERROR: Failed to start process: {str(e)}"
+        return f"EXECUTION ERROR: {str(e)}"
 
 
 def stop_process(name: str) -> str:
-    """Relaxes a flexed muscle by killing the background process tree."""
-    state = _load_and_heal_state()
+    """Stops a background process safely."""
+    import psutil
+
+    state = _load_state()
     if name not in state:
-        return f"PROPRIOCEPTION ERROR: Cannot stop '{name}'. It is not running."
+        return f"ERROR: Process '{name}' not found in state."
 
     pid = state[name]["pid"]
     try:
-        if sys.platform == "win32":
-            subprocess.run(
-                ["taskkill", "/F", "/T", "/PID", str(pid)],
-                check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        else:
-            os.killpg(os.getpgid(pid), signal.SIGTERM)  # type: ignore
+        parent = psutil.Process(pid)
+        for child in parent.children(recursive=True):
+            child.kill()
+        parent.kill()
+        del state[name]
+        _save_state(state)
+        return f"SUCCESS: Process '{name}' (PID {pid}) stopped."
+    except psutil.NoSuchProcess:
+        del state[name]
+        _save_state(state)
+        return f"SUCCESS: Process '{name}' was already dead. State cleaned."
     except Exception as e:
-        console.print(f"[dim yellow]Proprioception cleanup notice: {e}[/dim yellow]")
-
-    del state[name]
-    _save_state(state)
-
-    console.print(
-        f"[dim magenta]🤸 Proprioception: Relaxed '{name}' (Killed PID {pid})[/dim magenta]"
-    )
-    return f"SUCCESS: Stopped process '{name}' and freed resources."
+        return f"ERROR stopping process: {str(e)}"
 
 
 def list_processes() -> str:
-    """Returns spatial awareness of all currently flexed muscles."""
-    state = _load_and_heal_state()
-    if not state:
-        return "No background processes are currently running."
+    """Lists running background processes."""
+    import psutil
 
-    result = "Running Background Processes:\n"
+    state = _load_state()
+    if not state:
+        return "No background processes running."
+
+    output = "Running Processes:\n"
+    dead_procs = []
     for name, info in state.items():
-        result += (
-            f"- {name} (PID: {info['pid']}): {info['command']} [Dir: {info['cwd']}]\n"
-        )
-    return result
+        if psutil.pid_exists(info["pid"]):
+            output += f"- {name} (PID: {info['pid']}) -> {info['command']}\n"
+        else:
+            dead_procs.append(name)
+
+    if dead_procs:
+        for d in dead_procs:
+            del state[d]
+        _save_state(state)
+        output += f"\n(Cleaned up {len(dead_procs)} dead processes)"
+
+    return output
+
+
+def manage_background_process(
+    action: str, name: str = "", command: str = "", cwd: str = ""
+) -> str:
+    """Tool interface for managing background processes."""
+    action = action.lower()
+    if action == "start":
+        if not name or not command:
+            return "ERROR: 'name' and 'command' required to start."
+        return start_process(name, command, cwd)
+    elif action == "stop":
+        if not name:
+            return "ERROR: 'name' required to stop."
+        return stop_process(name)
+    elif action == "list":
+        return list_processes()
+    else:
+        return "ERROR: Invalid action. Use 'start', 'stop', or 'list'."

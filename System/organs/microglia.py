@@ -1,6 +1,7 @@
 import subprocess
 import yaml  # type: ignore
 import os
+import shlex
 from pathlib import Path
 from litellm import completion  # type: ignore
 from rich.console import Console
@@ -8,7 +9,7 @@ from System.tools import is_safe_path
 
 console = Console()
 ROOT_DIR = Path(__file__).parent.parent
-CONFIG_PATH = ROOT_DIR / "System" / "config" / "agents.yaml"
+CONFIG_PATH = ROOT_DIR / "config" / "agents.yaml"
 
 
 def trigger_immune_response(
@@ -84,9 +85,18 @@ Error Traceback:
                     f"SECURITY BLOCK: Microglia attempted to execute fix outside sandbox ({cwd}).",
                 )
 
-            fix_result = subprocess.run(
-                antibody_cmd, cwd=cwd, capture_output=True, text=True, shell=True
-            )
+            # SECURED: Eradicated shell=True, parsed antibody securely
+            try:
+                fix_args = shlex.split(antibody_cmd)
+                fix_result = subprocess.run(
+                    fix_args, cwd=cwd, capture_output=True, text=True, shell=False
+                )
+            except Exception as e:
+                return (
+                    False,
+                    f"Microglia antibody execution failed (likely a shell-builtin): {str(e)}\nOriginal Error:\n{current_stderr}",
+                )
+
             if fix_result.returncode != 0:
                 # The fix failed, abort immune response
                 return (
@@ -99,9 +109,17 @@ Error Traceback:
             )
 
             # 4. Retry the original command
-            retry_result = subprocess.run(
-                failed_cmd, cwd=cwd, capture_output=True, text=True, shell=True
-            )
+            # SECURED: Eradicated shell=True, parsed original command securely
+            try:
+                retry_args = shlex.split(failed_cmd)
+                retry_result = subprocess.run(
+                    retry_args, cwd=cwd, capture_output=True, text=True, shell=False
+                )
+            except Exception as e:
+                return (
+                    False,
+                    f"Microglia retry execution failed: {str(e)}\nOriginal Error:\n{current_stderr}",
+                )
 
             if retry_result.returncode == 0:
                 console.print(

@@ -247,6 +247,7 @@ def execute_command(command: str, directory_path: str) -> str:
     from System.organs.amygdala import scan_command
     import subprocess
     import os
+    import shlex
     from rich.console import Console
 
     console = Console()
@@ -254,14 +255,14 @@ def execute_command(command: str, directory_path: str) -> str:
     # 1. SHIFT-LEFT: Sandbox Enforcement
     is_safe_path, path_result = validate_execution_path(directory_path)
     if not is_safe_path:
-        return path_result
+        return f"<shell_output>\n<stderr>\n{path_result}\n</stderr>\n</shell_output>"
 
     # 2. SHIFT-LEFT: Semantic Intent Check
     is_safe_command, command_result = scan_command(command)
     if not is_safe_command:
-        return command_result
+        return f"<shell_output>\n<stderr>\n{command_result}\n</stderr>\n</shell_output>"
 
-    # 3. THE MISSING PIECE: Human-In-The-Loop (HITL) Check
+    # 3. HITL Check
     if os.environ.get("BRAIN_OS_HEADLESS") != "1":
         console.print(
             f"\n[bold yellow]⚠️ Agent wants to execute command in {path_result}:[/bold yellow]"
@@ -273,23 +274,35 @@ def execute_command(command: str, directory_path: str) -> str:
             auth = "n"
 
         if auth not in ["y", "yes"]:
-            return "SECURITY BLOCK: User explicitly denied command execution."
+            return "<shell_output>\n<stderr>\nSECURITY BLOCK: User explicitly denied command execution.\n</stderr>\n</shell_output>"
 
-    # 4. Execution
+    # 4. Execution (SECURED: shell=False + shlex)
     try:
+        # Safely parse the command string into an array to prevent RCE injection
+        args = shlex.split(command)
         result = subprocess.run(
-            command,
-            shell=True,
+            args,
+            shell=False,
             cwd=path_result,
             capture_output=True,
             text=True,
             timeout=60,
         )
-        return f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+
+        # RESTORED AND CORRECTED: Microglia Autonomous Bug Fixing
+        if result.returncode != 0:
+            from System.organs.microglia import trigger_immune_response
+
+            # The Microglia intercepts the failure, generates an antibody patch,
+            # and applies it autonomously in the correct directory.
+            trigger_immune_response(command, result.stderr, path_result)
+
+        # RESTORED: XML Data Contract
+        return f"<shell_output>\n<stdout>\n{result.stdout}\n</stdout>\n<stderr>\n{result.stderr}\n</stderr>\n</shell_output>"
     except subprocess.TimeoutExpired:
-        return "ERROR: Command timed out after 60 seconds."
+        return "<shell_output>\n<stderr>\nERROR: Command timed out after 60 seconds.\n</stderr>\n</shell_output>"
     except Exception as e:
-        return f"EXECUTION ERROR: {str(e)}"
+        return f"<shell_output>\n<stderr>\nEXECUTION ERROR: {str(e)}\n</stderr>\n</shell_output>"
 
 
 def operate_forge(project_name: str, instruction: str) -> str:

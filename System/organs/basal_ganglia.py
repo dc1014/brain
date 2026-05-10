@@ -1,6 +1,7 @@
 import json
 import subprocess
 import datetime
+import shlex
 from pathlib import Path
 from rich.console import Console
 
@@ -86,18 +87,38 @@ def tick_habits() -> None:
                     f"[dim magenta]🕰️ Basal Ganglia: Triggering habit '{name}'...[/dim magenta]"
                 )
 
-                # Execute subconsciously, but pipe output to the log file!
                 with open(log_file_path, "a", encoding="utf-8") as log_file:
                     log_file.write(f"\n### 🕰️ Executed '{name}' at {now.isoformat()}\n")
                     log_file.write(f"**Command:** `{data['command']}`\n```text\n")
                     log_file.flush()
 
-                    subprocess.Popen(
-                        data["command"],
-                        shell=True,
-                        stdout=log_file,
-                        stderr=subprocess.STDOUT,
+                    # SHIFT-LEFT: Sandbox Enforcement for Background Habits
+                    from System.organs.blood_brain_barrier import (
+                        validate_execution_path,
                     )
+                    from System.tools import ROOT_DIR
+
+                    # SHIFT-LEFT: Sandbox Enforcement for Background Habits
+
+                    # FIX: Default to Studio, because ROOT_DIR is blocked by the BBB
+                    is_safe, safe_cwd = validate_execution_path(
+                        str(ROOT_DIR / "Studio")
+                    )
+
+                    if is_safe:
+                        # SHIFT-LEFT: Strip shell=True, parse arguments safely
+                        args = shlex.split(data["command"])
+                        subprocess.Popen(
+                            args,
+                            shell=False,
+                            cwd=safe_cwd,
+                            stdout=log_file,
+                            stderr=subprocess.STDOUT,
+                        )
+                    else:
+                        log_file.write(
+                            f"\n[BLOCKED] Habit execution aborted. Invalid Sandbox: {safe_cwd}\n"
+                        )
 
                 habits[name]["last_run"] = now.isoformat()
                 updated = True

@@ -274,7 +274,7 @@ def test_execute_command_headless_bypass(monkeypatch, tmp_path):
     result = execute_command("echo 'test'", "Studio")
 
     assert "PATH TRAVERSAL BLOCKED" not in result
-    assert "STDOUT:" in result
+    assert "<shell_output>" in result  # Check for the restored XML contract
 
 
 def test_operate_forge_headless_bypass(monkeypatch, tmp_path):

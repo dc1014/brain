@@ -132,8 +132,8 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
     # FIX: Pass the absolute path variable, just like in Step 2!
     approve_result = execute_command("ls", str(studio_dir))
 
-    # FIX: Assert the new data contract
-    assert "STDOUT:" in approve_result
+    # FIX: Assert the restored XML data contract
+    assert "<shell_output>" in approve_result
     assert "mock_ls_output" in approve_result
 
 
