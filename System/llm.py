@@ -1,0 +1,290 @@
+import json
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from litellm import completion  # type: ignore
+from rich.console import Console
+
+from System.tools import (
+    write_safe_file,
+    read_safe_file,
+    list_safe_directory,
+    rename_safe_file,
+    append_safe_file,
+    bootstrap_project,
+    execute_command,
+    operate_forge,
+    copy_safe_file,
+)
+
+console = Console()
+
+LOG_DIR: Path = Path(__file__).parent.parent / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+LOG_FILE: Path = LOG_DIR / "agent_interactions.jsonl"
+
+
+@dataclass
+class AgentResponse:
+    text: str
+    actions: list[str] = field(default_factory=list)
+    usage: dict[str, int] = field(default_factory=dict)
+
+
+def log_interaction(
+    role_name: str,
+    model_string: str,
+    system_prompt: str,
+    user_prompt: str,
+    response_content: str,
+    usage: dict[str, int],
+    route: str = "UNKNOWN",
+    domain: str = "NONE",
+) -> None:
+    log_entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "route": route,
+        "domain": domain,
+        "agent": role_name,
+        "model": model_string,
+        "system_prompt": system_prompt,
+        "user_prompt": user_prompt,
+        "response": response_content,
+        "tokens": usage,
+    }
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(json.dumps(log_entry, default=str) + "\n")
+
+
+def get_system_context(
+    requested_contexts: list[str], current_domain: str = "NONE"
+) -> str:
+    """Dynamically loads specific canonical folders as defined in the YAML route."""
+    context = ""
+    root_dir = Path(__file__).parent.parent
+
+    for req in requested_contexts:
+        target_folder = current_domain if req == "Domain" else req.upper()
+        if target_folder == "META":
+            path = root_dir / "Meta" / "global-memory.md"
+        elif target_folder in ["PERSONAL", "PROFESSIONAL", "STUDIO"]:
+            path = (
+                root_dir
+                / target_folder.capitalize()
+                / f"{target_folder.lower()}-memory.md"
+            )
+        else:
+            continue
+
+        if path.exists():
+            context += f"\n\n--- {target_folder} MEMORY ---\n{path.read_text(encoding='utf-8')}\n------------------------------\n"
+
+    return context
+
+
+def run_agent(
+    role_name: str,
+    model_string: str,
+    system_prompt: str,
+    user_prompt: str,
+    tools: list[Any] | None = None,
+    route: str = "UNKNOWN",
+    domain: str = "NONE",
+) -> AgentResponse:
+    try:
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        action_manifest: list[str] = []
+        final_text: str = ""
+        total_prompt: int = 0
+        total_comp: int = 0
+
+        for step in range(15):
+            # --- SHIFT-LEFT: SMART CONTEXT SLIDING WINDOW ---
+            if len(messages) > 7:
+                window = messages[-6:]
+                while window and window[0].get("role") == "tool":
+                    window.pop(0)
+                pruned_messages = [messages[0]] + window
+            else:
+                pruned_messages = messages
+
+            kwargs: dict[str, Any] = {
+                "model": model_string,
+                "messages": pruned_messages,
+            }
+            if tools:
+                kwargs["tools"] = tools
+
+            response = completion(**kwargs)
+
+            if not getattr(response, "choices", None) or len(response.choices) == 0:
+                return AgentResponse(
+                    text="API SECURITY BLOCK: The LLM provider returned an empty response. This usually means its internal safety filters were triggered by words like 'execute', 'shell', or 'terminate'.",
+                    actions=action_manifest,
+                )
+
+            message = response.choices[0].message
+
+            if hasattr(response, "usage") and response.usage:
+                total_prompt += int(getattr(response.usage, "prompt_tokens", 0))
+                total_comp += int(getattr(response.usage, "completion_tokens", 0))
+
+            message_dict: dict[str, Any] = {"role": "assistant"}
+
+            if message.content:
+                message_dict["content"] = message.content
+                final_text += str(message.content) + "\n"
+
+            if hasattr(message, "tool_calls") and message.tool_calls:
+                processed_tools = []
+                for t in message.tool_calls:
+                    if hasattr(t, "model_dump"):
+                        processed_tools.append(t.model_dump())
+                    else:
+                        processed_tools.append(t)
+                message_dict["tool_calls"] = processed_tools
+
+            messages.append(message_dict)
+
+            if hasattr(message, "tool_calls") and message.tool_calls:
+                if step == 0:
+                    console.print(
+                        f"\n[dim]⚡ {role_name} is thinking and acting...[/dim]"
+                    )
+
+                for tool_call in message.tool_calls:
+                    args = json.loads(tool_call.function.arguments)
+                    func_name = str(tool_call.function.name)
+                    tool_id = str(tool_call.id)
+
+                    if func_name == "write_safe_file":
+                        result = write_safe_file(
+                            args.get("filepath", ""), args.get("content", "")
+                        )
+                        action_manifest.append(f"[WRITE] {args.get('filepath')}")
+                    elif func_name == "read_safe_file":
+                        result = read_safe_file(args.get("filepath", ""))
+                        action_manifest.append(f"[READ] {args.get('filepath')}")
+                    elif func_name == "list_safe_directory":
+                        result = list_safe_directory(args.get("directory_path", ""))
+                        action_manifest.append(f"[LIST] {args.get('directory_path')}")
+                    elif func_name == "rename_safe_file":
+                        result = rename_safe_file(
+                            args.get("old_filepath", ""), args.get("new_filepath", "")
+                        )
+                        action_manifest.append(
+                            f"[RENAME] {args.get('old_filepath')} -> {args.get('new_filepath')}"
+                        )
+                    elif func_name == "append_safe_file":
+                        result = append_safe_file(
+                            args.get("filepath", ""), args.get("content", "")
+                        )
+                        action_manifest.append(f"[APPEND] {args.get('filepath')}")
+                    elif func_name == "bootstrap_project":
+                        url = args.get(
+                            "template_url",
+                            "https://github.com/mrdanielcasper/forge.git",
+                        )
+                        result = bootstrap_project(args.get("project_name", ""), url)
+                        action_manifest.append(
+                            f"[BOOTSTRAP] {args.get('project_name')}"
+                        )
+                    elif func_name == "execute_command":
+                        result = execute_command(
+                            args.get("command", ""), args.get("directory_path", "")
+                        )
+                        action_manifest.append(
+                            f"[EXECUTE] {args.get('command')} in {args.get('directory_path')}"
+                        )
+                    elif func_name == "operate_forge":
+                        result = operate_forge(
+                            args.get("project_name", ""), args.get("instruction", "")
+                        )
+                        action_manifest.append(
+                            f"[OPERATE_FORGE] {args.get('project_name')}"
+                        )
+                    elif func_name == "copy_safe_file":
+                        result = copy_safe_file(
+                            args.get("source_filepath", ""),
+                            args.get("dest_filepath", ""),
+                        )
+                        action_manifest.append(
+                            f"[COPY] {args.get('source_filepath')} -> {args.get('dest_filepath')}"
+                        )
+                    else:
+                        result = f"ERROR: Unknown tool {func_name}"
+
+                    console.print(f"[dim]🔍 Tool Executed: {func_name}[/dim]")
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "name": func_name,
+                            "tool_call_id": tool_id,
+                            "content": str(result),
+                        }
+                    )
+
+                    if str(result).startswith("SECURITY BLOCK"):
+                        final_text += f"\n\n[SYSTEM HALT] {result}"
+                        action_manifest.append(
+                            "[HALTED] Security clearance denied by user."
+                        )
+                        return AgentResponse(
+                            text=final_text.strip(),
+                            actions=action_manifest,
+                            usage={
+                                "prompt_tokens": total_prompt,
+                                "completion_tokens": total_comp,
+                                "total_tokens": total_prompt + total_comp,
+                            },
+                        )
+                continue
+            else:
+                break
+
+        usage_data = {
+            "prompt_tokens": total_prompt,
+            "completion_tokens": total_comp,
+            "total_tokens": total_prompt + total_comp,
+        }
+        audit_trail = final_text + "\n\nACTIONS:\n" + "\n".join(action_manifest)
+        log_interaction(
+            role_name,
+            model_string,
+            system_prompt,
+            user_prompt,
+            audit_trail,
+            usage_data,
+            route,
+            domain,
+        )
+
+        return AgentResponse(
+            text=final_text.strip(), actions=action_manifest, usage=usage_data
+        )
+
+    except Exception as e:
+        error_msg = f"API/Execution Error: {str(e)}"
+        usage_data = {
+            "prompt_tokens": total_prompt,
+            "completion_tokens": total_comp,
+            "total_tokens": total_prompt + total_comp,
+        }
+
+        log_interaction(
+            role_name,
+            model_string,
+            system_prompt,
+            user_prompt,
+            error_msg,
+            usage_data,
+            route,
+            domain,
+        )
+
+        return AgentResponse(text=error_msg, actions=action_manifest, usage=usage_data)

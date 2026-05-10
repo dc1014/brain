@@ -1,12 +1,14 @@
 from unittest.mock import MagicMock
-from System.router import run_agent, analyze_task, init
+from System.llm import run_agent  # <-- NEW: Imported from llm
+from System.router import analyze_task, init  # <-- Kept in router
 from pathlib import Path
 from System.tools import bootstrap_project, execute_command
 
 
 def test_run_agent_success(mocker) -> None:  # type: ignore
     """Test that the agent correctly extracts the text from a successful API response."""
-    mock_completion = mocker.patch("System.router.completion")
+    # CHANGED: Mock System.llm instead of System.router
+    mock_completion = mocker.patch("System.llm.completion")
 
     mock_response = MagicMock()
     mock_response.choices = [MagicMock()]
@@ -22,13 +24,13 @@ def test_run_agent_success(mocker) -> None:  # type: ignore
 
 def test_run_agent_error_handling(mocker) -> None:  # type: ignore
     """Test that the agent gracefully catches and returns API errors."""
-    mocker.patch("System.router.log_interaction")
-    mock_completion = mocker.patch("System.router.completion")
+    # CHANGED: Mock System.llm instead of System.router
+    mocker.patch("System.llm.log_interaction")
+    mock_completion = mocker.patch("System.llm.completion")
     mock_completion.side_effect = Exception("Simulated API Error")
 
     result = run_agent("Worker (Claude)", "test-model", "system", "user")
 
-    # Update this assertion to match the new Circuit Breaker syntax
     assert result.text == "API/Execution Error: Simulated API Error"
     assert result.actions == []
 
@@ -126,7 +128,7 @@ def test_run_os_retry_circuit_breaker(mocker) -> None:  # type: ignore
     )
 
     # 2. Mock run_agent to simulate the Auditor failing the evaluation
-    from System.router import AgentResponse
+    from System.llm import AgentResponse  # <-- CHANGED: Imported from llm
 
     def mock_run_agent_side_effect(*args, **kwargs):
         role_name = kwargs.get("role_name", args[0] if len(args) > 0 else "")
