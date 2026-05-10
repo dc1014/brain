@@ -1,0 +1,99 @@
+base:
+  - type: "function"
+    function:
+      name: "read_safe_file"
+      description: "Reads file text."
+      parameters:
+        type: "object"
+        properties:
+          filepath: { type: "string" }
+        required: ["filepath"]
+  - type: "function"
+    function:
+      name: "list_safe_directory"
+      description: "Lists files/folders."
+      parameters:
+        type: "object"
+        properties:
+          directory_path: { type: "string" }
+        required: ["directory_path"]
+
+write:
+  - type: "function"
+    function:
+      name: "write_safe_file"
+      description: "Writes file."
+      parameters:
+        type: "object"
+        properties:
+          filepath: { type: "string" }
+          content: { type: "string" }
+        required: ["filepath", "content"]
+  - type: "function"
+    function:
+      name: "rename_safe_file"
+      description: "Renames file."
+      parameters:
+        type: "object"
+        properties:
+          old_filepath: { type: "string" }
+          new_filepath: { type: "string" }
+        required: ["old_filepath", "new_filepath"]
+  - type: "function"
+    function:
+      name: "append_safe_file"
+      description: "Appends to file."
+      parameters:
+        type: "object"
+        properties:
+          filepath: { type: "string" }
+          content: { type: "string" }
+        required: ["filepath", "content"]
+
+execute:
+  - type: "function"
+    function:
+      name: "bootstrap_project"
+      description: "Clones a project archetype into Studio."
+      parameters:
+        type: "object"
+        properties:
+          project_name: { type: "string" }
+          template_url: 
+            type: "string"
+            description: "Optional Git URL, defaults to Forge"
+        required: ["project_name"]
+  - type: "function"
+    function:
+      name: "execute_command"
+      description: "Runs a terminal command. DO NOT EXPECT OUTPUT in the response. Check the file system after it runs to see side effects."
+      parameters:
+        type: "object"
+        properties:
+          command: { type: "string" }
+          directory_path: { type: "string" }
+        required: ["command", "directory_path"]
+  - type: "function"
+    function:
+      name: "operate_forge"
+      description: "Operates a Forge archetype project securely. Use this INSTEAD of execute_command to run Forge. Automatically handles handoff.md and retrieves telemetry."
+      parameters:
+        type: "object"
+        properties:
+          project_name:
+            type: "string"
+            description: "The exact name of the project folder in Studio/ (e.g., 'Brain-Website')."
+          instruction:
+            type: "string"
+            description: "The natural language instruction or pipeline command (e.g., '[START: Engineering] Build the React site')."
+        required: ["project_name", "instruction"]
+  - type: "function"
+    function:
+      name: "copy_safe_file"
+      description: "Copies a file. Useful for moving images from Media/ into Studio/ projects."
+      parameters:
+        type: "object"
+        properties:
+          source_filepath: { type: "string" }
+          dest_filepath: { type: "string" }
+        required: ["source_filepath", "dest_filepath"]
