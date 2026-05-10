@@ -2,7 +2,6 @@ import json
 import subprocess
 from pathlib import Path
 from rich.console import Console
-from rich.prompt import Confirm
 import shutil
 
 # Define the absolute root of the Brain OS
@@ -201,13 +200,18 @@ def execute_command(command: str, directory_path: str) -> str:
             return f"ERROR: Directory not found at {target_path.relative_to(ROOT_DIR)}"
 
         console.print("\n[bold red]⚠️  SECURITY ALERT: EXECUTION REQUESTED[/bold red]")
-        is_approved = Confirm.ask(
+        console.print(
             f"[yellow]Brain OS wants to run:[/yellow] '{command}'\n"
-            f"[yellow]in directory:[/yellow] '{target_path.relative_to(ROOT_DIR)}'\n"
-            f"[bold]Allow execution?[/bold]"
+            f"[yellow]in directory:[/yellow] '{target_path.relative_to(ROOT_DIR)}'"
         )
 
-        if not is_approved:
+        # --- SHIFT-LEFT: STRICT Opt-In Gate ---
+        try:
+            user_input = input("Allow execution? [y/N]: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            user_input = "n"
+
+        if user_input not in ["y", "yes"]:
             return "SECURITY BLOCK: User explicitly denied command execution."
 
         console.print(f"[dim]Executing '{command}'... (Terminal I/O mapped)[/dim]\n")
@@ -250,13 +254,18 @@ def operate_forge(project_name: str, instruction: str) -> str:
         console.print(
             "\n[bold red]⚠️  SECURITY ALERT: FORGE OPERATION REQUESTED[/bold red]"
         )
-        is_approved = Confirm.ask(
+        console.print(
             f"[yellow]Brain OS wants to command Forge for project:[/yellow] '{project_name}'\n"
-            f"[yellow]Instruction:[/yellow] '{instruction}'\n"
-            f"[bold]Allow execution?[/bold]"
+            f"[yellow]Instruction:[/yellow] '{instruction}'"
         )
 
-        if not is_approved:
+        # --- SHIFT-LEFT: STRICT Opt-In Gate ---
+        try:
+            user_input = input("Allow execution? [y/N]: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            user_input = "n"
+
+        if user_input not in ["y", "yes"]:
             return "SECURITY BLOCK: User explicitly denied Forge operation."
 
         console.print(f"[dim]Booting Forge engine for '{project_name}'...[/dim]\n")

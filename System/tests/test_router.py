@@ -28,7 +28,8 @@ def test_run_agent_error_handling(mocker) -> None:  # type: ignore
 
     result = run_agent("Worker (Claude)", "test-model", "system", "user")
 
-    assert result.text == "Error: Simulated API Error"
+    # Update this assertion to match the new Circuit Breaker syntax
+    assert result.text == "API/Execution Error: Simulated API Error"
     assert result.actions == []
 
 
@@ -101,17 +102,65 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
     block_result = execute_command("ls", "../../")
     assert "SECURITY BLOCK" in block_result
 
-    # 2. Test HITL Rejection
-    # Mock the rich Confirm.ask to simulate a user pressing 'n'
-    mocker.patch("System.tools.Confirm.ask", return_value=False)
+    # 2. Test HITL Strict Rejection (Standard 'n' or unrecognized input)
+    mocker.patch("builtins.input", return_value="n")
     deny_result = execute_command("ls", "Studio/TestProject")
     assert "SECURITY BLOCK: User explicitly denied" in deny_result
 
-    # 3. Test Execution Approval
-    mocker.patch("System.tools.Confirm.ask", return_value=True)
+    # 3. Test Execution Approval (Standard 'y')
+    mocker.patch("builtins.input", return_value="y")
     mock_subprocess = mocker.patch("System.tools.subprocess.run")
     mock_subprocess.return_value.returncode = 0
-
     approve_result = execute_command("ls", "Studio/TestProject")
     assert "SUCCESS" in approve_result
     mock_subprocess.assert_called_once()
+
+
+def test_run_os_retry_circuit_breaker(mocker) -> None:  # type: ignore
+    """Test that the pipeline immediately aborts if user denies autonomous retry."""
+
+    # 1. Mock analyze_task to return a valid route
+    mocker.patch(
+        "System.router.analyze_task",
+        return_value=(True, "Approved", "FORGE", "STUDIO", {"total_tokens": 10}),
+    )
+
+    # 2. Mock run_agent to simulate the Auditor failing the evaluation
+    from System.router import AgentResponse
+
+    def mock_run_agent_side_effect(*args, **kwargs):
+        role_name = kwargs.get("role_name", args[0] if len(args) > 0 else "")
+        if "Auditor" in role_name:
+            return AgentResponse(
+                text="[GRADE: FAIL] The code has hallucinations.",
+                usage={"total_tokens": 50},
+            )
+        # For the Architect/Engineer
+        return AgentResponse(
+            text="Here is the generated code.", usage={"total_tokens": 50}
+        )
+
+    mocker.patch("System.router.run_agent", side_effect=mock_run_agent_side_effect)
+
+    # 3. Mock the HITL prompts!
+    # - The first input is 'y' for the initial Pre-Flight Auth.
+    # - The second input is 'n' for the Autonomous Retry Auth.
+    mocker.patch("builtins.input", side_effect=["y", "n"])
+
+    # 4. Spy on the console.print
+    mock_print = mocker.patch("System.router.console.print")
+
+    # 5. Run OS
+    from System.router import task
+
+    task("FORGE TASK: Test retry circuit breaker")
+
+    # 6. Verify the pipeline broke and printed the specific abort message
+    abort_called = any(
+        "User declined autonomous retry" in str(call.args[0])
+        for call in mock_print.call_args_list
+        if call.args
+    )
+    assert abort_called, (
+        "The retry circuit breaker did not trigger the abort print statement."
+    )
