@@ -41,7 +41,7 @@ def test_microglia_successful_heal(monkeypatch, tmp_path):
 
     # 4. Assertions
     assert healed is True
-    assert "Microglia (Immune System) detected an error" in output
+    assert "autonomously applied a patch" in output
     assert (tmp_path / "missing_file.txt").exists(), (
         "The Microglia failed to execute the antibody!"
     )

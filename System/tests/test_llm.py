@@ -32,7 +32,9 @@ def test_token_truncator_protects_context(mocker) -> None:  # type: ignore
 
     # Mock the tool to return a 15,000 character string
     massive_string = "A" * 15000
-    mocker.patch("System.llm.read_safe_file", return_value=massive_string)
+    mocker.patch(
+        "System.tools.read_safe_file", return_value=massive_string
+    )  # <--- Changed llm to tools
 
     asyncio.run(
         run_agent_async("Test_Agent", "model", "sys_prompt", "user_prompt", tools=[])
@@ -85,7 +87,7 @@ def test_context_sliding_window_preserves_anchors(mocker) -> None:  # type: igno
         final_mock,
     ]
 
-    mocker.patch("System.llm.list_safe_directory", return_value="file.txt")
+    mocker.patch("System.tools.list_safe_directory", return_value="file.txt")
     asyncio.run(
         run_agent_async("Test_Agent", "model", "sys_prompt", "user_prompt", tools=[])
     )

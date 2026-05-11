@@ -23,28 +23,25 @@ class TargetValidator:
         if parsed.scheme not in ["http", "https"]:
             raise SecurityBlockError("Only HTTP/HTTPS stimuli are allowed.")
 
-        # 2. Then check hostname
-        hostname = parsed.hostname
-        if not hostname:
-            raise SecurityBlockError(f"Invalid URL structure: {url}")
-
+        # 2. Resolve IP to prevent DNS rebinding / SSRF
         try:
-            # 1. Resolve the hostname to an IP
-            ip_str = socket.gethostbyname(hostname)
-            ip_obj = ipaddress.ip_address(ip_str)
-        except socket.gaierror:
-            raise SecurityBlockError(f"Could not resolve hostname: {hostname}")
+            hostname = parsed.hostname
+            if not hostname:
+                raise SecurityBlockError("Invalid URL: No hostname provided.")
 
-        # 2. SHIFT-LEFT: Block local, private, loopback, and reserved IPs
-        if (
-            ip_obj.is_loopback
-            or ip_obj.is_private
-            or ip_obj.is_multicast
-            or ip_obj.is_reserved
-        ):
+            ip_str = socket.gethostbyname(hostname)
+            ip = ipaddress.ip_address(ip_str)
+
+            if ip.is_private or ip.is_loopback or ip_str == "0.0.0.0":
+                raise SecurityBlockError(
+                    f"SSRF BLOCK: Attempted to access restricted subnet ({ip_str})."
+                )
+        except socket.gaierror:
             raise SecurityBlockError(
-                f"SSRF BLOCK: Attempted to access restricted subnet ({ip_str})."
+                f"DNS RESOLUTION FAILED: Could not resolve {parsed.hostname}"
             )
+        except ValueError:
+            raise SecurityBlockError(f"INVALID IP ADDRESS: {ip_str}")
 
         return url
 
@@ -78,6 +75,8 @@ def transduce_web_page(url: str) -> str:
         return f'<sensory_input source="{safe_url}" status="SUCCESS">\n{markdown_content}\n</sensory_input>'
 
     except SecurityBlockError as e:
-        return f'<sensory_error source="{url}" type="SECURITY_BLOCK">\n{str(e)}\n</sensory_error>'
+        return f'<sensory_error source="{url}">\n{str(e)}\n</sensory_error>'
     except Exception as e:
-        return f'<sensory_error source="{url}" type="FETCH_FAILURE">\n{str(e)}\n</sensory_error>'
+        return (
+            f'<sensory_error source="{url}">\nNETWORK ERROR: {str(e)}\n</sensory_error>'
+        )

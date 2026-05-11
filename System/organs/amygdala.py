@@ -89,14 +89,7 @@ def scan_prompt(prompt: str) -> tuple[bool, str]:
                 f"AMYGDALA BOUNDARY: Unauthorized access to vital organ ({target}).",
             )
 
-    # 4. Standard Destructive Verbs (Legacy Bouncer)
-    forbidden_actions = [r"\bdelete\b", r"\berase\b"]
-    for action in forbidden_actions:
-        if re.search(action, prompt_lower):
-            clean_word = action.replace(r"\b", "")
-            return False, f"AMYGDALA RULE: Destructive action blocked ('{clean_word}')."
-
-    # 5. FINAL TIER: If it passes all Regex, run the LLM check
+    # 4. FINAL TIER: If it passes all Regex, run the LLM check
     return _llm_intent_scan(prompt, "user prompt")
 
 

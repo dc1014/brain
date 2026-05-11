@@ -404,7 +404,8 @@ def sleep() -> None:
 
         # --- FIX: Define the payload using the current memory and the daily logs ---
         # Note: If your for-loop uses a different variable name for the logs (like 'log_text' or 'interactions'), change 'logs' to match it!
-        payload = f"CURRENT NEOCORTEX MEMORY:\n{current_memory}\n\nNEW DAILY HIPPOCAMPUS LOGS:\n{logs}"
+        # FIX: Send the actual JSON data, not the Typer function object
+        payload = f"CURRENT NEOCORTEX MEMORY:\n{current_memory}\n\nNEW DAILY HIPPOCAMPUS LOGS:\n{daily_log}"
 
         console.print(f"[dim]Consolidating {domain_name} memory...[/dim]")
         try:

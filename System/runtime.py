@@ -33,7 +33,7 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
     zero_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
     # --- 1. THE AMYGDALA (Shift-Left Threat Detection) ---
-    is_safe, threat_reason = scan_prompt(prompt)
+    is_safe, threat_reason = await asyncio.to_thread(scan_prompt, prompt)
     if not is_safe:
         return False, threat_reason, "NONE", "NONE", zero_usage
 
@@ -145,7 +145,7 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
     is_exhausted, tokens_burned = check_energy_levels()
     if is_exhausted:
         console.print(
-            f"\\n[bold yellow]⚠️ Interoception Alert: System Exhausted ({tokens_burned:,} tokens burned). Downgrading cognitive load.[/bold yellow]"
+            f"\n[bold yellow]⚠️ Interoception Alert: System Exhausted ({tokens_burned:,} tokens burned). Downgrading cognitive load.[/bold yellow]"
         )
 
     total_pipeline_tokens = 0
@@ -234,7 +234,7 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
             step.get("context", []), domain, prompt=current_payload
         )
 
-        console.print(f"\\n[bold cyan]⏳ {agent_cfg['name']} is working...[/bold cyan]")
+        console.print(f"\n[bold cyan]⏳ {agent_cfg['name']} is working...[/bold cyan]")
         agents_invoked.append(agent_cfg["name"])
 
         step_result = await run_agent_async(
@@ -253,7 +253,7 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
 
         display_text = step_result.text
         if step_result.actions:
-            display_text += "\\n\\n**Actions Taken:**\\n" + "\\n".join(
+            display_text += "\n\n**Actions Taken:**\n" + "\n".join(
                 [f"- {a}" for a in step_result.actions]
             )
 
@@ -269,7 +269,7 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
             "[SYSTEM HALT]" in step_result.text
             or "API/Execution Error:" in step_result.text
         ):
-            console.print("\\n[bold red]🛑 PIPELINE ABORTED.[/bold red]")
+            console.print("\n[bold red]🛑 PIPELINE ABORTED.[/bold red]")
             pipeline_aborted = True
             break
 
@@ -289,14 +289,14 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
                 if eval_retries < MAX_RETRIES:
                     if not is_valid:
                         console.print(
-                            "\\n[bold yellow]🗣️ Broca's Area intercepted malformed XML. Forcing retry.[/bold yellow]"
+                            "\n[bold yellow]🗣️ Broca's Area intercepted malformed XML. Forcing retry.[/bold yellow]"
                         )
-                        critique_msg = f"BROCA FORMATTING ERROR: {audit_content}\\nYou must strictly output <audit_result>PASS</audit_result> or <audit_result>FAIL</audit_result>."
+                        critique_msg = f"BROCA FORMATTING ERROR: {audit_content}\nYou must strictly output <audit_result>PASS</audit_result> or <audit_result>FAIL</audit_result>."
                     else:
                         console.print(
-                            "\\n[bold red]❌ Audit Failed! The Product Manager needs to fix the code.[/bold red]\\n"
+                            "\n[bold red]❌ Audit Failed! The Product Manager needs to fix the code.[/bold red]\n"
                         )
-                        critique_msg = f"CRITICAL - AUDIT FAILED. Read the critique, fix the instructions, and redeploy:\\n\\n{step_result.text}"
+                        critique_msg = f"CRITICAL - AUDIT FAILED. Read the critique, fix the instructions, and redeploy:\n\n{step_result.text}"
 
                     if os.environ.get("BRAIN_OS_HEADLESS") == "1":
                         retry_auth = "y"
@@ -335,26 +335,24 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
                         },
                     )
 
-                    current_payload = (
-                        f"Original Task: {description}\\n\\n{critique_msg}"
-                    )
+                    current_payload = f"Original Task: {description}\n\n{critique_msg}"
                     eval_retries += 1
                     continue
                 else:
                     console.print(
-                        "\\n[bold red]🛑 CIRCUIT BREAKER: Max eval retries reached. Halting pipeline.[/bold red]\\n"
+                        "\n[bold red]🛑 CIRCUIT BREAKER: Max eval retries reached. Halting pipeline.[/bold red]\n"
                     )
                     pipeline_aborted = True
                     break
 
-        current_payload = f"Original Task: {description}\\n\\nPrevious Output:\\n{step_result.text}\\n\\nActions Taken:\\n{step_result.actions}"
+        current_payload = f"Original Task: {description}\n\nPrevious Output:\n{step_result.text}\n\nActions Taken:\n{step_result.actions}"
 
     agent_summary = ", ".join(
         [f"{agent} (x{agents_invoked.count(agent)})" for agent in set(agents_invoked)]
     )
     diagnostics = (
-        f"[bold cyan]Agents Invoked:[/bold cyan] {agent_summary}\\n"
-        f"[bold cyan]Eval Loops (Retries):[/bold cyan] {eval_retries}\\n"
+        f"[bold cyan]Agents Invoked:[/bold cyan] {agent_summary}\n"
+        f"[bold cyan]Eval Loops (Retries):[/bold cyan] {eval_retries}\n"
         f"[bold cyan]Total Tokens Burned:[/bold cyan] {total_pipeline_tokens:,}"
     )
     console.print(
@@ -371,14 +369,12 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
     if pipeline_aborted:
         restore_balance()
         console.print(
-            "\\n[bold red]🛑 Task Aborted. Environment safely rolled back.[/bold red]\\n"
+            "\n[bold red]🛑 Task Aborted. Environment safely rolled back.[/bold red]\n"
         )
         with open(state_path, "w", encoding="utf-8") as f:
-            f.write("STATUS: ABORTED\\n")
+            f.write("STATUS: ABORTED\n")
     else:
         commit_transaction()
-        console.print(
-            "\\n[bold green]✅ Task Complete. Files committed.[/bold green]\\n"
-        )
+        console.print("\n[bold green]✅ Task Complete. Files committed.[/bold green]\n")
         with open(state_path, "w", encoding="utf-8") as f:
-            f.write("STATUS: COMPLETE\\n")
+            f.write("STATUS: COMPLETE\n")

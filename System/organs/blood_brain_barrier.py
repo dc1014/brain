@@ -49,13 +49,16 @@ def validate_execution_path(target_path: str) -> tuple[bool, str]:
     try:
         requested_path = Path(target_path).resolve()
 
-        if not str(requested_path).startswith(str(ROOT_DIR)):
+        # FIX: Use strict relative pathing to physically prevent traversal
+        try:
+            requested_path.relative_to(ROOT_DIR)
+        except ValueError:
             return (
                 False,
                 "PATH TRAVERSAL BLOCKED: Attempted to execute outside the OS Root.",
             )
 
-        safe_zones = ["Studio", "Personal", "Professional"]
+        safe_zones = ["Studio", "Personal", "Professional", "Media"]
         is_in_safe_zone = any(zone in requested_path.parts for zone in safe_zones)
 
         if not is_in_safe_zone:
