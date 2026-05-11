@@ -123,9 +123,9 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
 def test_run_os_retry_circuit_breaker(mocker) -> None:  # type: ignore
     """Test that the pipeline immediately aborts if user denies autonomous retry."""
 
-    # 1. Update: Mock analyze_task in runtime
+    # 1. Update: Mock analyze_task exactly where it is used in the CLI
     mocker.patch(
-        "System.runtime.analyze_task",
+        "System.cli.analyze_task",
         return_value=(True, "Approved", "FORGE", "STUDIO", {"total_tokens": 10}),
     )
 
