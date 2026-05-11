@@ -205,3 +205,38 @@ def test_search_safe_directory_security_and_metrics(tmp_path: Path, mocker) -> N
     # 2. Test Path Traversal Security Block
     block_result = search_safe_directory("password", "../../Windows")
     assert "SECURITY BLOCK" in block_result
+
+
+def test_analyze_safe_syntax(tmp_path: Path, mocker) -> None:  # type: ignore
+    """Ensure analyze_safe_syntax correctly wraps the local linter and respects the sandbox."""
+    from System.tools import analyze_safe_syntax
+
+    mocker.patch("System.tools.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
+
+    studio_dir = tmp_path / "Studio"
+    studio_dir.mkdir(parents=True)
+
+    # 1. Test Sandbox block
+    assert "SECURITY BLOCK" in analyze_safe_syntax("../../outside.py")
+
+    # 2. Test File Not Found
+    assert "ERROR: File" in analyze_safe_syntax("Studio/missing.py")
+
+    # 3. Test Linter Execution (Mocked)
+    py_file = studio_dir / "test.py"
+    py_file.write_text("print('hello')")
+
+    mock_subprocess = mocker.patch("System.tools.subprocess.run")
+
+    # Simulate Success
+    mock_subprocess.return_value = mocker.MagicMock(returncode=0)
+    assert "✅ Linter passed" in analyze_safe_syntax("Studio/test.py")
+
+    # Simulate Failure
+    mock_subprocess.return_value = mocker.MagicMock(
+        returncode=1, stdout="SyntaxError on line 1", stderr=""
+    )
+    result = analyze_safe_syntax("Studio/test.py")
+    assert "❌ Linter found errors" in result
+    assert "SyntaxError" in result

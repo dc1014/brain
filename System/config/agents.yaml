@@ -49,6 +49,7 @@ agents:
       Break this task down into a clear plan. 
       Use your tools to read, explore, or write files as necessary.
       CRITICAL: Never use list_safe_directory or read_safe_file to search for text or concepts. You MUST use search_safe_directory to save tokens.
+      ZERO-COST PRE-AUDIT: After writing any Python code using write_safe_file, you MUST immediately call 'analyze_safe_syntax' on that file to check for errors. If it fails, fix the code before finishing your turn.
 
       ARCHETYPE INSTRUCTIONS (FORGE):
       If asked to "build software", "create a site", or use "Forge":
