@@ -1,15 +1,15 @@
+import asyncio
 import os
 import yaml  # type: ignore
 from pathlib import Path
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
-from litellm import completion  # type: ignore
 from System.organs.amygdala import scan_prompt
 from System.organs.interoception import check_energy_levels, log_metabolism
 
 
-from System.llm import run_agent, get_system_context
+from System.llm import run_agent_async, get_system_context
 
 console = Console()
 
@@ -21,7 +21,7 @@ except Exception:
     AGENT_CONFIG = {"agents": {}, "routes": {}, "models": {}}
 
 
-def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
+async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
     """Analyzes a user prompt using the Dispatcher to determine validity, routing, and domain context."""
 
     # --- 🦠 ENTERIC NERVOUS SYSTEM (Gut Reaction) ---
@@ -43,8 +43,10 @@ def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
         ["Meta"], prompt=prompt
     )
 
+    from litellm import acompletion
+
     try:
-        response = completion(
+        response = await acompletion(
             model=AGENT_CONFIG["models"][dispatcher_cfg["model"]],
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -126,10 +128,8 @@ def get_resolved_model(desired_model_key: str, is_exhausted: bool) -> str:
     return AGENT_CONFIG["models"][desired_model_key]
 
 
-def execute_pipeline(description: str, route_type: str, domain: str) -> None:
+async def execute_pipeline(description: str, route_type: str, domain: str) -> None:
     from System.organs.vestibular import commit_transaction, restore_balance
-    from System.llm import run_agent_async
-    import asyncio
 
     commit_transaction()
 
@@ -190,8 +190,8 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
 
                 return await asyncio.gather(*[_task(s) for s in swarm_steps])
 
-            # Execute sub-agents concurrently using asyncio
-            swarm_results = asyncio.run(_execute_swarm_batch())
+            # STAGE 2: Await natively!
+            swarm_results = await _execute_swarm_batch()
 
             for agent_name, step_result in swarm_results:
                 step_tokens = step_result.usage.get("total_tokens", 0)
@@ -216,7 +216,6 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
                     f"--- {agent_name} Output ---\n{step_result.text}\nActions: {step_result.actions}"
                 )
 
-            # Synthesize swarm output for the next linear stage (e.g., QA Auditor)
             current_payload = (
                 f"Original Task: {description}\n\nSwarm Operations Complete:\n"
                 + "\n\n".join(swarm_outputs)
@@ -238,7 +237,7 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
         console.print(f"\\n[bold cyan]⏳ {agent_cfg['name']} is working...[/bold cyan]")
         agents_invoked.append(agent_cfg["name"])
 
-        step_result = run_agent(
+        step_result = await run_agent_async(
             role_name=agent_cfg["name"],
             model_string=model_str,
             system_prompt=full_system_prompt,

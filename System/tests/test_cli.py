@@ -1,7 +1,8 @@
 from unittest.mock import MagicMock
 from pathlib import Path
 
-from System.llm import run_agent
+from System.llm import run_agent_async
+import asyncio
 from System.runtime import analyze_task
 from System.cli import app, init
 from System.tools import bootstrap_project, execute_command
@@ -13,15 +14,21 @@ runner = CliRunner()
 def test_run_agent_success(mocker) -> None:  # type: ignore
     """Test that the agent correctly extracts the text from a successful API response."""
     # CHANGED: Mock System.llm instead of System.router
-    mock_completion = mocker.patch("System.llm.completion")
+    mock_completion = mocker.patch("System.llm.acompletion")
 
     mock_response = MagicMock()
     mock_response.choices = [MagicMock()]
     mock_response.choices[0].message.content = "This is a mocked AI response."
     mock_response.choices[0].message.tool_calls = None
-    mock_completion.return_value = mock_response
 
-    result = run_agent("Worker (Claude)", "test-model", "system", "user")
+    async def mock_acompletion(*args, **kwargs):
+        return mock_response
+
+    mock_completion.side_effect = mock_acompletion
+
+    result = asyncio.run(
+        run_agent_async("Worker (Claude)", "test-model", "system", "user")
+    )
 
     assert result.text == "This is a mocked AI response."
     assert result.actions == []
@@ -31,10 +38,16 @@ def test_run_agent_error_handling(mocker) -> None:  # type: ignore
     """Test that the agent gracefully catches and returns API errors."""
     # CHANGED: Mock System.llm instead of System.router
     mocker.patch("System.llm.log_interaction")
-    mock_completion = mocker.patch("System.llm.completion")
-    mock_completion.side_effect = Exception("Simulated API Error")
+    mock_completion = mocker.patch("System.llm.acompletion")
 
-    result = run_agent("Worker (Claude)", "test-model", "system", "user")
+    async def mock_acompletion_err(*args, **kwargs):
+        raise Exception("Simulated API Error")
+
+    mock_completion.side_effect = mock_acompletion_err
+
+    result = asyncio.run(
+        run_agent_async("Worker (Claude)", "test-model", "system", "user")
+    )
 
     assert result.text == "API/Execution Error: Simulated API Error"
     assert result.actions == []
@@ -44,12 +57,16 @@ def test_analyze_task_deterministic_blocks() -> None:
     """Test that shift-left heuristic checks block illegal prompts before hitting the LLM."""
 
     # 1. Test the destructive action block
-    is_valid, reason, route, domain, _ = analyze_task("Can you delete my journal?")
+    is_valid, reason, route, domain, _ = asyncio.run(
+        analyze_task("Can you delete my journal?")
+    )
     assert is_valid is False
     assert "amygdala rule" in reason.lower()
 
     # 2. Test the vital organ protection
-    is_valid, reason, route, domain, _ = analyze_task("Can you read the .env file?")
+    is_valid, reason, route, domain, _ = asyncio.run(
+        analyze_task("Can you read the .env file?")
+    )
     assert is_valid is False
     assert "amygdala boundary" in reason.lower()
 
@@ -152,7 +169,7 @@ def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:  # type: ign
 
     agent_calls = []
 
-    def mock_run_agent_side_effect(*args, **kwargs):
+    async def mock_run_agent_side_effect(*args, **kwargs):
         role_name = str(
             kwargs.get("role_name", args[0] if len(args) > 0 else "")
         ).lower()
@@ -168,7 +185,9 @@ def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:  # type: ign
             text="Here is the generated code.", usage={"total_tokens": 50}
         )
 
-    mocker.patch("System.runtime.run_agent", side_effect=mock_run_agent_side_effect)
+    mocker.patch(
+        "System.runtime.run_agent_async", side_effect=mock_run_agent_side_effect
+    )
 
     # Supply 'y' to authorize pipeline, 'n' to deny the retry.
     mocker.patch("builtins.input", side_effect=["y", "n", "n", "n"])
@@ -249,7 +268,7 @@ def test_task_obsidian_flag(tmp_path, monkeypatch):
 
     runner = CliRunner()
 
-    def mock_analyze(*args):
+    async def mock_analyze(*args):
         return True, "Mock reason", "Forge", "Studio", {"tokens": 0}
 
     monkeypatch.setattr("System.cli.analyze_task", mock_analyze)
@@ -297,11 +316,15 @@ def test_execute_pending(tmp_path, monkeypatch):
         encoding="utf-8",
     )
 
-    # 3. Mock the LLM and Execution functions
-    monkeypatch.setattr(
-        "System.cli.analyze_task", lambda x: (True, "Valid", "Forge", "Studio", {})
-    )
-    monkeypatch.setattr("System.cli.execute_pipeline", lambda d, r, dom: None)
+    async def _mock_analyze(x):
+        return (True, "Valid", "Forge", "Studio", {})
+
+    monkeypatch.setattr("System.cli.analyze_task", _mock_analyze)
+
+    async def _mock_exec(d, r, dom):
+        return None
+
+    monkeypatch.setattr("System.cli.execute_pipeline", _mock_exec)
 
     # 4. Run the command
     result = runner.invoke(app, ["execute-pending"])
@@ -328,7 +351,7 @@ def test_forage_command(monkeypatch, capsys):
     # Mock the pipeline execution
     executed_args = {}
 
-    def mock_execute_pipeline(desc, route, domain):
+    async def mock_execute_pipeline(desc, route, domain):
         executed_args["desc"] = desc
         executed_args["route"] = route
         executed_args["domain"] = domain
@@ -355,7 +378,7 @@ def test_daydream_command(monkeypatch, capsys):
     # Mock the pipeline execution
     executed_args = {}
 
-    def mock_execute_pipeline(desc, route, domain):
+    async def mock_execute_pipeline(desc, route, domain):
         executed_args["desc"] = desc
         executed_args["route"] = route
         executed_args["domain"] = domain

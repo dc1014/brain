@@ -5,6 +5,7 @@
 - **UNIX Philosophy:** Keep dependencies strictly minimal. Prioritize standard library (e.g., `ast`, `subprocess`) over massive third-party packages.
 - **Zero Debt:** Prioritize clean, modern Python 3.12+ features (strict typing, native `asyncio`).
 - **Shift-Left Security:** Security happens *before* execution. Do not rely on "try/except" for security. Rely on static analysis (AST Membrane) and deterministic allow-lists.
+- **Zero Waste Token Economics:** Context limits are respected. The system uses a deterministic router to wake up the cheapest, fastest model for simple tasks, saving the heavy reasoning models for complex software architecture.
 
 ## 2. Tooling & Data Contracts
 - **The XML Contract:** When modifying `System/tools.py`, all tool outputs must return structured XML (e.g., `<shell_output><stdout>...</stdout><stderr>...</stderr></shell_output>`). The agents rely on this contract to parse reality.

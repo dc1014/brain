@@ -1,3 +1,4 @@
+import asyncio
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -5,8 +6,7 @@ from pathlib import Path
 from typing import Any
 import yaml  # type: ignore
 
-import asyncio
-from litellm import completion, acompletion  # type: ignore
+from litellm import acompletion  # type: ignore
 from rich.console import Console
 
 from System.tools import (
@@ -95,257 +95,6 @@ def get_system_context(
     return context
 
 
-def run_agent(
-    role_name: str,
-    model_string: str,
-    system_prompt: str,
-    user_prompt: str,
-    tools: list[Any] | None = None,
-    route: str = "UNKNOWN",
-    domain: str = "NONE",
-) -> AgentResponse:
-    try:
-        messages: list[dict[str, Any]] = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-        action_manifest: list[str] = []
-        final_text: str = ""
-        total_prompt: int = 0
-        total_comp: int = 0
-
-        for step in range(15):
-            # --- SHIFT-LEFT: SMART CONTEXT SLIDING WINDOW ---
-            if len(messages) > 7:
-                window = messages[-5:]
-                # ANTHROPIC CRASH FIX 1: Never orphan a 'tool' message.
-                while window and window[0].get("role") == "tool":
-                    window.pop(0)
-
-                # ANTHROPIC CRASH FIX 2: The first non-system message MUST be 'user'.
-                # We anchor the System Prompt [0] AND the Original User Prompt [1].
-                pruned_messages = [messages[0], messages[1]] + window
-            else:
-                pruned_messages = messages
-
-            # --- SHIFT-LEFT: DYNAMIC API KEY FALLBACK ---
-            # If the config requests Anthropic, but the user only has OpenAI, seamlessly downgrade.
-            import os
-
-            _has_anthropic = bool(os.environ.get("ANTHROPIC_API_KEY"))
-            _has_openai = bool(os.environ.get("OPENAI_API_KEY"))
-
-            if (
-                "anthropic" in model_string.lower()
-                and not _has_anthropic
-                and _has_openai
-            ):
-                if step == 0:  # Only print the warning on the first step of the chain
-                    console.print(
-                        "[yellow]⚠️  Anthropic key missing. Automatically falling back to OpenAI (gpt-4o).[/yellow]"
-                    )
-                model_string = "openai/gpt-4o"
-            # ---------------------------------------------
-
-            kwargs: dict[str, Any] = {
-                "model": model_string,
-                "messages": pruned_messages,
-            }
-            if tools:
-                kwargs["tools"] = tools
-
-            response = completion(**kwargs)
-
-            if not getattr(response, "choices", None) or len(response.choices) == 0:
-                return AgentResponse(
-                    text="API SECURITY BLOCK: The LLM provider returned an empty response. This usually means its internal safety filters were triggered by words like 'execute', 'shell', or 'terminate'.",
-                    actions=action_manifest,
-                )
-
-            message = response.choices[0].message
-
-            if hasattr(response, "usage") and response.usage:
-                total_prompt += int(getattr(response.usage, "prompt_tokens", 0))
-                total_comp += int(getattr(response.usage, "completion_tokens", 0))
-
-            message_dict: dict[str, Any] = {"role": "assistant"}
-
-            if message.content:
-                message_dict["content"] = message.content
-                final_text += str(message.content) + "\n"
-
-            if hasattr(message, "tool_calls") and message.tool_calls:
-                processed_tools = []
-                for t in message.tool_calls:
-                    if hasattr(t, "model_dump"):
-                        processed_tools.append(t.model_dump())
-                    else:
-                        processed_tools.append(t)
-                message_dict["tool_calls"] = processed_tools
-
-            messages.append(message_dict)
-
-            if hasattr(message, "tool_calls") and message.tool_calls:
-                if step == 0:
-                    console.print(
-                        f"\n[dim]⚡ {role_name} is thinking and acting...[/dim]"
-                    )
-
-                for tool_call in message.tool_calls:
-                    args = json.loads(tool_call.function.arguments)
-                    func_name = str(tool_call.function.name)
-                    tool_id = str(tool_call.id)
-
-                    if func_name == "write_safe_file":
-                        result = write_safe_file(
-                            args.get("filepath", ""), args.get("content", "")
-                        )
-                        action_manifest.append(f"[WRITE] {args.get('filepath')}")
-                    elif func_name == "search_safe_directory":
-                        result = search_safe_directory(
-                            args.get("query", ""), args.get("directory_path", "")
-                        )
-                        action_manifest.append(
-                            f"[SEARCH] '{args.get('query')}' in {args.get('directory_path')}"
-                        )
-                    elif func_name == "read_safe_file":
-                        result = read_safe_file(args.get("filepath", ""))
-                        action_manifest.append(f"[READ] {args.get('filepath')}")
-                    elif func_name == "list_safe_directory":
-                        result = list_safe_directory(args.get("directory_path", ""))
-                        action_manifest.append(f"[LIST] {args.get('directory_path')}")
-                    elif func_name == "rename_safe_file":
-                        result = rename_safe_file(
-                            args.get("old_filepath", ""), args.get("new_filepath", "")
-                        )
-                        action_manifest.append(
-                            f"[RENAME] {args.get('old_filepath')} -> {args.get('new_filepath')}"
-                        )
-                    elif func_name == "append_safe_file":
-                        result = append_safe_file(
-                            args.get("filepath", ""), args.get("content", "")
-                        )
-                        action_manifest.append(f"[APPEND] {args.get('filepath')}")
-                    elif func_name == "bootstrap_project":
-                        url = args.get(
-                            "template_url",
-                            "https://github.com/mrdanielcasper/forge.git",
-                        )
-                        result = bootstrap_project(args.get("project_name", ""), url)
-                        action_manifest.append(
-                            f"[BOOTSTRAP] {args.get('project_name')}"
-                        )
-                    elif func_name == "execute_command":
-                        result = execute_command(
-                            args.get("command", ""), args.get("directory_path", "")
-                        )
-                        action_manifest.append(
-                            f"[EXECUTE] {args.get('command')} in {args.get('directory_path')}"
-                        )
-                    elif func_name == "operate_forge":
-                        result = operate_forge(
-                            args.get("project_name", ""), args.get("instruction", "")
-                        )
-                        action_manifest.append(
-                            f"[OPERATE_FORGE] {args.get('project_name')}"
-                        )
-                    elif func_name == "copy_safe_file":
-                        result = copy_safe_file(
-                            args.get("source_filepath", ""),
-                            args.get("dest_filepath", ""),
-                        )
-                        action_manifest.append(
-                            f"[COPY] {args.get('source_filepath')} -> {args.get('dest_filepath')}"
-                        )
-                    else:
-                        result = f"ERROR: Unknown tool {func_name}"
-
-                    console.print(f"[dim]🔍 Tool Executed: {func_name}[/dim]")
-
-                    # --- SHIFT-LEFT: TOKEN ECONOMICS TRUNCATION ---
-                    # 8,000 characters is roughly 2,000 tokens.
-                    # If a tool output is larger than this, we sever it to protect the context window.
-                    raw_output = str(result)
-                    MAX_CHARS = 8000
-
-                    if len(raw_output) > MAX_CHARS:
-                        truncated_output = raw_output[:MAX_CHARS] + (
-                            f"\n\n... [SYSTEM WARNING: Output truncated at {MAX_CHARS} characters to enforce Token Economics. "
-                            "Do not attempt to manually list or read massive directories/files. Use 'search_safe_directory' to find specific concepts or text efficiently.]"
-                        )
-                    else:
-                        truncated_output = raw_output
-
-                    messages.append(
-                        {
-                            "role": "tool",
-                            "name": func_name,
-                            "tool_call_id": tool_id,
-                            "content": truncated_output,
-                        }
-                    )
-
-                    if str(result).startswith("SECURITY BLOCK"):
-                        final_text += f"\n\n[SYSTEM HALT] {result}"
-                        action_manifest.append(
-                            "[HALTED] Security clearance denied by user."
-                        )
-                        return AgentResponse(
-                            text=final_text.strip(),
-                            actions=action_manifest,
-                            usage={
-                                "prompt_tokens": total_prompt,
-                                "completion_tokens": total_comp,
-                                "total_tokens": total_prompt + total_comp,
-                            },
-                        )
-                continue
-            else:
-                break
-
-        usage_data = {
-            "prompt_tokens": total_prompt,
-            "completion_tokens": total_comp,
-            "total_tokens": total_prompt + total_comp,
-        }
-        audit_trail = final_text + "\n\nACTIONS:\n" + "\n".join(action_manifest)
-        log_interaction(
-            role_name,
-            model_string,
-            system_prompt,
-            user_prompt,
-            audit_trail,
-            usage_data,
-            route,
-            domain,
-        )
-
-        return AgentResponse(
-            text=final_text.strip(), actions=action_manifest, usage=usage_data
-        )
-
-    except Exception as e:
-        error_msg = f"API/Execution Error: {str(e)}"
-        usage_data = {
-            "prompt_tokens": total_prompt,
-            "completion_tokens": total_comp,
-            "total_tokens": total_prompt + total_comp,
-        }
-
-        log_interaction(
-            role_name,
-            model_string,
-            system_prompt,
-            user_prompt,
-            error_msg,
-            usage_data,
-            route,
-            domain,
-        )
-
-        return AgentResponse(text=error_msg, actions=action_manifest, usage=usage_data)
-
-
 async def run_agent_async(
     role_name: str,
     model_string: str,
@@ -366,7 +115,6 @@ async def run_agent_async(
         total_comp: int = 0
 
         for step in range(15):
-            # --- SHIFT-LEFT: SMART CONTEXT SLIDING WINDOW ---
             if len(messages) > 7:
                 window = messages[-5:]
                 while window and window[0].get("role") == "tool":
@@ -387,7 +135,7 @@ async def run_agent_async(
             ):
                 if step == 0:
                     console.print(
-                        "[yellow]⚠️  Anthropic key missing. Automatically falling back to OpenAI (gpt-4o).[/yellow]"
+                        "[yellow]⚠️ Anthropic key missing. Falling back to OpenAI.[/yellow]"
                     )
                 model_string = "openai/gpt-4o"
 
@@ -398,12 +146,12 @@ async def run_agent_async(
             if tools:
                 kwargs["tools"] = tools
 
+            # ⚡ NATIVE ASYNC API CALL ⚡
             response = await acompletion(**kwargs)
 
             if not getattr(response, "choices", None) or len(response.choices) == 0:
                 return AgentResponse(
-                    text="API SECURITY BLOCK: The LLM provider returned an empty response. This usually means its internal safety filters were triggered by words like 'execute', 'shell', or 'terminate'.",
-                    actions=action_manifest,
+                    text="API SECURITY BLOCK: Empty response.", actions=action_manifest
                 )
 
             message = response.choices[0].message
@@ -413,18 +161,15 @@ async def run_agent_async(
                 total_comp += int(getattr(response.usage, "completion_tokens", 0))
 
             message_dict: dict[str, Any] = {"role": "assistant"}
-
             if message.content:
                 message_dict["content"] = message.content
                 final_text += str(message.content) + "\n"
 
             if hasattr(message, "tool_calls") and message.tool_calls:
-                processed_tools = []
-                for t in message.tool_calls:
-                    if hasattr(t, "model_dump"):
-                        processed_tools.append(t.model_dump())
-                    else:
-                        processed_tools.append(t)
+                processed_tools = [
+                    t.model_dump() if hasattr(t, "model_dump") else t
+                    for t in message.tool_calls
+                ]
                 message_dict["tool_calls"] = processed_tools
 
             messages.append(message_dict)
@@ -440,6 +185,7 @@ async def run_agent_async(
                     func_name = str(tool_call.function.name)
                     tool_id = str(tool_call.id)
 
+                    # ⚡ OFF-LOAD SYNC TOOLS TO THREADS ⚡
                     if func_name == "write_safe_file":
                         result = await asyncio.to_thread(
                             write_safe_file,
@@ -527,14 +273,11 @@ async def run_agent_async(
 
                     raw_output = str(result)
                     MAX_CHARS = 8000
-
-                    if len(raw_output) > MAX_CHARS:
-                        truncated_output = raw_output[:MAX_CHARS] + (
-                            f"\n\n... [SYSTEM WARNING: Output truncated at {MAX_CHARS} characters to enforce Token Economics. "
-                            "Do not attempt to manually list or read massive directories/files. Use 'search_safe_directory' to find specific concepts or text efficiently.]"
-                        )
-                    else:
-                        truncated_output = raw_output
+                    truncated_output = raw_output[:MAX_CHARS] + (
+                        f"\n\n... [SYSTEM WARNING: Truncated at {MAX_CHARS} chars]"
+                        if len(raw_output) > MAX_CHARS
+                        else ""
+                    )
 
                     messages.append(
                         {
@@ -545,11 +288,11 @@ async def run_agent_async(
                         }
                     )
 
-                    if str(result).startswith("SECURITY BLOCK"):
+                    if str(result).startswith("SECURITY BLOCK") or str(
+                        result
+                    ).startswith("<shell_output>\n<stderr>\nSECURITY BLOCK"):
                         final_text += f"\n\n[SYSTEM HALT] {result}"
-                        action_manifest.append(
-                            "[HALTED] Security clearance denied by user."
-                        )
+                        action_manifest.append("[HALTED] Security clearance denied.")
                         return AgentResponse(
                             text=final_text.strip(),
                             actions=action_manifest,
@@ -568,19 +311,16 @@ async def run_agent_async(
             "completion_tokens": total_comp,
             "total_tokens": total_prompt + total_comp,
         }
-        audit_trail = final_text + "\n\nACTIONS:\n" + "\n".join(action_manifest)
-        await asyncio.to_thread(
-            log_interaction,
+        log_interaction(
             role_name,
             model_string,
             system_prompt,
             user_prompt,
-            audit_trail,
+            final_text + "\n\nACTIONS:\n" + "\n".join(action_manifest),
             usage_data,
             route,
             domain,
         )
-
         return AgentResponse(
             text=final_text.strip(), actions=action_manifest, usage=usage_data
         )
@@ -592,8 +332,7 @@ async def run_agent_async(
             "completion_tokens": total_comp,
             "total_tokens": total_prompt + total_comp,
         }
-        await asyncio.to_thread(
-            log_interaction,
+        log_interaction(
             role_name,
             model_string,
             system_prompt,

@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import re
@@ -68,7 +69,9 @@ def task(
         "[bold yellow]🛡️ Dispatcher is analyzing the task...[/bold yellow]",
         spinner="dots",
     ):
-        is_valid, reason, route_type, domain, dispatch_usage = analyze_task(description)
+        is_valid, reason, route_type, domain, dispatch_usage = asyncio.run(
+            analyze_task(description)
+        )
 
     if not is_valid:
         console.print(
@@ -132,7 +135,7 @@ def task(
         )
         return
 
-    execute_pipeline(description, route_type, domain)
+    asyncio.run(execute_pipeline(description, route_type, domain))
 
 
 @app.command()
@@ -167,9 +170,9 @@ def execute_pending() -> None:
         )
 
         # Re-analyze to ensure context is perfectly fresh before execution
-        is_valid, reason, route_type, domain, _ = analyze_task(task_desc)
+        is_valid, reason, route_type, domain, _ = asyncio.run(analyze_task(task_desc))
         if is_valid:
-            execute_pipeline(task_desc, route_type, domain)
+            asyncio.run(execute_pipeline(task_desc, route_type, domain))
         else:
             console.print(
                 f"[bold red]Task failed pre-flight validation:[/bold red] {reason}"
@@ -198,7 +201,7 @@ def forage(
     os.environ["BRAIN_OS_HEADLESS"] = "1"
 
     prompt = f"Please forage this URL for high-signal intelligence: {url}"
-    execute_pipeline(prompt, "SUBCONSCIOUS_FORAGE", domain.upper())
+    asyncio.run(execute_pipeline(prompt, "SUBCONSCIOUS_FORAGE", domain.upper()))
 
 
 @app.command()
@@ -236,7 +239,7 @@ def daydream(
         )
         os.environ["BRAIN_OS_HEADLESS"] = "1"
         prompt = "Review our recent experiments and active memory. Synthesize a new strategic hypothesis and save it to the Daydreams file."
-        execute_pipeline(prompt, "SUBCONSCIOUS_DAYDREAM", domain.upper())
+        asyncio.run(execute_pipeline(prompt, "SUBCONSCIOUS_DAYDREAM", domain.upper()))
 
     else:
         # --- REM SLEEP (Active Software Prototyping) ---
@@ -261,7 +264,7 @@ def daydream(
             f"CRITICAL TOKEN ECONOMICS: Limit the Forge execution to a single focused task. Do not rewrite the whole app."
         )
 
-        execute_pipeline(prompt, "FORGE", "STUDIO")
+        asyncio.run(execute_pipeline(prompt, "FORGE", "STUDIO"))
 
         console.print(
             f"\n[bold green]🌅 Host awakened. Dream safely preserved in Git branch: {branch}.[/bold green]"

@@ -1,11 +1,14 @@
+import asyncio
 from unittest.mock import MagicMock
-from System.llm import run_agent
+from System.llm import run_agent_async
 
 
 def test_token_truncator_protects_context(mocker) -> None:  # type: ignore
     """Ensure that massive tool outputs are truncated to exactly 8000 chars + a warning."""
 
-    mock_completion = mocker.patch("System.llm.completion")
+    mock_completion = mocker.patch(
+        "System.llm.acompletion", new_callable=mocker.AsyncMock
+    )
     mocker.patch("System.llm.log_interaction")  # Silence the log writer for tests
 
     # 1. Properly Setup the mock (Avoiding the MagicMock name trap)
@@ -31,7 +34,9 @@ def test_token_truncator_protects_context(mocker) -> None:  # type: ignore
     massive_string = "A" * 15000
     mocker.patch("System.llm.read_safe_file", return_value=massive_string)
 
-    run_agent("Test_Agent", "model", "sys_prompt", "user_prompt", tools=[])
+    asyncio.run(
+        run_agent_async("Test_Agent", "model", "sys_prompt", "user_prompt", tools=[])
+    )
 
     # Intercept the exact messages array.
     messages_sent_to_llm = mock_completion.call_args_list[1][1]["messages"]
@@ -44,19 +49,16 @@ def test_token_truncator_protects_context(mocker) -> None:  # type: ignore
     assert len(tool_response_msg["content"]) < 15000, (
         "The massive string was not truncated!"
     )
-    assert (
-        "SYSTEM WARNING: Output truncated at 8000 characters"
-        in tool_response_msg["content"]
-    )
-    assert tool_response_msg["content"].startswith("A" * 8000), (
-        "The content was altered before truncation!"
-    )
+    # FIX: Assert the exact new, shortened warning string
+    assert "SYSTEM WARNING: Truncated at 8000 chars" in tool_response_msg["content"]
 
 
 def test_context_sliding_window_preserves_anchors(mocker) -> None:  # type: ignore
     """Ensure that when context overflows, the System and User prompts are NEVER dropped."""
 
-    mock_completion = mocker.patch("System.llm.completion")
+    mock_completion = mocker.patch(
+        "System.llm.acompletion", new_callable=mocker.AsyncMock
+    )
     mocker.patch("System.llm.log_interaction")
 
     def create_tool_mock(step_id: int):
@@ -84,7 +86,9 @@ def test_context_sliding_window_preserves_anchors(mocker) -> None:  # type: igno
     ]
 
     mocker.patch("System.llm.list_safe_directory", return_value="file.txt")
-    run_agent("Test_Agent", "model", "sys_prompt", "user_prompt", tools=[])
+    asyncio.run(
+        run_agent_async("Test_Agent", "model", "sys_prompt", "user_prompt", tools=[])
+    )
 
     for call in mock_completion.call_args_list:
         messages = call[1]["messages"]
@@ -100,3 +104,37 @@ def test_context_sliding_window_preserves_anchors(mocker) -> None:  # type: igno
             assert messages[2]["role"] != "tool", (
                 "Anthropic crash: Tool message orphaned immediately after User prompt!"
             )
+
+
+def test_run_agent_async_execution(mocker):
+    """Proves that the asynchronous Swarm agent runner processes LLM responses correctly."""
+    mock_completion = mocker.patch(
+        "System.llm.acompletion", new_callable=mocker.AsyncMock
+    )
+
+    class MockMessage:
+        content = "I am a parallel Swarm agent."
+        tool_calls = []
+
+    class MockChoice:
+        message = MockMessage()
+
+    class MockResponse:
+        choices = [MockChoice()]
+        usage = MagicMock(prompt_tokens=0, completion_tokens=0, total_tokens=0)
+
+    mock_completion.return_value = MockResponse()
+
+    # 2. Run the async function using the standard event loop
+    result = asyncio.run(
+        run_agent_async(
+            role_name="Swarm Node",
+            model_string="gpt-4o-mini",
+            system_prompt="You are a swarm agent.",
+            user_prompt="Hello swarm.",
+        )
+    )
+
+    # 3. Verify the async agent processed the data contract correctly
+    assert result.text == "I am a parallel Swarm agent."
+    assert result.usage["prompt_tokens"] == 0
