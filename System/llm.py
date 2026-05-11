@@ -18,6 +18,7 @@ from System.tools import (
     execute_command,
     operate_forge,
     copy_safe_file,
+    search_safe_directory,
 )
 
 console = Console()
@@ -107,10 +108,14 @@ def run_agent(
         for step in range(15):
             # --- SHIFT-LEFT: SMART CONTEXT SLIDING WINDOW ---
             if len(messages) > 7:
-                window = messages[-6:]
+                window = messages[-5:]
+                # ANTHROPIC CRASH FIX 1: Never orphan a 'tool' message.
                 while window and window[0].get("role") == "tool":
                     window.pop(0)
-                pruned_messages = [messages[0]] + window
+
+                # ANTHROPIC CRASH FIX 2: The first non-system message MUST be 'user'.
+                # We anchor the System Prompt [0] AND the Original User Prompt [1].
+                pruned_messages = [messages[0], messages[1]] + window
             else:
                 pruned_messages = messages
 
@@ -168,6 +173,13 @@ def run_agent(
                             args.get("filepath", ""), args.get("content", "")
                         )
                         action_manifest.append(f"[WRITE] {args.get('filepath')}")
+                    elif func_name == "search_safe_directory":
+                        result = search_safe_directory(
+                            args.get("query", ""), args.get("directory_path", "")
+                        )
+                        action_manifest.append(
+                            f"[SEARCH] '{args.get('query')}' in {args.get('directory_path')}"
+                        )
                     elif func_name == "read_safe_file":
                         result = read_safe_file(args.get("filepath", ""))
                         action_manifest.append(f"[READ] {args.get('filepath')}")
@@ -221,12 +233,27 @@ def run_agent(
                         result = f"ERROR: Unknown tool {func_name}"
 
                     console.print(f"[dim]🔍 Tool Executed: {func_name}[/dim]")
+
+                    # --- SHIFT-LEFT: TOKEN ECONOMICS TRUNCATION ---
+                    # 8,000 characters is roughly 2,000 tokens.
+                    # If a tool output is larger than this, we sever it to protect the context window.
+                    raw_output = str(result)
+                    MAX_CHARS = 8000
+
+                    if len(raw_output) > MAX_CHARS:
+                        truncated_output = raw_output[:MAX_CHARS] + (
+                            f"\n\n... [SYSTEM WARNING: Output truncated at {MAX_CHARS} characters to enforce Token Economics. "
+                            "Do not attempt to manually list or read massive directories/files. Use 'search_safe_directory' to find specific concepts or text efficiently.]"
+                        )
+                    else:
+                        truncated_output = raw_output
+
                     messages.append(
                         {
                             "role": "tool",
                             "name": func_name,
                             "tool_call_id": tool_id,
-                            "content": str(result),
+                            "content": truncated_output,
                         }
                     )
 

@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 from rich.console import Console
 import shutil
+import time
 
 # Define the absolute root of the Brain OS
 ROOT_DIR: Path = Path(__file__).parent.parent.resolve()
@@ -334,3 +335,70 @@ def copy_safe_file(source_filepath: str, dest_filepath: str) -> str:
         return f"SUCCESS: Copied to {dest_path.relative_to(ROOT_DIR)}"
     except Exception as e:
         return f"ERROR: Failed to copy file - {str(e)}"
+
+
+def search_safe_directory(query: str, directory_path: str) -> str:
+    """Recursively searches for a string within safe directory bounds, returning telemetry."""
+    start_time = time.perf_counter()
+    target_path = (ROOT_DIR / directory_path).resolve()
+
+    # SHIFT-LEFT SECURITY: Always check authorization BEFORE existence
+    # to prevent path enumeration attacks.
+    if not is_safe_path(target_path):
+        return f"SECURITY BLOCK: Cannot search outside allowed directories. Attempted to access {target_path}"
+
+    if not target_path.exists():
+        return f"ERROR: Directory '{directory_path}' does not exist."
+
+    results = []
+    files_scanned = 0
+    # ... (the rest of the function remains exactly the same)
+    # Ignore binary, cache, and massive dependency folders
+    ignore_dirs = {".git", "node_modules", "__pycache__", ".venv", "dist", "build"}
+    valid_exts = {
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx",
+        ".py",
+        ".md",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".css",
+        ".html",
+        ".txt",
+    }
+
+    try:
+        for filepath in target_path.rglob("*"):
+            if filepath.is_file() and filepath.suffix in valid_exts:
+                if any(ignored in filepath.parts for ignored in ignore_dirs):
+                    continue
+
+                files_scanned += 1
+                content = filepath.read_text(errors="ignore")
+                if query.lower() in content.lower():
+                    results.append(f"- {filepath.relative_to(ROOT_DIR)}")
+
+                    # Prevent LLM context bloat
+                    if len(results) >= 15:
+                        results.append(
+                            "... (Additional results truncated for token limits)"
+                        )
+                        break
+
+    except Exception as e:
+        return f"ERROR: Failed to search directory - {str(e)}"
+
+    duration = time.perf_counter() - start_time
+    telemetry = f"[Telemetry: Scanned {files_scanned} files in {duration:.3f} seconds]"
+
+    if not results:
+        return f"No matches found for '{query}' in {directory_path}. {telemetry}"
+
+    return (
+        f"Found '{query}' in the following files:\n"
+        + "\n".join(results)
+        + f"\n\n{telemetry}"
+    )
