@@ -134,6 +134,11 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 * **Host-Agnostic Cron (Unix Philosophy):** To remain completely portable, Brain OS does not rely on Linux `cron` or Windows Task Scheduler. The Basal Ganglia uses a plain-text `habits.json` file to track intervals, ticked passively by the Pineal Gland.
 * **Shift-Left Security:** Before a habit can be formed, the raw command is routed through the Amygdala to ensure no malicious background tasks are permanently scheduled.
 * **Token Economics:** Habits run purely in the background (using Proprioception) without waking up the expensive LLM Swarm, allowing Brain OS to perform maintenance, backups, and data foraging for free.
+
+### 27. Auditory Processing (The Temporal Lobe)
+* **The Biological Ear:** The Peripheral Nervous System (`Sense`) captures raw environmental audio waveforms via the host's microphone or from local files.
+* **Sensory XML Integration:** Wernicke's Area (Semantic Speech) and the Primary Auditory Cortex (Environmental Sound via Gemini 1.5 Flash) operate in tandem. They combine spoken words and background context (e.g., music playing, birds chirping) into a strict `<sensory_input>` XML tag before passing the reality to the Dispatcher.
+* **Broca's Area (Speech Articulation):** The system does not force speech. Agents are equipped with a `speak` tool, allowing the Prefrontal Cortex to autonomously decide *when* it is appropriate to formulate a vocal response and push it to the physical speakers.
 ---
 
 ## 🏗️ Architecture & Routing
@@ -160,6 +165,11 @@ Brain implements the UNIX philosophy via a completely decoupled transducer syste
 In biology, the brain does not process raw photons; the retina transduces them into action potentials. Similarly, LLMs should not read raw HTML or massive Git trees. `Sense` fetches external stimuli (websites, repos, PDFs), strips the noise, and transduces them into strictly formatted XML "Action Potentials" that ensure zero context bloat.
 
 Because `Sense` is an independent package in our `uv workspace`, it can be used by Brain OS, Forge, or standalone bash scripts interchangeably, with mathematical **SSRF Security Blocks** ensuring the AI can never autonomously ping your `localhost` or private subnets.
+
+**Testing the Hardware Directly (Zero Tokens):**
+You can test the physical microphone and speakers completely decoupled from the AI:
+* `uv run python -m Sense.cli listen --duration 5 --output test.wav`
+* `uv run python -m Sense.cli speak test.wav`
 
 ---
 

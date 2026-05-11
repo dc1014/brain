@@ -716,5 +716,133 @@ def reindex() -> None:
     console.print("[bold green]✅ Index completely rebuilt![/bold green]")
 
 
+@app.command()
+def speak(text: str = typer.Argument(..., help="Text for the brain to say out loud.")):
+    """Broca's Area + Physical Speaker: Synthesizes and plays speech independently."""
+    from System.organs.broca import synthesize_speech
+    from Sense.receptors.audio import play_audio
+    from pathlib import Path
+    import tempfile
+
+    temp_file = Path(tempfile.gettempdir()) / "brain_speech.mp3"
+
+    console.print(
+        "[bold cyan]🧠 Broca's Area formulating motor commands...[/bold cyan]"
+    )
+    synthesize_speech(text, str(temp_file))
+
+    console.print("[bold cyan]👄 Sending waveform to physical speakers...[/bold cyan]")
+    play_audio(str(temp_file))
+
+
+@app.command()
+def listen(
+    duration: int = typer.Option(
+        5, "--duration", "-d", help="Seconds to record if using mic"
+    ),
+    file: str = typer.Option(
+        None,
+        "--file",
+        "-f",
+        help="Path to an existing audio file to process instead of recording",
+    ),
+):
+    """The Biological Ear: Records the room OR reads an audio file, comprehends it, and routes intent."""
+    from Sense.receptors.audio import record_audio
+    from System.organs.wernicke import transcribe_speech
+    from System.organs.temporal_lobe import comprehend_sound
+    from System.tools import is_safe_path
+    from pathlib import Path
+    import asyncio
+
+    if file:
+        audio_path = Path(file).resolve()
+
+        # 1A. SHIFT-LEFT: Sandbox Check
+        if not is_safe_path(audio_path):
+            console.print(
+                f"[bold red]SECURITY BLOCK: Cannot ingest audio files outside the sandbox ({audio_path}).[/bold red]"
+            )
+            return
+
+        if not audio_path.exists():
+            console.print(f"[bold red]File not found: {file}[/bold red]")
+            return
+
+        # 1B. TOKEN ECONOMICS: Whisper Limit Check (25MB)
+        file_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
+        if file_size_mb > 25:
+            console.print(
+                f"[bold red]TOKEN BLOCK: Audio file is {file_size_mb:.2f}MB. Exceeds 25MB limit.[/bold red]"
+            )
+            return
+
+        console.print(f"[bold cyan]🎧 Ingesting audio file: {file}[/bold cyan]")
+    else:
+        from datetime import datetime
+
+        # FIX: The Media Quarantine (No more tempfiles)
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        audio_path = (
+            Path(__file__).parent.parent
+            / "Media"
+            / "Recordings"
+            / f"brain_env_{timestamp}.wav"
+        )
+        audio_path.parent.mkdir(parents=True, exist_ok=True)
+
+        console.print(
+            f"[bold cyan]🎤 Hardware Mic Active: Recording to {audio_path.relative_to(Path(__file__).parent.parent)}...[/bold cyan]"
+        )
+        record_audio(str(audio_path), duration)
+
+    # 2. Wernicke's Area
+    speech_text = transcribe_speech(str(audio_path))
+
+    # 3. Primary Auditory Cortex
+    prompt = "Listen to this audio. Briefly describe the background environment. Is there music? Nature sounds? Machinery? Ignore any human speech."
+    environmental_context = comprehend_sound(str(audio_path), prompt)
+
+    # Pack the reality into a strict XML data contract
+    combined_intent = (
+        f"<sensory_input>\n"
+        f"  <wernicke_speech_transcription>{speech_text}</wernicke_speech_transcription>\n"
+        f"  <auditory_cortex_environment>{environmental_context}</auditory_cortex_environment>\n"
+        f"</sensory_input>\n\n"
+        f"Please act on the sensory input above."
+    )
+
+    console.print(
+        Panel(
+            combined_intent,
+            title="[bold green]Sensory Comprehension Complete[/bold green]",
+            border_style="green",
+        )
+    )
+
+    # 4. Route to Dispatcher
+    console.print(
+        "[bold yellow]🛡️ Routing sensory input through Amygdala and Dispatcher...[/bold yellow]"
+    )
+
+    async def _dispatch_voice():
+        from System.runtime import analyze_task, execute_pipeline
+
+        is_valid, reason, route_type, domain, _ = await analyze_task(combined_intent)
+        if not is_valid:
+            console.print(
+                f"[bold red]Voice Command Rejected by Amygdala:[/bold red] {reason}"
+            )
+            return
+
+        console.print(f"[dim]Voice Command Accepted. Route: {route_type}[/dim]")
+
+        auth = input("\nExecute this command? [y/N]: ").strip().lower()
+        if auth in ["y", "yes"]:
+            await execute_pipeline(combined_intent, route_type, domain)
+
+    asyncio.run(_dispatch_voice())
+
+
 if __name__ == "__main__":
     app()

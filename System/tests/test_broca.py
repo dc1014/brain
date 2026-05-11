@@ -1,4 +1,5 @@
 from System.organs.broca import enforce_data_contract
+from unittest.mock import MagicMock
 
 
 def test_broca_perfect_articulation():
@@ -27,3 +28,19 @@ def test_broca_catches_missing_tag():
     is_valid, content = enforce_data_contract(response, "execute")
     assert is_valid is False
     assert "BROCA ERROR" in content
+
+
+def test_synthesize_speech(mocker, tmp_path):
+    from System.organs.broca import synthesize_speech
+
+    out_path = tmp_path / "out.mp3"
+
+    # FIX: Patch litellm directly
+    mock_speech = mocker.patch("litellm.speech")
+    mock_response = MagicMock()
+    mock_speech.return_value = mock_response
+
+    result = synthesize_speech("Hello, world.", str(out_path))
+
+    assert str(out_path) in result
+    mock_response.stream_to_file.assert_called_once_with(str(out_path))

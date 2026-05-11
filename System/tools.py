@@ -687,3 +687,45 @@ def semantic_search(directory: str, query: str) -> str:
     semantic_result = filter_semantic_relevance(query, raw_results)
 
     return semantic_result
+
+
+def speak(text: str) -> str:
+    """BROCA + MOUTH: Speaks text out loud to the user."""
+    from System.organs.broca import synthesize_speech
+    from Sense.receptors.audio import play_audio
+    import tempfile
+    from pathlib import Path
+
+    try:
+        out_file = Path(tempfile.gettempdir()) / "brain_tool_speech.mp3"
+        synthesize_speech(text, str(out_file))
+        play_audio(str(out_file))
+        return "SUCCESS: Text spoken out loud to the user."
+    except Exception as e:
+        return f"SPEECH ERROR: {str(e)}"
+
+
+def analyze_audio(filepath: str) -> str:
+    """TEMPORAL LOBE + WERNICKE: Transcribes speech and analyzes environmental sound."""
+    from System.organs.wernicke import transcribe_speech
+    from System.organs.temporal_lobe import comprehend_sound
+
+    try:
+        target_path = (ROOT_DIR / filepath).resolve()
+        if not is_safe_path(target_path):
+            return "SECURITY BLOCK: Cannot access audio files outside the sandbox."
+
+        if not target_path.exists():
+            return f"ERROR: File {filepath} does not exist."
+
+        speech = transcribe_speech(str(target_path))
+        environment = comprehend_sound(str(target_path))
+
+        return (
+            f"<auditory_analysis>\n"
+            f"  <speech>\n{speech}\n  </speech>\n"
+            f"  <environment>\n{environment}\n  </environment>\n"
+            f"</auditory_analysis>"
+        )
+    except Exception as e:
+        return f"AUDIO ANALYSIS ERROR: {str(e)}"

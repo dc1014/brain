@@ -11,6 +11,17 @@ else
     echo "✅ uv is already installed."
 fi
 
+# 1.5. Hardware Senses (Linux Only)
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    echo "📦 Checking for Biological Ear hardware drivers (PortAudio)..."
+    if ! dpkg -s portaudio19-dev &> /dev/null; then
+        echo "   Installing portaudio19-dev..."
+        sudo apt-get update && sudo apt-get install -y portaudio19-dev
+    else
+        echo "✅ Hardware drivers installed."
+    fi
+fi
+
 # 2. Setup Environment Variables
 if [ ! -f .env ]; then
     echo "📄 Creating .env file from template..."

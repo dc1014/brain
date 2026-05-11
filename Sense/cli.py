@@ -4,6 +4,9 @@ from rich.console import Console
 
 # Using the flattened import structure
 from receptors.web import transduce_web_page
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).parent.parent))
 
 app = typer.Typer(help="Sense: The Sensory Nervous System for Brain OS")
 console = Console()
@@ -89,6 +92,51 @@ def perceive(
 
     result = perceive_image(image_path, query)
     console.print(result)
+
+
+@app.command()
+def listen(
+    duration: int = typer.Option(5, "--duration", "-d", help="Seconds to record"),
+    output: str = typer.Option(
+        "recording.wav", "--output", "-o", help="Output file path"
+    ),
+) -> None:
+    """The Physical Ear: Activate the microphone to record ambient audio."""
+    from Sense.receptors.audio import record_audio
+    from pathlib import Path
+
+    target = Path(output)
+
+    # SHIFT-LEFT: Media Quarantine. If no absolute path is given, force it into Media/Recordings
+    if target.parent == Path("."):
+        out_path = Path(__file__).parent.parent / "Media" / "Recordings" / output
+    else:
+        out_path = target.resolve()
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    console.print(
+        f"[bold cyan]🎤 Hardware Mic Active: Recording for {duration} seconds...[/bold cyan]"
+    )
+    result = record_audio(str(out_path), duration)
+    console.print(f"[green]{result}[/green]")
+
+
+@app.command()
+def speak(file: str = typer.Argument(..., help="Path to an audio file to play.")):
+    """The Physical Mouth: Plays a raw audio file out loud without cognition."""
+    from Sense.receptors.audio import play_audio
+    from pathlib import Path
+
+    target = Path(file).resolve()
+    if not target.exists():
+        console.print(f"[bold red]File not found: {file}[/bold red]")
+        return
+
+    console.print(
+        f"[bold cyan]🔊 Physical Speaker Active: Playing {file}...[/bold cyan]"
+    )
+    play_audio(str(target))
 
 
 if __name__ == "__main__":

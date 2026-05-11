@@ -266,6 +266,22 @@ async def run_agent_async(
                         action_manifest.append(
                             f"[COPY] {args.get('source_filepath')} -> {args.get('dest_filepath')}"
                         )
+                    elif func_name == "speak":
+                        from System.tools import speak
+
+                        result = await asyncio.to_thread(speak, args.get("text", ""))
+                        action_manifest.append(
+                            f"[SPEAK] {args.get('text', '')[:20]}..."
+                        )
+                    elif func_name == "analyze_audio":
+                        from System.tools import analyze_audio
+
+                        result = await asyncio.to_thread(
+                            analyze_audio, args.get("filepath", "")
+                        )
+                        action_manifest.append(
+                            f"[ANALYZE_AUDIO] {args.get('filepath', '')}"
+                        )
                     else:
                         result = f"ERROR: Unknown tool {func_name}"
 

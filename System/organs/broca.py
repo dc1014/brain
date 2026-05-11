@@ -41,3 +41,22 @@ def enforce_data_contract(llm_response: str, expected_tag: str) -> tuple[bool, s
         return False, f"BROCA ERROR: The {open_tag} tag was empty."
 
     return True, extracted
+
+
+def synthesize_speech(text: str, output_path: str) -> str:
+    """Broca's Motor Area: Converts text into spoken human audio."""
+    from litellm import speech  # type: ignore
+    from rich.console import Console
+    from pathlib import Path
+
+    console = Console()
+    try:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        console.print(
+            "[dim yellow]🗣️ Broca's Area articulating text-to-speech...[/dim yellow]"
+        )
+        response = speech(model="tts-1", voice="alloy", input=text)
+        response.stream_to_file(output_path)
+        return str(output_path)
+    except Exception as e:
+        return f"TTS ERROR: {str(e)}"

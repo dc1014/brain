@@ -52,6 +52,16 @@ base:
           filepath: { type: "string" }
         required: ["filepath"]
 
+  - type: "function"
+    function:
+      name: "speak"
+      description: "Outputs audio to the user. Use this for responses instead of just text."
+      parameters:
+        type: "object"
+        properties:
+          text: { type: "string", description: "The text to speak." }
+        required: ["text"]
+
 write:
   - type: "function"
     function:
@@ -148,6 +158,16 @@ execute:
             type: "string"
             description: "The HTTP or HTTPS URL to read."
         required: ["url"]
+
+  - type: "function"
+    function:
+      name: "analyze_audio"
+      description: "Analyzes an audio file. Detects human speech, transcribes it, and identifies environmental sounds."
+      parameters:
+        type: "object"
+        properties:
+          filepath: { type: "string", description: "The path to the audio file." }
+        required: ["filepath"]
 
   - type: "function"
     function:

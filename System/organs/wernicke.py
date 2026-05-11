@@ -115,3 +115,20 @@ def save_plain_text_embeddings(embeddings_dict: dict) -> None:
     EMBEDDINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(EMBEDDINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(embeddings_dict, f, indent=2)
+
+
+def transcribe_speech(filepath: str) -> str:
+    """Wernicke's Area: Converts human voice (speech) into semantic text."""
+    from litellm import transcription  # type: ignore
+    from rich.console import Console
+
+    console = Console()
+    try:
+        console.print(
+            "[dim yellow]🧠 Wernicke's Area processing speech-to-text...[/dim yellow]"
+        )
+        with open(filepath, "rb") as audio_file:
+            response = transcription(model="whisper-1", file=audio_file)
+        return str(response.text)
+    except Exception as e:
+        return f"TRANSCRIPTION ERROR: {str(e)}"

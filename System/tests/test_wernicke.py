@@ -5,6 +5,7 @@ from System.organs.wernicke import (
     load_plain_text_embeddings,
     save_plain_text_embeddings,
 )
+from unittest.mock import MagicMock
 
 
 def test_wernicke_empty_results():
@@ -66,3 +67,21 @@ def test_wernicke_zombie_embedding_rotation(monkeypatch, tmp_path):
     # Assert zombie was destroyed and real note was kept
     assert "Studio/deleted_note.md" not in healed
     assert "Studio/real_note.md" in healed
+
+
+def test_transcribe_speech(mocker, tmp_path):
+    from System.organs.wernicke import transcribe_speech
+
+    fake_audio = tmp_path / "test.wav"
+    fake_audio.write_text("fake binary")
+
+    # FIX: Patch litellm directly
+    mock_transcription = mocker.patch("litellm.transcription")
+    mock_response = MagicMock()
+    mock_response.text = "Hello, Brain OS."
+    mock_transcription.return_value = mock_response
+
+    result = transcribe_speech(str(fake_audio))
+
+    assert result == "Hello, Brain OS."
+    mock_transcription.assert_called_once()

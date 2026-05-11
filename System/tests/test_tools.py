@@ -361,3 +361,34 @@ def test_tools_yaml_schema_validity():
             assert "name" in tool["function"]
             assert "parameters" in tool["function"]
             assert "properties" in tool["function"]["parameters"]
+
+
+def test_speak(mocker):
+    from System.tools import speak
+
+    mocker.patch("System.organs.broca.synthesize_speech")
+    mocker.patch("Sense.receptors.audio.play_audio")
+
+    res = speak("Hello")
+    assert "SUCCESS" in res
+
+
+def test_analyze_audio(tmp_path, mocker):
+    from System.tools import analyze_audio
+
+    mocker.patch("System.tools.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path})
+
+    fake_audio = tmp_path / "test.wav"
+    fake_audio.write_text("fake binary")
+
+    mocker.patch(
+        "System.organs.wernicke.transcribe_speech", return_value="Speech text."
+    )
+    mocker.patch(
+        "System.organs.temporal_lobe.comprehend_sound", return_value="Bird sound."
+    )
+
+    res = analyze_audio("test.wav")
+    assert "Speech text" in res
+    assert "Bird sound" in res
