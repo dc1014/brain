@@ -59,7 +59,10 @@ def read_safe_file(filepath: str) -> str:
             return f"ERROR: File not found at {target_path.relative_to(ROOT_DIR)}"
         if not target_path.is_file():
             return "ERROR: Target is not a file."
-        return target_path.read_text(encoding="utf-8")
+
+        # SHIFT-LEFT: XML Framing for Prompt Caching & Attention
+        content = target_path.read_text(encoding="utf-8")
+        return f'<document path="{filepath}">\n{content}\n</document>'
     except Exception as e:
         return f"ERROR: Failed to read file - {str(e)}"
 
@@ -223,11 +226,34 @@ def execute_command(command: str, directory_path: str) -> str:
             f"\n[dim]Execution completed with exit code {result.returncode}[/dim]"
         )
 
+        # SHIFT-LEFT: Strictly decode bytes to strings for MyPy safety
+        out_raw = result.stdout
+        err_raw = result.stderr
+
+        output = (
+            out_raw.decode("utf-8", errors="replace").strip()
+            if isinstance(out_raw, bytes)
+            else str(out_raw or "").strip()
+        )
+        error = (
+            err_raw.decode("utf-8", errors="replace").strip()
+            if isinstance(err_raw, bytes)
+            else str(err_raw or "").strip()
+        )
+
+        combined = output
+        if error:
+            combined += f"\nSTDERR:\n{error}"
+
+        # SHIFT-LEFT: XML Framing for Prompt Caching & Attention
         if result.returncode == 0:
-            return f"SUCCESS: Command '{command}' executed successfully."
-        return f"ERROR: Command failed with exit code {result.returncode}."
+            return f'<shell_output command="{command}">\n{combined if combined else "SUCCESS"}\n</shell_output>'
+        else:
+            return f'<shell_error command="{command}">\n{combined}\n</shell_error>'
+    except subprocess.TimeoutExpired:
+        return "ERROR: Command timed out after 60 seconds."
     except Exception as e:
-        return f"ERROR: Failed to execute command - {str(e)}"
+        return f"ERROR: Command execution failed - {str(e)}"
 
 
 def operate_forge(project_name: str, instruction: str) -> str:

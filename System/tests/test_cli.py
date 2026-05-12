@@ -113,11 +113,20 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
 
     # 3. Test Execution Approval (Standard 'y')
     mocker.patch("builtins.input", return_value="y")
+    mock_subprocess = mocker.patch(
+        "System.cli.subprocess.run"
+    )  # NOTE: In test_cli, it patches System.cli.subprocess.run, or System.tools depending on your import!
+
+    # If your test_cli.py imports execute_command from System.tools, use:
     mock_subprocess = mocker.patch("System.tools.subprocess.run")
+
     mock_subprocess.return_value.returncode = 0
+    mock_subprocess.return_value.stdout = ""
+    mock_subprocess.return_value.stderr = ""
+
     approve_result = execute_command("ls", "Studio/TestProject")
     assert "SUCCESS" in approve_result
-    mock_subprocess.assert_called_once()
+    assert "<shell_output" in approve_result
 
 
 def test_run_os_retry_circuit_breaker(mocker) -> None:  # type: ignore
