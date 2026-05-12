@@ -195,6 +195,7 @@ async def run_agent_async(
                         semantic_search,
                         analyze_audio,
                         speak,
+                        taste_safe_file,
                     )
 
                     TOOL_REGISTRY = {
@@ -241,6 +242,9 @@ async def run_agent_async(
                         "speak": lambda a: speak(a.get("text", "")),
                         "analyze_audio": lambda a: analyze_audio(a.get("filepath", "")),
                         "delete_safe_file": lambda a: delete_safe_file(
+                            a.get("filepath", "")
+                        ),
+                        "taste_safe_file": lambda a: taste_safe_file(
                             a.get("filepath", "")
                         ),
                     }

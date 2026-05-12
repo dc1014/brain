@@ -41,7 +41,12 @@ def test_proprioception_zombie_healing(monkeypatch, tmp_path):
     (ROOT_DIR / "Studio").mkdir(exist_ok=True)
 
     start_process("ghost_process", 'python -c "print(1)"')
-    time.sleep(1.0)
+
+    # FIX: Windows occasionally keeps PIDs alive in the kernel.
+    # Mock psutil to guarantee the OS sees it as dead, perfectly testing the OS healing logic.
+    import psutil
+
+    monkeypatch.setattr(psutil, "pid_exists", lambda pid: False)
 
     # list_processes autonomously cleans up dead processes!
     active = list_processes()

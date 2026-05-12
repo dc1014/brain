@@ -151,6 +151,10 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 30. The Lysosome (.trash Membrane)
 * **Biological Digestion:** Cells don't destroy waste instantly; lysosomes encapsulate it to prevent toxicity.
 * **HITL Deletion:** Brain OS agents are equipped with `delete_safe_file`. Instead of performing dangerous `os.remove` commands, it acts as a cellular lysosome, safely moving rotting files into a `.trash/` directory and logging a `manifest.jsonl` so humans can effortlessly recover data if the Swarm hallucinates.
+
+### 31. File Sampling (Gustatory System / Taste)
+* **Biological Taste:** Transducing dense physical matter into digestible chemical information.
+* **Token Economics:** `taste_safe_file` allows agents to safely parse massive PDFs, 10,000-row CSVs, and huge logs by sampling the head/tail and truncating the rest, guaranteeing the Swarm's context window never explodes.
 ---
 
 ## 🏗️ Architecture & Routing

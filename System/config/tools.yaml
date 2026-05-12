@@ -62,17 +62,18 @@ base:
           text: { type: "string", description: "The text to speak." }
         required: ["text"]
 
+
   - type: "function"
     function:
-      name: "delete_safe_file"
-      description: "LYSOSOME: Safely removes a file by moving it to the local .trash directory. Use this to clean up anomalies, empty files, or dead code detected by the Olfactory Bulb."
+      name: "search_hippocampus"
+      description: "Instantly searches the codebase's long-term memory for a concept, variable, or function name. Returns tightly cropped text snippets. Highly token-efficient."
       parameters:
         type: "object"
         properties:
-          filepath:
+          query:
             type: "string"
-            description: "The relative path of the file to safely delete (e.g., 'Personal/old_note.md')."
-        required: ["filepath"]
+            description: "The exact keyword or phrase to search for."
+        required: ["query"]
 
 write:
   - type: "function"
@@ -224,18 +225,6 @@ execute:
 
   - type: "function"
     function:
-      name: "search_hippocampus"
-      description: "Instantly searches the codebase's long-term memory for a concept, variable, or function name. Returns tightly cropped text snippets. Highly token-efficient."
-      parameters:
-        type: "object"
-        properties:
-          query:
-            type: "string"
-            description: "The exact keyword or phrase to search for."
-        required: ["query"]
-
-  - type: "function"
-    function:
       name: "manage_background_process"
       description: "PROPRIOCEPTION: Starts, stops, or lists long-running background processes (like npm run dev). ALWAYS stop an existing server before starting a new one."
       parameters:
@@ -266,6 +255,30 @@ execute:
           command: { type: "string", description: "The terminal command to run" }
           interval_minutes: { type: "integer", description: "How often to run (e.g., 1440 for daily)" }
         required: ["name", "command", "interval_minutes"]
+
+  - type: "function"
+    function:
+      name: "delete_safe_file"
+      description: "LYSOSOME: Safely removes a file by moving it to the local .trash directory. Use this to clean up anomalies, empty files, or dead code detected by the Olfactory Bulb."
+      parameters:
+        type: "object"
+        properties:
+          filepath:
+            type: "string"
+            description: "The relative path of the file to safely delete (e.g., 'Personal/old_note.md')."
+        required: ["filepath"]
+
+  - type: "function"
+    function:
+      name: "taste_safe_file"
+      description: "GUSTATORY: Safely samples large files (PDFs, CSVs, JSONs, Logs) to extract token-efficient text. Use this instead of read_safe_file when dealing with unknown, unstructured, or massive files."
+      parameters:
+        type: "object"
+        properties:
+          filepath:
+            type: "string"
+            description: "The relative path of the file to sample."
+        required: ["filepath"]
 
 vision:
   - type: "function"

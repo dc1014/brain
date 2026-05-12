@@ -779,3 +779,16 @@ def delete_safe_file(filepath: str) -> str:
 
     except Exception as e:
         return f"DELETE ERROR: {str(e)}"
+
+
+def taste_safe_file(filepath: str) -> str:
+    """
+    GUSTATORY: Safely samples large/dense files (PDF, CSV, Logs) to prevent token bloat.
+    """
+    from System.organs.gustatory import process_taste_profile
+
+    target_path = (ROOT_DIR / filepath).resolve()
+    if not is_safe_path(target_path):
+        return f"SECURITY BLOCK: Cannot taste files outside the sandbox ({filepath})."
+
+    return process_taste_profile(filepath)

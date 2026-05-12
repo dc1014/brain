@@ -167,5 +167,19 @@ def smell(
         )
 
 
+@app.command()
+def taste(
+    filepath: str = typer.Argument(
+        ..., help="Path to the file to sample (PDF, CSV, LOG)."
+    ),
+) -> None:
+    """The Biological Tongue: Samples massive/dense files into token-safe outputs."""
+    import json
+    from Sense.receptors.taste import sample_file
+
+    data = sample_file(filepath)
+    console.print_json(json.dumps(data))
+
+
 if __name__ == "__main__":
     app()
