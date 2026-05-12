@@ -18,6 +18,11 @@ if (!(Test-Path .env)) {
     Write-Host "✅ .env file already exists." -ForegroundColor Green
 }
 
+# 2.5 Setup Biological Membranes (Trash & Memory)
+Write-Host "🧬 Initializing biological membranes..." -ForegroundColor Yellow
+if (!(Test-Path .trash)) { New-Item -ItemType Directory -Force -Path .trash | Out-Null }
+if (!(Test-Path Meta)) { New-Item -ItemType Directory -Force -Path Meta | Out-Null }
+
 # 3. Hydrate Dependencies
 Write-Host "⚡ Syncing OS dependencies..." -ForegroundColor Cyan
 uv sync

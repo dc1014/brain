@@ -62,6 +62,18 @@ base:
           text: { type: "string", description: "The text to speak." }
         required: ["text"]
 
+  - type: "function"
+    function:
+      name: "delete_safe_file"
+      description: "LYSOSOME: Safely removes a file by moving it to the local .trash directory. Use this to clean up anomalies, empty files, or dead code detected by the Olfactory Bulb."
+      parameters:
+        type: "object"
+        properties:
+          filepath:
+            type: "string"
+            description: "The relative path of the file to safely delete (e.g., 'Personal/old_note.md')."
+        required: ["filepath"]
+
 write:
   - type: "function"
     function:

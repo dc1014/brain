@@ -1,13 +1,18 @@
 import asyncio
 import json
+import yaml  # type: ignore
+import litellm  # type: ignore
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-import yaml  # type: ignore
-
+from System.organs.hypothalamus import regulate_api_heartbeat
 from litellm import acompletion  # type: ignore
 from rich.console import Console
+
+
+litellm.telemetry = False
+litellm.drop_params = True  # (Helps with strict APIs)
 
 
 console = Console()
@@ -134,8 +139,8 @@ async def run_agent_async(
             if tools:
                 kwargs["tools"] = tools
 
-            # ⚡ NATIVE ASYNC API CALL ⚡
-            response = await acompletion(**kwargs)
+            # ⚡ NATIVE ASYNC API CALL (Regulated by Hypothalamus) ⚡
+            response = await regulate_api_heartbeat(acompletion, **kwargs)
 
             if not getattr(response, "choices", None) or len(response.choices) == 0:
                 return AgentResponse(
@@ -181,6 +186,7 @@ async def run_agent_async(
                         list_safe_directory,
                         rename_safe_file,
                         append_safe_file,
+                        delete_safe_file,
                         bootstrap_project,
                         execute_command,
                         operate_forge,
@@ -234,6 +240,9 @@ async def run_agent_async(
                         ),
                         "speak": lambda a: speak(a.get("text", "")),
                         "analyze_audio": lambda a: analyze_audio(a.get("filepath", "")),
+                        "delete_safe_file": lambda a: delete_safe_file(
+                            a.get("filepath", "")
+                        ),
                     }
 
                     if func_name in TOOL_REGISTRY:

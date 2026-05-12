@@ -845,5 +845,29 @@ def listen(
     asyncio.run(_dispatch_voice())
 
 
+@app.command()
+def smell(
+    directory: str = typer.Argument(
+        ".", help="The domain to smell for code and semantic rot."
+    ),  # <--- Changed default to "."
+):
+    """The Olfactory Bulb: Runs zero-token static analysis to find dead code and broken links."""
+    from System.organs.olfactory import process_scent_profile
+
+    console.print(
+        f"[bold cyan]👃 Olfactory Bulb smelling '{directory}' for anomalies...[/bold cyan]"
+    )
+    report = process_scent_profile(directory)
+
+    if "status='clean'" in report:
+        console.print(
+            "[bold green]✅ Vault smells clean. No rot detected.[/bold green]"
+        )
+    else:
+        console.print(
+            "[bold yellow]⚠️  Anomalies Detected! Scent report written to Meta/Olfactory_Anomalies.md[/bold yellow]"
+        )
+
+
 if __name__ == "__main__":
     app()

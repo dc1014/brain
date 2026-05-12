@@ -139,6 +139,18 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 * **The Biological Ear:** The Peripheral Nervous System (`Sense`) captures raw environmental audio waveforms via the host's microphone or from local files.
 * **Sensory XML Integration:** Wernicke's Area (Semantic Speech) and the Primary Auditory Cortex (Environmental Sound via Gemini 1.5 Flash) operate in tandem. They combine spoken words and background context (e.g., music playing, birds chirping) into a strict `<sensory_input>` XML tag before passing the reality to the Dispatcher.
 * **Broca's Area (Speech Articulation):** The system does not force speech. Agents are equipped with a `speak` tool, allowing the Prefrontal Cortex to autonomously decide *when* it is appropriate to formulate a vocal response and push it to the physical speakers.
+
+### 28. Homeostasis & API Backoff (The Hypothalamus)
+* **Biological Heart Rate:** When you run a sprint, lactic acid builds up, and the Hypothalamus forces you to breathe and slow down to prevent cardiac arrest.
+* **Swarm Throttling:** When Brain OS spawns highly parallel Swarm agents, it can trigger `HTTP 429 Rate Limit` errors from cloud LLM providers. The `hypothalamus.py` organ physically intercepts these exceptions, inducing an asynchronous Exponential Backoff ("breathing exercises") to safely pause the execution threads until the API quotas recover, ensuring zero crashes under heavy workload.
+
+### 29. Static Rot Detection (The Olfactory Bulb)
+* **Biological Smell:** The only sense that completely bypasses the Thalamus, sending chemical impulses of decay directly to the Limbic system.
+* **Zero-Token Garbage Collection:** `uv run python Sense/cli.py smell`. The Olfactory Bulb uses $0.00 in API tokens, relying instead on `ruff` checks and RegEx math to detect dead code, empty notes, and broken `[[wikilinks]]`. It writes anomalies directly to `Meta/Olfactory_Anomalies.md` for the Swarm to review during sleep.
+
+### 30. The Lysosome (.trash Membrane)
+* **Biological Digestion:** Cells don't destroy waste instantly; lysosomes encapsulate it to prevent toxicity.
+* **HITL Deletion:** Brain OS agents are equipped with `delete_safe_file`. Instead of performing dangerous `os.remove` commands, it acts as a cellular lysosome, safely moving rotting files into a `.trash/` directory and logging a `manifest.jsonl` so humans can effortlessly recover data if the Swarm hallucinates.
 ---
 
 ## 🏗️ Architecture & Routing

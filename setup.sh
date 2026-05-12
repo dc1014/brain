@@ -31,6 +31,11 @@ else
     echo "✅ .env file already exists."
 fi
 
+# 2.5 Setup Biological Membranes (Trash & Memory)
+echo "🧬 Initializing biological membranes..."
+mkdir -p .trash
+mkdir -p Meta
+
 # 3. Hydrate Dependencies
 echo "⚡ Syncing OS dependencies..."
 uv sync

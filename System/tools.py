@@ -729,3 +729,53 @@ def analyze_audio(filepath: str) -> str:
         )
     except Exception as e:
         return f"AUDIO ANALYSIS ERROR: {str(e)}"
+
+
+def delete_safe_file(filepath: str) -> str:
+    """
+    LYSOSOME: Safely removes a file by moving it to a local .trash directory.
+    Maintains a manifest for Human-in-the-Loop recovery.
+    """
+    import shutil
+    import json
+    from datetime import datetime
+
+    try:
+        target_path = (ROOT_DIR / filepath).resolve()
+
+        if not is_safe_path(target_path):
+            return (
+                f"SECURITY BLOCK: Cannot delete files outside the sandbox ({filepath})."
+            )
+
+        if not target_path.exists():
+            return f"ERROR: File {filepath} does not exist."
+
+        if not target_path.is_file():
+            return "ERROR: delete_safe_file only works on files, not directories."
+
+        # The Trash Membrane
+        trash_dir = ROOT_DIR / ".trash"
+        trash_dir.mkdir(parents=True, exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_trash_name = f"{target_path.stem}_{timestamp}{target_path.suffix}"
+        trash_path = trash_dir / safe_trash_name
+
+        # Move the file
+        shutil.move(str(target_path), str(trash_path))
+
+        # Log the recovery data
+        manifest_path = trash_dir / "manifest.jsonl"
+        recovery_data = {
+            "deleted_at": timestamp,
+            "original_path": str(target_path.relative_to(ROOT_DIR)),
+            "trash_path": str(trash_path.relative_to(ROOT_DIR)),
+        }
+        with open(manifest_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(recovery_data) + "\n")
+
+        return f"SUCCESS: File safely moved to {trash_path.relative_to(ROOT_DIR)}. (Logged in manifest)."
+
+    except Exception as e:
+        return f"DELETE ERROR: {str(e)}"
