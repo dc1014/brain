@@ -5,5 +5,8 @@
     ".git",
     ".venv",
     "__pycache__"
-  ]
+  ],
+  "attachmentFolderPath": "Media/Attachments",
+  "newFileLocation": "folder",
+  "newFileFolderPath": "Personal/Scratchpad"
 }
