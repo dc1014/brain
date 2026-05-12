@@ -4,6 +4,7 @@ from pathlib import Path
 from rich.console import Console
 import shutil
 import time
+from System.ast_parser import extract_python_signatures
 
 # Define the absolute root of the Brain OS
 ROOT_DIR: Path = Path(__file__).parent.parent.resolve()
@@ -65,6 +66,36 @@ def read_safe_file(filepath: str) -> str:
         return f'<document path="{filepath}">\n{content}\n</document>'
     except Exception as e:
         return f"ERROR: Failed to read file - {str(e)}"
+
+
+def read_file_signatures(filepath: str) -> str:
+    """Reads a Python file and returns only its class and function signatures (AST stubs)."""
+    try:
+        target_path: Path = (ROOT_DIR / filepath).resolve()
+
+        # 1. Ironclad Sandbox Checks
+        if not is_safe_path(target_path):
+            return f"SECURITY BLOCK: Access denied to read at {target_path}."
+        if not target_path.exists():
+            return f"ERROR: File not found at {target_path.relative_to(ROOT_DIR)}"
+        if not target_path.is_file():
+            return "ERROR: Target is not a file."
+
+        # 2. File Type Guard (We only have a Python parser for now)
+        if target_path.suffix != ".py":
+            return f"ERROR: AST stubbing currently only supports .py files. Provided: {target_path.suffix}"
+
+        # 3. AST Extraction
+        content = target_path.read_text(encoding="utf-8")
+        stubs = extract_python_signatures(content)
+
+        # 4. XML Framing for Prompt Caching
+        return (
+            f'<document_signatures path="{filepath}">\n{stubs}\n</document_signatures>'
+        )
+
+    except Exception as e:
+        return f"ERROR: Failed to extract signatures - {str(e)}"
 
 
 def list_safe_directory(directory_path: str) -> str:

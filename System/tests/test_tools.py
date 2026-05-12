@@ -245,3 +245,32 @@ def test_analyze_safe_syntax(tmp_path: Path, mocker) -> None:  # type: ignore
     result = analyze_safe_syntax("Studio/test.py")
     assert "❌ Linter found errors" in result
     assert "SyntaxError" in result
+
+
+def test_read_file_signatures_tool(tmp_path: Path, mocker) -> None:  # type: ignore
+    """Ensure the AST scouting tool respects security boundaries and formats correctly."""
+    from System.tools import read_file_signatures
+
+    # 1. Setup our mock sandbox
+    mocker.patch("System.tools.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path})
+
+    test_file = tmp_path / "test_module.py"
+    test_file.write_text("def mock_func():\n    print('heavy logic')", encoding="utf-8")
+
+    # 2. Test Security Boundary
+    block_result = read_file_signatures("../../test_module.py")
+    assert "SECURITY BLOCK" in block_result
+
+    # 3. Test Unsupported File Type
+    txt_file = tmp_path / "test.txt"
+    txt_file.write_text("hello", encoding="utf-8")
+    txt_result = read_file_signatures("test.txt")
+    assert "ERROR: AST stubbing currently only supports .py files" in txt_result
+
+    # 4. Test Successful Stubbing & XML Wrapping
+    success_result = read_file_signatures("test_module.py")
+    assert '<document_signatures path="test_module.py">' in success_result
+    assert "def mock_func():" in success_result
+    assert "..." in success_result
+    assert "heavy logic" not in success_result
