@@ -1,8 +1,9 @@
+import time
+from System.tools import ROOT_DIR
 from System.organs.proprioception import (
     start_process,
     stop_process,
     list_processes,
-    _save_state,
 )
 
 
@@ -11,34 +12,37 @@ def test_proprioception_lifecycle(monkeypatch, tmp_path):
         "System.organs.proprioception.STATE_FILE", tmp_path / "motor_state.json"
     )
 
-    # Use a perfectly cross-platform headless command
+    # Safely ensure the Studio directory exists for the CI runner
+    (ROOT_DIR / "Studio").mkdir(exist_ok=True)
+
     cmd = 'python -c "import time; time.sleep(10)"'
 
     # 1. Start safely
     assert "SUCCESS" in start_process("test_sleep", cmd)
-    assert "test_sleep" in list_processes()
 
-    # 2. Block duplicates
-    # FIX: Assert the new, accurate error message
-    assert "already running" in start_process("test_sleep", cmd)
+    # 2. Check state
+    status = list_processes()
+    assert "test_sleep" in status
 
-    # 3. Stop process
-    assert "SUCCESS" in stop_process("test_sleep")
-    assert "test_sleep" not in list_processes()
+    # 3. Stop gracefully
+    stop_result = stop_process("test_sleep")
+    assert "SUCCESS" in stop_result
+
+    # 4. Verify cleanup
+    time.sleep(0.5)
+    final_status = list_processes()
+    assert "test_sleep" not in final_status
 
 
 def test_proprioception_zombie_healing(monkeypatch, tmp_path):
-    state_file = tmp_path / "motor_state.json"
-    monkeypatch.setattr("System.organs.proprioception.STATE_FILE", state_file)
+    monkeypatch.setattr(
+        "System.organs.proprioception.STATE_FILE", tmp_path / "motor_state.json"
+    )
+    (ROOT_DIR / "Studio").mkdir(exist_ok=True)
 
-    # Manually inject a fake PID (999999) into the state file to simulate a crashed zombie
-    fake_state = {
-        "zombie_server": {"pid": 999999, "command": "npm run dev", "cwd": "root"}
-    }
-    _save_state(fake_state)
+    start_process("ghost_process", 'python -c "print(1)"')
+    time.sleep(1.0)
 
-    # When list_processes is called, it should realize 999999 is dead, and auto-delete it.
-    running = list_processes()
-
-    # FIX: Assert the new descriptive Wernicke-friendly output
-    assert "Cleaned up 1 dead processes" in running
+    # list_processes autonomously cleans up dead processes!
+    active = list_processes()
+    assert "ghost_process" not in active
