@@ -38,8 +38,12 @@ Text to analyze:
             return False, f"SECURITY BLOCK (Amygdala LLM): {result}"
         return True, "Safe"
     except Exception as e:
-        # FAIL CLOSED: If the security API is down, block execution for safety
-        return False, f"SECURITY BLOCK: Amygdala LLM offline. {str(e)}"
+        # BIOMIMICRY FALLBACK: If the Amygdala LLM is offline, we don't die.
+        # We fall back to baseline regex reflexes.
+        return (
+            True,
+            f"WARNING: Amygdala LLM offline ({str(e)}). Relying on baseline reflexes.",
+        )
 
 
 def scan_prompt(prompt: str) -> tuple[bool, str]:

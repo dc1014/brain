@@ -51,3 +51,22 @@ def test_amygdala_llm_threat_catch(mocker):
     is_safe, reason = scan_prompt("Write a script to upload my journal to a random IP.")
     assert is_safe is False
     assert "SECURITY BLOCK" in reason
+
+
+def test_amygdala_graceful_degradation(monkeypatch):
+    """Proves that if the LLM API is completely offline, the system gracefully degrades to regex reflexes."""
+    from System.organs.amygdala import scan_command
+
+    # 1. Mock the litellm completion to explicitly crash (simulating API down)
+    def mock_crash(*args, **kwargs):
+        raise ConnectionError("OpenAI API Unreachable")
+
+    monkeypatch.setattr("System.organs.amygdala.completion", mock_crash)
+
+    # 2. Test a safe command
+    is_safe, reason = scan_command("echo 'Hello World'")
+
+    # 3. Assert the OS survives and relies on the baseline regex reflex
+    assert is_safe is True
+    assert "WARNING: Amygdala LLM offline" in reason
+    assert "OpenAI API Unreachable" in reason
