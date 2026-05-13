@@ -792,3 +792,20 @@ def taste_safe_file(filepath: str) -> str:
         return f"SECURITY BLOCK: Cannot taste files outside the sandbox ({filepath})."
 
     return process_taste_profile(filepath)
+
+
+def map_spatial_dependencies(
+    directory_path: str, output_format: str = "json", map_type: str = "code"
+) -> str:
+    """
+    PARIETAL LOBE: Generates a spatial dependency graph.
+    Formats: 'json', 'mermaid', 'vertigo_check'.
+    Map Types: 'code' (imports) or 'notes' (Obsidian links).
+    """
+    from System.organs.parietal_lobe import generate_spatial_map
+
+    target_path = (ROOT_DIR / directory_path).resolve()
+    if not is_safe_path(target_path):
+        return f"SECURITY BLOCK: Cannot map dependencies outside the workspace ({directory_path})."
+
+    return generate_spatial_map(str(target_path), output_format, map_type)

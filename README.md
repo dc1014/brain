@@ -155,6 +155,13 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 31. File Sampling (Gustatory System / Taste)
 * **Biological Taste:** Transducing dense physical matter into digestible chemical information.
 * **Token Economics:** `taste_safe_file` allows agents to safely parse massive PDFs, 10,000-row CSVs, and huge logs by sampling the head/tail and truncating the rest, guaranteeing the Swarm's context window never explodes.
+
+### 32. The Parietal Lobe (Spatial Topology Mapping)
+* **Biological Function:** Integrating sensory information to form a 3D spatial map of the environment.
+* **OS Implementation:** The `parietal_lobe` generates mathematical dependency graphs of the OS environment using two distinct modes:
+* **Code Topology (Mermaid.js):** Traces Python, TypeScript, and JavaScript imports so agents understand the "blast radius" of code changes. Outputs clean Mermaid UML diagrams without polluting the vault.
+* **The Vertigo Reflex:** Detects and explicitly warns the Swarm about dangerous circular dependencies in the codebase.
+* **Thought Topology (Obsidian Graph):** Traces `[[Wikilinks]]` between your Markdown notes to map your personal knowledge graph, allowing agents to understand how your thoughts connect natively within Obsidian.
 ---
 
 ## 🏗️ Architecture & Routing
