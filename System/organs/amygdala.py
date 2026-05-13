@@ -1,6 +1,6 @@
-import os
 import re
 from litellm import completion  # type: ignore
+from System.organs.corpus_callosum import route_hemisphere
 
 # --- SHIFT-LEFT SECURITY: Background Threat Signatures ---
 FORBIDDEN_BACKGROUND_COMMANDS = [
@@ -28,18 +28,25 @@ Text to analyze:
 {text}
 """
     try:
+        # 🧠 CORPUS CALLOSUM: Route the Amygdala to the Left Brain (Local SLM) if enabled
+        # Default fallback is gpt-4o-mini if local routing is disabled
+        target_model = route_hemisphere("AMYGDALA", "openai/gpt-4o-mini")
+
         response = completion(
-            model=os.getenv("VISION_MODEL", "gpt-4o-mini"),
-            messages=[{"role": "system", "content": prompt}],
-            max_tokens=20,
+            model=target_model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
         )
+
         result = str(response.choices[0].message.content).strip()
-        if result.startswith("THREAT"):
-            return False, f"SECURITY BLOCK (Amygdala LLM): {result}"
-        return True, "Safe"
+        if result == "SAFE":
+            return True, "Safe."
+        else:
+            return False, f"AMYGDALA BLOCK: {result}"
+
     except Exception as e:
-        # BIOMIMICRY FALLBACK: If the Amygdala LLM is offline, we don't die.
-        # We fall back to baseline regex reflexes.
+        # BIOMIMICRY FALLBACK: If the Amygdala LLM is offline or rate-limited, we don't die.
+        # We gracefully degrade to the baseline Regex reflexes.
         return (
             True,
             f"WARNING: Amygdala LLM offline ({str(e)}). Relying on baseline reflexes.",
@@ -48,22 +55,18 @@ Text to analyze:
 
 def scan_prompt(prompt: str) -> tuple[bool, str]:
     """
-    The Amygdala: Shift-Left Threat Detection.
-    A biological reflex arc that processes inputs before the Dispatcher
-    to prevent prompt injections, malicious payloads, and catastrophic commands.
+    The Amygdala: Scans user prompts for prompt injection and catastrophic commands.
+    Returns (is_safe, threat_reason).
     """
     prompt_lower = prompt.lower()
 
-    # 1. Prompt Injection Heuristics (The "Hijack" Reflex)
+    # 1. Prompt Injection Heuristics
     injection_patterns = [
         r"ignore previous instructions",
-        r"ignore all previous",
+        r"forget everything",
         r"system prompt",
         r"you are now",
-        r"forget everything",
-        r"bypass rules",
-        r"override context",
-        r"print your instructions",
+        r"bypass",
     ]
     for pattern in injection_patterns:
         if re.search(pattern, prompt_lower):
@@ -102,9 +105,10 @@ def scan_command(command: str) -> tuple[bool, str]:
     The Amygdala: Scans terminal commands for malicious background execution patterns.
     Returns (is_safe, threat_reason).
     """
-    for pattern in FORBIDDEN_BACKGROUND_COMMANDS:
-        if re.search(pattern, command, re.IGNORECASE):
-            return False, "AMYGDALA FLINCH: Lethal background command detected."
+    command_lower = command.lower()
 
-    # FINAL TIER: If it passes Regex, run the LLM check
+    for pattern in FORBIDDEN_BACKGROUND_COMMANDS:
+        if re.search(pattern, command_lower):
+            return False, f"AMYGDALA FLINCH: Forbidden command pattern ({pattern})."
+
     return _llm_intent_scan(command, "terminal command")

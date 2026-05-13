@@ -162,6 +162,12 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 * **Code Topology (Mermaid.js):** Traces Python, TypeScript, and JavaScript imports so agents understand the "blast radius" of code changes. Outputs clean Mermaid UML diagrams without polluting the vault.
 * **The Vertigo Reflex:** Detects and explicitly warns the Swarm about dangerous circular dependencies in the codebase.
 * **Thought Topology (Obsidian Graph):** Traces `[[Wikilinks]]` between your Markdown notes to map your personal knowledge graph, allowing agents to understand how your thoughts connect natively within Obsidian.
+
+### The Corpus Callosum (Hemispheric Bridging & Local SLMs)
+* **Biological Function:** The nerve bundle bridging the left and right hemispheres of the brain, routing analytical vs. creative tasks.
+* **OS Implementation:** Acts as a dynamic API router. By enabling `USE_LOCAL_SLM=true` in your `.env`, the OS splits tasks based on complexity.
+* **Left Brain (Local SLMs):** Tasks requiring high privacy or deterministic analysis (Threat Detection, Dispatching, Personal Journaling, Basic File Reading) are routed locally to Ollama (`llama3`, `phi3`), ensuring 0 API cost and 100% offline privacy.
+* **Right Brain (Cloud LLMs):** Complex synthesis, multi-agent swarming, and software engineering (`FORGE`) are strictly reserved for powerful cloud models (Claude 3.5 Sonnet, GPT-4o).
 ---
 
 ## 🏗️ Architecture & Routing

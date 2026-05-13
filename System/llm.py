@@ -121,6 +121,11 @@ async def run_agent_async(
     domain: str = "NONE",
 ) -> AgentResponse:
     try:
+        # 🧠 CORPUS CALLOSUM: Dynamically bridge to Local SLM if applicable
+        from System.organs.corpus_callosum import route_hemisphere
+
+        model_string = route_hemisphere(route, model_string)
+
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},

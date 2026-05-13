@@ -45,14 +45,21 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
     )
 
     try:
+        base_model = AGENT_CONFIG["models"][dispatcher_cfg["model"]]
+
+        # 🧠 CORPUS CALLOSUM: Route Dispatcher (Analytical) to Left Brain
+        from System.organs.corpus_callosum import route_hemisphere
+
+        actual_model = route_hemisphere("DISPATCHER", base_model)
+
         response = await acompletion(
-            model=AGENT_CONFIG["models"][dispatcher_cfg["model"]],
+            model=actual_model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
             temperature=0.0,
-            response_format={"type": "json_object"},  # <--- FORCE JSON STRUCTURE
+            response_format={"type": "json_object"},
         )
         raw_text = str(response.choices[0].message.content).strip()
 

@@ -20,19 +20,22 @@ agents:
       <step number="2">Assign a ROUTE based on the requested subsystem:
          - FAST: Simple conversational questions or fetching a quick URL using sense_environment.
          - WORKSPACE: Any task involving searching, reading, creating, editing, appending, or organizing Markdown notes in the vault.
+         - MEMORY: Querying, summarizing, or reflecting on highly personal journals, diary entries, or private vault data.
+         - SENSE: Distilling massive web pages, extracting entities from logs, or summarizing raw sensory text.
          - FORGE: ONLY for software engineering, writing Python/JS code, building apps, or planning software architecture. Uses the external Forge factory.
          - SWARM: Complex, full-stack applications requiring frontend and backend to be built simultaneously using native Brain OS agents in parallel.
       </step>
-      <step number="3">Assign DOMAIN: PERSONAL, PROFESSIONAL, STUDIO, or NONE.
+      <step number="3">Assign DOMAIN: PERSONAL, PROFESSIONAL, STUDIO, MEDIA, or NONE.
         - "Studio" folder, coding, or Forge -> STUDIO.
         - "Personal" folder -> PERSONAL.
         - "Professional" folder, work -> PROFESSIONAL.
         - "Meta" or system architecture -> NONE.
+        - "Media" folder -> MEDIA.
       </step>
       <output_format>
       If the task is rejected in Step 1, output EXACTLY the string: REJECTED: <reason>
       Otherwise, you MUST output a valid JSON object with EXACTLY two keys: "route" and "domain".
-      Do NOT wrap it in markdown block quotes (```json ... ```). Output ONLY the raw JSON object.
+      Do NOT wrap it in markdown block quotes. Output ONLY the raw JSON object.
       Example: {"route": "WORKSPACE", "domain": "Personal"}
       </output_format>
       </system_instructions>
@@ -57,18 +60,18 @@ agents:
       </system_instructions>
 
   archivist:
-    name: "Brain OS Archivist"
-    model: "gpt_mini"
+    name: "Archivist"
+    model: "claude_haiku"  # Or whatever fast model you prefer
     system_prompt: |
       <system_instructions>
-      <persona>
-      You are the Brain OS Archivist. Your domain is the Obsidian vault. You manage notes in Personal, Professional, Studio, and Meta folders. Your goal is to maintain a clean, organized, and interconnected knowledge base.
-      </persona>
-      <execution_protocol>
-      <step number="1">SEARCH FIRST: Unless commanded to "create a new file", use `search_safe_directory` to find existing notes on the topic before writing.</step>
-      <step number="2">APPEND OVERWRITE: If a relevant note exists, use `append_safe_file` to add new information rather than overwriting.</step>
-      <step number="3">WIKILINKS: Always prioritize clean Markdown formatting and link related concepts using [[wikilinks]].</step>
-      </execution_protocol>
+      <role>You are the Archivist, a highly analytical memory and data extraction agent.</role>
+      <core_directive>
+      1. For MEMORY tasks: Read the user's private journals, notes, or logs. Summarize them with absolute factual accuracy and preserve the user's original tone.
+      2. For SENSE tasks: Distill massive web pages or audio transcripts into clean, structural markdown. Extract only the signal; ignore the noise.
+      </core_directive>
+      <security>
+      You are handling highly sensitive personal data. DO NOT invent information. If the requested memory does not exist in the context, explicitly state "Memory not found."
+      </security>
       </system_instructions>
 
   product_manager:
@@ -217,17 +220,27 @@ routes:
       context: ["Meta", "Domain", "Studio", "Professional"]
     - swarm:
         - agent: "frontend_engineer"
-          tools: ["base", "write", "execute"]
+          tools: ["base", "write", "execute", "map_spatial_dependencies"]
           context: ["Studio"]
         - agent: "backend_engineer"
-          tools: ["base", "write", "execute"]
+          tools: ["base", "write", "execute", "map_spatial_dependencies"]
           context: ["Studio"]
     - agent: "qa_auditor"
-      tools: ["base", "execute", "capture_screenshot"]
+      tools: ["base", "execute", "capture_screenshot", "map_spatial_dependencies"]
       context: ["Meta", "Domain", "Studio", "Professional"]
     - agent: "deployment_ops"
       tools: ["base", "write", "execute"]
       context: ["Meta", "Domain", "Studio", "Professional"]
+
+  MEMORY:
+    - agent: "archivist"
+      tools: ["base", "write", "sense_environment", "map_spatial_dependencies"]
+      context: ["Meta", "Domain", "Personal", "Professional", "Studio"]
+
+  SENSE:
+    - agent: "archivist"
+      tools: ["base", "sense_environment"]
+      context: ["Meta"]
 
   SUBCONSCIOUS_FORAGE:
     - agent: "forager"

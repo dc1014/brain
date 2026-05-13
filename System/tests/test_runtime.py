@@ -155,3 +155,38 @@ async def test_auditor_headless_retry_bypass(mocker):
 
     # Assert it called the auditor twice (initial + retry) safely
     assert call_count["qa_auditor"] == 2
+
+
+@pytest.mark.asyncio
+async def test_analyze_task_local_slm_routes(mocker, monkeypatch, tmp_path) -> None:
+    """Test that the dispatcher correctly parses the new high-privacy SLM routes."""
+
+    # Isolate the test
+    monkeypatch.setattr(
+        "System.organs.enteric.GUT_MEMORY_FILE", tmp_path / "fake_gut.json"
+    )
+    mocker.patch("System.organs.enteric.get_gut_reaction", return_value=None)
+
+    async def mock_acompletion(*args, **kwargs):
+        class MockChoice:
+            class MockMessage:
+                content = '{"route": "MEMORY", "domain": "Personal"}'
+
+            message = MockMessage()
+
+        class MockResponse:
+            choices = [MockChoice()]
+            usage = MagicMock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
+
+        return MockResponse()
+
+    # Patch the local reference
+    monkeypatch.setattr("System.runtime.acompletion", mock_acompletion)
+
+    is_valid, reason, route, domain, usage = await analyze_task(
+        "Summarize my journal entry from yesterday."
+    )
+
+    assert is_valid is True
+    assert route == "MEMORY"
+    assert domain == "Personal"
