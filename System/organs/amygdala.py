@@ -1,6 +1,7 @@
 import re
 from litellm import completion  # type: ignore
 from System.organs.corpus_callosum import route_hemisphere
+from System.organs.immune_system import vault
 
 # --- SHIFT-LEFT SECURITY: Background Threat Signatures ---
 FORBIDDEN_BACKGROUND_COMMANDS = [
@@ -36,6 +37,7 @@ Text to analyze:
             model=target_model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
+            api_key=vault.get_api_key_for_model(target_model),  # Inject Key
         )
 
         result = str(response.choices[0].message.content).strip()

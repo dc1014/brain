@@ -1,4 +1,7 @@
-from System.organs.immune_system import scan_for_pathogens
+import os
+from System.organs.immune_system import scan_for_pathogens, SecretVault
+
+# --- Original Macrophage Tests ---
 
 
 def test_immune_system_allows_safe_code():
@@ -26,3 +29,26 @@ def test_immune_system_blocks_private_keys():
     is_clean, msg = scan_for_pathogens(private_key_mock)
     assert is_clean is False
     assert "RSA Private Key" in msg
+
+
+# --- New Nuclear Option Test ---
+
+
+def test_nuclear_option_scrubbing(monkeypatch):
+    # 1. Simulate the .env loading process
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-fake123")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-fake")
+    monkeypatch.setenv("SAFE_VAR", "visible")
+
+    # 2. Engage the Immune System
+    vault = SecretVault()
+    vault.secure_environment()
+
+    # 3. PROVE THE ENVIRONMENT IS MATHEMATICALLY SCRUBBED
+    assert "OPENAI_API_KEY" not in os.environ
+    assert "ANTHROPIC_API_KEY" not in os.environ
+    assert os.environ.get("SAFE_VAR") == "visible"  # Harmless vars survive
+
+    # 4. Prove the Vault safely retained the keys in memory
+    assert vault.get_api_key_for_model("openai/gpt-4o") == "sk-fake123"
+    assert vault.get_api_key_for_model("anthropic/claude-3-5-sonnet") == "sk-ant-fake"

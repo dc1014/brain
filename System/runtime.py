@@ -6,11 +6,18 @@ from pathlib import Path
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
+from System.organs.immune_system import vault
+from dotenv import load_dotenv
+
 from System.organs.amygdala import scan_prompt
 from System.organs.interoception import check_energy_levels, log_metabolism
-from System.organs.polymerase import proofread_agents_yaml, PolymeraseError
-
+from System.organs.polymerase import proofread_agents_yaml
 from System.llm import acompletion, run_agent_async, get_system_context
+
+load_dotenv()
+
+# 🛡️ IMMUNE SYSTEM: Engage the Nuclear Option (Scrub Environment)
+vault.secure_environment()
 
 console = Console()
 
@@ -18,15 +25,10 @@ CONFIG_PATH = Path(__file__).parent / "config" / "agents.yaml"
 try:
     # 🧬 DNA POLYMERASE: Proofread the OS genetic code before booting
     proofread_agents_yaml(CONFIG_PATH)
-
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         AGENT_CONFIG = yaml.safe_load(f)
-except PolymeraseError as e:
-    print(f"\n[FATAL BOOT ERROR] DNA Polymerase halted execution: {e}")
-    import sys
-
-    sys.exit(1)
-except Exception:
+except Exception as e:
+    console.print(f"[bold red]BOOT WARNING: Config failed to load ({e}).[/bold red]")
     AGENT_CONFIG = {"agents": {}, "routes": {}, "models": {}}
 
 
@@ -36,7 +38,8 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
     # --- 🦠 ENTERIC NERVOUS SYSTEM (Gut Reaction) ---
     from System.organs.enteric import get_gut_reaction, save_gut_reaction
 
-    gut_reflex = get_gut_reaction(prompt)
+    # ⚡ SHIFT-LEFT: Prevent Async Blocking on File I/O
+    gut_reflex = await asyncio.to_thread(get_gut_reaction, prompt)
     if gut_reflex:
         return gut_reflex
     zero_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
@@ -68,6 +71,7 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
             ],
             temperature=0.0,
             response_format={"type": "json_object"},
+            api_key=vault.get_api_key_for_model(actual_model),  # 🛡️ SECURE INJECTION
         )
         raw_text = str(response.choices[0].message.content).strip()
 
@@ -81,21 +85,11 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
             )
             usage_data["total_tokens"] = int(getattr(response.usage, "total_tokens", 0))
 
-        # Handle the Amygdala/Capabilities rejection fast-path
         if "REJECTED:" in raw_text.upper():
-            # If the model wraps the rejection in JSON, safely strip quotes/braces
             reason = raw_text.upper().split("REJECTED:")[1].strip(" \"'}\n").strip()
-            return (
-                False,
-                reason,
-                "NONE",
-                "NONE",
-                usage_data,
-            )
+            return False, reason, "NONE", "NONE", usage_data
 
-        # Parse the JSON payload natively
         try:
-            # LiteLLM sometimes returns markdown blocks even when told not to
             clean_text = raw_text.strip()
             if clean_text.startswith("```json"):
                 clean_text = clean_text[7:]
@@ -104,21 +98,20 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
             clean_text = clean_text.strip()
 
             data = json.loads(clean_text)
-
             route = str(data.get("route", "UNKNOWN")).strip().upper()
             domain = str(data.get("domain", "NONE")).strip()
         except json.JSONDecodeError:
-            # Fallback if the model somehow completely mangled the JSON
             route = "UNKNOWN"
             domain = "NONE"
 
         # --- THE VAGUS NERVE: Log the Dispatcher's metabolism ---
-        from System.organs.interoception import log_metabolism
-
-        log_metabolism(usage_data.get("total_tokens", 0))
+        # ⚡ SHIFT-LEFT: Prevent Async Blocking
+        await asyncio.to_thread(log_metabolism, usage_data.get("total_tokens", 0))
 
         # --- 🦠 ENTERIC NERVOUS SYSTEM (Save Memory) ---
-        save_gut_reaction(prompt, True, "Approved.", route, domain)
+        await asyncio.to_thread(
+            save_gut_reaction, prompt, True, "Approved.", route, domain
+        )
 
         return True, "Approved.", route, domain, usage_data
 
@@ -127,32 +120,27 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
 
 
 def get_resolved_model(desired_model_key: str, is_exhausted: bool) -> str:
-    """Helper to resolve the fallback LLM models cleanly."""
-    import os
-
+    """Helper to resolve the fallback LLM models securely using the Vault."""
     if is_exhausted:
         from System.organs.endocrine import is_cortisol_active
 
         if not is_cortisol_active():
             desired_model_key = "gpt_mini"
 
-    env_key_map = {
-        "gpt_mini": "OPENAI_API_KEY",
-        "claude_haiku": "ANTHROPIC_API_KEY",
-        "gemini_flash": "GEMINI_API_KEY",
-        "claude_sonnet": "ANTHROPIC_API_KEY",
-    }
+    desired_model_str = AGENT_CONFIG["models"].get(desired_model_key, "")
 
-    if os.getenv(env_key_map.get(desired_model_key, "")):
-        return AGENT_CONFIG["models"][desired_model_key]
+    # 🛡️ IMMUNE SYSTEM: Check the Secure Vault, not os.environ!
+    if vault.get_api_key_for_model(desired_model_str):
+        return desired_model_str
 
-    if os.getenv("OPENAI_API_KEY"):
-        return AGENT_CONFIG["models"]["gpt_mini"]
-    elif os.getenv("ANTHROPIC_API_KEY"):
-        return AGENT_CONFIG["models"]["claude_haiku"]
-    elif os.getenv("GEMINI_API_KEY"):
-        return AGENT_CONFIG["models"]["gemini_flash"]
-    return AGENT_CONFIG["models"][desired_model_key]
+    if vault.get_api_key_for_model("openai/gpt"):
+        return AGENT_CONFIG["models"].get("gpt_mini", "openai/gpt-4o-mini")
+    elif vault.get_api_key_for_model("anthropic/claude"):
+        return AGENT_CONFIG["models"].get("claude_haiku", "anthropic/claude-haiku-4-5")
+    elif vault.get_api_key_for_model("gemini/"):
+        return AGENT_CONFIG["models"].get("gemini_flash", "gemini/gemini-2.5-flash")
+
+    return desired_model_str
 
 
 async def execute_pipeline(description: str, route_type: str, domain: str) -> None:
@@ -217,13 +205,14 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
 
                 return await asyncio.gather(*[_task(s) for s in swarm_steps])
 
-            # STAGE 2: Await natively!
             swarm_results = await _execute_swarm_batch()
 
             for agent_name, step_result in swarm_results:
                 step_tokens = step_result.usage.get("total_tokens", 0)
                 total_pipeline_tokens += step_tokens
-                log_metabolism(step_tokens)
+                await asyncio.to_thread(
+                    log_metabolism, step_tokens
+                )  # ⚡ Prevent Async Block
                 agents_invoked.append(agent_name)
 
                 display_text = step_result.text
@@ -276,7 +265,7 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
 
         step_tokens = step_result.usage.get("total_tokens", 0)
         total_pipeline_tokens += step_tokens
-        log_metabolism(step_tokens)
+        await asyncio.to_thread(log_metabolism, step_tokens)  # ⚡ Prevent Async Block
 
         display_text = step_result.text
         if step_result.actions:
@@ -344,7 +333,6 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
                         pipeline_aborted = True
                         break
 
-                    # Re-insert the failing step, but we fall back to the linear PM to fix the Swarm's mess
                     pipeline.insert(
                         0,
                         {

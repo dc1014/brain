@@ -3,12 +3,13 @@ import json
 import yaml  # type: ignore
 import litellm  # type: ignore
 import System.tools as os_tools
-from collections import defaultdict  # <--- ADD THIS
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from System.organs.hypothalamus import regulate_api_heartbeat
+from System.organs.immune_system import vault  # 🛡️ IMMUNE SYSTEM IMPORT
 from litellm import acompletion  # type: ignore
 from rich.console import Console
 
@@ -29,7 +30,6 @@ class MotorCortex:
 
     @classmethod
     def get_lock(cls, filepath: str | Path) -> asyncio.Lock:
-        # Resolving the path guarantees "./app.py" and "app.py" share the exact same lock
         return cls._locks[str(Path(filepath).resolve())]
 
 
@@ -67,7 +67,6 @@ async def log_interaction(
         "tokens": usage,
     }
 
-    # Secure the Motor Cortex lock for the shared log file
     async with MotorCortex.get_lock(LOG_FILE):
 
         def _write():
@@ -80,7 +79,6 @@ async def log_interaction(
 def get_system_context(
     context_tags: list[str], domain: str = "NONE", prompt: str = ""
 ) -> str:
-    """Dynamically loads specific canonical folders and passes them through the Thalamus."""
     context = ""
     root_dir = Path(__file__).parent.parent
     memory_config_path = Path(__file__).parent / "config" / "memory.yaml"
@@ -100,7 +98,6 @@ def get_system_context(
             if path.exists():
                 content = path.read_text(encoding="utf-8")
 
-                # --- 🧠 THALAMUS TRIGGER (Semantic Attention) ---
                 if prompt:
                     from System.organs.thalamus import filter_attention
 
@@ -121,7 +118,6 @@ async def run_agent_async(
     domain: str = "NONE",
 ) -> AgentResponse:
     try:
-        # 🧠 CORPUS CALLOSUM: Dynamically bridge to Local SLM if applicable
         from System.organs.corpus_callosum import route_hemisphere
 
         model_string = route_hemisphere(route, model_string)
@@ -144,10 +140,11 @@ async def run_agent_async(
             else:
                 pruned_messages = messages
 
-            import os
-
-            _has_anthropic = bool(os.environ.get("ANTHROPIC_API_KEY"))
-            _has_openai = bool(os.environ.get("OPENAI_API_KEY"))
+            # 🛡️ IMMUNE SYSTEM: Check the Vault, not the environment!
+            _has_anthropic = bool(
+                vault.get_api_key_for_model("anthropic/claude-3-haiku")
+            )
+            _has_openai = bool(vault.get_api_key_for_model("openai/gpt-4o-mini"))
 
             if (
                 "anthropic" in model_string.lower()
@@ -163,11 +160,14 @@ async def run_agent_async(
             kwargs: dict[str, Any] = {
                 "model": model_string,
                 "messages": pruned_messages,
+                "api_key": vault.get_api_key_for_model(
+                    model_string
+                ),  # 🛡️ SECURE INJECTION
             }
             if tools:
                 kwargs["tools"] = tools
 
-            # ⚡ NATIVE ASYNC API CALL (Regulated by Hypothalamus) ⚡
+            # ⚡ NATIVE ASYNC API CALL
             response = await regulate_api_heartbeat(acompletion, **kwargs)
 
             if not getattr(response, "choices", None) or len(response.choices) == 0:
@@ -206,7 +206,6 @@ async def run_agent_async(
                     func_name = str(tool_call.function.name)
                     tool_id = str(tool_call.id)
 
-                    # ⚡ DYNAMIC TOOL DISPATCH (Unix Philosophy) ⚡
                     try:
                         if not hasattr(os_tools, func_name):
                             result = (
@@ -215,7 +214,6 @@ async def run_agent_async(
                         else:
                             tool_func = getattr(os_tools, func_name)
 
-                            # 🧠 MOTOR CORTEX: Async File Locking for Write Operations
                             WRITE_TOOLS = {
                                 "write_safe_file",
                                 "append_safe_file",
@@ -225,7 +223,6 @@ async def run_agent_async(
                             }
 
                             if func_name in WRITE_TOOLS:
-                                # Extract the target filepath to lock it against parallel swarms
                                 target_path = (
                                     args.get("filepath")
                                     or args.get("dest_filepath")
@@ -235,7 +232,6 @@ async def run_agent_async(
                                 async with MotorCortex.get_lock(target_path):
                                     result = await asyncio.to_thread(tool_func, **args)
                             else:
-                                # Safe read-only or stateless tools execute immediately
                                 result = await asyncio.to_thread(tool_func, **args)
 
                             action_manifest.append(
