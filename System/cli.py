@@ -77,15 +77,17 @@ def task(
         console.print(
             Panel(f"[bold red]Task Rejected:[/bold red] {reason}", border_style="red")
         )
-        log_interaction(
-            "Dispatcher (Bouncer)",
-            AGENT_CONFIG["models"]["gpt_mini"],
-            "Dispatcher Logic",
-            description,
-            f"REJECTED: {reason}",
-            dispatch_usage,
-            "REJECTED",
-            "NONE",
+        asyncio.run(
+            log_interaction(
+                "Dispatcher",
+                AGENT_CONFIG["models"]["gpt_mini"],
+                "Dispatcher Logic",
+                description,
+                f"REJECTED: {reason}",
+                dispatch_usage,
+                "REJECTED",
+                "NONE",
+            )
         )
         return
 

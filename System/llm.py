@@ -3,6 +3,7 @@ import json
 import yaml  # type: ignore
 import litellm  # type: ignore
 import System.tools as os_tools
+from collections import defaultdict  # <--- ADD THIS
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,12 +12,26 @@ from System.organs.hypothalamus import regulate_api_heartbeat
 from litellm import acompletion  # type: ignore
 from rich.console import Console
 
-
 litellm.telemetry = False
-litellm.drop_params = True  # (Helps with strict APIs)
-
+litellm.drop_params = True
 
 console = Console()
+
+
+# --- 🧠 BIOMIMETIC LOCKING (Zero-Debt Race Condition Prevention) ---
+class MotorCortex:
+    """
+    Coordinates file-system motor actions to prevent race conditions
+    when parallel Swarm agents attempt to write to the exact same file.
+    """
+
+    _locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+
+    @classmethod
+    def get_lock(cls, filepath: str | Path) -> asyncio.Lock:
+        # Resolving the path guarantees "./app.py" and "app.py" share the exact same lock
+        return cls._locks[str(Path(filepath).resolve())]
+
 
 LOG_DIR: Path = Path(__file__).parent.parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
@@ -30,7 +45,7 @@ class AgentResponse:
     usage: dict[str, int] = field(default_factory=dict)
 
 
-def log_interaction(
+async def log_interaction(
     role_name: str,
     model_string: str,
     system_prompt: str,
@@ -51,8 +66,15 @@ def log_interaction(
         "response": response_content,
         "tokens": usage,
     }
-    with open(LOG_FILE, "a", encoding="utf-8") as f:
-        f.write(json.dumps(log_entry, default=str) + "\n")
+
+    # Secure the Motor Cortex lock for the shared log file
+    async with MotorCortex.get_lock(LOG_FILE):
+
+        def _write():
+            with open(LOG_FILE, "a", encoding="utf-8") as f:
+                f.write(json.dumps(log_entry, default=str) + "\n")
+
+        await asyncio.to_thread(_write)
 
 
 def get_system_context(
@@ -181,15 +203,36 @@ async def run_agent_async(
 
                     # ⚡ DYNAMIC TOOL DISPATCH (Unix Philosophy) ⚡
                     try:
-                        # 1. Check if the tool physically exists in System/tools.py
                         if not hasattr(os_tools, func_name):
                             result = (
                                 f"ERROR: Unknown tool '{func_name}' in System.tools"
                             )
                         else:
-                            # 2. Dynamically grab the function and execute it
                             tool_func = getattr(os_tools, func_name)
-                            result = await asyncio.to_thread(tool_func, **args)
+
+                            # 🧠 MOTOR CORTEX: Async File Locking for Write Operations
+                            WRITE_TOOLS = {
+                                "write_safe_file",
+                                "append_safe_file",
+                                "delete_safe_file",
+                                "rename_safe_file",
+                                "copy_safe_file",
+                            }
+
+                            if func_name in WRITE_TOOLS:
+                                # Extract the target filepath to lock it against parallel swarms
+                                target_path = (
+                                    args.get("filepath")
+                                    or args.get("dest_filepath")
+                                    or args.get("new_filepath")
+                                    or "global_write"
+                                )
+                                async with MotorCortex.get_lock(target_path):
+                                    result = await asyncio.to_thread(tool_func, **args)
+                            else:
+                                # Safe read-only or stateless tools execute immediately
+                                result = await asyncio.to_thread(tool_func, **args)
+
                             action_manifest.append(
                                 f"[{func_name.upper()}] Executed successfully."
                             )
@@ -238,7 +281,7 @@ async def run_agent_async(
             "completion_tokens": total_comp,
             "total_tokens": total_prompt + total_comp,
         }
-        log_interaction(
+        await log_interaction(
             role_name,
             model_string,
             system_prompt,
@@ -259,7 +302,7 @@ async def run_agent_async(
             "completion_tokens": total_comp,
             "total_tokens": total_prompt + total_comp,
         }
-        log_interaction(
+        await log_interaction(
             role_name,
             model_string,
             system_prompt,
