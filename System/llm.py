@@ -2,6 +2,7 @@ import asyncio
 import json
 import yaml  # type: ignore
 import litellm  # type: ignore
+import System.tools as os_tools
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -178,88 +179,22 @@ async def run_agent_async(
                     func_name = str(tool_call.function.name)
                     tool_id = str(tool_call.id)
 
-                    # ⚡ O(1) TOOL REGISTRY DISPATCH ⚡
-                    from System.tools import (
-                        write_safe_file,
-                        search_safe_directory,
-                        read_safe_file,
-                        list_safe_directory,
-                        rename_safe_file,
-                        append_safe_file,
-                        delete_safe_file,
-                        bootstrap_project,
-                        execute_command,
-                        operate_forge,
-                        copy_safe_file,
-                        capture_screenshot,
-                        semantic_search,
-                        analyze_audio,
-                        speak,
-                        taste_safe_file,
-                    )
-
-                    TOOL_REGISTRY = {
-                        "write_safe_file": lambda a: write_safe_file(
-                            a.get("filepath", ""), a.get("content", "")
-                        ),
-                        "search_safe_directory": lambda a: search_safe_directory(
-                            a.get("query", ""), a.get("directory_path", "")
-                        ),
-                        "read_safe_file": lambda a: read_safe_file(
-                            a.get("filepath", "")
-                        ),
-                        "list_safe_directory": lambda a: list_safe_directory(
-                            a.get("directory_path", "")
-                        ),
-                        "rename_safe_file": lambda a: rename_safe_file(
-                            a.get("old_filepath", ""), a.get("new_filepath", "")
-                        ),
-                        "append_safe_file": lambda a: append_safe_file(
-                            a.get("filepath", ""), a.get("content", "")
-                        ),
-                        "bootstrap_project": lambda a: bootstrap_project(
-                            a.get("project_name", ""),
-                            a.get(
-                                "template_url",
-                                "https://github.com/mrdanielcasper/forge.git",
-                            ),
-                        ),
-                        "execute_command": lambda a: execute_command(
-                            a.get("command", ""), a.get("directory_path", "")
-                        ),
-                        "operate_forge": lambda a: operate_forge(
-                            a.get("project_name", ""), a.get("instruction", "")
-                        ),
-                        "copy_safe_file": lambda a: copy_safe_file(
-                            a.get("source_filepath", ""), a.get("dest_filepath", "")
-                        ),
-                        "capture_screenshot": lambda a: capture_screenshot(
-                            a.get("url", "")
-                        ),
-                        "semantic_search": lambda a: semantic_search(
-                            a.get("directory", ""), a.get("query", "")
-                        ),
-                        "speak": lambda a: speak(a.get("text", "")),
-                        "analyze_audio": lambda a: analyze_audio(a.get("filepath", "")),
-                        "delete_safe_file": lambda a: delete_safe_file(
-                            a.get("filepath", "")
-                        ),
-                        "taste_safe_file": lambda a: taste_safe_file(
-                            a.get("filepath", "")
-                        ),
-                    }
-
-                    if func_name in TOOL_REGISTRY:
-                        try:
-                            handler = TOOL_REGISTRY[func_name]
-                            result = await asyncio.to_thread(handler, args)
+                    # ⚡ DYNAMIC TOOL DISPATCH (Unix Philosophy) ⚡
+                    try:
+                        # 1. Check if the tool physically exists in System/tools.py
+                        if not hasattr(os_tools, func_name):
+                            result = (
+                                f"ERROR: Unknown tool '{func_name}' in System.tools"
+                            )
+                        else:
+                            # 2. Dynamically grab the function and execute it
+                            tool_func = getattr(os_tools, func_name)
+                            result = await asyncio.to_thread(tool_func, **args)
                             action_manifest.append(
                                 f"[{func_name.upper()}] Executed successfully."
                             )
-                        except Exception as e:
-                            result = f"ERROR executing {func_name}: {str(e)}"
-                    else:
-                        result = f"ERROR: Unknown tool {func_name}"
+                    except Exception as e:
+                        result = f"ERROR executing {func_name}: {str(e)}"
 
                     console.print(f"[dim]🔍 Tool Executed: {func_name}[/dim]")
 
