@@ -15,9 +15,10 @@ agents:
 
       The downstream agents in this OS have tools to: list, read, write, append, rename, perform recursive codebase searches with telemetry, AND safely execute shell commands.
 
-      STEP 1: Is the task completely outside the OS's capabilities? (e.g., requires live web browsing, sending an email, or making a phone call).
+      STEP 1: Is the task completely outside the OS's capabilities? (e.g., requires sending an email, or making a phone call).
       If YES, reply EXACTLY: 'REJECTED: <reason>'.
       If NO, proceed to STEP 2.
+      If the user asks to summarize a web page, read an article, or fetch external context using sense_environment, assign it to the FAST route (The Archivist). Only assign it to the READ_ONLY route (The Architect) if they ask to analyze complex API documentation to plan a software architecture.
 
       STEP 2: Assign a ROUTE based on the requested subsystem:
          - FAST: Simple questions, no tools needed.
@@ -43,6 +44,8 @@ agents:
     model: "gemini_flash"
     system_prompt: |
       You are a fast, helpful Life OS assistant. Answer the user directly.
+
+      CRITICAL TOOL INSTRUCTION: You HAVE internet access via the `sense_environment` tool. If the user provides a URL or asks you to read a web page, you MUST use the `sense_environment` tool to fetch the content before answering. DO NOT apologize or claim you cannot browse the web.
 
   archivist:
     name: "Brain OS Archivist"
@@ -95,12 +98,12 @@ agents:
 routes:
   FAST:
     - agent: "fast_responder"
-      tools: []
+      tools: ["sense_environment"]
       context: ["Meta", "Domain"]
 
   READ_ONLY:
     - agent: "architect"
-      tools: ["base"]
+      tools: ["base", "sense_environment"]
       context: ["Meta", "Domain"]
     - agent: "auditor"
       tools: []
@@ -108,12 +111,12 @@ routes:
 
   WORKSPACE:
     - agent: "archivist"
-      tools: ["base", "write"]
+      tools: ["base", "write", "sense_environment"]
       context: ["Meta", "Domain"]
 
   FORGE:
     - agent: "architect"
-      tools: ["base", "write", "execute"]
+      tools: ["base", "write", "execute", "sense_environment"]
       context: ["Meta", "Domain", "Studio"]
     - agent: "auditor"
       tools: ["base", "write"]

@@ -15,6 +15,7 @@ dependencies = [
     "tree-sitter-typescript>=0.23.2",
     "tree-sitter-javascript>=0.25.0",
     "pytest-cov>=7.1.0",
+    "sense",
 ]
 
 [dependency-groups]
@@ -37,10 +38,13 @@ exclude = [
 ]
 # Ignore missing imports for third-party libraries that don't have type hints
 ignore_missing_imports = true
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = "Sense"
 
 [tool.pytest.ini_options]
 addopts = "-v -m \"not eval\" --strict-markers --cov=System --cov-report=term-missing --cov-fail-under=80"
-pythonpath = "."
+pythonpath = [".", "Sense"]
 testpaths = ["System/tests"]
 # SHIFT-LEFT: Prevent Pytest from scanning generated child projects
 norecursedirs = ["Studio", "Personal", "Professional", "Meta", "Media", "node_modules", ".venv"]
@@ -48,3 +52,9 @@ markers = [
     "core: core system functionality",
     "eval: AI evaluation tests (makes real LLM API calls, costs money)",
 ]
+
+[tool.uv.workspace]
+members = ["Sense"]
+
+[tool.uv.sources]
+sense = { workspace = true }

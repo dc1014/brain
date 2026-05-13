@@ -106,3 +106,14 @@ execute:
           source_filepath: { type: "string" }
           dest_filepath: { type: "string" }
         required: ["source_filepath", "dest_filepath"]
+  - type: function
+    function:
+      name: sense_environment
+      description: "Fetches and reads an external webpage, converting it to token-optimized Hybrid XML/MD. Use this to research competitors, read API docs, or fetch external context."
+      parameters:
+        type: object
+        properties:
+          url:
+            type: string
+            description: "The HTTP or HTTPS URL to read."
+        required: ["url"]

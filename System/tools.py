@@ -497,3 +497,25 @@ def analyze_safe_syntax(filepath: str) -> str:
             return f"ERROR: Failed to run linter subprocess. Details: {e}"
     else:
         return f"WARNING: Syntax analysis for {target_path.suffix} files is not yet implemented. Only .py files are currently supported."
+
+
+def sense_environment(url: str) -> str:
+    """
+    Uses the independent Sense organ to fetch and read an external webpage.
+    Returns highly-optimized Hybrid XML/MD.
+    """
+    try:
+        # UNIX PHILOSOPHY: Call the external organ via stdout/stderr piping
+        result = subprocess.run(
+            ["uv", "run", "sense", url], capture_output=True, text=True, check=False
+        )
+
+        # If Sense blocked the request (e.g., SSRF) or crashed
+        if result.returncode != 0:
+            return f'<sensory_error source="{url}">\nSense Error: {result.stdout.strip()}\n{result.stderr.strip()}\n</sensory_error>'
+
+        # The success output is already formatted as <sensory_input> by the CLI
+        return result.stdout.strip()
+
+    except Exception as e:
+        return f'<sensory_error source="{url}">\nFailed to invoke Sense organ: {str(e)}\n</sensory_error>'

@@ -1,0 +1,22 @@
+[project]
+name = "sense"
+version = "0.1.0"
+description = "The Sensory Nervous System for AI Agents. Transduces web/git stimuli into safe LLM context."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.27.0",
+    "beautifulsoup4>=4.12.0",
+    "markdownify>=0.11.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+# Exposes the command cleanly: sense scrape <url>
+sense = "cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["receptors", "cli.py"]

@@ -16,6 +16,8 @@ Obsidian serves as the primary UI "glass pane" for viewing and queuing content, 
 2. **Shift-Left Security:** We catch errors, enforce routing, and demand human approval *before* execution. Agents can see everything but can only act within explicitly whitelisted sandboxes.
 3. **The Unix Philosophy:** Everything is a file. Brain acts as the parent orchestrator but delegates software compilation and linting to the sub-projects inside `Studio/`.
 4. **Zero-Waste Token Economics:** Context limits are respected. The system uses a deterministic router to wake up the cheapest, fastest model for simple tasks, saving the heavy reasoning models for complex software architecture.
+5. **Biologically Inspired:** Brain attempts to draw from biology, e.g. memory formation in REM sleep, a Sensory Nervous System engaging the Default Mode Network, etc., wherever possible.
+6. **Hybrid XML/MD Data Contracts:** Brain  does not use brittle YAML frontmatter. All agent routing, metadata, state tracking, and sensory inputs are strictly wrapped in XML tags, while human-readable content remains in standard Markdown. This creates absolute deterministic boundaries for LLM attention mechanisms and regex parsing.
 
 ---
 
@@ -33,6 +35,16 @@ Unlike heavy frameworks with hardcoded agent logic, Brain is driven by a single,
 
 ### 3. Hierarchical Context Engineering
 The OS dynamically stacks memory. It always injects `Meta/global-memory.md` (your core identity), but uses intent-mapping to selectively inject `Personal/`, `Professional/`, or `Studio/` memory based on the active task, saving massive amounts of tokens.
+
+---
+
+## 👁️ The Sensory Nervous System (`Sense`)
+
+Brain implements the UNIX philosophy via a completely decoupled transducer system called **`Sense`**.
+
+In biology, the brain does not process raw photons; the retina transduces them into action potentials. Similarly, LLMs should not read raw HTML or massive Git trees. `Sense` fetches external stimuli (websites, repos, PDFs), strips the noise, and transduces them into strictly formatted XML "Action Potentials" that ensure zero context bloat.
+
+Because `Sense` is an independent package in our `uv workspace`, it can be used by Brain OS, Forge, or standalone bash scripts interchangeably, with mathematical **SSRF Security Blocks** ensuring the AI can never autonomously ping your `localhost` or private subnets.
 
 ---
 

@@ -336,3 +336,42 @@ def test_operate_forge_headless_bypass(monkeypatch, tmp_path):
 
     assert "SECURITY BLOCK" not in result
     assert "FORGE EXECUTION COMPLETE" in result
+
+
+def test_sense_environment_tool(monkeypatch):
+    """Proves the Brain can successfully invoke the external Sense organ and return Hybrid XML/MD."""
+    from System.tools import sense_environment
+
+    # 1. Mock a successful transduction
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda *args, **kwargs: type(
+            "MockResult",
+            (),
+            {
+                "returncode": 0,
+                "stdout": '<sensory_input source="https://example.com">\n# Mock Webpage\n</sensory_input>',
+                "stderr": "",
+            },
+        )(),
+    )
+    result = sense_environment("https://example.com")
+    assert "<sensory_input" in result
+    assert "# Mock Webpage" in result
+
+    # 2. Mock a blocked SSRF attempt
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda *args, **kwargs: type(
+            "MockResult",
+            (),
+            {
+                "returncode": 1,
+                "stdout": "<sensory_error>\nSSRF Block\n</sensory_error>",
+                "stderr": "",
+            },
+        )(),
+    )
+    error_result = sense_environment("http://localhost")
+    assert "<sensory_error" in error_result
+    assert "SSRF Block" in error_result
