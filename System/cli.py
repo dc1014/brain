@@ -200,7 +200,19 @@ def init() -> None:
     # 1. ROOT DIR IS DEFINED HERE
     root_dir = Path(__file__).parent.parent
 
-    for dir_name in ["Personal", "Professional", "Studio", "Meta", "Media", "logs"]:
+    # We add the deep folders here so Obsidian doesn't crash looking for them
+    for dir_name in [
+        "Personal",
+        "Personal/Scratchpad",
+        "Personal/Journal",
+        "Professional",
+        "Professional/Projects",
+        "Studio",
+        "Meta",
+        "Media",
+        "Media/Attachments",
+        "logs",
+    ]:
         dir_path = root_dir / dir_name
         if not dir_path.exists():
             dir_path.mkdir(parents=True, exist_ok=True)

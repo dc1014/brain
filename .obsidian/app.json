@@ -1,12 +1,15 @@
 {
-  "useMarkdownLinks": true,
-  "userIgnoreFilters": [
-    "node_modules/",
-    ".git",
-    ".venv",
-    "__pycache__"
-  ],
   "attachmentFolderPath": "Media/Attachments",
   "newFileLocation": "folder",
-  "newFileFolderPath": "Personal/Scratchpad"
+  "newFileFolderPath": "Personal/Scratchpad",
+  "userIgnoreFilters": [
+    "node_modules/",
+    ".venv/",
+    "__pycache__/",
+    "dist/",
+    "build/",
+    "package-lock.json",
+    "uv.lock",
+    ".git/"
+  ]
 }
