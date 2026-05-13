@@ -1,7 +1,7 @@
 # OBSIDIAN VAULT LOCAL DIRECTIVES
 
 ## 1. Context Initialization (The "Current State" Pointer)
-- Before answering any complex queries regarding my personal or professional life, use your filesystem tool to read `System/Current-Focus.md`. 
+- Before answering any complex queries regarding my personal or professional life, use your filesystem tool to read `System/Current-Focus.md`.
 - This file contains my active projects, weekly goals, and current headspace. Align your advice and synthesis with the priorities listed there.
 
 ## 2. Vault Maintenance & Markdown Rules

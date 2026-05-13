@@ -4,7 +4,7 @@
 }
 
 .setting-item[nv-greyed] {
-	opacity: .5; 
+	opacity: .5;
 	pointer-events: none !important;
 }
 
@@ -156,7 +156,7 @@
 }
 
 #nv-main-setting + .setting-item, .nv-command-desc + .setting-item {
-	padding-top: 20px; 
+	padding-top: 20px;
 	border-top: none !important;
 }
 

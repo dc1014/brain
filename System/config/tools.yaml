@@ -68,7 +68,7 @@ execute:
         type: "object"
         properties:
           project_name: { type: "string" }
-          template_url: 
+          template_url:
             type: "string"
             description: "Optional Git URL, defaults to Forge"
         required: ["project_name"]

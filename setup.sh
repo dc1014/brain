@@ -30,4 +30,3 @@ uv run System/cli.py init
 
 echo ""
 echo "🚀 Brain OS is ready! Run: uv run python System/cli.py 'Your prompt here'"
-

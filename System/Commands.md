@@ -14,7 +14,7 @@ To run these, highlight the prompt and hit `Cmd + Shift + B`.
 - `task "Search Studio for 'fastapi' and summarize the endpoints."`
 
 
-### Other Stuff 
+### Other Stuff
 
 uv run System/cli.py logs --limit 2
 

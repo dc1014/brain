@@ -26,4 +26,3 @@ uv sync
 uv run System/cli.py init
 
 Write-Host "`n🚀 Brain OS is ready! Run: uv run python System/cli.py 'Your prompt here'" -ForegroundColor Green
-

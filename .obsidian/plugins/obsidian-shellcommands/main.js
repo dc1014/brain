@@ -1081,7 +1081,7 @@ class Variable {
         this.always_available = true;
         this.app = plugin.app;
     }
-    getValue(shell, t_shell_command = null, sc_event = null, variableArguments = {}, 
+    getValue(shell, t_shell_command = null, sc_event = null, variableArguments = {},
     /**
      * Will parse variables in a default value (only used if this variable is not available this time). The callback
      * is only used, if t_shell_command is given. Set to null, if no variable parsing is needed for default values.
@@ -5534,7 +5534,7 @@ async function parseVariables(plugin, content, shell, escapeVariables, t_shell_c
                 escapeCurrentVariable = false;
             }
             // Render the variable
-            const variable_value_result = await variable.getValue(shell, t_shell_command, sc_event, presentArguments, 
+            const variable_value_result = await variable.getValue(shell, t_shell_command, sc_event, presentArguments,
             // Define a recursive callback that can be used to parse possible variables in a default value of the current variable.
             (raw_default_value) => {
                 // Avoid circular references by removing the current variable from the set of parseable variables.
@@ -11876,7 +11876,7 @@ class TShellCommandMap extends Map {
  * Contact the author (Jarkko Linnanvirta): https://github.com/Taitava/
  */
 class ShellCommandExecutor {
-    constructor(plugin, t_shell_command, 
+    constructor(plugin, t_shell_command,
     /** Needed for Preactions to be able to access all variables, in case any variables are used by a Preaction. Use null, if the shell command execution happens outside of any event context. */
     sc_event) {
         this.plugin = plugin;
@@ -12596,9 +12596,9 @@ class OutputWrapper extends Instance {
  * Contact the author (Jarkko Linnanvirta): https://github.com/Taitava/
  */
 class OutputWrapperSettingsModal extends SC_Modal {
-    constructor(plugin, output_wrapper, 
+    constructor(plugin, output_wrapper,
     /** Can be undefined if the output wrapper is created from a place where there is no name element. */
-    output_wrapper_name_setting, 
+    output_wrapper_name_setting,
     /** If defined, a button will be added and on_after_approval() / on_after_cancelling() will be called depending on whether the button was clicked or not. */
     ok_button_text, on_after_approval, on_after_cancelling) {
         super(plugin);
@@ -13115,9 +13115,9 @@ async function getShellCommandPreview(plugin, shell_command, shell, t_shell_comm
  * Contact the author (Jarkko Linnanvirta): https://github.com/Taitava/
  */
 class CustomShellSettingsModal extends SC_Modal {
-    constructor(plugin, customShellInstance, 
+    constructor(plugin, customShellInstance,
     /** Can be undefined if the instance is created from a place where there is no name element. */
-    nameSetting, 
+    nameSetting,
     /** If defined, a button will be added and onAfterApproval() / onAfterCancelling() will be called depending on whether the button was clicked or not. */
     okButtonText, onAfterApproval, onAfterCancelling) {
         super(plugin);
@@ -15685,9 +15685,9 @@ class Prompt extends Instance {
  * Contact the author (Jarkko Linnanvirta): https://github.com/Taitava/
  */
 class PromptModal extends SC_Modal {
-    constructor(plugin, prompt_fields, 
+    constructor(plugin, prompt_fields,
     /** Can be null, if wanted to just preview the Prompt modal without really executing a shell command. Inputted values will still be assigned to target variables. */
-    t_shell_command, parsing_process, prompt, sc_event, 
+    t_shell_command, parsing_process, prompt, sc_event,
     /** A function that is called when a user clicks the execution button. This function should check the form elements' validity and return false if there are unfilled fields. */
     validator) {
         super(plugin);
@@ -16111,9 +16111,9 @@ function createNewModelInstanceButton(plugin, model_class_name, button_container
  * Contact the author (Jarkko Linnanvirta): https://github.com/Taitava/
  */
 class PromptSettingsModal extends SC_Modal {
-    constructor(plugin, prompt, 
+    constructor(plugin, prompt,
     /** Can be undefined if the modal is created from a place where there is no name element. */
-    prompt_name_setting, 
+    prompt_name_setting,
     /** If defined, a button will be added and on_after_approval() / on_after_cancelling() will be called depending on whether the button was clicked or not. */
     ok_button_text, on_after_approval, on_after_cancelling) {
         super(plugin);
@@ -16632,14 +16632,14 @@ class UsageContainer {
  * content. The same keys will then be used to form another object containing the parsing results.
  */
 class ParsingProcess {
-    constructor(plugin, original_contents, 
+    constructor(plugin, original_contents,
     /** Used to get a shell (getShell()) and default values for variables. */
-    t_shell_command, sc_event, 
+    t_shell_command, sc_event,
     /**
      * When .process() is called, it will shift and process the first VariableSet present in this array. So, the next call
      * will shift and process the next set.
      */
-    variable_sets, 
+    variable_sets,
     /**
      * This can be used to mark certain contents to always avoid escaping special characters in their variable values.
      * This should only be used for content that is never submitted to a shell, i.e. output wrappers at the moment.
