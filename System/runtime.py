@@ -8,7 +8,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from System.organs.amygdala import scan_prompt
 from System.organs.interoception import check_energy_levels, log_metabolism
-
+from System.organs.polymerase import proofread_agents_yaml, PolymeraseError
 
 from System.llm import acompletion, run_agent_async, get_system_context
 
@@ -16,8 +16,16 @@ console = Console()
 
 CONFIG_PATH = Path(__file__).parent / "config" / "agents.yaml"
 try:
+    # 🧬 DNA POLYMERASE: Proofread the OS genetic code before booting
+    proofread_agents_yaml(CONFIG_PATH)
+
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         AGENT_CONFIG = yaml.safe_load(f)
+except PolymeraseError as e:
+    print(f"\n[FATAL BOOT ERROR] DNA Polymerase halted execution: {e}")
+    import sys
+
+    sys.exit(1)
 except Exception:
     AGENT_CONFIG = {"agents": {}, "routes": {}, "models": {}}
 
