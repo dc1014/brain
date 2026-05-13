@@ -29,6 +29,13 @@ agents:
         - "Professional" folder, work -> PROFESSIONAL.
         - "Meta" or system architecture -> NONE.
       </step>
+      <output_format>
+      If the task is rejected in Step 1, output EXACTLY the string: REJECTED: <reason>
+      Otherwise, you MUST output a valid JSON object with EXACTLY two keys: "route" and "domain".
+      Do NOT wrap it in markdown block quotes (```json ... ```). Output ONLY the raw JSON object.
+      Example: {"route": "WORKSPACE", "domain": "Personal"}
+      </output_format>
+      </system_instructions>
       </execution_protocol>
       <output_format>
       ROUTE: <route>

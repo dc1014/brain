@@ -16,6 +16,7 @@ Welcome to your Second Brain.
 - [[Meta/global-memory.md]] - *Your core identity and system instructions*
 - [[Media/Attachments/]] - *All pasted images are quarantined here*
 
+
 ---
 **💡 Pro Tip:** *To issue a command to Brain OS, write your ticket in a markdown file, open your terminal, and run:*
 `uv run System/cli.py task "Read my ticket at Personal/Scratchpad/ticket.md and execute it."

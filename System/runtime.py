@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import yaml  # type: ignore
 from pathlib import Path
@@ -9,7 +10,7 @@ from System.organs.amygdala import scan_prompt
 from System.organs.interoception import check_energy_levels, log_metabolism
 
 
-from System.llm import run_agent_async, get_system_context
+from System.llm import acompletion, run_agent_async, get_system_context
 
 console = Console()
 
@@ -43,8 +44,6 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
         ["Meta"], prompt=prompt
     )
 
-    from litellm import acompletion
-
     try:
         response = await acompletion(
             model=AGENT_CONFIG["models"][dispatcher_cfg["model"]],
@@ -52,8 +51,10 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
+            temperature=0.0,
+            response_format={"type": "json_object"},  # <--- FORCE JSON STRUCTURE
         )
-        result = str(response.choices[0].message.content).strip().upper()
+        raw_text = str(response.choices[0].message.content).strip()
 
         usage_data = zero_usage.copy()
         if hasattr(response, "usage") and response.usage:
@@ -65,23 +66,36 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
             )
             usage_data["total_tokens"] = int(getattr(response.usage, "total_tokens", 0))
 
-        if result.startswith("REJECTED:"):
+        # Handle the Amygdala/Capabilities rejection fast-path
+        if "REJECTED:" in raw_text.upper():
+            # If the model wraps the rejection in JSON, safely strip quotes/braces
+            reason = raw_text.upper().split("REJECTED:")[1].strip(" \"'}\n").strip()
             return (
                 False,
-                result.replace("REJECTED:", "").strip(),
+                reason,
                 "NONE",
                 "NONE",
                 usage_data,
             )
 
-        route = "COMPLEX"
-        domain = "NONE"
-        for line in result.split("\n"):
-            line = line.strip()
-            if line.startswith("ROUTE:"):
-                route = line.split("ROUTE:")[1].strip()
-            elif line.startswith("DOMAIN:"):
-                domain = line.split("DOMAIN:")[1].strip()
+        # Parse the JSON payload natively
+        try:
+            # LiteLLM sometimes returns markdown blocks even when told not to
+            clean_text = raw_text.strip()
+            if clean_text.startswith("```json"):
+                clean_text = clean_text[7:]
+            if clean_text.endswith("```"):
+                clean_text = clean_text[:-3]
+            clean_text = clean_text.strip()
+
+            data = json.loads(clean_text)
+
+            route = str(data.get("route", "UNKNOWN")).strip().upper()
+            domain = str(data.get("domain", "NONE")).strip()
+        except json.JSONDecodeError:
+            # Fallback if the model somehow completely mangled the JSON
+            route = "UNKNOWN"
+            domain = "NONE"
 
         # --- THE VAGUS NERVE: Log the Dispatcher's metabolism ---
         from System.organs.interoception import log_metabolism
@@ -89,8 +103,6 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
         log_metabolism(usage_data.get("total_tokens", 0))
 
         # --- 🦠 ENTERIC NERVOUS SYSTEM (Save Memory) ---
-        from System.organs.enteric import save_gut_reaction
-
         save_gut_reaction(prompt, True, "Approved.", route, domain)
 
         return True, "Approved.", route, domain, usage_data

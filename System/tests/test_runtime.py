@@ -29,24 +29,27 @@ async def test_analyze_task_llm_parsing(mocker, monkeypatch, tmp_path) -> None:
     """Test that the dispatcher correctly extracts ROUTE and DOMAIN from the LLM."""
 
     # --- 1. FORCE DISABLE Gut Reflex (Zero-Debt Isolation) ---
-    # By pointing the memory to a fake temp file, it physically cannot return cached routes like 'WORKSPACE'
     monkeypatch.setattr(
         "System.organs.enteric.GUT_MEMORY_FILE", tmp_path / "fake_gut.json"
     )
     mocker.patch("System.organs.enteric.get_gut_reaction", return_value=None)
 
     # --- 2. Setup mock LLM response ---
-    msg = MagicMock()
-    msg.content = "ROUTE: READ_ONLY\nDOMAIN: STUDIO"
+    async def mock_acompletion(*args, **kwargs):
+        class MockChoice:
+            class MockMessage:
+                # FIX: Match the assertions at the bottom of the test
+                content = '{"route": "READ_ONLY", "domain": "STUDIO"}'
 
-    mock_response = MagicMock(choices=[MagicMock(message=msg)])
-    mock_response.usage = MagicMock(
-        prompt_tokens=10, completion_tokens=5, total_tokens=15
-    )
+            message = MockMessage()
 
-    # --- 3. Patch litellm directly (Safest Global Intercept) ---
-    mock_completion = mocker.patch("litellm.acompletion", new_callable=mocker.AsyncMock)
-    mock_completion.return_value = mock_response
+        class MockResponse:
+            choices = [MockChoice()]
+            usage = MagicMock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
+
+        return MockResponse()
+
+    monkeypatch.setattr("System.runtime.acompletion", mock_acompletion)
 
     # --- 4. Execute ---
     is_valid, reason, route, domain, usage = await analyze_task(
@@ -64,11 +67,17 @@ async def test_analyze_task_llm_parsing(mocker, monkeypatch, tmp_path) -> None:
 async def test_analyze_task_llm_rejection(mocker) -> None:  # type: ignore
     """Test that the dispatcher correctly handles explicit REJECTED messages."""
 
+    # Isolate the test by disabling the gut reflex!
+    mocker.patch("System.organs.enteric.get_gut_reaction", return_value=None)
+
     # Setup mock LLM response acting like it hit a limitation
     msg = MagicMock()
     msg.content = "REJECTED: I cannot browse the live internet."
 
-    mock_completion = mocker.patch("litellm.acompletion", new_callable=mocker.AsyncMock)
+    # FIX: Patch the local module reference, NOT the global litellm module!
+    mock_completion = mocker.patch(
+        "System.runtime.acompletion", new_callable=mocker.AsyncMock
+    )
     mock_completion.return_value = MagicMock(choices=[MagicMock(message=msg)])
 
     is_valid, reason, route, domain, _ = await analyze_task(
@@ -76,7 +85,6 @@ async def test_analyze_task_llm_rejection(mocker) -> None:  # type: ignore
     )
 
     assert is_valid is False
-    # SHIFT-LEFT FIX: Account for the uppercase transformation in runtime.py
     assert "browse the live internet" in reason.lower()
     assert route == "NONE"
 
@@ -85,7 +93,13 @@ async def test_analyze_task_llm_rejection(mocker) -> None:  # type: ignore
 async def test_analyze_task_api_error(mocker) -> None:  # type: ignore
     """Test that API errors during dispatch fail safely."""
 
-    mock_completion = mocker.patch("litellm.acompletion", new_callable=mocker.AsyncMock)
+    # Isolate the test by disabling the gut reflex!
+    mocker.patch("System.organs.enteric.get_gut_reaction", return_value=None)
+
+    # FIX: Patch the local module reference, NOT the global litellm module!
+    mock_completion = mocker.patch(
+        "System.runtime.acompletion", new_callable=mocker.AsyncMock
+    )
     mock_completion.side_effect = Exception("Anthropic API is down.")
 
     is_valid, reason, route, domain, _ = await analyze_task("Build me a website.")
