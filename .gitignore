@@ -81,3 +81,7 @@ Meta/Synapses/
 
 # OS State & Queues
 System/Pending_Actions.md
+
+# --- Sleep Cycle Archives ---
+logs/archive/
+logs/backups/

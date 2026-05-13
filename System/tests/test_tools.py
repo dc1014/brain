@@ -55,6 +55,9 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
     mocker.patch("System.tools.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
 
+    # SHIFT-LEFT: Guarantee no headless state bleeds into our security test
+    mocker.patch.dict("os.environ", {"BRAIN_OS_HEADLESS": "0"}, clear=True)
+
     studio_dir = tmp_path / "Studio" / "TestProject"
     studio_dir.mkdir(parents=True)
 
@@ -117,6 +120,9 @@ def test_operate_forge_security(tmp_path, monkeypatch) -> None:
     from System.tools import operate_forge
     import System.tools as tools
     from pathlib import Path
+
+    # --- SHIFT-LEFT FIX: Clear headless state so HITL is strictly enforced! ---
+    monkeypatch.delenv("BRAIN_OS_HEADLESS", raising=False)
 
     # 1. Test Path Traversal Block
     res_path = operate_forge("../../../Windows", "Build stuff")

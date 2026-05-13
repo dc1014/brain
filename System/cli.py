@@ -2,6 +2,7 @@ import json
 import os
 import re
 import typer
+import shutil
 import subprocess
 import yaml  # type: ignore
 import sys
@@ -15,12 +16,12 @@ from litellm import completion  # type: ignore
 # --- SHIFT-LEFT: CROSS-PLATFORM ENCODING FIX ---
 if sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore
-# ---------------------------------------------
 
-# --- RESTORED IMPORTS ---
-from System.llm import LOG_FILE, LOG_DIR, log_interaction
+
+from System.llm import LOG_FILE, log_interaction
 from System.runtime import analyze_task, execute_pipeline
-from System.tools import append_safe_file
+
+ROOT_DIR = Path(__file__).parent.parent
 
 app = typer.Typer(help="Brain OS: The Multi-Agent Life Operating System")
 console = Console()
@@ -196,86 +197,129 @@ def logs(
 
 
 @app.command()
-def sleep(
-    synaptic: bool = typer.Option(
-        False,
-        "--synaptic",
-        help="Use experimental GPU weight-training instead of Markdown files.",
-    ),
-) -> None:
-    console.print("\n[bold blue]🌙 Initiating Sleep Cycle...[/bold blue]")
-    if not LOG_FILE.exists() or LOG_FILE.stat().st_size == 0:
-        console.print("[dim]No daily logs found. Brain OS is already rested.[/dim]\n")
-        return
-
-    with console.status(
-        "[bold cyan]Reading daily interactions...[/bold cyan]", spinner="dots"
-    ):
-        logs_content = LOG_FILE.read_text(encoding="utf-8")
-        log_lines = logs_content.strip().split("\n")
-    console.print(f"[dim]Found {len(log_lines)} interactions to consolidate.[/dim]")
-
-    system_prompt = (
-        "You are the Brain OS Sleep Compactor. Extract PERMANENT, VALUABLE facts from these logs.\n"
-        'EXPECTED JSON FORMAT:\n{\n  "META": ["Fact 1"],\n  "PERSONAL": ["Fact 2"],\n  "PROFESSIONAL": ["Fact 3"],\n  "STUDIO": ["Fact 4"]\n}'
+def sleep() -> None:
+    """Biological Sleep Cycle: Prunes short-term JSONL logs and consolidates into long-term structured Markdown memory."""
+    console.print(
+        "\n[bold magenta]🧠 Initiating Biological Sleep Cycle...[/bold magenta]"
     )
 
-    with console.status(
-        "[bold magenta]Compacting short-term memory...[/bold magenta]", spinner="dots"
-    ):
-        try:
-            response = completion(
-                model=AGENT_CONFIG["models"]["gpt_mini"],
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": logs_content},
-                ],
-                response_format={"type": "json_object"},
-            )
-            memories = json.loads(str(response.choices[0].message.content).strip())
-        except Exception as e:
-            console.print(
-                f"[bold red]Sleep Cycle Interrupted (API/JSON Error):[/bold red] {str(e)}"
-            )
-            return
+    # 1. READ HIPPOCAMPUS (Short-Term Memory)
+    log_path = ROOT_DIR / "logs" / "agent_interactions.jsonl"
+    if not log_path.exists():
+        console.print(
+            "[dim]No short-term memories found in Hippocampus. Sleep skipped.[/dim]"
+        )
+        return
 
-    memory_path = Path(__file__).parent / "config" / "memory.yaml"
-    with open(memory_path, "r", encoding="utf-8") as f:
+    # BIOLOGICAL INSPIRATION: Functional Segregation of Memory
+    memories_by_domain: dict[str, list[dict[str, str]]] = {}
+
+    with open(log_path, "r", encoding="utf-8") as f:
+        for line in f:
+            try:
+                data = json.loads(line)
+                if data.get("user_prompt") and data.get("response"):
+                    domain = data.get("domain", "NONE")
+                    if domain not in memories_by_domain:
+                        memories_by_domain[domain] = []
+
+                    memories_by_domain[domain].append(
+                        {
+                            "role": data.get("agent", "User"),
+                            "prompt": data["user_prompt"][:500],  # Cap length
+                            "response": data["response"][:1000],  # Cap length
+                        }
+                    )
+            except Exception:
+                continue
+
+    if not memories_by_domain:
+        console.print("[dim]No actionable memories found. Triggering Amnesia...[/dim]")
+        log_path.unlink()
+        return
+
+    date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    # 2. LOAD NEOCORTEX MAP
+    memory_yaml = ROOT_DIR / "System" / "config" / "memory.yaml"
+    with open(memory_yaml, "r", encoding="utf-8") as f:
         domains = yaml.safe_load(f).get("domains", {})
 
-    memories_saved = 0
+    model = (
+        "openai/gpt-4o-mini"
+        if os.environ.get("OPENAI_API_KEY")
+        else "anthropic/claude-3-haiku-20240307"
+    )
 
-    # Remove the status spinner here so it doesn't swallow our multi-line terminal prints
-    console.print("\n[bold yellow]🧠 Injecting synapses into Vault...[/bold yellow]")
-    for domain, facts in memories.items():
-        if facts and isinstance(facts, list):
-            filepath = domains.get(domain.upper())
-            if filepath:
-                bullet_facts = "\n".join([f"- {fact}" for fact in facts])
-                result = append_safe_file(filepath, bullet_facts)
-                if "SUCCESS" in result:
-                    memories_saved += len(facts)
-                    console.print(f"\n[green]✓ {domain} MEMORY UPDATED:[/green]")
+    for domain_name, rel_path in domains.items():
+        # ZERO-DEBT: Skip API calls for domains that had no activity today
+        domain_logs = memories_by_domain.get(domain_name, [])
+        global_logs = memories_by_domain.get("NONE", [])
+        combined_logs = domain_logs + global_logs
 
-                    for fact in facts:
-                        # Token Economics: 1 Token ≈ 4 characters
-                        token_cost = max(1, len(fact) // 4)
+        if not combined_logs and domain_name != "META":
+            console.print(
+                f"[dim]No new memories for {domain_name}. Skipping API call.[/dim]"
+            )
+            continue
 
-                        # Extract just the first sentence for a clean terminal display
-                        first_sentence = (
-                            fact.split(". ")[0] + "." if ". " in fact else fact
-                        )
-                        if len(first_sentence) > 80:
-                            first_sentence = first_sentence[:77] + "..."
+        daily_log = json.dumps(combined_logs, indent=2)
 
-                        console.print(
-                            f"  [dim]└─ {first_sentence} (Context Weight: ~{token_cost} tokens)[/dim]"
-                        )
+        mem_file = ROOT_DIR / rel_path
+        if not mem_file.exists():
+            continue
 
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
-    LOG_FILE.rename(LOG_DIR / f"archive_{timestamp}.jsonl")
+        # 3. SHIFT-LEFT: Immutable Versioning (Backup before mutation)
+        backup_dir = ROOT_DIR / "logs" / "backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(mem_file, backup_dir / f"{mem_file.stem}_{date_str}.md")
+
+        current_memory = mem_file.read_text(encoding="utf-8")
+
+        # 4. REM SLEEP: Synaptic Pruning Prompt
+        system_prompt = f"""You are the Brain OS Sleep Consolidator. Your job is biological synaptic pruning.
+1. Read the CURRENT NEOCORTEX MEMORY.
+2. Read the DAILY HIPPOCAMPUS LOG.
+3. Identify new persistent facts relevant to the '{domain_name}' domain.
+4. Supersede stale facts (mark old ones as 'Superseded: [Reason]', do not blindly delete history).
+5. Discard transient noise and duplicates.
+6. Maintain the 100KB rule: Keep it strictly concise.
+7. Output ONLY the updated markdown file. Preserve all XML tags like <working_memory>. Do not use markdown code block formatting."""
+
+        console.print(f"[dim]Consolidating {domain_name} memory...[/dim]")
+        try:
+            response = completion(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {
+                        "role": "user",
+                        "content": f"CURRENT NEOCORTEX MEMORY:\n{current_memory}\n\nDAILY HIPPOCAMPUS LOG:\n{daily_log}",
+                    },
+                ],
+            )
+
+            new_memory = str(response.choices[0].message.content).strip()
+            # Clean accidental markdown wrappings
+            if new_memory.startswith("```markdown"):
+                new_memory = new_memory[11:-3].strip()
+            elif new_memory.startswith("```"):
+                new_memory = new_memory[3:-3].strip()
+
+            mem_file.write_text(new_memory, encoding="utf-8")
+            console.print(
+                f"✅ [green]Synaptic Pruning complete for {domain_name}.[/green]"
+            )
+        except Exception as e:
+            console.print(f"❌ [red]Failed to consolidate {domain_name}: {e}[/red]")
+
+    # 5. AMNESIA: Log Rotation
+    archive_dir = ROOT_DIR / "logs" / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    log_path.rename(archive_dir / f"hippocampus_{date_str}.jsonl")
+
     console.print(
-        f"\n[bold green]🌅 Sleep Cycle Complete.[/bold green] [dim]Consolidated {memories_saved} new core memories.[/dim]\n"
+        "[bold magenta]🌙 Sleep cycle complete. Hippocampus archived. OS is ready for a new day.[/bold magenta]\n"
     )
 
 

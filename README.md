@@ -114,8 +114,15 @@ Brain logs every token, prompt, and action for perfect local observability.
 uv run python System/cli.py logs --limit 3
 ```
 
-### 🌙 The Sleep Cycle Compactor (Memory Synthesis)
-At the end of the day, command the OS to sleep. The AI will read your daily `logs/agent_interactions.jsonl`, extract permanent high-value facts (strategies, preferences, coding rules), inject them directly into your Markdown memory files, and safely rotate/archive the logs.
+### 🌙 The Biological Sleep Cycle (Memory Consolidation)
+Inspired by human biology and Anthropic's "Dreams" architecture, Brain OS features a multi-phase memory consolidation system to ensure zero context bloat and data safety.
+
+1. **The Hippocampus (Capture):** Throughout the day, the OS logs fast, unstructured agent interactions to `logs/agent_interactions.jsonl`.
+2. **NREM Sleep (Filtration):** When you execute `sleep`, the OS parses the JSONL, truncating massive code payloads to extract pure conceptual intents.
+3. **Immutable Versioning:** The OS creates a read-only timestamped backup of your current `.md` files in `logs/backups/`.
+4. **REM Sleep (Synaptic Pruning):** The Auditor LLM analyzes the daily log against your existing Markdown memories. It identifies persistent facts, marks old logic as `Superseded` (rather than blindly overwriting history), and maintains a strict 100KB file-size rule.
+5. **Amnesia (Log Rotation):** The daily JSONL is archived, wiping the short-term memory clean for the next day.
+
 ```bash
 uv run python System/cli.py sleep
 ```
