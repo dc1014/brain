@@ -3,8 +3,11 @@ from pathlib import Path
 
 from System.llm import run_agent
 from System.runtime import analyze_task
-from System.cli import init
+from System.cli import app, init
 from System.tools import bootstrap_project, execute_command
+from typer.testing import CliRunner
+
+runner = CliRunner()
 
 
 def test_run_agent_success(mocker) -> None:  # type: ignore
@@ -162,7 +165,7 @@ def test_run_os_retry_circuit_breaker(mocker) -> None:  # type: ignore
     # 4. Update: Call task from cli
     from System.cli import task
 
-    task("FORGE TASK: Test retry circuit breaker")
+    task("FORGE TASK: Test retry circuit breaker", obsidian=False)
 
     abort_called = any(
         "User declined autonomous retry" in str(call.args[0])
@@ -274,3 +277,77 @@ def test_init_autonomous_git_hooks(mocker, tmp_path) -> None:  # type: ignore
     ]
     assert any("Secured Git hooks for repository" in text for text in printed_texts)
     assert any("FakeForge" in text for text in printed_texts)
+
+
+def test_task_obsidian_flag(tmp_path, monkeypatch):
+    """Test that the --obsidian flag safely queues the task and exits."""
+    from typer.testing import CliRunner
+
+    runner = CliRunner()
+
+    def mock_analyze(*args):
+        return True, "Mock reason", "Forge", "Studio", {"tokens": 0}
+
+    monkeypatch.setattr("System.cli.analyze_task", mock_analyze)
+
+    # 1. Setup exact mock directory structure
+    system_dir = tmp_path / "System"
+    system_dir.mkdir(parents=True, exist_ok=True)
+    mock_cli_file = system_dir / "cli.py"
+
+    # 2. Monkeypatch the module's __file__ directly (Not Path)
+    monkeypatch.setattr("System.cli.__file__", str(mock_cli_file))
+
+    # 3. Run the Typer command
+    result = runner.invoke(app, ["task", "Build a test app", "--obsidian"])
+
+    assert result.exit_code == 0
+    assert "Task safely queued" in result.stdout
+
+    # 4. Test that the file was actually created with the right content
+    mock_pending_file = system_dir / "Pending_Actions.md"
+    assert mock_pending_file.exists()
+
+    file_contents = mock_pending_file.read_text(encoding="utf-8")
+    assert "Pending Task: Forge" in file_contents
+    assert "Build a test app" in file_contents
+
+
+def test_execute_pending(tmp_path, monkeypatch):
+    """Test that execute_pending reads the file, runs tasks, and clears the queue."""
+    from typer.testing import CliRunner
+
+    runner = CliRunner()
+
+    # 1. Setup exact mock directory structure
+    system_dir = tmp_path / "System"
+    system_dir.mkdir(parents=True, exist_ok=True)
+    mock_cli_file = system_dir / "cli.py"
+
+    monkeypatch.setattr("System.cli.__file__", str(mock_cli_file))
+
+    # 2. Create the mock pending file
+    mock_pending_file = system_dir / "Pending_Actions.md"
+    mock_pending_file.write_text(
+        "### ⏳ Pending Task: Forge\n**Prompt:** Refactor the UI\n---\n",
+        encoding="utf-8",
+    )
+
+    # 3. Mock the LLM and Execution functions
+    monkeypatch.setattr(
+        "System.cli.analyze_task", lambda x: (True, "Valid", "Forge", "Studio", {})
+    )
+    monkeypatch.setattr("System.cli.execute_pipeline", lambda d, r, dom: None)
+
+    # 4. Run the command
+    result = runner.invoke(app, ["execute-pending"])
+
+    # 5. Assertions
+    assert result.exit_code == 0
+    assert "Found 1 pending tasks" in result.stdout
+    assert "Executing Task 1/1" in result.stdout
+
+    # Ensure the file was wiped clean after execution
+    assert "*Queue is currently empty.*" in mock_pending_file.read_text(
+        encoding="utf-8"
+    )

@@ -67,6 +67,29 @@ Because Brain is privacy-first, your personal data directories are ignored in gi
 uv run System/cli.py init
 ```
 
+## 🔮 The Obsidian UI (The Glass Pane)
+
+Brain OS uses the local file system as its database, but **Obsidian** is its official UI. Because we check the `.obsidian/` folder into version control, your vault comes pre-configured with a highly opinionated "Second Brain" layout.
+
+### 1. The Control Room (`Home.md`)
+When you open the vault, you will land on `Home.md`. This is your OS Dashboard. It provides instantaneous links to your active Forge projects (`Studio/`), your scratchpad, and your system logs.
+
+### 2. The Media Quarantine
+By default, pasting images into markdown clutters the root directory. Brain OS prevents this. 
+When you paste an image or PDF into any file in Obsidian, it is automatically routed to `Media/Attachments/`.
+* **The Forge Workflow:** If you want an AI to use an image in a web app, do not put the image in the web app folder. Drop it into Obsidian, then command the OS: `"Copy Media/Attachments/image.png to Studio/My-App/public/logo.png"`.
+
+### 3. The Clean Knowledge Graph
+Obsidian's Graph View is powerful, but indexing `node_modules` and Python caches ruins it. 
+* Brain OS uses hidden `userIgnoreFilters` to completely banish build files and dependencies from Obsidian's index. 
+* To filter out raw code files from your graph, open the Graph Settings and set the search filter to: `-path:Studio`
+
+### 4. Running Commands Natively (Zero Alt-Tab)
+You do not need to open a separate terminal to command Brain OS. The vault is pre-configured with the **Shell Commands** plugin.
+1. Press `Cmd + Shift + B` (or your configured hotkey) inside Obsidian.
+2. A native prompt will appear.
+3. Type your command (e.g., `"Summarize my active tasks in Personal/Scratchpad"`) and hit Enter. The OS will execute the Python engine in the background and return the result directly to your UI.
+
 ## 💻 Usage & Commands
 
 Brain operates via a unified CLI router. 
