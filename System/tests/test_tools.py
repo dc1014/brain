@@ -1,3 +1,5 @@
+import pytest
+
 from pathlib import Path
 from System.tools import (
     write_safe_file,
@@ -273,3 +275,58 @@ def test_read_file_signatures_tool(tmp_path, mocker) -> None:  # type: ignore
     success_result = read_file_signatures("test_module.py")
     assert '<document_signatures path="test_module.py">' in success_result
     assert "def mock_func():" in success_result
+
+
+def test_execute_command_headless_bypass(monkeypatch, tmp_path):
+    """Test that setting the headless flag bypasses the HITL prompt for execute_command."""
+    from System.tools import execute_command
+
+    # 1. Setup safe path
+    safe_dir = tmp_path / "Studio"
+    safe_dir.mkdir(parents=True)
+    monkeypatch.setattr("System.tools.ROOT_DIR", tmp_path)
+    monkeypatch.setattr("System.tools.ALLOWED_DIRECTORIES", {safe_dir})
+
+    # 2. Set the headless override flag
+    monkeypatch.setenv("BRAIN_OS_HEADLESS", "1")
+
+    # 3. If the script tries to call input(), intentionally crash the test.
+    # This proves the input() block is completely bypassed.
+    monkeypatch.setattr(
+        "builtins.input", lambda *args: pytest.fail("HITL prompt was not bypassed!")
+    )
+
+    # 4. Execute a harmless command
+    result = execute_command("echo 'test'", "Studio")
+
+    assert "SECURITY BLOCK" not in result
+    assert "<shell_output" in result
+
+
+def test_operate_forge_headless_bypass(monkeypatch, tmp_path):
+    """Test that setting the headless flag bypasses the HITL prompt for operate_forge."""
+    from System.tools import operate_forge
+
+    # 1. Setup a fake Forge project
+    project_dir = tmp_path / "Studio" / "TestProject"
+    project_dir.mkdir(parents=True)
+    (project_dir / "orchestrator.py").touch()
+    monkeypatch.setattr("System.tools.ROOT_DIR", tmp_path)
+    monkeypatch.setattr("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
+
+    # 2. Mock execution to do nothing but succeed
+    monkeypatch.setattr(
+        "subprocess.run",
+        lambda *args, **kwargs: type("MockResult", (), {"returncode": 0})(),
+    )
+
+    # 3. Set the headless flag and crash if input() is called
+    monkeypatch.setenv("BRAIN_OS_HEADLESS", "1")
+    monkeypatch.setattr(
+        "builtins.input", lambda *args: pytest.fail("HITL prompt was not bypassed!")
+    )
+
+    result = operate_forge("TestProject", "Do something")
+
+    assert "SECURITY BLOCK" not in result
+    assert "FORGE EXECUTION COMPLETE" in result
