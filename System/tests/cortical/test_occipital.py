@@ -189,3 +189,22 @@ def test_memorize_user_appearance_mocked(monkeypatch):
     assert "user_reference.jpg" in result
     assert "append_safe_file" in result
     mock_capture.assert_called_once()
+
+
+def test_record_user_video_mocked(monkeypatch):
+    """Proves the Memory Hook strictly enforces HITL for video recording."""
+    from System.neuroanatomy.cortical.occipital import record_user_video
+    from unittest.mock import MagicMock
+
+    # Mock human typing 'y'
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+    monkeypatch.setenv("BRAIN_OS_HEADLESS", "0")
+
+    mock_record = MagicMock()
+    monkeypatch.setattr("Sense.receptors.vision.record_webcam_video", mock_record)
+
+    result = record_user_video(duration_seconds=5)
+
+    assert "SUCCESS" in result
+    assert "user_video_reference.mp4" in result
+    mock_record.assert_called_once()

@@ -349,3 +349,57 @@ def memorize_user_appearance() -> str:
         f"CRITICAL SYSTEM INSTRUCTION: You must now use the `append_safe_file` tool to add this note "
         f"to 'Personal/personal-memory.md' so you don't forget where the physical reference is stored!"
     )
+
+
+def record_user_video(duration_seconds: int = 5) -> str:
+    """
+    Occipital Lobe (Temporal Memory Hook):
+    Explicitly asks for permission to permanently record a video of the user.
+    """
+    import os
+    from System.core.paths import ROOT_DIR
+    from rich.console import Console
+
+    console = Console()
+
+    # 1. SHIFT-LEFT SECURITY: Strict Permanent Memory Authorization
+    if os.environ.get("BRAIN_OS_HEADLESS") != "1":
+        console.print(
+            "\n[bold red]⚠️  SECURITY ALERT: PHYSICAL TEMPORAL MEMORY HOOK[/bold red]"
+        )
+        console.print(
+            f"[yellow]Brain OS wants to record a {duration_seconds}s video of you and permanently save it to Media/user_video_reference.mp4.[/yellow]"
+        )
+        try:
+            auth = (
+                input("Allow permanent physical video recording? [y/N]: ")
+                .strip()
+                .lower()
+            )
+        except (EOFError, KeyboardInterrupt):
+            auth = "n"
+
+        if auth not in ["y", "yes"]:
+            return "SECURITY BLOCK: User explicitly denied taking a permanent video recording."
+
+    output_path = ROOT_DIR / "Media" / "user_video_reference.mp4"
+
+    # 2. Trigger the Temporal Retina
+    try:
+        from Sense.receptors.vision import record_webcam_video
+
+        console.print(
+            f"[dim cyan]👁️ Retina: Recording {duration_seconds}s physical video...[/dim cyan]"
+        )
+        record_webcam_video(
+            save_path=str(output_path), duration_seconds=duration_seconds
+        )
+    except Exception as e:
+        return f"VISUAL ERROR: Webcam video failure. Details: {str(e)}"
+
+    # 3. Instruct the Agent to build the Memory Link
+    return (
+        f"SUCCESS: The user's physical video was recorded and saved to {output_path.relative_to(ROOT_DIR)}.\n"
+        f"CRITICAL SYSTEM INSTRUCTION: You must now use the `append_safe_file` tool to add this note "
+        f"to 'Personal/personal-memory.md' so you don't forget where the temporal reference is stored!"
+    )

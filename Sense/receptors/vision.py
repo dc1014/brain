@@ -82,12 +82,14 @@ def capture_webcam_frame(save_path: str | None = None) -> str:
     if not cap.isOpened():
         raise ValueError("Failed to open physical webcam.")
 
-    # Warm up the sensor
-    for _ in range(5):
-        cap.read()
-
-    ret, frame = cap.read()
-    cap.release()
+    try:
+        # Warm up the sensor
+        for _ in range(5):
+            cap.read()
+        ret, frame = cap.read()
+    finally:
+        # SHIFT-LEFT: Guarantee hardware is released even if the read panics
+        cap.release()
 
     if not ret:
         raise ValueError("Failed to read frame from webcam.")
@@ -104,3 +106,49 @@ def capture_webcam_frame(save_path: str | None = None) -> str:
     b64_str = base64.b64encode(buffer).decode("utf-8")
 
     return f"data:image/jpeg;base64,{b64_str}"
+
+
+def record_webcam_video(save_path: str, duration_seconds: int = 5) -> str:
+    """
+    RETINA (Live Temporal):
+    Records a video from the physical webcam for a specified duration and saves it to disk.
+    """
+    import cv2
+    import time
+    from pathlib import Path
+
+    Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        raise ValueError("Failed to open physical webcam for recording.")
+
+    out = None
+    try:
+        # Warm up the sensor
+        for _ in range(5):
+            cap.read()
+
+        # Get camera specifications
+        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = 20.0
+
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(save_path, fourcc, fps, (frame_width, frame_height))
+
+        start_time = time.time()
+
+        # Strict temporal loop
+        while int(time.time() - start_time) < duration_seconds:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            out.write(frame)
+    finally:
+        # SHIFT-LEFT: Guarantee hardware and file streams are closed gracefully
+        cap.release()
+        if out is not None:
+            out.release()
+
+    return f"Video successfully recorded to {save_path}"

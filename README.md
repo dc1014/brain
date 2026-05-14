@@ -126,7 +126,7 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 
 ### 24. Visual Cortex (The Occipital Lobe)
 * **Visual Perception & Generation:** The Occipital lobe processes raw optical data into semantic meaning.
-* **Multimodal QA:** Brain OS is not blind. Using the `Sense` capability and the `occipital.py` organ, agents can use Headless Chromium to take screenshots of the local web servers they spawn (via Proprioception). The OS then encodes these screenshots into base64 and feeds them to a baseline multimodal model (GPT-4o-mini) to visually verify CSS layouts, UI designs, and color contrast. It can also generate visual assets autonomously using DALL-E 3.
+* **Multimodal QA:** Encodes images/video, captures screenshots, controls image generation, and manages live webcam perception/recording. Using the `Sense` capability and the `occipital.py` organ, agents can use Headless Chromium to take screenshots of the local web servers they spawn (via Proprioception). The OS then encodes these screenshots into base64 and feeds them to a baseline multimodal model (GPT-4o-mini) to visually verify CSS layouts, UI designs, and color contrast. It can also generate visual assets autonomously using GPT Image.
 
 ### 25. Semantic Comprehension (Wernicke's Area)
 * **Meaning Extraction:** Wernicke's Area processes raw vocabulary into semantic comprehension.

@@ -883,3 +883,10 @@ def memorize_user_appearance() -> str:
     from System.neuroanatomy.cortical.occipital import memorize_user_appearance as _mem
 
     return _mem()
+
+
+def record_user_video(duration_seconds: int = 5) -> str:
+    """SENSE (VISION): Records a short physical video of the user via webcam."""
+    from System.neuroanatomy.cortical.occipital import record_user_video as _rec
+
+    return _rec(duration_seconds)

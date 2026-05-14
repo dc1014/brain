@@ -377,3 +377,14 @@ vision:
       parameters:
         type: "object"
         properties: {}
+
+  - type: "function"
+    function:
+      name: "record_user_video"
+      description: "SENSE (VISION): Records a short physical video of the user via webcam and saves it to the Media folder. DO NOT ask the user for permission in text before calling this tool. The OS terminal will physically pause and handle the security authorization."
+      parameters:
+        type: "object"
+        properties:
+          duration_seconds:
+            type: "integer"
+            description: "How long to record the video (default 5)."
