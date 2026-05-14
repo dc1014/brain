@@ -1,3 +1,5 @@
+import os
+import builtins
 import pytest
 
 
@@ -32,3 +34,21 @@ def bypass_amygdala_network_calls(mocker):
     mocker.patch(
         "System.neuroanatomy.limbic.amygdala.completion", return_value=MockResponse()
     )
+
+
+@pytest.fixture(autouse=True)
+def block_test_logging(monkeypatch):
+    """
+    Intercepts any attempt to write to the production log file during tests
+    and securely redirects it into the void (os.devnull).
+    """
+    original_open = builtins.open
+
+    def safe_open(file, *args, **kwargs):
+        file_path = str(file).lower()
+        # Block the production log, but ALLOW temporary test logs!
+        if "agent_interactions.jsonl" in file_path and "pytest" not in file_path:
+            return original_open(os.devnull, *args, **kwargs)
+        return original_open(file, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", safe_open)
