@@ -716,6 +716,15 @@ def capture_screenshot(url: str) -> str:
     return f"Screenshot successfully captured and saved to {output_path.as_posix()}"
 
 
+def analyze_video(video_path: str, query: str) -> str:
+    """
+    SENSE (VISION): Analyzes a local video file by extracting frames and feeding them to the Visual Cortex.
+    """
+    from System.neuroanatomy.cortical.occipital import perceive_video
+
+    return perceive_video(video_path, query)
+
+
 def semantic_search(directory: str, query: str) -> str:
     """
     A deep semantic search. Uses keyword search to grab a broad batch of notes,

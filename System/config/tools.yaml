@@ -342,3 +342,18 @@ vision:
             type: "string"
             description: "The URL to capture (e.g., 'http://localhost:3000')"
         required: ["url"]
+
+  - type: "function"
+    function:
+      name: "analyze_video"
+      description: "SENSE (VISION): Analyzes a local video file by extracting frames and feeding them to the Visual Cortex. Use this to understand what happens over time in an mp4 or webm file."
+      parameters:
+        type: "object"
+        properties:
+          video_path:
+            type: "string"
+            description: "The file path to the video (e.g., 'Studio/test.mp4')"
+          query:
+            type: "string"
+            description: "What you want to know about the events in the video."
+        required: ["video_path", "query"]

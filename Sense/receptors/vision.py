@@ -1,5 +1,7 @@
 from pathlib import Path
 from rich.console import Console
+import base64
+import cv2
 
 console = Console()
 
@@ -30,3 +32,39 @@ def take_screenshot(url: str, output_path: str) -> str:
         return f"SUCCESS: Screenshot saved to {output_path}"
     except Exception as e:
         return f"FATAL SENSE ERROR: Failed to take screenshot. {str(e)}"
+
+
+def extract_video_frames(video_path: str, max_frames: int = 8) -> list[str]:
+    """
+    RETINA (Video):
+    Extracts evenly spaced frames from a video and returns them as Base64 strings.
+    """
+    path = Path(video_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Video not found: {video_path}")
+
+    cap = cv2.VideoCapture(str(path))
+    if not cap.isOpened():
+        raise ValueError("Failed to open video stream.")
+
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    if total_frames <= 0:
+        return []
+
+    # Calculate step to get exactly max_frames
+    step = max(1, total_frames // max_frames)
+    frames_b64 = []
+
+    for i in range(max_frames):
+        cap.set(cv2.CAP_PROP_POS_FRAMES, i * step)
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Compress and encode to JPG to save memory
+        _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        b64_str = base64.b64encode(buffer).decode("utf-8")
+        frames_b64.append(f"data:image/jpeg;base64,{b64_str}")
+
+    cap.release()
+    return frames_b64
