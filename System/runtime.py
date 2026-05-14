@@ -104,12 +104,21 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
                 clean_text = clean_text[:-3]
             clean_text = clean_text.strip()
 
-            data = json.loads(clean_text)
-            route = str(data.get("route", "UNKNOWN")).strip().upper()
-            domain = str(data.get("domain", "NONE")).strip()
-        except json.JSONDecodeError:
+            from System.core.schemas import DispatcherResult
+
+            data = DispatcherResult.model_validate_json(clean_text)
+            route = data.route.strip().upper()
+            domain = data.domain.strip().upper()
+
+            # Print the Thalamus reasoning so humans can observe the cognitive routing
+            console.print(
+                f"[dim green]🧠 Thalamus Reasoning: {data.reasoning}[/dim green]"
+            )
+
+        except Exception as e:
             route = "UNKNOWN"
             domain = "NONE"
+            console.print(f"[dim red]Thalamus Parsing Error: {e}[/dim red]")
 
         # --- THE VAGUS NERVE: Log the Dispatcher's metabolism ---
         # ⚡ SHIFT-LEFT: Prevent Async Blocking

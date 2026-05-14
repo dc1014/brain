@@ -42,7 +42,7 @@ async def test_analyze_task_llm_parsing(mocker, monkeypatch, tmp_path) -> None:
         class MockChoice:
             class MockMessage:
                 # FIX: Match the assertions at the bottom of the test
-                content = '{"route": "READ_ONLY", "domain": "STUDIO"}'
+                content = '{"reasoning": "Mocked Thalamus reasoning", "route": "READ_ONLY", "domain": "STUDIO"}'
 
             message = MockMessage()
 
@@ -180,7 +180,7 @@ async def test_analyze_task_local_slm_routes(mocker, monkeypatch, tmp_path) -> N
     async def mock_acompletion(*args, **kwargs):
         class MockChoice:
             class MockMessage:
-                content = '{"route": "MEMORY", "domain": "Personal"}'
+                content = '{"reasoning": "Mocked Thalamus reasoning", "route": "MEMORY", "domain": "Personal"}'
 
             message = MockMessage()
 
@@ -199,4 +199,4 @@ async def test_analyze_task_local_slm_routes(mocker, monkeypatch, tmp_path) -> N
 
     assert is_valid is True
     assert route == "MEMORY"
-    assert domain == "Personal"
+    assert domain == "PERSONAL"

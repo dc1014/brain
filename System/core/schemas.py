@@ -19,3 +19,15 @@ class SleepConsolidation(BaseModel):
 class QAAuditResult(BaseModel):
     audit_result: str = Field(..., description="EXACTLY 'PASS' or 'FAIL'")
     reasoning: str = Field(..., description="Explanation of critique or approval")
+
+
+class DispatcherResult(BaseModel):
+    reasoning: str = Field(
+        ..., description="Explain step-by-step why this route and domain were selected."
+    )
+    route: str = Field(
+        ..., description="The designated pipeline route (e.g., FORGE, FAST, SENSE)."
+    )
+    domain: str = Field(
+        ..., description="The designated domain context (e.g., STUDIO, MEDIA)."
+    )

@@ -1,4 +1,3 @@
-from System.core.paths import ROOT_DIR
 import asyncio
 import json
 import os
@@ -15,6 +14,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from litellm import completion  # type: ignore
 from System.neuroanatomy.limbic.basal_ganglia import tick_habits
+from System.core.paths import ROOT_DIR
 
 
 # --- SHIFT-LEFT: CROSS-PLATFORM ENCODING FIX ---
