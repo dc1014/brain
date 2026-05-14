@@ -1,6 +1,5 @@
 import asyncio
 import json
-from collections import defaultdict
 from pathlib import Path
 from typing import Any
 from rich.console import Console
@@ -11,15 +10,27 @@ console = Console()
 
 class MotorCortex:
     """
-    Coordinates file-system motor actions to prevent race conditions
-    when parallel Swarm agents attempt to write to the exact same file.
+    Coordinates file-system motor actions to prevent race conditions.
+    Locks are securely bound to their specific event loop to prevent cross-loop contamination.
     """
 
-    _locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+    _locks: dict[str, asyncio.Lock] = {}
 
     @classmethod
     def get_lock(cls, filepath: str | Path) -> asyncio.Lock:
-        return cls._locks[str(Path(filepath).resolve())]
+        try:
+            loop = asyncio.get_running_loop()
+            loop_id = str(id(loop))
+        except RuntimeError:
+            # SHIFT-LEFT: Graceful degradation for synchronous Pytest environments
+            loop_id = "sync_test_loop"
+
+        # Create a unique lock key based on the active event loop ID AND the file path
+        key = f"{loop_id}_{str(Path(filepath).resolve())}"
+
+        if key not in cls._locks:
+            cls._locks[key] = asyncio.Lock()
+        return cls._locks[key]
 
 
 async def execute_tools(

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from rich.console import Console
 from litellm import completion  # type: ignore
+from System.neuroanatomy.systemic.immune_system import vault
 
 console = Console()
 
@@ -39,10 +40,12 @@ def filter_semantic_relevance(query: str, raw_search_results: str) -> str:
     )
 
     try:
+        model_name = os.getenv("VISION_MODEL", "openai/gpt-4o-mini")
+        api_key = vault.get_api_key_for_model(model_name) or os.getenv("OPENAI_API_KEY")
+
         response = completion(
-            model=os.getenv(
-                "VISION_MODEL", "gpt-4o-mini"
-            ),  # Reuse our fast/cheap baseline model
+            model=model_name,
+            api_key=api_key,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {
@@ -127,8 +130,11 @@ def transcribe_speech(filepath: str) -> str:
         console.print(
             "[dim yellow]🧠 Wernicke's Area processing speech-to-text...[/dim yellow]"
         )
+        api_key = vault.get_api_key_for_model("openai") or os.getenv("OPENAI_API_KEY")
         with open(filepath, "rb") as audio_file:
-            response = transcription(model="whisper-1", file=audio_file)
+            response = transcription(
+                model="whisper-1", file=audio_file, api_key=api_key
+            )
         return str(response.text)
     except Exception as e:
         return f"TRANSCRIPTION ERROR: {str(e)}"
