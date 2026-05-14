@@ -1,10 +1,10 @@
+from System.core.paths import ROOT_DIR
 import json
 from datetime import datetime, timezone, timedelta
-from pathlib import Path
 from rich.console import Console
 
 console = Console()
-ROOT_DIR = Path(__file__).parent.parent.parent.parent.resolve()
+
 LOG_FILE = ROOT_DIR / "logs" / "agent_interactions.jsonl"
 
 

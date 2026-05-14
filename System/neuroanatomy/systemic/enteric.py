@@ -1,9 +1,9 @@
+from System.core.paths import ROOT_DIR
 import json
-from pathlib import Path
 from rich.console import Console
 
 console = Console()
-ROOT_DIR = Path(__file__).parent.parent.parent.parent.resolve()
+
 GUT_MEMORY_FILE = ROOT_DIR / "System" / "config" / "gut_memory.json"
 
 # SHIFT-LEFT SECURITY: Routes that are too dangerous to cache based on semantic similarity

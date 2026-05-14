@@ -1,9 +1,9 @@
+from System.core.paths import ROOT_DIR
 import time
 from pathlib import Path
 from rich.console import Console
 
 console = Console()
-ROOT_DIR = Path(__file__).parent.parent.parent.parent.resolve()
 
 
 def process_sensory_event(source: str, event_type: str, payload: dict) -> None:

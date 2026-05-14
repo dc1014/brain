@@ -1,3 +1,4 @@
+from System.core.paths import ROOT_DIR
 import os
 import re
 import ast
@@ -40,9 +41,6 @@ def inspect_toxins(command: str) -> tuple[bool, str]:
             )
 
     return True, ""
-
-
-ROOT_DIR = Path(__file__).parent.parent.parent.parent.resolve()
 
 
 def validate_execution_path(target_path: str) -> tuple[bool, str]:

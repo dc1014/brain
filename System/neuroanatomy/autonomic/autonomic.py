@@ -1,9 +1,9 @@
+from System.core.paths import ROOT_DIR
 import time
 import subprocess
 from datetime import datetime
-from pathlib import Path
 
-ROOT_DIR = Path(__file__).parent.parent.parent.parent.resolve()
+
 LOG_DIR = ROOT_DIR / "logs"
 
 

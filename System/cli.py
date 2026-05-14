@@ -1,3 +1,4 @@
+from System.core.paths import ROOT_DIR
 import asyncio
 import json
 import os
@@ -24,7 +25,6 @@ if sys.stdout.encoding.lower() != "utf-8":
 from System.llm import LOG_FILE, log_interaction
 from System.runtime import analyze_task, execute_pipeline
 
-ROOT_DIR = Path(__file__).parent.parent
 
 app = typer.Typer(help="Brain OS: The Multi-Agent Life Operating System")
 console = Console()

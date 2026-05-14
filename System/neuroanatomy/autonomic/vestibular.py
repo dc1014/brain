@@ -1,10 +1,11 @@
+from System.core.paths import ROOT_DIR
 import json
 import shutil
 from pathlib import Path
 from rich.console import Console
 
 console = Console()
-ROOT_DIR = Path(__file__).parent.parent.parent.parent.resolve()
+
 VESTIBULAR_DIR = ROOT_DIR / "Meta" / "Vestibular"
 LEDGER_PATH = VESTIBULAR_DIR / "ledger.json"
 

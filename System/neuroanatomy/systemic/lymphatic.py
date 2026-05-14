@@ -1,10 +1,9 @@
+from System.core.paths import ROOT_DIR
 import time
 import tarfile
-from pathlib import Path
 from rich.console import Console
 
 console = Console()
-ROOT_DIR = Path(__file__).parent.parent.parent.parent.resolve()
 
 
 def flush_waste(max_log_lines: int = 2000, max_bak_age_hours: int = 24) -> None:

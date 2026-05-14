@@ -1,3 +1,4 @@
+from System.core.paths import ROOT_DIR
 import json
 import subprocess
 from pathlib import Path
@@ -8,7 +9,6 @@ import time
 from System.ast_parser import extract_signatures
 
 # Define the absolute root of the Brain OS
-ROOT_DIR: Path = Path(__file__).parent.parent.resolve()
 
 # The AI can see everything, but can ONLY write to these specific folders
 ALLOWED_DIRECTORIES: set[Path] = {
@@ -388,10 +388,18 @@ def operate_forge(project_name: str, instruction: str) -> str:
 
         console.print(f"[dim]Booting Forge engine for '{project_name}'...[/dim]\n")
 
-        # 4. EXECUTION: shell=False completely eliminates shell injection vectors
+        # 4. EXECUTION: Wrap the Forge orchestrator in Cellular Apoptosis
+        from System.neuroanatomy.systemic.blood_brain_barrier import wrap_with_apoptosis
+
+        # Generate the lethal membrane around the Forge engine
+        membrane_script = wrap_with_apoptosis(str(orchestrator_path))
+
+        # Run the membrane (which then securely runs the orchestrator)
         result = subprocess.run(
-            ["uv", "run", "orchestrator.py"],
+            ["uv", "run", membrane_script],
             cwd=str(target_path),
+            capture_output=True,
+            text=True,
         )
 
         # 5. OBSERVABILITY: Harvest Telemetry & Status

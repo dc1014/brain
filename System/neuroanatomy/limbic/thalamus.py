@@ -1,11 +1,11 @@
+from System.core.paths import ROOT_DIR
 import os
 import yaml  # type: ignore
-from pathlib import Path
 from litellm import completion  # type: ignore
 from rich.console import Console
 
 console = Console()
-ROOT_DIR = Path(__file__).parent.parent.parent.parent.resolve()
+
 CONFIG_PATH = ROOT_DIR / "System" / "config" / "agents.yaml"
 
 

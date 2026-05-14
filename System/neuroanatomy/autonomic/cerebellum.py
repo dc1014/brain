@@ -1,10 +1,11 @@
+from System.core.paths import ROOT_DIR
 import json
 import subprocess
 import platform
 from pathlib import Path
 from System.tools import is_safe_path
 
-ROOT_DIR = Path(__file__).parent.parent.parent.parent.resolve()
+
 ENGRAM_DIR = ROOT_DIR / "System" / "engrams"
 INDEX_FILE = ENGRAM_DIR / "index.json"
 

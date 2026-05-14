@@ -1,3 +1,4 @@
+from System.core.paths import ROOT_DIR
 import subprocess
 import yaml  # type: ignore
 import shlex
@@ -7,7 +8,7 @@ from rich.console import Console
 from System.tools import is_safe_path
 
 console = Console()
-ROOT_DIR = Path(__file__).parent.parent.parent.parent.resolve()
+
 CONFIG_PATH = ROOT_DIR / "config" / "agents.yaml"
 
 
