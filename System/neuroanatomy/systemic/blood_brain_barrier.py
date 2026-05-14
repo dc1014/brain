@@ -1,6 +1,7 @@
 import os
 import re
 import ast
+import tempfile
 from pathlib import Path
 from rich.console import Console
 
@@ -155,3 +156,43 @@ def scan_python_ast_string(code: str) -> tuple[bool, str]:
         return False, "AST MEMBRANE ERROR: Inline script contains invalid syntax."
     except Exception as e:
         return False, f"AST MEMBRANE ERROR: Could not analyze inline script. {str(e)}"
+
+
+def wrap_with_apoptosis(target_script_path: str) -> str:
+    """
+    CELLULAR APOPTOSIS: Generates a temporary membrane script.
+    It installs a strict Python Audit Hook to physically block OS-level execution
+    from inside the Python interpreter, then runs the target script.
+    """
+    membrane_code = f"""
+import sys
+import runpy
+
+def apoptosis_hook(event, args):
+    # The lethal systemic calls we do not allow autonomous agents to execute
+    forbidden_events = {{
+        "os.system",
+        "os.exec",
+        "os.posix_spawn",
+        "subprocess.Popen",
+    }}
+    if event in forbidden_events:
+        print(f"\\n[APOPTOSIS TRIGGERED] SecurityError: Blocked unauthorized syscall '{{event}}'.", file=sys.stderr)
+        sys.exit(1) # Instantly kill the cell
+
+# 1. Install the immune response
+sys.addaudithook(apoptosis_hook)
+
+# 2. Execute the Swarm's script inside the membrane
+try:
+    runpy.run_path("{target_script_path}", run_name="__main__")
+except Exception as e:
+    print(f"Execution Error: {{e}}", file=sys.stderr)
+    sys.exit(1)
+"""
+    # Write the membrane to a temporary execution file
+    temp_dir = Path(tempfile.gettempdir())
+    membrane_path = temp_dir / "apoptosis_membrane.py"
+    membrane_path.write_text(membrane_code.strip(), encoding="utf-8")
+
+    return str(membrane_path)

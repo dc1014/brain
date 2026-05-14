@@ -39,7 +39,13 @@ def test_biological_sleep_cycle(monkeypatch, tmp_path):
     personal_mem = personal_dir / "personal-memory.md"
     personal_mem.write_text("<working_memory>\n- I like Java\n</working_memory>")
 
-    # 2. Mock the LLM to return summary, neuroplasticity tag, AND usage stats
+    # 2. Mock the LLM to return our strict JSON data contract AND usage stats
+    mock_response_data = {
+        "sleep_summary": "Pruned Java, added Python.",
+        "neuroplasticity": '<neuroplasticity agent="dispatcher">Always route Python tasks to FORGE.</neuroplasticity>',
+        "updated_memory": "<working_memory>\n- [2026-05-08] Superseded: I like Java (Now prefers Python)\n</working_memory>",
+    }
+
     monkeypatch.setattr(
         "System.cli.completion",
         lambda *args, **kwargs: type(
@@ -56,7 +62,8 @@ def test_biological_sleep_cycle(monkeypatch, tmp_path):
                                 "MockMsg",
                                 (),
                                 {
-                                    "content": '<sleep_summary>Pruned Java, added Python.</sleep_summary>\n<neuroplasticity agent="dispatcher">Always route Python tasks to FORGE.</neuroplasticity>\n<working_memory>\n- [2026-05-08] Superseded: I like Java (Now prefers Python)\n</working_memory>'
+                                    # Pass the JSON string to simulate the new LLM behavior
+                                    "content": json.dumps(mock_response_data)
                                 },
                             )()
                         },

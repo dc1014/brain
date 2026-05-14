@@ -307,6 +307,8 @@ def logs(
 @app.command()
 def sleep() -> None:
     """Biological Sleep Cycle: Prunes short-term JSONL logs and consolidates into long-term structured Markdown memory."""
+    from System.neuroanatomy.systemic.immune_system import vault
+
     console.print(
         "\n[bold magenta]🧠 Initiating Biological Sleep Cycle...[/bold magenta]"
     )
@@ -353,11 +355,11 @@ def sleep() -> None:
     with open(memory_yaml, "r", encoding="utf-8") as f:
         domains = yaml.safe_load(f).get("domains", {})
 
-    model = (
-        "openai/gpt-4o-mini"
-        if os.environ.get("OPENAI_API_KEY")
-        else "anthropic/claude-3-haiku-20240307"
-    )
+    # --- SHIFT-LEFT FIX: Use the Vault to safely select the model! ---
+    if vault.get_api_key_for_model("openai/gpt-4o-mini"):
+        model = "openai/gpt-4o-mini"
+    else:
+        model = "anthropic/claude-3-haiku-20240307"
 
     current_date_short = datetime.now().strftime("%Y-%m-%d")
 
@@ -395,7 +397,7 @@ def sleep() -> None:
 
         current_memory = mem_file.read_text(encoding="utf-8")
 
-        # 4. REM SLEEP: Synaptic Pruning Prompt
+        # 4. REM SLEEP: Synaptic Pruning Prompt (STRICT JSON CONTRACT)
         system_prompt = f"""You are the Brain OS Sleep Consolidator. Your job is biological synaptic pruning.
 1. Read the CURRENT NEOCORTEX MEMORY.
 2. Read the DAILY HIPPOCAMPUS LOG.
@@ -404,77 +406,84 @@ def sleep() -> None:
 5. Discard transient noise and duplicates.
 6. Maintain the 100KB rule: Keep it strictly concise.
 7. TIMESTAMP MANDATE: Every new memory added MUST be prefixed with today's date: [{current_date_short}].
-8. NEUROPLASTICITY: If the logs reveal a critical structural error or a strict new rule an agent must obey forever, output a <neuroplasticity agent="agent_name">The rule.</neuroplasticity> block (e.g., agent="product_manager").
-9. OUTPUT FORMAT: First, output a <sleep_summary>...</sleep_summary> block. Second, output any <neuroplasticity> blocks. Finally, output ONLY the updated markdown file (including the <working_memory> tags). Do not use markdown code block formatting."""
+8. NEUROPLASTICITY: If the logs reveal a critical structural error or a strict new rule an agent must obey forever, create a neuroplasticity rule.
+9. OUTPUT FORMAT: You MUST output a valid JSON object with EXACTLY three keys:
+   - "sleep_summary": A brief text summary of what was consolidated.
+   - "neuroplasticity": Any raw <neuroplasticity> XML tags/rules (or an empty string if none).
+   - "updated_memory": The COMPLETE, fully updated markdown file content (including the <working_memory> tags).
+Do NOT wrap the output in markdown code blocks. Output raw JSON only."""
 
-        # --- FIX: Define the payload using the current memory and the daily logs ---
-        # Note: If your for-loop uses a different variable name for the logs (like 'log_text' or 'interactions'), change 'logs' to match it!
-        # FIX: Send the actual JSON data, not the Typer function object
         payload = f"CURRENT NEOCORTEX MEMORY:\n{current_memory}\n\nNEW DAILY HIPPOCAMPUS LOGS:\n{daily_log}"
 
         console.print(f"[dim]Consolidating {domain_name} memory...[/dim]")
         try:
+            # Secure execution via the Vault
             response = completion(
                 model=model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": payload},
                 ],
+                temperature=0.0,
+                response_format={"type": "json_object"},
+                api_key=vault.get_api_key_for_model(model),
             )
 
-            # Extract the raw text from the LLM response
-            raw_content = str(response.choices[0].message.content)
+            raw_text = str(response.choices[0].message.content).strip()
+
+            # Clean markdown if the LLM disobeys the raw JSON instruction
+            if raw_text.startswith("```json"):
+                raw_text = raw_text[7:-3].strip()
+            elif raw_text.startswith("```"):
+                raw_text = raw_text[3:-3].strip()
+
+            data = json.loads(raw_text)
 
             # --- EXPLAINABILITY: Extract and Print Summary ---
-            summary_match = re.search(
-                r"<sleep_summary>(.*?)</sleep_summary>", raw_content, re.DOTALL
-            )
-            if summary_match:
-                summary_text = summary_match.group(1).strip()
-                console.print(
-                    Panel(
-                        summary_text,
-                        title=f"🧠 {domain_name} Consolidation Summary",
-                        border_style="magenta",
-                    )
+            summary_text = data.get("sleep_summary", "No summary generated.")
+            console.print(
+                Panel(
+                    summary_text,
+                    title=f"🧠 {domain_name} Consolidation Summary",
+                    border_style="magenta",
                 )
-                new_memory = raw_content.replace(summary_match.group(0), "").strip()
-            else:
-                new_memory = raw_content
+            )
 
             # --- NEUROPLASTICITY: Guided Evolution (Staging Area) ---
-            np_matches = list(
-                re.finditer(
-                    r'<neuroplasticity agent="(.*?)">(.*?)</neuroplasticity>',
-                    new_memory,
-                    re.DOTALL,
+            np_content = data.get("neuroplasticity", "")
+            if np_content:
+                np_matches = list(
+                    re.finditer(
+                        r'<neuroplasticity agent="(.*?)">(.*?)</neuroplasticity>',
+                        np_content,
+                        re.DOTALL,
+                    )
                 )
-            )
-            if np_matches:
-                mutations_path = ROOT_DIR / "Meta" / "Mutations.md"
-                mutations_path.parent.mkdir(parents=True, exist_ok=True)
+                if np_matches:
+                    mutations_path = ROOT_DIR / "Meta" / "Mutations.md"
+                    mutations_path.parent.mkdir(parents=True, exist_ok=True)
 
-                with open(mutations_path, "a", encoding="utf-8") as f:
-                    for match in np_matches:
-                        f.write(f"\n{match.group(0)}\n")
+                    with open(mutations_path, "a", encoding="utf-8") as f:
+                        for match in np_matches:
+                            f.write(f"\n{match.group(0)}\n")
 
-                console.print(
-                    f"[bold yellow]🧬 {len(np_matches)} new genetic mutation(s) proposed! Review Personal/Mutations.md[/bold yellow]"
-                )
+                    console.print(
+                        f"[bold yellow]🧬 {len(np_matches)} new genetic mutation(s) proposed! Review Meta/Mutations.md[/bold yellow]"
+                    )
 
-                for match in np_matches:
-                    # Strip the XML out so it doesn't leak into the Vault Markdown
-                    new_memory = new_memory.replace(match.group(0), "").strip()
-
-            # Clean accidental markdown wrappings
-            if new_memory.startswith("```markdown"):
-                new_memory = new_memory[11:-3].strip()
-            elif new_memory.startswith("```"):
-                new_memory = new_memory[3:-3].strip()
+            # --- THE VITAL FIX: Save the actual new memory ---
+            new_memory = data.get("updated_memory", "")
+            if not new_memory:
+                raise ValueError("LLM returned an empty 'updated_memory' string.")
 
             mem_file.write_text(new_memory, encoding="utf-8")
             console.print(
                 f"✅ [green]Synaptic Pruning complete for {domain_name}.[/green]"
+            )
+
+        except json.JSONDecodeError:
+            console.print(
+                f"❌ [red]DMN Error: The Sleep Cycle hallucinated the JSON schema for {domain_name}.[/red]"
             )
         except Exception as e:
             console.print(f"❌ [red]Failed to consolidate {domain_name}: {e}[/red]")

@@ -92,6 +92,7 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 16. Supply Chain Defense (The Blood-Brain Barrier)
 * **Toxin Filtration:** The Blood-Brain Barrier strictly blocks foreign substances from infecting the central nervous system.
 * **Network Isolation:** While Brain OS is operating autonomously in REM Sleep (`BRAIN_OS_HEADLESS=1`), the `blood_brain_barrier.py` organ physically intercepts shell commands. The AI is permitted to execute standard code (`npm run build`, `pytest`), but if it attempts to download external code (`npm install`, `pip install`, `curl | bash`), the barrier rejects the command. This completely immunizes the autonomous dreaming engine from supply-chain attacks, remote code execution, and dependency typo-squatting.
+* **Apoptosis:** If the Blood-Brain Barrier detects an incoming command that could compromise the system using Audit Hooks, it will trigger a shutdown.
 
 ### 17. Event-Driven Reflexes (Somatosensory Cortex)
 * **Sense of Touch:** The Somatosensory Cortex processes physical sensations.
@@ -104,6 +105,8 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 19. Secret Scanning (The Immune System)
 * **Pathogen Neutralization:** The biological immune system patrols the bloodstream, neutralizing foreign pathogens before they can infect cells.
 * **Shift-Left Secret Scanning:** Before Brain OS is allowed to write or append any file to the filesystem, the `immune_system.py` organ acts as a leukocyte barrier. It scans the outbound text stream using strict Zero-Debt regex patterns for high-entropy secrets (AWS Keys, OpenAI tokens, RSA Private Keys). If Forge hallucinates or attempts to hardcode a live secret into your application, the Immune System instantly intercepts and blocks the disk write, enforcing strict environment-variable `.env` hygiene.
+* **Tier 1 (The Nuclear Option):** At boot, a `SecretVault` singleton ingests all LLM API keys into a locked memory state and explicitly scrubs them from `os.environ`. If an agent is tricked into running a malicious script or `printenv`, the environment is clean and keys cannot be stolen.
+* **Tier 2 (Macrophages):** A regex scanner actively monitors all outbound text streams written by the Swarm. It intercepts and blocks execution if an agent attempts to write hardcoded AWS, Stripe, or RSA keys directly to disk.
 
 ### 20. Data Contract Enforcement (Broca's Area)
 * **Speech Articulation:** Broca's Area is responsible for human speech production.

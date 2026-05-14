@@ -270,40 +270,36 @@ def execute_command(command: str, directory_path: str) -> str:
 
     # 3. SHIFT-LEFT: AST MEMBRANE & BINARY WHITELIST (Payload inspection)
     try:
-        from System.neuroanatomy.systemic.blood_brain_barrier import scan_python_ast
+        from System.neuroanatomy.systemic.blood_brain_barrier import (
+            scan_python_ast,
+            wrap_with_apoptosis,
+        )
 
         args = shlex.split(command)
         if args:
             binary = args[0].lower()
 
-            # We only allow the agent to autonomously execute Python or Node scripts.
-            # Executing 'bash' or 'sh' directly bypasses our membrane.
             if binary in ["bash", "sh", "zsh", "powershell", "pwsh", "cmd"]:
                 return "<shell_output>\n<stderr>\nSECURITY BLOCK: Executing raw shell binaries is forbidden. Write Python scripts instead.\n</stderr>\n</shell_output>"
 
-            if binary in ["python", "python3", "py"]:
-                # Catch inline execution: python -c "import os..."
-                if "-c" in args:
-                    c_index = args.index("-c")
-                    if len(args) > c_index + 1:
-                        inline_code = args[c_index + 1]
-                        from System.neuroanatomy.systemic.blood_brain_barrier import (
-                            scan_python_ast_string,
-                        )
-
-                        is_safe_ast, ast_reason = scan_python_ast_string(inline_code)
-                        if not is_safe_ast:
-                            return f"<shell_output>\n<stderr>\n{ast_reason}\n</stderr>\n</shell_output>"
-
+            if binary in ["python", "python3", "py", "uv"]:
                 # Catch file execution: python script.py
-                for arg in args[1:]:
-                    if arg.endswith(".py"):
+                for idx, arg in enumerate(args):
+                    if arg.endswith(".py") and arg != "orchestrator.py":
                         script_path = os.path.join(path_result, arg)
+
+                        # 1. Static check (AST)
                         is_safe_ast, ast_reason = scan_python_ast(script_path)
                         if not is_safe_ast:
                             return f"<shell_output>\n<stderr>\n{ast_reason}\n</stderr>\n</shell_output>"
+
+                        # 2. Runtime check (APOPTOSIS MEMBRANE)
+                        # We rewrite the command to execute the secure membrane instead of the raw script!
+                        membrane_script = wrap_with_apoptosis(script_path)
+                        args[idx] = membrane_script
+                        break  # Only wrap the primary target script
     except ValueError:
-        pass  # shlex parsing error will be caught later
+        pass  # shlex parsing error caught by subprocess
 
     # 4. HITL Check
     if os.environ.get("BRAIN_OS_HEADLESS") != "1":
