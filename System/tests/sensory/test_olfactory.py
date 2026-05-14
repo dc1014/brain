@@ -5,7 +5,7 @@ from System.tools import delete_safe_file
 def test_delete_safe_file_lysosome(tmp_path, monkeypatch):
     monkeypatch.setattr("System.tools.ROOT_DIR", tmp_path)
     monkeypatch.setattr(
-        "System.tools.is_safe_path", lambda x: True
+        "System.tools.is_safe_path", lambda x, require_write=False: True
     )  # <--- Bypass sandbox for test
 
     test_file = tmp_path / "Personal" / "bad_note.md"

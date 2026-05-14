@@ -32,7 +32,7 @@ routes:
           tools: ["base", "write", "execute", "map_spatial_dependencies"]
           context: ["Studio"]
     - agent: "qa_auditor"
-      tools: ["base", "execute", "capture_screenshot", "map_spatial_dependencies"]
+      tools: ["base", "execute", "vision"]
       context: ["Meta", "Domain", "Studio", "Professional"]
     - agent: "deployment_ops"
       tools: ["base", "write", "execute"]
@@ -57,3 +57,8 @@ routes:
     - agent: "daydreamer"
       tools: ["base", "write"]
       context: ["Meta", "Studio", "Personal", "Professional"]
+
+  VISION:
+    - agent: "artist"
+      tools: ["base", "vision"]
+      context: ["Meta", "Domain", "Studio", "Personal", "Professional", "Media"]

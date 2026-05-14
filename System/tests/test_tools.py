@@ -105,7 +105,7 @@ def test_operate_forge_security(tmp_path, monkeypatch) -> None:
     # Mock the safe path using a real, OS-resolved temporary directory
     mock_root = tmp_path.resolve()
     monkeypatch.setattr(tools, "ROOT_DIR", mock_root)
-    monkeypatch.setattr(tools, "is_safe_path", lambda x: True)
+    monkeypatch.setattr(tools, "is_safe_path", lambda x, require_write=False: True)
 
     # 2. Test Missing Engine Block
     res_missing = operate_forge("Empty-Project", "Build stuff")

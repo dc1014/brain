@@ -19,18 +19,35 @@ ALLOWED_DIRECTORIES: set[Path] = {
     ROOT_DIR / "Media",  # <-- The universal binary blob store
 }
 
+# The AI can read these directories to understand itself, but CANNOT modify them
+READ_ONLY_DIRECTORIES: set[Path] = {
+    ROOT_DIR / "System",
+}
+
 console = Console()
 
 
-def is_safe_path(target_path: Path) -> bool:
-    """Check if the target path strictly resides within allowed directories."""
+def is_safe_path(target_path: Path, require_write: bool = False) -> bool:
+    """Check if the target path strictly resides within allowed or read-only directories."""
     resolved_target = target_path.resolve()
+
+    # 1. Check Write-Allowed Zones
     for allowed_dir in ALLOWED_DIRECTORIES:
         try:
             resolved_target.relative_to(allowed_dir)
             return True
         except ValueError:
             continue
+
+    # 2. Check Read-Only Zones (if write is not explicitly required)
+    if not require_write:
+        for ro_dir in READ_ONLY_DIRECTORIES:
+            try:
+                resolved_target.relative_to(ro_dir)
+                return True
+            except ValueError:
+                continue
+
     return False
 
 
@@ -38,7 +55,7 @@ def write_safe_file(filepath: str, content: str) -> str:
     """Writes files safely, blocking writes outside the sandbox."""
     try:
         target_path: Path = (ROOT_DIR / filepath).resolve()
-        if not is_safe_path(target_path):
+        if not is_safe_path(target_path, require_write=True):
             return f"SECURITY BLOCK: Access denied to write at {target_path}."
 
         # SHIFT-LEFT SAFETY: Block any modification to Architectural Decision Records
@@ -116,6 +133,12 @@ def list_safe_directory(directory_path: str) -> str:
     """Lists all files and folders inside a safe directory."""
     try:
         target_path: Path = (ROOT_DIR / directory_path).resolve()
+
+        # SHIFT-LEFT: Virtual Root Directory Support (Prevents lethal halts when agents get lost)
+        if target_path == ROOT_DIR:
+            items = [f"[DIR] {d.name}" for d in ALLOWED_DIRECTORIES if d.exists()]
+            return "OS Root. Safe zones available:\n" + "\n".join(items)
+
         if not is_safe_path(target_path):
             return f"SECURITY BLOCK: Access denied to list directory at {target_path}."
         if not target_path.exists() or not target_path.is_dir():
@@ -136,7 +159,9 @@ def rename_safe_file(old_filepath: str, new_filepath: str) -> str:
         old_path: Path = (ROOT_DIR / old_filepath).resolve()
         new_path: Path = (ROOT_DIR / new_filepath).resolve()
 
-        if not is_safe_path(old_path) or not is_safe_path(new_path):
+        if not is_safe_path(old_path, require_write=True) or not is_safe_path(
+            new_path, require_write=True
+        ):
             return "SECURITY BLOCK: Access denied. Source and dest must be safe."
 
         # SHIFT-LEFT SAFETY: Check both source and destination to prevent ADR tampering/creation.
@@ -158,7 +183,7 @@ def append_safe_file(filepath: str, content: str) -> str:
     """Appends content to a file safely, blocking writes outside the sandbox."""
     try:
         target_path: Path = (ROOT_DIR / filepath).resolve()
-        if not is_safe_path(target_path):
+        if not is_safe_path(target_path, require_write=True):
             return f"SECURITY BLOCK: Access denied to append at {target_path}."
 
         # SHIFT-LEFT SAFETY: Block any modification to Architectural Decision Records
@@ -198,7 +223,7 @@ def bootstrap_project(
     """Clones a project archetype into the Studio directory and initializes dependencies."""
     try:
         target_path: Path = (ROOT_DIR / "Studio" / project_name).resolve()
-        if not is_safe_path(target_path):
+        if not is_safe_path(target_path, require_write=True):
             return f"SECURITY BLOCK: Access denied to clone into {target_path}."
         if target_path.exists():
             return f"ERROR: Directory exists at {target_path.relative_to(ROOT_DIR)}"
@@ -350,7 +375,7 @@ def operate_forge(project_name: str, instruction: str) -> str:
         target_path: Path = (ROOT_DIR / "Studio" / project_name).resolve()
 
         # 1. SHIFT-LEFT SAFETY: Path Traversal & Sandbox Check
-        if not is_safe_path(target_path):
+        if not is_safe_path(target_path, require_write=True):
             return (
                 f"SECURITY BLOCK: Access denied. {target_path} is outside safe zones."
             )
@@ -444,7 +469,9 @@ def copy_safe_file(source_filepath: str, dest_filepath: str) -> str:
         source_path: Path = (ROOT_DIR / source_filepath).resolve()
         dest_path: Path = (ROOT_DIR / dest_filepath).resolve()
 
-        if not is_safe_path(source_path) or not is_safe_path(dest_path):
+        if not is_safe_path(source_path) or not is_safe_path(
+            dest_path, require_write=True
+        ):
             return "SECURITY BLOCK: Access denied. Source and dest must be safe."
         if not source_path.exists():
             return (
@@ -466,6 +493,10 @@ def search_safe_directory(query: str, directory_path: str) -> str:
     """Recursively searches for a string within safe directory bounds, returning telemetry."""
     start_time = time.perf_counter()
     target_path = (ROOT_DIR / directory_path).resolve()
+
+    # SHIFT-LEFT: Graceful redirection for root searches
+    if target_path == ROOT_DIR:
+        return "ERROR: Cannot search the entire OS root. Please narrow your search to a specific safe zone (e.g., 'Studio', 'Personal', 'Professional')."
 
     # SHIFT-LEFT SECURITY: Always check authorization BEFORE existence
     # to prevent path enumeration attacks.
@@ -757,7 +788,7 @@ def delete_safe_file(filepath: str) -> str:
     try:
         target_path = (ROOT_DIR / filepath).resolve()
 
-        if not is_safe_path(target_path):
+        if not is_safe_path(target_path, require_write=True):
             return (
                 f"SECURITY BLOCK: Cannot delete files outside the sandbox ({filepath})."
             )
