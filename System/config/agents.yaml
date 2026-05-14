@@ -1,11 +1,3 @@
-# 🧠 Brain OS: Declarative Agent Pipelines
-
-models:
-  gemini_flash: "gemini/gemini-2.5-flash"
-  claude_haiku: "anthropic/claude-haiku-4-5"
-  gpt_mini: "openai/gpt-4o-mini"
-  claude_sonnet: "anthropic/claude-sonnet-4-5"
-
 agents:
   dispatcher:
     name: "Dispatcher (Gemini)"
@@ -193,62 +185,3 @@ agents:
       </system_instructions>
 
 # The Pipeline Engine: Define how agents compose and hand-off
-routes:
-  FAST:
-    - agent: "fast_responder"
-      tools: ["sense_environment"]
-      context: ["Meta", "Domain"]
-
-  WORKSPACE:
-    - agent: "archivist"
-      tools: ["base", "write", "sense_environment"]
-      context: ["Meta", "Domain"]
-
-  FORGE:
-    - agent: "product_manager"
-      tools: ["base", "write", "execute", "sense_environment"]
-      context: ["Meta", "Domain", "Studio"]
-    - agent: "qa_auditor"
-      tools: ["base"]
-      context: ["Meta", "Domain", "Studio"]
-    - agent: "deployment_ops"
-      tools: ["base", "write", "execute"]
-      context: ["Meta", "Domain", "Studio"]
-
-  SWARM:
-    - agent: "swarm_architect"
-      tools: ["base", "write", "sense_environment"]
-      context: ["Meta", "Domain", "Studio", "Professional"]
-    - swarm:
-        - agent: "frontend_engineer"
-          tools: ["base", "write", "execute", "map_spatial_dependencies"]
-          context: ["Studio"]
-        - agent: "backend_engineer"
-          tools: ["base", "write", "execute", "map_spatial_dependencies"]
-          context: ["Studio"]
-    - agent: "qa_auditor"
-      tools: ["base", "execute", "capture_screenshot", "map_spatial_dependencies"]
-      context: ["Meta", "Domain", "Studio", "Professional"]
-    - agent: "deployment_ops"
-      tools: ["base", "write", "execute"]
-      context: ["Meta", "Domain", "Studio", "Professional"]
-
-  MEMORY:
-    - agent: "archivist"
-      tools: ["base", "write", "sense_environment", "map_spatial_dependencies"]
-      context: ["Meta", "Domain", "Personal", "Professional", "Studio"]
-
-  SENSE:
-    - agent: "archivist"
-      tools: ["base", "sense_environment"]
-      context: ["Meta"]
-
-  SUBCONSCIOUS_FORAGE:
-    - agent: "forager"
-      tools: ["base", "write", "sense_environment"]
-      context: ["Meta", "Personal", "Professional"]
-
-  SUBCONSCIOUS_DAYDREAM:
-    - agent: "daydreamer"
-      tools: ["base", "write"]
-      context: ["Meta", "Studio", "Personal", "Professional"]

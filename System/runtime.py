@@ -2,19 +2,21 @@ import asyncio
 import json
 import os
 import yaml  # type: ignore
-from pathlib import Path
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
-from System.neuroanatomy.systemic.immune_system import vault
 from dotenv import load_dotenv
 
+from System.core.paths import ROOT_DIR
+from System.neuroanatomy.systemic.immune_system import vault
 from System.neuroanatomy.limbic.amygdala import scan_prompt
 from System.neuroanatomy.autonomic.interoception import (
     check_energy_levels,
     log_metabolism,
 )
-from System.neuroanatomy.pathways.polymerase import proofread_agents_yaml
+from System.neuroanatomy.pathways.polymerase import (
+    proofread_yaml_dna,
+)
 from System.llm import acompletion, run_agent_async, get_system_context
 
 load_dotenv()
@@ -24,12 +26,14 @@ vault.secure_environment()
 
 console = Console()
 
-CONFIG_PATH = Path(__file__).parent / "config" / "agents.yaml"
+CONFIG_DIR = ROOT_DIR / "System" / "config"
 try:
     # 🧬 DNA POLYMERASE: Proofread the OS genetic code before booting
-    proofread_agents_yaml(CONFIG_PATH)
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        AGENT_CONFIG = yaml.safe_load(f)
+    proofread_yaml_dna(CONFIG_DIR)
+    AGENT_CONFIG = {}
+    for file in ["models.yaml", "agents.yaml", "routes.yaml"]:
+        with open(CONFIG_DIR / file, "r", encoding="utf-8") as f:
+            AGENT_CONFIG.update(yaml.safe_load(f))
 except Exception as e:
     console.print(f"[bold red]BOOT WARNING: Config failed to load ({e}).[/bold red]")
     AGENT_CONFIG = {"agents": {}, "routes": {}, "models": {}}
@@ -154,7 +158,7 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
 
     commit_transaction()
 
-    tools_path = Path(__file__).parent / "config" / "tools.yaml"
+    tools_path = ROOT_DIR / "System" / "config" / "tools.yaml"
     with open(tools_path, "r", encoding="utf-8") as f:
         available_tools = yaml.safe_load(f)
 
@@ -391,7 +395,7 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
         )
     )
 
-    log_dir = Path(__file__).parent.parent / "logs"
+    log_dir = ROOT_DIR / "logs"
     state_path = log_dir / "pipeline_state.md"
 
     if pipeline_aborted:

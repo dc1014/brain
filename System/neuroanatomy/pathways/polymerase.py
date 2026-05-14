@@ -3,59 +3,54 @@ from pathlib import Path
 
 
 class PolymeraseError(Exception):
-    """Raised when the DNA Polymerase detects a malformed configuration sequence."""
-
     pass
 
 
-def proofread_agents_yaml(yaml_path: str | Path) -> bool:
-    """
-    DNA Polymerase: Proofreads the core agents.yaml configuration.
-    Shift-Left: Fails instantly at boot if the configuration is malformed.
-    """
-    path = Path(yaml_path).resolve()
-    if not path.exists():
-        raise PolymeraseError(f"Critical System File Missing: {path}")
+def proofread_yaml_dna(config_dir: str | Path) -> bool:
+    """DNA Polymerase: Proofreads the fragmented DNA (models, agents, routes)."""
+    config_dir_path = Path(config_dir).resolve()
+    models_file = config_dir_path / "models.yaml"
+    agents_file = config_dir_path / "agents.yaml"
+    routes_file = config_dir_path / "routes.yaml"
+
+    for config_file in [models_file, agents_file, routes_file]:
+        if not config_file.exists():
+            raise PolymeraseError(f"Critical System File Missing: {config_file.name}")
 
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            config = yaml.safe_load(f)
+        with open(models_file, "r", encoding="utf-8") as file:
+            models_cfg = yaml.safe_load(file) or {}
+        with open(agents_file, "r", encoding="utf-8") as file:
+            agents_cfg = yaml.safe_load(file) or {}
+        with open(routes_file, "r", encoding="utf-8") as file:
+            routes_cfg = yaml.safe_load(file) or {}
     except Exception as e:
-        raise PolymeraseError(f"YAML Syntax Error in {path.name}: {e}")
+        raise PolymeraseError(f"YAML Syntax Error: {e}")
 
-    if not isinstance(config, dict):
-        raise PolymeraseError(f"Root of {path.name} must be a dictionary.")
+    if "models" not in models_cfg or not isinstance(models_cfg["models"], dict):
+        raise PolymeraseError("models.yaml is missing required key: 'models'")
 
-    # 1. Validate Models Array
-    if "models" not in config or not isinstance(config["models"], dict):
-        raise PolymeraseError("Missing or invalid required key: 'models'")
+    if "agents" not in agents_cfg or not isinstance(agents_cfg["agents"], dict):
+        raise PolymeraseError("agents.yaml is missing required key: 'agents'")
 
-    # 2. Validate Agent Definitions
-    if "agents" not in config or not isinstance(config["agents"], dict):
-        raise PolymeraseError("Missing or invalid required key: 'agents'")
-
-    for agent_id, agent_data in config["agents"].items():
+    for agent_id, agent_data in agents_cfg["agents"].items():
         if "name" not in agent_data:
-            raise PolymeraseError(f"Agent '{agent_id}' is missing a 'name'.")
+            raise PolymeraseError(f"Agent '{agent_id}' missing 'name'.")
         if "model" not in agent_data:
-            raise PolymeraseError(f"Agent '{agent_id}' is missing a 'model'.")
+            raise PolymeraseError(f"Agent '{agent_id}' missing 'model'.")
         if "system_prompt" not in agent_data:
-            raise PolymeraseError(f"Agent '{agent_id}' is missing a 'system_prompt'.")
-        if agent_data["model"] not in config["models"]:
+            raise PolymeraseError(f"Agent '{agent_id}' missing 'system_prompt'.")
+        if agent_data["model"] not in models_cfg["models"]:
             raise PolymeraseError(
                 f"Agent '{agent_id}' references an unknown model: '{agent_data['model']}'."
             )
 
-    # 3. Validate Routing Pathways (Corrected to 'routes')
-    if "routes" not in config or not isinstance(config["routes"], dict):
-        raise PolymeraseError("Missing or invalid required key: 'routes'")
+    if "routes" not in routes_cfg or not isinstance(routes_cfg["routes"], dict):
+        raise PolymeraseError("routes.yaml is missing required key: 'routes'")
 
-    for route_id, route_data in config["routes"].items():
+    for route_id, route_data in routes_cfg["routes"].items():
         if not isinstance(route_data, list):
-            raise PolymeraseError(
-                f"Route '{route_id}' must be a list of execution steps."
-            )
-
+            raise PolymeraseError(f"Route '{route_id}' must be a list.")
         for step_idx, step in enumerate(route_data):
             if "swarm" in step:
                 if not isinstance(step["swarm"], list):
@@ -63,17 +58,9 @@ def proofread_agents_yaml(yaml_path: str | Path) -> bool:
                         f"Swarm in route '{route_id}' step {step_idx} must be a list."
                     )
             elif "agent" in step:
-                if step["agent"] not in config["agents"]:
+                if step["agent"] not in agents_cfg["agents"]:
                     raise PolymeraseError(
                         f"Route '{route_id}' step {step_idx} references undefined agent '{step['agent']}'."
-                    )
-                if "tools" not in step or not isinstance(step["tools"], list):
-                    raise PolymeraseError(
-                        f"Route '{route_id}' step {step_idx} is missing a valid 'tools' array."
-                    )
-                if "context" not in step or not isinstance(step["context"], list):
-                    raise PolymeraseError(
-                        f"Route '{route_id}' step {step_idx} is missing a valid 'context' array."
                     )
             else:
                 raise PolymeraseError(

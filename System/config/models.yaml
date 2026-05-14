@@ -1,0 +1,5 @@
+models:
+  gemini_flash: "gemini/gemini-2.5-flash"
+  claude_haiku: "anthropic/claude-haiku-4-5"
+  gpt_mini: "openai/gpt-4o-mini"
+  claude_sonnet: "anthropic/claude-sonnet-4-5"

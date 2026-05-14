@@ -29,10 +29,12 @@ from System.runtime import analyze_task, execute_pipeline
 app = typer.Typer(help="Brain OS: The Multi-Agent Life Operating System")
 console = Console()
 
-CONFIG_PATH = Path(__file__).parent / "config" / "agents.yaml"
+CONFIG_DIR = Path(__file__).parent / "config"
 try:
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        AGENT_CONFIG = yaml.safe_load(f)
+    AGENT_CONFIG = {}
+    for filename in ["models.yaml", "agents.yaml", "routes.yaml"]:
+        with open(CONFIG_DIR / filename, "r", encoding="utf-8") as f:
+            AGENT_CONFIG.update(yaml.safe_load(f))
 except Exception as e:
     console.print(f"[bold red]Fatal Error loading agents.yaml:[/bold red] {e}")
     exit(1)
