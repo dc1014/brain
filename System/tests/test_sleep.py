@@ -2,7 +2,7 @@ import json
 
 
 def test_biological_sleep_cycle(monkeypatch, tmp_path):
-    """Proves that sleep creates backups, prunes JSONL, and rotates logs (Amnesia)."""
+    """Proves that sleep creates backups, prunes JSONL, rotates logs (Amnesia), and extracts XML summaries."""
     from System.cli import sleep
 
     # 1. Setup Mock File System cleanly
@@ -16,7 +16,10 @@ def test_biological_sleep_cycle(monkeypatch, tmp_path):
 
     # Write mock hippocampus data
     log_file.write_text(
-        json.dumps({"user_prompt": "I love Python", "response": "Noted."}) + "\n"
+        json.dumps(
+            {"user_prompt": "I love Python", "response": "Noted.", "domain": "PERSONAL"}
+        )
+        + "\n"
     )
 
     # Setup config and neocortex
@@ -31,13 +34,14 @@ def test_biological_sleep_cycle(monkeypatch, tmp_path):
     personal_mem = personal_dir / "personal-memory.md"
     personal_mem.write_text("<working_memory>\n- I like Java\n</working_memory>")
 
-    # 2. Mock the LLM to return a "pruned" string
+    # 2. Mock the LLM to return the new XML summary AND usage stats
     monkeypatch.setattr(
         "System.cli.completion",
         lambda *args, **kwargs: type(
             "Mock",
             (),
             {
+                "usage": type("MockUsage", (), {"total_tokens": 150})(),
                 "choices": [
                     type(
                         "MockChoice",
@@ -47,12 +51,12 @@ def test_biological_sleep_cycle(monkeypatch, tmp_path):
                                 "MockMsg",
                                 (),
                                 {
-                                    "content": "<working_memory>\n- Superseded: I like Java (Now prefers Python)\n</working_memory>"
+                                    "content": "<sleep_summary>Pruned Java, added Python.</sleep_summary>\n<working_memory>\n- [2026-05-08] Superseded: I like Java (Now prefers Python)\n</working_memory>"
                                 },
                             )()
                         },
                     )
-                ]
+                ],
             },
         )(),
     )
@@ -72,7 +76,9 @@ def test_biological_sleep_cycle(monkeypatch, tmp_path):
         "Memory backup missing!"
     )
 
-    # C. Neocortex Updated?
-    assert "Superseded:" in personal_mem.read_text(), (
-        "LLM output was not written to neocortex!"
+    # C. Neocortex Updated and Summary Stripped?
+    final_memory = personal_mem.read_text()
+    assert "Superseded:" in final_memory, "LLM output was not written to neocortex!"
+    assert "<sleep_summary>" not in final_memory, (
+        "The UI summary XML leaked into the permanent markdown vault!"
     )

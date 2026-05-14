@@ -251,6 +251,8 @@ def sleep() -> None:
         else "anthropic/claude-3-haiku-20240307"
     )
 
+    current_date_short = datetime.now().strftime("%Y-%m-%d")
+
     for domain_name, rel_path in domains.items():
         # ZERO-DEBT: Skip API calls for domains that had no activity today
         domain_logs = memories_by_domain.get(domain_name, [])
@@ -264,6 +266,15 @@ def sleep() -> None:
             continue
 
         daily_log = json.dumps(combined_logs, indent=2)
+
+        # --- EXPLAINABILITY: Print Expected Cost ---
+        interaction_count = len(combined_logs)
+        estimated_tokens = (
+            len(daily_log) // 4
+        )  # Standard 1 token ~ 4 chars approximation
+        console.print(
+            f"\n[bold blue]Processing {domain_name} Domain:[/bold blue] {interaction_count} short-term memories (~{estimated_tokens} input tokens)"
+        )
 
         mem_file = ROOT_DIR / rel_path
         if not mem_file.exists():
@@ -284,7 +295,8 @@ def sleep() -> None:
 4. Supersede stale facts (mark old ones as 'Superseded: [Reason]', do not blindly delete history).
 5. Discard transient noise and duplicates.
 6. Maintain the 100KB rule: Keep it strictly concise.
-7. Output ONLY the updated markdown file. Preserve all XML tags like <working_memory>. Do not use markdown code block formatting."""
+7. TIMESTAMP MANDATE: Every new memory added MUST be prefixed with today's date: [{current_date_short}].
+8. OUTPUT FORMAT: First, output a <sleep_summary>...</sleep_summary> block explaining exactly what you learned, added, or pruned. Then, output ONLY the updated markdown file (including the <working_memory> tags). Do not use markdown code block formatting."""
 
         console.print(f"[dim]Consolidating {domain_name} memory...[/dim]")
         try:
@@ -299,7 +311,32 @@ def sleep() -> None:
                 ],
             )
 
-            new_memory = str(response.choices[0].message.content).strip()
+            # --- EXPLAINABILITY: Print Actual Cost ---
+            actual_tokens = (
+                response.usage.total_tokens if hasattr(response, "usage") else 0
+            )
+            console.print(f"[dim]Actual Token Cost: {actual_tokens} tokens[/dim]")
+
+            raw_content = str(response.choices[0].message.content).strip()
+
+            # --- EXPLAINABILITY: Extract and Print Summary ---
+            summary_match = re.search(
+                r"<sleep_summary>(.*?)</sleep_summary>", raw_content, re.DOTALL
+            )
+            if summary_match:
+                summary_text = summary_match.group(1).strip()
+                console.print(
+                    Panel(
+                        summary_text,
+                        title=f"🧠 {domain_name} Consolidation Summary",
+                        border_style="magenta",
+                    )
+                )
+                # Strip the summary out so we only save the pure markdown to the vault
+                new_memory = raw_content.replace(summary_match.group(0), "").strip()
+            else:
+                new_memory = raw_content
+
             # Clean accidental markdown wrappings
             if new_memory.startswith("```markdown"):
                 new_memory = new_memory[11:-3].strip()

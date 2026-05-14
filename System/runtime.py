@@ -188,10 +188,13 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
             break
 
         # RETRY LOOP
-        if step["agent"] == "auditor" and "[GRADE: FAIL]" in step_result.text:
+        if (
+            step["agent"] == "qa_auditor"
+            and '<audit_result grade="FAIL">' in step_result.text
+        ):
             if eval_retries < MAX_RETRIES:
                 console.print(
-                    "\n[bold red]❌ Audit Failed! The Architect needs to fix the implementation.[/bold red]\n"
+                    "\n[bold red]❌ Audit Failed! The Product Manager needs to fix the specification/implementation.[/bold red]\n"
                 )
 
                 # --- SHIFT-LEFT: Headless UI Override ---
@@ -218,21 +221,21 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
                 pipeline.insert(
                     0,
                     {
-                        "agent": "auditor",
-                        "tools": ["base", "write"],
+                        "agent": "qa_auditor",
+                        "tools": ["base"],
                         "context": ["Meta", "Domain", "Studio"],
                     },
                 )
                 pipeline.insert(
                     0,
                     {
-                        "agent": "architect",
-                        "tools": ["base", "write", "execute"],
+                        "agent": "product_manager",
+                        "tools": ["base", "write", "execute", "sense_environment"],
                         "context": ["Meta", "Domain", "Studio"],
                     },
                 )
 
-                current_payload = f"Original Task: {description}\n\nCRITICAL - AUDIT FAILED. Read the critique, fix the code, and redeploy:\n\n{step_result.text}"
+                current_payload = f"Original Task: {description}\n\nCRITICAL - AUDIT FAILED. Read the critique, fix the instructions, and redeploy:\n\n{step_result.text}"
                 eval_retries += 1
                 continue
             else:

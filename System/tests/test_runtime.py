@@ -85,15 +85,20 @@ def test_auditor_headless_retry_bypass(mocker):
     )
 
     # 2. Mock Agent to FAIL on the first try, but PASS on the retry
-    call_count = {"auditor": 0}
+    call_count = {"qa_auditor": 0}
 
     def mock_run_agent_side_effect(*args, **kwargs):
         role_name = kwargs.get("role_name", args[0] if len(args) > 0 else "")
         if "Auditor" in role_name:
-            call_count["auditor"] += 1
-            if call_count["auditor"] == 1:
-                return AgentResponse(text="[GRADE: FAIL] Try again.", usage={})
-            return AgentResponse(text="[GRADE: PASS] Good.", usage={})
+            call_count["qa_auditor"] += 1
+            if call_count["qa_auditor"] == 1:
+                return AgentResponse(
+                    text='<audit_result grade="FAIL">Try again.</audit_result>',
+                    usage={},
+                )
+            return AgentResponse(
+                text='<audit_result grade="PASS">Good.</audit_result>', usage={}
+            )
         return AgentResponse(text="Here is code.", usage={})
 
     mocker.patch("System.runtime.run_agent", side_effect=mock_run_agent_side_effect)
@@ -112,4 +117,4 @@ def test_auditor_headless_retry_bypass(mocker):
     execute_pipeline("Test retry", "FORGE", "STUDIO")
 
     # Assert it called the auditor twice (initial + retry) without crashing on input()
-    assert call_count["auditor"] == 2
+    assert call_count["qa_auditor"] == 2

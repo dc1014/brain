@@ -147,7 +147,7 @@ def test_run_os_retry_circuit_breaker(mocker) -> None:  # type: ignore
         role_name = kwargs.get("role_name", args[0] if len(args) > 0 else "")
         if "Auditor" in role_name:
             return AgentResponse(
-                text="[GRADE: FAIL] The code has hallucinations.",
+                text='<audit_result grade="FAIL">\nThe code has hallucinations.\n</audit_result>',
                 usage={"total_tokens": 50},
             )
         return AgentResponse(
