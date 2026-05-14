@@ -1,0 +1,57 @@
+# -------------------------------------------------------------------
+# 1. Default Behavior
+# -------------------------------------------------------------------
+# Auto-detect text files, normalize to LF in the repo.
+# When checking out on Windows, it will check out as CRLF (if core.autocrlf is true)
+# but it will ALWAYS commit as pure Unix LF.
+* text=auto eol=lf
+
+# -------------------------------------------------------------------
+# 2. Strict Text Files (Always LF)
+# -------------------------------------------------------------------
+# Code & Configuration
+*.py    text eol=lf
+*.js    text eol=lf
+*.jsx   text eol=lf
+*.ts    text eol=lf
+*.tsx   text eol=lf
+*.json  text eol=lf
+*.jsonl text eol=lf
+*.toml  text eol=lf
+*.lock  text eol=lf
+
+# Data Contracts & Documentation
+*.md    text eol=lf
+*.xml   text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.txt   text eol=lf
+
+# Web
+*.html  text eol=lf
+*.css   text eol=lf
+
+# -------------------------------------------------------------------
+# 3. Execution Scripts (CRITICAL)
+# -------------------------------------------------------------------
+# Shell scripts MUST remain LF, even if checked out on Windows.
+# If these get CRLF, Docker containers and Git hooks will fatally crash.
+*.sh    text eol=lf
+scripts/githooks/* text eol=lf
+
+# Windows scripts MUST be CRLF to execute properly in PowerShell/CMD.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# -------------------------------------------------------------------
+# 4. Binary Files (Never alter line endings)
+# -------------------------------------------------------------------
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.woff  binary
+*.woff2 binary
