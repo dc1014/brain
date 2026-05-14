@@ -297,28 +297,35 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
 
         # --- 🗣️ BROCA'S AREA (Data Contract Validation & RETRY LOOP) ---
         if step["agent"] == "qa_auditor":
-            from System.neuroanatomy.cortical.broca import enforce_data_contract
+            try:
+                # ⚡ BULLETPROOF JSON PARSING
+                clean_text = step_result.text.strip()
+                if clean_text.startswith("```json"):
+                    clean_text = clean_text[7:-3].strip()
+                elif clean_text.startswith("```"):
+                    clean_text = clean_text[3:-3].strip()
 
-            is_valid, audit_content = enforce_data_contract(
-                step_result.text, "audit_result"
-            )
+                data = json.loads(clean_text)
+                audit_result = str(data.get("audit_result", "FAIL")).strip().upper()
+                audit_reasoning = str(data.get("reasoning", "No reasoning provided."))
+                is_valid = True
+            except json.JSONDecodeError:
+                is_valid = False
+                audit_result = "FAIL"
+                audit_reasoning = "JSON Parsing Failed. Hallucinated schema."
 
-            if (
-                not is_valid
-                or "FAIL" in audit_content.upper()
-                or '<audit_result grade="FAIL">' in step_result.text
-            ):
+            if not is_valid or audit_result == "FAIL":
                 if eval_retries < MAX_RETRIES:
                     if not is_valid:
                         console.print(
-                            "\n[bold yellow]🗣️ Broca's Area intercepted malformed XML. Forcing retry.[/bold yellow]"
+                            "\n[bold yellow]🗣️ Broca's Area intercepted malformed JSON. Forcing retry.[/bold yellow]"
                         )
-                        critique_msg = f"BROCA FORMATTING ERROR: {audit_content}\nYou must strictly output <audit_result>PASS</audit_result> or <audit_result>FAIL</audit_result>."
+                        critique_msg = "BROCA FORMATTING ERROR: You must strictly output valid JSON with 'audit_result': 'PASS' or 'FAIL'."
                     else:
                         console.print(
                             "\n[bold red]❌ Audit Failed! The Product Manager needs to fix the code.[/bold red]\n"
                         )
-                        critique_msg = f"CRITICAL - AUDIT FAILED. Read the critique, fix the instructions, and redeploy:\n\n{step_result.text}"
+                        critique_msg = f"CRITICAL - AUDIT FAILED. Read the critique, fix the instructions, and redeploy:\n\n{audit_reasoning}"
 
                     if os.environ.get("BRAIN_OS_HEADLESS") == "1":
                         retry_auth = "y"

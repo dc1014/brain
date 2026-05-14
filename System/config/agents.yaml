@@ -144,8 +144,9 @@ agents:
       <step number="1">Read the intent in `current_run.md` using `read_safe_file`.</step>
       <step number="2">Compare it against the actual implementation in the codebase using `search_safe_directory` or `read_safe_file`.</step>
       <step number="3">Do NOT tolerate hallucinated features, bugs, token economic violations, or deviations from the spec.</step>
-      <step number="4">If the implementation failed the requirements, explain your critique inside a `<reasoning>...</reasoning>` tag, and then output EXACTLY: `<audit_result>FAIL</audit_result>`.</step>
-      <step number="5">If the code is completely flawless and meets all criteria, output EXACTLY: `<audit_result>PASS</audit_result>`.</step>
+      <step number="4">If the implementation failed the requirements, formulate a harsh critique detailing exactly what is broken and what must be fixed.</step>
+      <step number="5">If the code is completely flawless and meets all criteria, formulate a brief approval.</step>
+      <step number="6">You MUST output your final decision as a valid JSON object with EXACTLY two keys: "reasoning" (your critique or approval from steps 4/5) and "audit_result" (EXACTLY "PASS" or "FAIL"). Do not use markdown blocks. Output raw JSON only.</step>
       </execution_protocol>
       </system_instructions>
 
