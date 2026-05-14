@@ -2,38 +2,23 @@ import asyncio
 import json
 import yaml  # type: ignore
 import litellm  # type: ignore
-import System.tools as os_tools
-from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from System.neuroanatomy.limbic.hypothalamus import regulate_api_heartbeat
-from System.neuroanatomy.systemic.immune_system import vault  # 🛡️ IMMUNE SYSTEM IMPORT
-from litellm import acompletion  # type: ignore
 from rich.console import Console
+
+from System.core.paths import ROOT_DIR
+from System.neuroanatomy.limbic.hypothalamus import regulate_api_heartbeat
+from System.neuroanatomy.systemic.immune_system import vault
+from litellm import acompletion  # type: ignore
 
 litellm.telemetry = False
 litellm.drop_params = True
 
 console = Console()
 
-
-# --- 🧠 BIOMIMETIC LOCKING (Zero-Debt Race Condition Prevention) ---
-class MotorCortex:
-    """
-    Coordinates file-system motor actions to prevent race conditions
-    when parallel Swarm agents attempt to write to the exact same file.
-    """
-
-    _locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
-
-    @classmethod
-    def get_lock(cls, filepath: str | Path) -> asyncio.Lock:
-        return cls._locks[str(Path(filepath).resolve())]
-
-
-LOG_DIR: Path = Path(__file__).parent.parent / "logs"
+LOG_DIR: Path = ROOT_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE: Path = LOG_DIR / "agent_interactions.jsonl"
 
@@ -67,6 +52,9 @@ async def log_interaction(
         "tokens": usage,
     }
 
+    # Secure the Motor Cortex lock for the shared log file
+    from System.neuroanatomy.cortical.motor_cortex import MotorCortex
+
     async with MotorCortex.get_lock(LOG_FILE):
 
         def _write():
@@ -80,8 +68,7 @@ def get_system_context(
     context_tags: list[str], domain: str = "NONE", prompt: str = ""
 ) -> str:
     context = ""
-    root_dir = Path(__file__).parent.parent
-    memory_config_path = Path(__file__).parent / "config" / "memory.yaml"
+    memory_config_path = ROOT_DIR / "System" / "config" / "memory.yaml"
 
     try:
         with open(memory_config_path, "r", encoding="utf-8") as f:
@@ -94,7 +81,7 @@ def get_system_context(
         rel_path = memory_map.get(target_folder)
 
         if rel_path:
-            path = root_dir / rel_path
+            path = ROOT_DIR / rel_path
             if path.exists():
                 content = path.read_text(encoding="utf-8")
 
@@ -117,8 +104,15 @@ async def run_agent_async(
     route: str = "UNKNOWN",
     domain: str = "NONE",
 ) -> AgentResponse:
+    # ⚡ SHIFT-LEFT FIX: Declare variables outside the try block
+    action_manifest: list[str] = []
+    final_text: str = ""
+    total_prompt: int = 0
+    total_comp: int = 0
+
     try:
         from System.neuroanatomy.pathways.corpus_callosum import route_hemisphere
+        from System.neuroanatomy.cortical.motor_cortex import execute_tools
 
         model_string = route_hemisphere(route, model_string)
 
@@ -126,10 +120,6 @@ async def run_agent_async(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
-        action_manifest: list[str] = []
-        final_text: str = ""
-        total_prompt: int = 0
-        total_comp: int = 0
 
         for step in range(15):
             if len(messages) > 7:
@@ -140,7 +130,7 @@ async def run_agent_async(
             else:
                 pruned_messages = messages
 
-            # 🛡️ IMMUNE SYSTEM: Check the Vault, not the environment!
+            # 🛡️ IMMUNE SYSTEM: Check the Vault
             _has_anthropic = bool(
                 vault.get_api_key_for_model("anthropic/claude-3-haiku")
             )
@@ -160,9 +150,7 @@ async def run_agent_async(
             kwargs: dict[str, Any] = {
                 "model": model_string,
                 "messages": pruned_messages,
-                "api_key": vault.get_api_key_for_model(
-                    model_string
-                ),  # 🛡️ SECURE INJECTION
+                "api_key": vault.get_api_key_for_model(model_string),
             }
             if tools:
                 kwargs["tools"] = tools
@@ -195,84 +183,18 @@ async def run_agent_async(
 
             messages.append(message_dict)
 
+            # --- ⚡ DELEGATE TO MOTOR CORTEX ---
             if hasattr(message, "tool_calls") and message.tool_calls:
-                if step == 0:
-                    console.print(
-                        f"\n[dim]⚡ {role_name} is thinking and acting...[/dim]"
-                    )
+                tool_messages, new_actions, halt_text = await execute_tools(
+                    message.tool_calls, role_name, step_index=step
+                )
 
-                for tool_call in message.tool_calls:
-                    args = json.loads(tool_call.function.arguments)
-                    func_name = str(tool_call.function.name)
-                    tool_id = str(tool_call.id)
+                messages.extend(tool_messages)
+                action_manifest.extend(new_actions)
 
-                    try:
-                        if not hasattr(os_tools, func_name):
-                            result = (
-                                f"ERROR: Unknown tool '{func_name}' in System.tools"
-                            )
-                        else:
-                            tool_func = getattr(os_tools, func_name)
-
-                            WRITE_TOOLS = {
-                                "write_safe_file",
-                                "append_safe_file",
-                                "delete_safe_file",
-                                "rename_safe_file",
-                                "copy_safe_file",
-                            }
-
-                            if func_name in WRITE_TOOLS:
-                                target_path = (
-                                    args.get("filepath")
-                                    or args.get("dest_filepath")
-                                    or args.get("new_filepath")
-                                    or "global_write"
-                                )
-                                async with MotorCortex.get_lock(target_path):
-                                    result = await asyncio.to_thread(tool_func, **args)
-                            else:
-                                result = await asyncio.to_thread(tool_func, **args)
-
-                            action_manifest.append(
-                                f"[{func_name.upper()}] Executed successfully."
-                            )
-                    except Exception as e:
-                        result = f"ERROR executing {func_name}: {str(e)}"
-
-                    console.print(f"[dim]🔍 Tool Executed: {func_name}[/dim]")
-
-                    raw_output = str(result)
-                    MAX_CHARS = 8000
-                    truncated_output = raw_output[:MAX_CHARS] + (
-                        f"\n\n... [SYSTEM WARNING: Truncated at {MAX_CHARS} chars]"
-                        if len(raw_output) > MAX_CHARS
-                        else ""
-                    )
-
-                    messages.append(
-                        {
-                            "role": "tool",
-                            "name": func_name,
-                            "tool_call_id": tool_id,
-                            "content": truncated_output,
-                        }
-                    )
-
-                    if str(result).startswith("SECURITY BLOCK") or str(
-                        result
-                    ).startswith("<shell_output>\n<stderr>\nSECURITY BLOCK"):
-                        final_text += f"\n\n[SYSTEM HALT] {result}"
-                        action_manifest.append("[HALTED] Security clearance denied.")
-                        return AgentResponse(
-                            text=final_text.strip(),
-                            actions=action_manifest,
-                            usage={
-                                "prompt_tokens": total_prompt,
-                                "completion_tokens": total_comp,
-                                "total_tokens": total_prompt + total_comp,
-                            },
-                        )
+                if halt_text:
+                    final_text += halt_text
+                    break
                 continue
             else:
                 break

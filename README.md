@@ -44,7 +44,7 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 
 ### 4. Sensory & Motor Systems (I/O)
 * **The Retina (Transduction):** The `Sense` tool acts as a sensory organ, transducing chaotic environmental noise (raw DOM/HTML) into clean, LLM-readable Markdown.
-* **The Motor Cortex:** The `execute_shell_command` tool allows the OS to physically manipulate its host environment, compiling code and moving files.
+* **The Motor Cortex:** Physically decouples the "thinking" (LLM API calls) from the "doing" (Tool execution). It safely unpacks JSON tool calls, executes the requested Python functions, and automatically applies `asyncio.Lock` mechanisms to physical file paths to prevent parallel Swarm agents from corrupting data via race conditions. It also acts as an involuntary circuit breaker, instantly severing the cognitive loop if a motor action returns a `SECURITY BLOCK`.
 
 ### 5. Shift-Left Threat Detection (The Amygdala)
 * **The Flinch Reflex:** Before a prompt ever reaches the expensive, analytical LLM router (Prefrontal Cortex), it passes through `amygdala.py`—a sub-millisecond heuristic engine. It flinches and snaps the circuit breaker instantly if it detects prompt injections or catastrophic commands (`rm -rf`).
