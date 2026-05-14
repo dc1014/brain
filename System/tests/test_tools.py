@@ -366,7 +366,7 @@ def test_tools_yaml_schema_validity():
 def test_speak(mocker):
     from System.tools import speak
 
-    mocker.patch("System.organs.broca.synthesize_speech")
+    mocker.patch("System.neuroanatomy.cortical.broca.synthesize_speech")
     mocker.patch("Sense.receptors.audio.play_audio")
 
     res = speak("Hello")
@@ -383,10 +383,12 @@ def test_analyze_audio(tmp_path, mocker):
     fake_audio.write_text("fake binary")
 
     mocker.patch(
-        "System.organs.wernicke.transcribe_speech", return_value="Speech text."
+        "System.neuroanatomy.cortical.wernicke.transcribe_speech",
+        return_value="Speech text.",
     )
     mocker.patch(
-        "System.organs.temporal_lobe.comprehend_sound", return_value="Bird sound."
+        "System.neuroanatomy.cortical.temporal_lobe.comprehend_sound",
+        return_value="Bird sound.",
     )
 
     res = analyze_audio("test.wav")

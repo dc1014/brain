@@ -53,7 +53,7 @@ def scrape(
 @app.command()
 def flush() -> None:
     """Lymphatic System: Sweeps metabolic waste (old logs, baks) into compressed tarball archives."""
-    from System.organs.lymphatic import flush_waste
+    from System.neuroanatomy.systemic.lymphatic import flush_waste
 
     flush_waste()
 
@@ -61,7 +61,7 @@ def flush() -> None:
 @app.command()
 def purge() -> None:
     """Lymphatic System: Destructively and permanently deletes all tarball archives."""
-    from System.organs.lymphatic import purge_waste
+    from System.neuroanatomy.systemic.lymphatic import purge_waste
 
     purge_waste()
 
@@ -69,7 +69,7 @@ def purge() -> None:
 @app.command()
 def sleep() -> None:
     """Pineal Gland: Manually force the OS into a Deep Sleep cycle (Flush + REM)."""
-    from System.organs.pineal import enter_sleep_cycle
+    from System.neuroanatomy.autonomic.pineal import enter_sleep_cycle
 
     enter_sleep_cycle()
 
@@ -88,7 +88,7 @@ def perceive(
     image_path: str, query: str = "Describe this image in extreme detail."
 ) -> None:
     """Sense: Uses the Occipital Lobe to read an image file and extract semantic meaning."""
-    from System.organs.occipital import perceive_image
+    from System.neuroanatomy.cortical.occipital import perceive_image
 
     result = perceive_image(image_path, query)
     console.print(result)
@@ -146,7 +146,7 @@ def smell(
     ),
 ):
     """The Olfactory Bulb: Runs zero-token static analysis to find dead code and broken links."""
-    from System.organs.olfactory import (
+    from System.neuroanatomy.sensory.olfactory import (
         process_scent_profile,
     )  # <--- Ensure this is process_scent_profile, NOT sniff_vault
 

@@ -6,12 +6,15 @@ from pathlib import Path
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
-from System.organs.immune_system import vault
+from System.neuroanatomy.systemic.immune_system import vault
 from dotenv import load_dotenv
 
-from System.organs.amygdala import scan_prompt
-from System.organs.interoception import check_energy_levels, log_metabolism
-from System.organs.polymerase import proofread_agents_yaml
+from System.neuroanatomy.limbic.amygdala import scan_prompt
+from System.neuroanatomy.autonomic.interoception import (
+    check_energy_levels,
+    log_metabolism,
+)
+from System.neuroanatomy.pathways.polymerase import proofread_agents_yaml
 from System.llm import acompletion, run_agent_async, get_system_context
 
 load_dotenv()
@@ -36,7 +39,7 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
     """Analyzes a user prompt using the Dispatcher to determine validity, routing, and domain context."""
 
     # --- 🦠 ENTERIC NERVOUS SYSTEM (Gut Reaction) ---
-    from System.organs.enteric import get_gut_reaction, save_gut_reaction
+    from System.neuroanatomy.systemic.enteric import get_gut_reaction, save_gut_reaction
 
     # ⚡ SHIFT-LEFT: Prevent Async Blocking on File I/O
     gut_reflex = await asyncio.to_thread(get_gut_reaction, prompt)
@@ -59,7 +62,7 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
         base_model = AGENT_CONFIG["models"][dispatcher_cfg["model"]]
 
         # 🧠 CORPUS CALLOSUM: Route Dispatcher (Analytical) to Left Brain
-        from System.organs.corpus_callosum import route_hemisphere
+        from System.neuroanatomy.pathways.corpus_callosum import route_hemisphere
 
         actual_model = route_hemisphere("DISPATCHER", base_model)
 
@@ -122,7 +125,7 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
 def get_resolved_model(desired_model_key: str, is_exhausted: bool) -> str:
     """Helper to resolve the fallback LLM models securely using the Vault."""
     if is_exhausted:
-        from System.organs.endocrine import is_cortisol_active
+        from System.neuroanatomy.systemic.endocrine import is_cortisol_active
 
         if not is_cortisol_active():
             desired_model_key = "gpt_mini"
@@ -144,7 +147,10 @@ def get_resolved_model(desired_model_key: str, is_exhausted: bool) -> str:
 
 
 async def execute_pipeline(description: str, route_type: str, domain: str) -> None:
-    from System.organs.vestibular import commit_transaction, restore_balance
+    from System.neuroanatomy.autonomic.vestibular import (
+        commit_transaction,
+        restore_balance,
+    )
 
     commit_transaction()
 
@@ -291,7 +297,7 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
 
         # --- 🗣️ BROCA'S AREA (Data Contract Validation & RETRY LOOP) ---
         if step["agent"] == "qa_auditor":
-            from System.organs.broca import enforce_data_contract
+            from System.neuroanatomy.cortical.broca import enforce_data_contract
 
             is_valid, audit_content = enforce_data_contract(
                 step_result.text, "audit_result"

@@ -13,7 +13,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from litellm import completion  # type: ignore
-from System.organs.basal_ganglia import tick_habits
+from System.neuroanatomy.limbic.basal_ganglia import tick_habits
 
 
 # --- SHIFT-LEFT: CROSS-PLATFORM ENCODING FIX ---
@@ -51,7 +51,10 @@ def task(
         False, "--explore", help="Release Dopamine: Increase creativity."
     ),
 ) -> None:
-    from System.organs.endocrine import release_cortisol, release_dopamine
+    from System.neuroanatomy.systemic.endocrine import (
+        release_cortisol,
+        release_dopamine,
+    )
 
     # 1. Subconscious Pulse: Check background habits before conscious thought
     tick_habits()
@@ -225,8 +228,8 @@ def daydream(
     ),
 ) -> None:
     """Default Mode Network: Synthesizes thoughts, or safely prototypes software via REM Paralysis."""
-    from System.organs.pineal import is_host_asleep
-    from System.organs.dmn import enforce_rem_paralysis
+    from System.neuroanatomy.autonomic.pineal import is_host_asleep
+    from System.neuroanatomy.autonomic.dmn import enforce_rem_paralysis
 
     # 1. Pineal Gland Check (Optional safeguard, mostly for autonomous pacemakers, but good to log)
     if not is_host_asleep(idle_hours_threshold=0.1):  # Just a check for demo purposes
@@ -662,7 +665,7 @@ def init() -> None:
 @app.command()
 def start_autonomic():
     """Wakes up the Autonomic Nervous System (Background Pacemaker)."""
-    from System.organs.autonomic import run_pacemaker
+    from System.neuroanatomy.autonomic.autonomic import run_pacemaker
 
     run_pacemaker()
 
@@ -681,7 +684,7 @@ def observe(
     ),
 ) -> None:
     """Mirror Neurons: Scans human code or prose to deduce style and proposes genetic alignment mutations."""
-    from System.organs.mirror_neurons import observe_human_behavior
+    from System.neuroanatomy.cortical.mirror_neurons import observe_human_behavior
 
     os.environ["BRAIN_OS_HEADLESS"] = "1"
 
@@ -702,7 +705,7 @@ def watch(
     ),
 ) -> None:
     """Somatosensory Cortex: Runs a background watcher to trigger local reflexes."""
-    from System.organs.somatosensory import start_local_watcher
+    from System.neuroanatomy.sensory.somatosensory import start_local_watcher
 
     # If a specific target is provided, wrap it in a list. Otherwise, pass None to use all defaults.
     target_list = [target] if target else None
@@ -712,7 +715,7 @@ def watch(
 @app.command()
 def reindex() -> None:
     """Maintenance: Wipes and rebuilds the Ephemeral Glass Brain (SQLite index) from flat files."""
-    from System.organs.hippocampus import rebuild_index
+    from System.neuroanatomy.limbic.hippocampus import rebuild_index
 
     console.print("[bold blue]🧠 Rebuilding Hippocampus Index...[/bold blue]")
     rebuild_index()
@@ -722,7 +725,7 @@ def reindex() -> None:
 @app.command()
 def speak(text: str = typer.Argument(..., help="Text for the brain to say out loud.")):
     """Broca's Area + Physical Speaker: Synthesizes and plays speech independently."""
-    from System.organs.broca import synthesize_speech
+    from System.neuroanatomy.cortical.broca import synthesize_speech
     from Sense.receptors.audio import play_audio
     from pathlib import Path
     import tempfile
@@ -752,8 +755,8 @@ def listen(
 ):
     """The Biological Ear: Records the room OR reads an audio file, comprehends it, and routes intent."""
     from Sense.receptors.audio import record_audio
-    from System.organs.wernicke import transcribe_speech
-    from System.organs.temporal_lobe import comprehend_sound
+    from System.neuroanatomy.cortical.wernicke import transcribe_speech
+    from System.neuroanatomy.cortical.temporal_lobe import comprehend_sound
     from System.tools import is_safe_path
     from pathlib import Path
     import asyncio
@@ -854,7 +857,7 @@ def smell(
     ),  # <--- Changed default to "."
 ):
     """The Olfactory Bulb: Runs zero-token static analysis to find dead code and broken links."""
-    from System.organs.olfactory import process_scent_profile
+    from System.neuroanatomy.sensory.olfactory import process_scent_profile
 
     console.print(
         f"[bold cyan]👃 Olfactory Bulb smelling '{directory}' for anomalies...[/bold cyan]"

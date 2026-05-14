@@ -29,4 +29,6 @@ def bypass_amygdala_network_calls(mocker):
         choices = [MockChoice()]
 
     # Intercept the network call and instantly return "SAFE" for all tests automatically
-    mocker.patch("System.organs.amygdala.completion", return_value=MockResponse())
+    mocker.patch(
+        "System.neuroanatomy.limbic.amygdala.completion", return_value=MockResponse()
+    )

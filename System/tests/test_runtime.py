@@ -30,9 +30,12 @@ async def test_analyze_task_llm_parsing(mocker, monkeypatch, tmp_path) -> None:
 
     # --- 1. FORCE DISABLE Gut Reflex (Zero-Debt Isolation) ---
     monkeypatch.setattr(
-        "System.organs.enteric.GUT_MEMORY_FILE", tmp_path / "fake_gut.json"
+        "System.neuroanatomy.systemic.enteric.GUT_MEMORY_FILE",
+        tmp_path / "fake_gut.json",
     )
-    mocker.patch("System.organs.enteric.get_gut_reaction", return_value=None)
+    mocker.patch(
+        "System.neuroanatomy.systemic.enteric.get_gut_reaction", return_value=None
+    )
 
     # --- 2. Setup mock LLM response ---
     async def mock_acompletion(*args, **kwargs):
@@ -68,7 +71,9 @@ async def test_analyze_task_llm_rejection(mocker) -> None:  # type: ignore
     """Test that the dispatcher correctly handles explicit REJECTED messages."""
 
     # Isolate the test by disabling the gut reflex!
-    mocker.patch("System.organs.enteric.get_gut_reaction", return_value=None)
+    mocker.patch(
+        "System.neuroanatomy.systemic.enteric.get_gut_reaction", return_value=None
+    )
 
     # Setup mock LLM response acting like it hit a limitation
     msg = MagicMock()
@@ -94,7 +99,9 @@ async def test_analyze_task_api_error(mocker) -> None:  # type: ignore
     """Test that API errors during dispatch fail safely."""
 
     # Isolate the test by disabling the gut reflex!
-    mocker.patch("System.organs.enteric.get_gut_reaction", return_value=None)
+    mocker.patch(
+        "System.neuroanatomy.systemic.enteric.get_gut_reaction", return_value=None
+    )
 
     # FIX: Patch the local module reference, NOT the global litellm module!
     mock_completion = mocker.patch(
@@ -121,8 +128,8 @@ async def test_auditor_headless_retry_bypass(mocker):
         "System.runtime.analyze_task",
         return_value=(True, "Approved", "FORGE", "STUDIO", {"total_tokens": 10}),
     )
-    mocker.patch("System.organs.vestibular.commit_transaction")
-    mocker.patch("System.organs.vestibular.restore_balance")
+    mocker.patch("System.neuroanatomy.autonomic.vestibular.commit_transaction")
+    mocker.patch("System.neuroanatomy.autonomic.vestibular.restore_balance")
 
     # 2. Mock Agent to FAIL on the first try, but PASS on the retry
     call_count = {"qa_auditor": 0}
@@ -163,9 +170,12 @@ async def test_analyze_task_local_slm_routes(mocker, monkeypatch, tmp_path) -> N
 
     # Isolate the test
     monkeypatch.setattr(
-        "System.organs.enteric.GUT_MEMORY_FILE", tmp_path / "fake_gut.json"
+        "System.neuroanatomy.systemic.enteric.GUT_MEMORY_FILE",
+        tmp_path / "fake_gut.json",
     )
-    mocker.patch("System.organs.enteric.get_gut_reaction", return_value=None)
+    mocker.patch(
+        "System.neuroanatomy.systemic.enteric.get_gut_reaction", return_value=None
+    )
 
     async def mock_acompletion(*args, **kwargs):
         class MockChoice:

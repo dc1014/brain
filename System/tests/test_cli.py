@@ -116,11 +116,13 @@ def test_bootstrap_security_block(tmp_path: Path, mocker) -> None:  # type: igno
 def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # type: ignore
     """Test that command execution is sandboxed and respects HITL."""
     mocker.patch("System.tools.ROOT_DIR", tmp_path)
-    mocker.patch("System.organs.blood_brain_barrier.ROOT_DIR", tmp_path)
+    mocker.patch("System.neuroanatomy.systemic.blood_brain_barrier.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
 
     # <-- ADD THIS LINE: Bypass the LLM network call in the test environment
-    mocker.patch("System.organs.amygdala.scan_command", return_value=(True, "Safe"))
+    mocker.patch(
+        "System.neuroanatomy.limbic.amygdala.scan_command", return_value=(True, "Safe")
+    )
 
     studio_dir = tmp_path / "Studio" / "TestProject"
     studio_dir.mkdir(parents=True, exist_ok=True)

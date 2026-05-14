@@ -46,14 +46,14 @@ def write_safe_file(filepath: str, content: str) -> str:
             return f"SECURITY BLOCK: Cannot modify ADRs. Human approval required for {filepath}."
 
         # --- 🦠 IMMUNE SYSTEM REFLEX (Secret Scanning) ---
-        from System.organs.immune_system import scan_for_pathogens
+        from System.neuroanatomy.systemic.immune_system import scan_for_pathogens
 
         is_clean, immune_reason = scan_for_pathogens(content)
         if not is_clean:
             return immune_reason
 
         # --- ⚖️ VESTIBULAR REFLEX (Take Snapshot) ---
-        from System.organs.vestibular import create_snapshot
+        from System.neuroanatomy.autonomic.vestibular import create_snapshot
 
         create_snapshot(filepath)
 
@@ -166,14 +166,14 @@ def append_safe_file(filepath: str, content: str) -> str:
             return f"SECURITY BLOCK: Cannot modify ADRs. Human approval required for {filepath}."
 
         # --- 🦠 IMMUNE SYSTEM REFLEX (Secret Scanning) ---
-        from System.organs.immune_system import scan_for_pathogens
+        from System.neuroanatomy.systemic.immune_system import scan_for_pathogens
 
         is_clean, immune_reason = scan_for_pathogens(content)
         if not is_clean:
             return immune_reason
 
         # --- ⚖️ VESTIBULAR REFLEX (Take Snapshot) ---
-        from System.organs.vestibular import create_snapshot
+        from System.neuroanatomy.autonomic.vestibular import create_snapshot
 
         create_snapshot(filepath)
 
@@ -249,8 +249,8 @@ def bootstrap_project(
 
 def execute_command(command: str, directory_path: str) -> str:
     """Runs a terminal command strictly within the BBB Sandbox and demands Human Approval."""
-    from System.organs.blood_brain_barrier import validate_execution_path
-    from System.organs.amygdala import scan_command
+    from System.neuroanatomy.systemic.blood_brain_barrier import validate_execution_path
+    from System.neuroanatomy.limbic.amygdala import scan_command
     import subprocess
     import os
     import shlex
@@ -270,7 +270,7 @@ def execute_command(command: str, directory_path: str) -> str:
 
     # 3. SHIFT-LEFT: AST MEMBRANE & BINARY WHITELIST (Payload inspection)
     try:
-        from System.organs.blood_brain_barrier import scan_python_ast
+        from System.neuroanatomy.systemic.blood_brain_barrier import scan_python_ast
 
         args = shlex.split(command)
         if args:
@@ -287,7 +287,7 @@ def execute_command(command: str, directory_path: str) -> str:
                     c_index = args.index("-c")
                     if len(args) > c_index + 1:
                         inline_code = args[c_index + 1]
-                        from System.organs.blood_brain_barrier import (
+                        from System.neuroanatomy.systemic.blood_brain_barrier import (
                             scan_python_ast_string,
                         )
 
@@ -334,7 +334,7 @@ def execute_command(command: str, directory_path: str) -> str:
 
         # RESTORED AND CORRECTED: Microglia Autonomous Bug Fixing
         if result.returncode != 0:
-            from System.organs.microglia import trigger_immune_response
+            from System.neuroanatomy.systemic.microglia import trigger_immune_response
 
             # The Microglia intercepts the failure, generates an antibody patch,
             # and applies it autonomously in the correct directory.
@@ -583,14 +583,14 @@ def create_engram_tool(name: str, description: str, commands: str) -> str:
     Saves a sequence of bash/shell commands into procedural muscle memory.
     Use this when you successfully complete a complex, multi-step task that will likely be repeated.
     """
-    from System.organs.cerebellum import save_engram
+    from System.neuroanatomy.autonomic.cerebellum import save_engram
 
     return save_engram(name, description, commands)
 
 
 def list_engrams_tool() -> str:
     """Lists all available muscle memory scripts (engrams) the system knows how to do instantly."""
-    from System.organs.cerebellum import list_engrams
+    from System.neuroanatomy.autonomic.cerebellum import list_engrams
 
     return list_engrams()
 
@@ -600,14 +600,14 @@ def execute_engram_tool(name: str, args: str = "") -> str:
     Instantly executes a learned engram (bash script).
     Use this instead of manually executing shell commands if an engram already exists.
     """
-    from System.organs.cerebellum import execute_engram
+    from System.neuroanatomy.autonomic.cerebellum import execute_engram
 
     return execute_engram(name, args)
 
 
 def search_hippocampus(query: str) -> str:
     """Searches the AI's long-term ephemeral index for code snippets."""
-    from System.organs.hippocampus import recall_memory
+    from System.neuroanatomy.limbic.hippocampus import recall_memory
 
     return recall_memory(query)
 
@@ -624,7 +624,11 @@ def manage_background_process(
     - command: The terminal command to run (e.g., 'npm run dev'). Required for 'start'.
     - cwd: The directory to run the command in (optional).
     """
-    from System.organs.proprioception import start_process, stop_process, list_processes
+    from System.neuroanatomy.autonomic.proprioception import (
+        start_process,
+        stop_process,
+        list_processes,
+    )
 
     if action == "list":
         return list_processes()
@@ -645,7 +649,7 @@ def analyze_image(image_path: str, query: str) -> str:
     Use this to look at and analyze an image file on the disk (e.g., a screenshot or diagram).
     Pass a specific query like 'Does this UI match the spec?' or 'What is in this image?'.
     """
-    from System.organs.occipital import perceive_image
+    from System.neuroanatomy.cortical.occipital import perceive_image
 
     return perceive_image(image_path, query)
 
@@ -656,7 +660,7 @@ def generate_image(prompt: str, output_filename: str) -> str:
     The image will be saved to the Studio/ directory.
     output_filename should be a relative path like 'My-App/public/logo.png'.
     """
-    from System.organs.occipital import generate_visual_asset
+    from System.neuroanatomy.cortical.occipital import generate_visual_asset
 
     return generate_visual_asset(prompt, output_filename)
 
@@ -683,7 +687,7 @@ def semantic_search(directory: str, query: str) -> str:
     and then uses Wernicke's Area (an LLM) to comprehend and extract the exact answer.
     """
     from System.tools import search_safe_directory
-    from System.organs.wernicke import filter_semantic_relevance
+    from System.neuroanatomy.cortical.wernicke import filter_semantic_relevance
 
     # 1. Fast Path (Hippocampus): Get keyword matches
     # Removed the invalid 'limit' arg and explicitly named the parameters
@@ -697,7 +701,7 @@ def semantic_search(directory: str, query: str) -> str:
 
 def speak(text: str) -> str:
     """BROCA + MOUTH: Speaks text out loud to the user."""
-    from System.organs.broca import synthesize_speech
+    from System.neuroanatomy.cortical.broca import synthesize_speech
     from Sense.receptors.audio import play_audio
     import tempfile
     from pathlib import Path
@@ -713,8 +717,8 @@ def speak(text: str) -> str:
 
 def analyze_audio(filepath: str) -> str:
     """TEMPORAL LOBE + WERNICKE: Transcribes speech and analyzes environmental sound."""
-    from System.organs.wernicke import transcribe_speech
-    from System.organs.temporal_lobe import comprehend_sound
+    from System.neuroanatomy.cortical.wernicke import transcribe_speech
+    from System.neuroanatomy.cortical.temporal_lobe import comprehend_sound
 
     try:
         target_path = (ROOT_DIR / filepath).resolve()
@@ -791,7 +795,7 @@ def taste_safe_file(filepath: str) -> str:
     """
     GUSTATORY: Safely samples large/dense files (PDF, CSV, Logs) to prevent token bloat.
     """
-    from System.organs.gustatory import process_taste_profile
+    from System.neuroanatomy.sensory.gustatory import process_taste_profile
 
     target_path = (ROOT_DIR / filepath).resolve()
     if not is_safe_path(target_path):
@@ -808,7 +812,7 @@ def map_spatial_dependencies(
     Formats: 'json', 'mermaid', 'vertigo_check'.
     Map Types: 'code' (imports) or 'notes' (Obsidian links).
     """
-    from System.organs.parietal_lobe import generate_spatial_map
+    from System.neuroanatomy.cortical.parietal_lobe import generate_spatial_map
 
     target_path = (ROOT_DIR / directory_path).resolve()
     if not is_safe_path(target_path):

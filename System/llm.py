@@ -8,8 +8,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from System.organs.hypothalamus import regulate_api_heartbeat
-from System.organs.immune_system import vault  # 🛡️ IMMUNE SYSTEM IMPORT
+from System.neuroanatomy.limbic.hypothalamus import regulate_api_heartbeat
+from System.neuroanatomy.systemic.immune_system import vault  # 🛡️ IMMUNE SYSTEM IMPORT
 from litellm import acompletion  # type: ignore
 from rich.console import Console
 
@@ -99,7 +99,7 @@ def get_system_context(
                 content = path.read_text(encoding="utf-8")
 
                 if prompt:
-                    from System.organs.thalamus import filter_attention
+                    from System.neuroanatomy.limbic.thalamus import filter_attention
 
                     content = filter_attention(prompt, content)
 
@@ -118,7 +118,7 @@ async def run_agent_async(
     domain: str = "NONE",
 ) -> AgentResponse:
     try:
-        from System.organs.corpus_callosum import route_hemisphere
+        from System.neuroanatomy.pathways.corpus_callosum import route_hemisphere
 
         model_string = route_hemisphere(route, model_string)
 
