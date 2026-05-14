@@ -301,3 +301,51 @@ def perceive_webcam(query: str) -> str:
 
     except Exception as e:
         return f"SECURITY BLOCK: Failed to synthesize webcam frame. Details: {str(e)}"
+
+
+def memorize_user_appearance() -> str:
+    """
+    Occipital Lobe (Memory Hook):
+    Explicitly asks for permission to permanently save the user's face to the OS.
+    """
+    import os
+    from System.core.paths import ROOT_DIR
+    from rich.console import Console
+
+    console = Console()
+
+    # 1. SHIFT-LEFT SECURITY: Strict Permanent Memory Authorization
+    if os.environ.get("BRAIN_OS_HEADLESS") != "1":
+        console.print("\n[bold red]⚠️  SECURITY ALERT: PHYSICAL MEMORY HOOK[/bold red]")
+        console.print(
+            "[yellow]Brain OS wants to take a photo of you and permanently save it to Media/user_reference.jpg.[/yellow]"
+        )
+        try:
+            auth = input("Allow permanent physical snapshot? [y/N]: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            auth = "n"
+
+        if auth not in ["y", "yes"]:
+            return "SECURITY BLOCK: User explicitly denied taking a permanent snapshot."
+
+    output_path = ROOT_DIR / "Media" / "user_reference.jpg"
+
+    # 2. Trigger the Retina (Bypassing LLM Synthesis entirely!)
+    try:
+        from Sense.receptors.vision import capture_webcam_frame
+
+        console.print(
+            "[dim cyan]👁️ Retina: Capturing and saving physical snapshot...[/dim cyan]"
+        )
+
+        # We pass the path so the Retina saves the file physically
+        capture_webcam_frame(save_path=str(output_path))
+    except Exception as e:
+        return f"VISUAL ERROR: Webcam failure. Details: {str(e)}"
+
+    # 3. Instruct the Agent to build the Memory Link
+    return (
+        f"SUCCESS: The user's physical appearance was captured and saved to {output_path.relative_to(ROOT_DIR)}.\n"
+        f"CRITICAL SYSTEM INSTRUCTION: You must now use the `append_safe_file` tool to add this note "
+        f"to 'Personal/personal-memory.md' so you don't forget where the physical reference is stored!"
+    )

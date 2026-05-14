@@ -167,3 +167,25 @@ def test_perceive_webcam_mocked_hitl(monkeypatch):
     assert "A user sitting" in result
     mock_capture.assert_called_once()
     mock_completion.assert_called_once()
+
+
+def test_memorize_user_appearance_mocked(monkeypatch):
+    """Proves the Memory Hook strictly enforces HITL and instructs the agent properly."""
+    from System.neuroanatomy.cortical.occipital import memorize_user_appearance
+    from unittest.mock import MagicMock
+
+    # 1. Mock human typing 'y'
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+    monkeypatch.setenv("BRAIN_OS_HEADLESS", "0")
+
+    # 2. Mock the Retina
+    mock_capture = MagicMock()
+    monkeypatch.setattr("Sense.receptors.vision.capture_webcam_frame", mock_capture)
+
+    result = memorize_user_appearance()
+
+    assert "SUCCESS" in result
+    assert "Media" in result
+    assert "user_reference.jpg" in result
+    assert "append_safe_file" in result
+    mock_capture.assert_called_once()

@@ -60,5 +60,5 @@ routes:
 
   VISION:
     - agent: "artist"
-      tools: ["base", "vision"]
+      tools: ["base", "vision", "write"]
       context: ["Meta", "Domain", "Studio", "Personal", "Professional", "Media"]

@@ -369,3 +369,11 @@ vision:
             type: "string"
             description: "What you are trying to look for or analyze in the physical world."
         required: ["query"]
+
+  - type: "function"
+    function:
+      name: "memorize_user_appearance"
+      description: "SENSE (VISION): Takes a permanent physical snapshot of the user via webcam and saves it to the Media folder. DO NOT ask the user for permission in text before calling this tool. Just call the tool directly. The OS terminal will physically pause and handle the security authorization."
+      parameters:
+        type: "object"
+        properties: {}

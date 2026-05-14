@@ -874,3 +874,12 @@ def perceive_webcam(query: str) -> str:
     )
 
     return _perceive_webcam(query)
+
+
+def memorize_user_appearance() -> str:
+    """
+    SENSE (VISION): Takes a permanent physical snapshot of the user.
+    """
+    from System.neuroanatomy.cortical.occipital import memorize_user_appearance as _mem
+
+    return _mem()

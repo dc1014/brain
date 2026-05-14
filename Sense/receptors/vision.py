@@ -70,22 +70,19 @@ def extract_video_frames(video_path: str, max_frames: int = 8) -> list[str]:
     return frames_b64
 
 
-def capture_webcam_frame() -> str:
+def capture_webcam_frame(save_path: str | None = None) -> str:
     """
     RETINA (Live):
-    Snaps a single frame from the default webcam and returns it as a Base64 string.
+    Snaps a frame from the webcam. Optionally saves it to disk, then returns Base64.
     """
     import cv2
     import base64
 
-    # 0 is usually the default built-in webcam
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        raise ValueError(
-            "Failed to open physical webcam. Is it plugged in and unblocked?"
-        )
+        raise ValueError("Failed to open physical webcam.")
 
-    # Warm up the camera sensor (auto-exposure/white balance takes a moment to adjust)
+    # Warm up the sensor
     for _ in range(5):
         cap.read()
 
@@ -94,6 +91,13 @@ def capture_webcam_frame() -> str:
 
     if not ret:
         raise ValueError("Failed to read frame from webcam.")
+
+    # 💾 PHYSICAL MEMORY HOOK: Save to disk if requested
+    if save_path:
+        from pathlib import Path
+
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(save_path, frame)
 
     # Compress and encode
     _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
