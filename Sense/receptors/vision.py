@@ -68,3 +68,35 @@ def extract_video_frames(video_path: str, max_frames: int = 8) -> list[str]:
 
     cap.release()
     return frames_b64
+
+
+def capture_webcam_frame() -> str:
+    """
+    RETINA (Live):
+    Snaps a single frame from the default webcam and returns it as a Base64 string.
+    """
+    import cv2
+    import base64
+
+    # 0 is usually the default built-in webcam
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        raise ValueError(
+            "Failed to open physical webcam. Is it plugged in and unblocked?"
+        )
+
+    # Warm up the camera sensor (auto-exposure/white balance takes a moment to adjust)
+    for _ in range(5):
+        cap.read()
+
+    ret, frame = cap.read()
+    cap.release()
+
+    if not ret:
+        raise ValueError("Failed to read frame from webcam.")
+
+    # Compress and encode
+    _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+    b64_str = base64.b64encode(buffer).decode("utf-8")
+
+    return f"data:image/jpeg;base64,{b64_str}"

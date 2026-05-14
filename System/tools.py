@@ -863,3 +863,14 @@ def map_spatial_dependencies(
         return f"SECURITY BLOCK: Cannot map dependencies outside the workspace ({directory_path})."
 
     return generate_spatial_map(str(target_path), output_format, map_type)
+
+
+def perceive_webcam(query: str) -> str:
+    """
+    SENSE (VISION): Snaps a frame from the physical webcam and analyzes it.
+    """
+    from System.neuroanatomy.cortical.occipital import (
+        perceive_webcam as _perceive_webcam,
+    )
+
+    return _perceive_webcam(query)

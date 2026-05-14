@@ -232,3 +232,72 @@ def perceive_video(video_path: str, query: str) -> str:
 
     except Exception as e:
         return f"SECURITY BLOCK: Failed to synthesize video frames. Details: {str(e)}"
+
+
+def perceive_webcam(query: str) -> str:
+    """
+    Occipital Lobe (Live Perception):
+    Enforces HITL security, snaps a webcam frame, and synthesizes it.
+    """
+    import os
+    from rich.console import Console
+
+    console = Console()
+
+    # 1. SHIFT-LEFT SECURITY: Human-in-the-Loop (HITL) Authorization
+    if os.environ.get("BRAIN_OS_HEADLESS") != "1":
+        console.print(
+            "\n[bold red]⚠️  SECURITY ALERT: WEBCAM ACCESS REQUESTED[/bold red]"
+        )
+        console.print(
+            f"[yellow]Brain OS wants to look through your webcam to answer:[/yellow] '{query}'"
+        )
+        try:
+            auth = input("Allow webcam access? [y/N]: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            auth = "n"
+
+        if auth not in ["y", "yes"]:
+            return "SECURITY BLOCK: User explicitly denied webcam access."
+
+    # 2. Trigger the Retina
+    try:
+        from Sense.receptors.vision import capture_webcam_frame
+
+        console.print("[dim cyan]👁️ Retina: Accessing physical webcam...[/dim cyan]")
+        frame_b64 = capture_webcam_frame()
+    except Exception as e:
+        return f"VISUAL ERROR: Webcam failure. Details: {str(e)}"
+
+    # 3. LLM Synthesis (The Visual Cortex)
+    try:
+        from System.neuroanatomy.systemic.immune_system import vault
+        from litellm import completion
+        from typing import Any
+
+        api_key = vault.get_api_key_for_model("openai") or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return "SECURITY BLOCK: OPENAI_API_KEY is missing."
+
+        model_name = os.getenv("VISION_MODEL", "openai/gpt-4o-mini")
+
+        # Build the multimodal payload
+        content_array: list[dict[str, Any]] = [
+            {"type": "text", "text": query},
+            {"type": "image_url", "image_url": {"url": frame_b64}},
+        ]
+
+        messages = [{"role": "user", "content": content_array}]
+
+        console.print(
+            f"[dim cyan]🧠 Occipital Lobe: Synthesizing live frame through {model_name}...[/dim cyan]"
+        )
+
+        response = completion(model=model_name, messages=messages, api_key=api_key)
+
+        analysis = response.choices[0].message.content
+        console.print("[bold cyan]✅ Webcam Analysis Complete![/bold cyan]")
+        return f"WEBCAM ANALYSIS: {analysis}"
+
+    except Exception as e:
+        return f"SECURITY BLOCK: Failed to synthesize webcam frame. Details: {str(e)}"

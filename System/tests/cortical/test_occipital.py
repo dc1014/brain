@@ -136,3 +136,34 @@ def test_perceive_video_mocked_extraction(tmp_path, monkeypatch):
     assert "fox running" in result
     mock_extract.assert_called_once_with(str(fake_video), max_frames=8)
     mock_completion.assert_called_once()
+
+
+def test_perceive_webcam_mocked_hitl(monkeypatch):
+    """Proves the Occipital Lobe strictly enforces HITL and routes to the Retina."""
+    from System.neuroanatomy.cortical.occipital import perceive_webcam
+    from unittest.mock import MagicMock
+
+    # 1. Mock the HITL input to automatically simulate a human typing 'y'
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+
+    # 2. Mock the Retina (Hardware Extraction)
+    mock_capture = MagicMock(return_value="data:image/jpeg;base64,fake_b64")
+    monkeypatch.setattr("Sense.receptors.vision.capture_webcam_frame", mock_capture)
+
+    # 3. Mock the LLM (Cognitive Synthesis)
+    mock_response = MagicMock()
+    mock_response.choices[0].message.content = "A user sitting at a desk."
+    mock_completion = MagicMock(return_value=mock_response)
+    monkeypatch.setattr("litellm.completion", mock_completion)
+
+    # 4. Mock the Vault
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
+    monkeypatch.setenv("BRAIN_OS_HEADLESS", "0")  # Ensure HITL is explicitly triggered
+
+    result = perceive_webcam("Who is there?")
+
+    # Assertions
+    assert "WEBCAM ANALYSIS:" in result
+    assert "A user sitting" in result
+    mock_capture.assert_called_once()
+    mock_completion.assert_called_once()

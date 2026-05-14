@@ -357,3 +357,15 @@ vision:
             type: "string"
             description: "What you want to know about the events in the video."
         required: ["video_path", "query"]
+
+  - type: "function"
+    function:
+      name: "perceive_webcam"
+      description: "SENSE (VISION): Turns on the physical webcam to look at the user or their physical environment. STRICT REQUIREMENT: You must ask the user for permission before using this. Use this to see what is happening in the real world right now."
+      parameters:
+        type: "object"
+        properties:
+          query:
+            type: "string"
+            description: "What you are trying to look for or analyze in the physical world."
+        required: ["query"]
