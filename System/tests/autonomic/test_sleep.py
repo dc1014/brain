@@ -42,7 +42,9 @@ def test_biological_sleep_cycle(monkeypatch, tmp_path):
     # 2. Mock the LLM to return our strict JSON data contract AND usage stats
     mock_response_data = {
         "sleep_summary": "Pruned Java, added Python.",
-        "neuroplasticity": '<neuroplasticity agent="dispatcher">Always route Python tasks to FORGE.</neuroplasticity>',
+        "neuroplasticity": [
+            {"agent": "dispatcher", "rule": "Always route Python tasks to FORGE."}
+        ],
         "updated_memory": "<working_memory>\n- [2026-05-08] Superseded: I like Java (Now prefers Python)\n</working_memory>",
     }
 

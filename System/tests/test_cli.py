@@ -276,46 +276,49 @@ def test_task_obsidian_flag(tmp_path, monkeypatch):
 
     monkeypatch.setattr("System.cli.analyze_task", mock_analyze)
 
-    # 1. Setup exact mock directory structure
+    # 1. Setup exact mock directory structure using the centralized ROOT_DIR
+    monkeypatch.setattr("System.cli.ROOT_DIR", tmp_path)
     system_dir = tmp_path / "System"
     system_dir.mkdir(parents=True, exist_ok=True)
-    mock_cli_file = system_dir / "cli.py"
 
-    # 2. Monkeypatch the module's __file__ directly (Not Path)
-    monkeypatch.setattr("System.cli.__file__", str(mock_cli_file))
-
-    # 3. Run the Typer command
+    # 2. Run the Typer command
     result = runner.invoke(app, ["task", "Build a test app", "--obsidian"])
 
     assert result.exit_code == 0
     assert "Task safely queued" in result.stdout
 
-    # 4. Test that the file was actually created with the right content
+    # 3. Test that BOTH the queue and the glass-pane markdown were created
     mock_pending_file = system_dir / "Pending_Actions.md"
-    assert mock_pending_file.exists()
+    mock_queue_file = system_dir / "queue.jsonl"
 
-    file_contents = mock_pending_file.read_text(encoding="utf-8")
-    assert "Pending Task: Forge" in file_contents
-    assert "Build a test app" in file_contents
+    assert mock_pending_file.exists()
+    assert mock_queue_file.exists()
+    assert "Build a test app" in mock_queue_file.read_text(encoding="utf-8")
 
 
 def test_execute_pending(tmp_path, monkeypatch):
     """Test that execute_pending reads the file, runs tasks, and clears the queue."""
     from typer.testing import CliRunner
+    import json
 
     runner = CliRunner()
 
     # 1. Setup exact mock directory structure
+    monkeypatch.setattr("System.cli.ROOT_DIR", tmp_path)
     system_dir = tmp_path / "System"
     system_dir.mkdir(parents=True, exist_ok=True)
-    mock_cli_file = system_dir / "cli.py"
 
-    monkeypatch.setattr("System.cli.__file__", str(mock_cli_file))
-
-    # 2. Create the mock pending file
+    # 2. Create the mock pending file AND the new JSONL queue database
     mock_pending_file = system_dir / "Pending_Actions.md"
     mock_pending_file.write_text(
         "### ⏳ Pending Task: Forge\n**Prompt:** Refactor the UI\n---\n",
+        encoding="utf-8",
+    )
+
+    mock_queue_file = system_dir / "queue.jsonl"
+    mock_queue_file.write_text(
+        json.dumps({"prompt": "Refactor the UI", "route": "Forge", "domain": "Studio"})
+        + "\n",
         encoding="utf-8",
     )
 
@@ -337,15 +340,15 @@ def test_execute_pending(tmp_path, monkeypatch):
     assert "Found 1 pending tasks" in result.stdout
     assert "Executing Task 1/1" in result.stdout
 
-    # Ensure the file was wiped clean after execution
+    # Ensure BOTH files were wiped clean after execution
     assert "*Queue is currently empty.*" in mock_pending_file.read_text(
         encoding="utf-8"
     )
+    assert mock_queue_file.read_text(encoding="utf-8") == ""
 
 
 def test_forage_command(monkeypatch, capsys):
     """Proves the forage command executes the correct pipeline in headless mode."""
-    from System.cli import app
     from typer.testing import CliRunner
     import os
 
@@ -372,7 +375,6 @@ def test_forage_command(monkeypatch, capsys):
 
 def test_daydream_command(monkeypatch, capsys):
     """Proves the daydream command executes the correct pipeline in headless mode."""
-    from System.cli import app
     from typer.testing import CliRunner
     import os
 

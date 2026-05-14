@@ -102,9 +102,21 @@ def task(
 
     # --- THE HANDOFF PROTOCOL (OBSIDIAN UI) ---
     if obsidian:
-        pending_file = Path(__file__).parent.parent / "System" / "Pending_Actions.md"
+        queue_file = ROOT_DIR / "System" / "queue.jsonl"
+        pending_file = ROOT_DIR / "System" / "Pending_Actions.md"
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
+        # 1. Deterministic Machine Queue (The Truth)
+        queue_data = {
+            "timestamp": timestamp,
+            "route": route_type,
+            "domain": domain,
+            "prompt": description,
+        }
+        with open(queue_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(queue_data) + "\n")
+
+        # 2. Human-Readable Glass Pane (For Obsidian Viewing Only)
         ticket = (
             f"\n### ⏳ Pending Task: {route_type}\n"
             f"**Logged:** {timestamp} | **Domain:** `{domain}`\n"
@@ -114,8 +126,9 @@ def task(
         )
         with open(pending_file, "a", encoding="utf-8") as f:
             f.write(ticket)
+
         console.print(
-            "[bold green]✅ Task safely queued in System/Pending_Actions.md[/bold green]"
+            "[bold green]✅ Task safely queued in System/queue.jsonl[/bold green]"
         )
         return
 
@@ -147,34 +160,39 @@ def task(
 
 @app.command()
 def execute_pending() -> None:
-    """Reads the Pending_Actions.md queue, executes all tasks sequentially, and clears the file."""
-    # Tell downstream modules we are in a pre-approved headless UI state
+    """Reads the deterministic queue.jsonl, executes all tasks sequentially, and clears the queue."""
     os.environ["BRAIN_OS_HEADLESS"] = "1"
 
-    pending_file = Path(__file__).parent.parent / "System" / "Pending_Actions.md"
-    # ... the rest of the function remains identical
+    queue_file = ROOT_DIR / "System" / "queue.jsonl"
+    pending_file = ROOT_DIR / "System" / "Pending_Actions.md"
 
-    if not pending_file.exists() or pending_file.stat().st_size == 0:
-        console.print("[yellow]No pending tasks found in queue.[/yellow]")
+    if not queue_file.exists() or queue_file.stat().st_size == 0:
+        console.print("[yellow]No pending tasks found in queue.jsonl.[/yellow]")
         return
 
-    content = pending_file.read_text(encoding="utf-8")
-
-    # Extract all the queued descriptions using Regex
-    tasks_to_run = re.findall(r"\*\*Prompt:\*\* (.*)", content)
+    tasks_to_run = []
+    with open(queue_file, "r", encoding="utf-8") as f:
+        for line in f:
+            try:
+                tasks_to_run.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
 
     if not tasks_to_run:
-        console.print("[red]Could not parse any valid tasks from the file.[/red]")
+        console.print("[red]Could not parse any valid tasks from the queue.[/red]")
         return
 
     console.print(
         f"[bold green]🚀 Found {len(tasks_to_run)} pending tasks. Executing sequence...[/bold green]"
     )
 
-    for idx, task_desc in enumerate(tasks_to_run, 1):
+    for idx, task_obj in enumerate(tasks_to_run, 1):
         console.print(
             f"\n[bold blue]--- Executing Task {idx}/{len(tasks_to_run)} ---[/bold blue]"
         )
+        task_desc = task_obj.get("prompt")
+        if not task_desc:
+            continue
 
         # Re-analyze to ensure context is perfectly fresh before execution
         is_valid, reason, route_type, domain, _ = asyncio.run(analyze_task(task_desc))
@@ -185,10 +203,13 @@ def execute_pending() -> None:
                 f"[bold red]Task failed pre-flight validation:[/bold red] {reason}"
             )
 
-    # THE WIPE: Overwrite the file with 'w' to reset it back to a clean state
-    pending_file.write_text(
-        "# ⚠️ Pending Execution Queue\n\n*Queue is currently empty.*\n", encoding="utf-8"
-    )
+    # THE WIPE: Overwrite both files to reset to a clean state
+    queue_file.write_text("", encoding="utf-8")
+    if pending_file.exists():
+        pending_file.write_text(
+            "# ⚠️ Pending Execution Queue\n\n*Queue is currently empty.*\n",
+            encoding="utf-8",
+        )
     console.print(
         "\n[bold green]✅ Queue executed and cleared successfully![/bold green]"
     )
@@ -400,6 +421,7 @@ def sleep() -> None:
         current_memory = mem_file.read_text(encoding="utf-8")
 
         # 4. REM SLEEP: Synaptic Pruning Prompt (STRICT JSON CONTRACT)
+        # 4. REM SLEEP: Synaptic Pruning Prompt (STRICT JSON CONTRACT)
         system_prompt = f"""You are the Brain OS Sleep Consolidator. Your job is biological synaptic pruning.
 1. Read the CURRENT NEOCORTEX MEMORY.
 2. Read the DAILY HIPPOCAMPUS LOG.
@@ -411,7 +433,7 @@ def sleep() -> None:
 8. NEUROPLASTICITY: If the logs reveal a critical structural error or a strict new rule an agent must obey forever, create a neuroplasticity rule.
 9. OUTPUT FORMAT: You MUST output a valid JSON object with EXACTLY three keys:
    - "sleep_summary": A brief text summary of what was consolidated.
-   - "neuroplasticity": Any raw <neuroplasticity> XML tags/rules (or an empty string if none).
+   - "neuroplasticity": A JSON array of objects representing rules to learn. Format: [{{"agent": "target_agent_name", "rule": "The new rule to follow"}}]. Output an empty array [] if none.
    - "updated_memory": The COMPLETE, fully updated markdown file content (including the <working_memory> tags).
 Do NOT wrap the output in markdown code blocks. Output raw JSON only."""
 
@@ -452,26 +474,24 @@ Do NOT wrap the output in markdown code blocks. Output raw JSON only."""
             )
 
             # --- NEUROPLASTICITY: Guided Evolution (Staging Area) ---
-            np_content = data.get("neuroplasticity", "")
-            if np_content:
-                np_matches = list(
-                    re.finditer(
-                        r'<neuroplasticity agent="(.*?)">(.*?)</neuroplasticity>',
-                        np_content,
-                        re.DOTALL,
-                    )
+            np_array = data.get("neuroplasticity", [])
+            if np_array and isinstance(np_array, list):
+                mutations_path = ROOT_DIR / "Meta" / "Mutations.md"
+                mutations_path.parent.mkdir(parents=True, exist_ok=True)
+
+                with open(mutations_path, "a", encoding="utf-8") as f:
+                    for mutation in np_array:
+                        agent = mutation.get("agent")
+                        rule = mutation.get("rule")
+                        if agent and rule:
+                            # We write it as XML into the markdown file so humans can review it easily and evolve() can parse it cleanly
+                            f.write(
+                                f'\n<neuroplasticity agent="{agent}">\n{rule}\n</neuroplasticity>\n'
+                            )
+
+                console.print(
+                    f"[bold yellow]🧬 {len(np_array)} new genetic mutation(s) proposed! Review Meta/Mutations.md[/bold yellow]"
                 )
-                if np_matches:
-                    mutations_path = ROOT_DIR / "Meta" / "Mutations.md"
-                    mutations_path.parent.mkdir(parents=True, exist_ok=True)
-
-                    with open(mutations_path, "a", encoding="utf-8") as f:
-                        for match in np_matches:
-                            f.write(f"\n{match.group(0)}\n")
-
-                    console.print(
-                        f"[bold yellow]🧬 {len(np_matches)} new genetic mutation(s) proposed! Review Meta/Mutations.md[/bold yellow]"
-                    )
 
             # --- THE VITAL FIX: Save the actual new memory ---
             new_memory = data.get("updated_memory", "")
