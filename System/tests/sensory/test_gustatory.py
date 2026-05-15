@@ -17,4 +17,6 @@ def test_process_taste_profile(tmp_path, monkeypatch):
 
     # Test Tool
     tool_xml = taste_safe_file("test.txt")
-    assert tool_xml == xml
+
+    # 🎯 THE FIX: Explicitly check the .output property for exact equality
+    assert tool_xml.output == xml

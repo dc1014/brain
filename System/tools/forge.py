@@ -6,23 +6,26 @@ from pathlib import Path
 from rich.console import Console
 from System.core.paths import ROOT_DIR
 from .sandbox import is_safe_path
+from System.core.schemas import ExecutionResult
 
 console = Console()
 
 
-def operate_forge(project_name: str, instruction: str) -> str:
+def operate_forge(project_name: str, instruction: str) -> ExecutionResult:
     """Operates a Forge instance securely via handoff.md and returns its telemetry."""
     try:
         target_path: Path = (ROOT_DIR / "Studio" / project_name).resolve()
 
         if not is_safe_path(target_path, require_write=True):
-            return (
+            reason = (
                 f"SECURITY BLOCK: Access denied. {target_path} is outside safe zones."
             )
+            return ExecutionResult(success=False, output=reason, block_reason=reason)
 
         orchestrator_path = target_path / "orchestrator.py"
         if not orchestrator_path.exists():
-            return f"ERROR: Forge engine not found at {orchestrator_path.relative_to(ROOT_DIR)}."
+            reason = f"ERROR: Forge engine not found at {orchestrator_path.relative_to(ROOT_DIR)}."
+            return ExecutionResult(success=False, output=reason, block_reason=reason)
 
         ops_dir = target_path / "docs" / "ops"
         ops_dir.mkdir(parents=True, exist_ok=True)
@@ -45,7 +48,8 @@ def operate_forge(project_name: str, instruction: str) -> str:
                 user_input = "n"
 
         if user_input not in ["y", "yes"]:
-            return "SECURITY BLOCK: User explicitly denied Forge operation."
+            reason = "SECURITY BLOCK: User explicitly denied Forge operation."
+            return ExecutionResult(success=False, output=reason, block_reason=reason)
 
         console.print(f"[dim]Booting Forge engine for '{project_name}'...[/dim]\n")
 
@@ -87,23 +91,31 @@ def operate_forge(project_name: str, instruction: str) -> str:
 
         if result.returncode != 0:
             summary += "\n--- ERROR ---\nForge execution failed. Please check the live terminal output for the exact stack trace."
+            return ExecutionResult(
+                success=False,
+                output=summary,
+                block_reason="Forge execution returned a non-zero exit code.",
+            )
 
-        return summary
+        return ExecutionResult(success=True, output=summary)
 
     except Exception as e:
-        return f"ERROR: Failed to operate Forge - {str(e)}"
+        reason = f"ERROR: Failed to operate Forge - {str(e)}"
+        return ExecutionResult(success=False, output=reason, block_reason=reason)
 
 
 def bootstrap_project(
     project_name: str, template_url: str = "https://github.com/mrdanielcasper/forge.git"
-) -> str:
+) -> ExecutionResult:
     """Clones a project archetype into the Studio directory and initializes dependencies."""
     try:
         target_path: Path = (ROOT_DIR / "Studio" / project_name).resolve()
         if not is_safe_path(target_path, require_write=True):
-            return f"SECURITY BLOCK: Access denied to clone into {target_path}."
+            reason = f"SECURITY BLOCK: Access denied to clone into {target_path}."
+            return ExecutionResult(success=False, output=reason, block_reason=reason)
         if target_path.exists():
-            return f"ERROR: Directory exists at {target_path.relative_to(ROOT_DIR)}"
+            reason = f"ERROR: Directory exists at {target_path.relative_to(ROOT_DIR)}"
+            return ExecutionResult(success=False, output=reason, block_reason=reason)
 
         result = subprocess.run(
             ["git", "clone", template_url, str(target_path)],
@@ -137,8 +149,13 @@ def bootstrap_project(
                     [npm_path, "install"], cwd=str(target_path), capture_output=True
                 )
 
-            return f"SUCCESS: Bootstrapped and hydrated at {target_path.relative_to(ROOT_DIR)}"
+            return ExecutionResult(
+                success=True,
+                output=f"SUCCESS: Bootstrapped and hydrated at {target_path.relative_to(ROOT_DIR)}",
+            )
 
-        return f"ERROR: Git clone failed - {result.stderr}"
+        reason = f"ERROR: Git clone failed - {result.stderr}"
+        return ExecutionResult(success=False, output=reason, block_reason=reason)
     except Exception as e:
-        return f"ERROR: Failed to bootstrap project - {str(e)}"
+        reason = f"ERROR: Failed to bootstrap project - {str(e)}"
+        return ExecutionResult(success=False, output=reason, block_reason=reason)
