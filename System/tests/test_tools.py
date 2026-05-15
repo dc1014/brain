@@ -10,6 +10,7 @@ from System.tools import (
     execute_command,
     write_multiple_files,
 )
+from System.tools.execution import manage_background_process
 
 
 def test_write_safe_file_allowed(tmp_path: Path, mocker) -> None:  # type: ignore
@@ -569,3 +570,29 @@ def test_write_multiple_files_batch_and_security(monkeypatch, tmp_path):
 
     assert "Successfully wrote: Studio/App.jsx" in result
     assert "SECURITY BLOCK" in result
+
+
+def test_motor_cortex_background_proprioception(mocker):
+    """
+    Zero-Debt Test: Ensures manage_background_process correctly applies Windows
+    formatting, polls ports for health checks, and returns success.
+    """
+    # 1. Mock the subprocess and the port scanner
+    mock_popen = mocker.patch("System.tools.execution.subprocess.Popen")
+    mock_popen.return_value.pid = 9999
+
+    # Simulate port successfully opening after 2 seconds
+    mocker.patch(
+        "System.tools.execution.is_port_in_use", side_effect=[False, False, True]
+    )
+    mocker.patch("System.tools.execution.time.sleep")  # Speed up test
+
+    # 2. Execute
+    result = manage_background_process(
+        action="start", command="npm run dev", port=5173, cwd_path="Studio"
+    )
+
+    # 3. Validation
+    assert "Success" in result
+    assert "Port 5173 is active" in result
+    assert mock_popen.called

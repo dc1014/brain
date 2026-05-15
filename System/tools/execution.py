@@ -5,6 +5,14 @@ from rich.console import Console
 from System.core.paths import ROOT_DIR
 from .sandbox import is_safe_path
 from System.core.schemas import ExecutionResult
+import socket
+import time
+import sys
+from typing import Optional, Dict
+
+# The Motor Cortex's active memory of running background servers
+ACTIVE_PROCESSES: Dict[str, subprocess.Popen] = {}
+
 
 console = Console()
 
@@ -191,42 +199,82 @@ def analyze_safe_syntax(filepath: str) -> ExecutionResult:
         )
 
 
+def is_port_in_use(port: int) -> bool:
+    """Proprioceptive sensory check: verifies if a port is actually transmitting."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(("localhost", port)) == 0
+
+
 def manage_background_process(
-    action: str, name: str = "", command: str = "", cwd: str = ""
-) -> ExecutionResult:
-    """Proprioception Motor Control: Start, stop, or list background processes."""
-    from System.neuroanatomy.autonomic.proprioception import (
-        start_process,
-        stop_process,
-        list_processes,
-    )
+    action: str,
+    command: str = "",
+    port: Optional[int] = None,
+    cwd_path: str = "Studio/Brain-Website",
+) -> str:
+    """
+    MOTOR CORTEX: Manages non-blocking background servers (like Vite/React).
+    Includes health checks to ensure the server actually bound to the port.
+    """
+    global ACTIVE_PROCESSES
 
     if action == "list":
-        return ExecutionResult(success=True, output=list_processes())
-    elif action == "start":
-        if not name or not command:
-            return ExecutionResult(
-                success=False,
-                output="Error: Both 'name' and 'command' are required to start a process.",
-                block_reason="Missing arguments.",
-            )
-        return ExecutionResult(
-            success=True, output=start_process(name, command, cwd if cwd else None)
+        if not ACTIVE_PROCESSES:
+            return "No active background processes."
+        return "Active processes:\n" + "\n".join(
+            [f"PID {p.pid}: {cmd}" for cmd, p in ACTIVE_PROCESSES.items()]
         )
-    elif action == "stop":
-        if not name:
-            return ExecutionResult(
-                success=False,
-                output="Error: 'name' is required to stop a process.",
-                block_reason="Missing arguments.",
+
+    if action == "stop":
+        stopped = 0
+        for cmd, p in list(ACTIVE_PROCESSES.items()):
+            p.terminate()
+            del ACTIVE_PROCESSES[cmd]
+            stopped += 1
+        return f"Stopped {stopped} active processes."
+
+    if action == "start":
+        if not command:
+            return "Error: Command required to start a process."
+
+        # ⚡ SHIFT-LEFT: Cure the Windows Subprocess Bug
+        if sys.platform == "win32":
+            if command.startswith("npm "):
+                command = command.replace("npm ", "npm.cmd ", 1)
+            elif command.startswith("npx "):
+                command = command.replace("npx ", "npx.cmd ", 1)
+
+        try:
+            target_dir = (ROOT_DIR / cwd_path).resolve()
+            target_dir.mkdir(parents=True, exist_ok=True)
+
+            # Start detached process so the LLM doesn't hang forever
+            process = subprocess.Popen(
+                command,
+                shell=True,
+                cwd=str(target_dir),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
-        return ExecutionResult(success=True, output=stop_process(name))
-    else:
-        return ExecutionResult(
-            success=False,
-            output="Error: Invalid action. Must be 'start', 'stop', or 'list'.",
-            block_reason="Invalid action.",
-        )
+            ACTIVE_PROCESSES[command] = process
+
+            # 🧠 PROPRIOCEPTION: The Health Check
+            if port:
+                for _ in range(15):  # Poll for 15 seconds
+                    if is_port_in_use(port):
+                        return f"Success: Background process started. Health check passed: Port {port} is active."
+                    time.sleep(1)
+
+                # If it failed to bind, kill it and report the crash
+                process.terminate()
+                del ACTIVE_PROCESSES[command]
+                return f"Error: Process started but failed to bind to port {port} within 15 seconds. The server crashed (likely due to missing npm packages)."
+
+            return f"Success: Background process started (PID {process.pid}). No port health check requested."
+
+        except Exception as e:
+            return f"Error starting background process: {str(e)}"
+
+    return "Error: Invalid action. Use 'start', 'stop', or 'list'."
 
 
 def deploy_project(directory_path: str, provider: str = "custom") -> ExecutionResult:
