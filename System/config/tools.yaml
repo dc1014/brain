@@ -388,3 +388,18 @@ vision:
           duration_seconds:
             type: "integer"
             description: "How long to record the video (default 5)."
+
+  - type: "function"
+    function:
+      name: "deploy_project"
+      description: "Deploys a built project to the internet using the generic Deployment Organ."
+      parameters:
+        type: "object"
+        properties:
+          directory_path:
+            type: "string"
+            description: "The path to the project directory to deploy (e.g., 'Studio/Brain-Website')."
+          provider:
+            type: "string"
+            description: "The deployment provider to use. Supported options: 'custom', 'vercel', 'netlify'. Defaults to 'custom'."
+        required: ["directory_path"]

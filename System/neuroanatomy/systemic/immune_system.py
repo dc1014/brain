@@ -43,13 +43,13 @@ class SecretVault:
             "OPENAI_API_KEY",
             "ANTHROPIC_API_KEY",
             "GEMINI_API_KEY",
+            "DEPLOYMENT_TOKEN",  # 🔒 SHIFT-LEFT: Generic Deployment Organ Protection
         ]
 
     def secure_environment(self) -> None:
         """
         The Nuclear Option: Scrubs API keys from the OS environment at boot.
-        This guarantees that sub-processes (like `printenv` or malicious scripts)
-        executed by the Swarm cannot access LLM credentials.
+        This guarantees that sub-processes executed by the Swarm cannot access LLM credentials.
         """
         for key in self._keys_to_protect:
             val = os.environ.get(key)
@@ -66,10 +66,12 @@ class SecretVault:
             return self._secrets.get("ANTHROPIC_API_KEY")
         elif model_lower.startswith("gemini/"):
             return self._secrets.get("GEMINI_API_KEY")
-
-        # Local SLMs (Ollama) do not require API keys
         return None
 
+    def get_secret(self, key: str) -> Optional[str]:
+        """Safely retrieve an arbitrary protected secret for an internal organ."""
+        return self._secrets.get(key)
 
-# Global Singleton Vault
+
+# The Singleton Vault instance
 vault = SecretVault()

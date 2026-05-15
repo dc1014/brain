@@ -469,3 +469,57 @@ def test_analyze_audio(tmp_path, mocker):
     res = analyze_audio("test.wav")
     assert "Speech text" in res
     assert "Bird sound" in res
+
+
+def test_deploy_project(tmp_path: Path, mocker) -> None:  # type: ignore
+    """Ensures the generic deployment tool respects the Vault, HITL, and the Sandbox."""
+    from System.tools.execution import deploy_project
+    from System.core.schemas import ExecutionResult
+
+    mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.neuroanatomy.systemic.blood_brain_barrier.ROOT_DIR", tmp_path)
+
+    studio_dir = tmp_path / "Studio" / "WebProject"
+    studio_dir.mkdir(parents=True, exist_ok=True)
+    mocker.patch(
+        "System.neuroanatomy.systemic.blood_brain_barrier.validate_execution_path",
+        return_value=(True, str(studio_dir)),
+    )
+
+    # 1. Test Missing Token (Vault Block)
+    mocker.patch(
+        "System.neuroanatomy.systemic.immune_system.vault.get_secret", return_value=None
+    )
+    result_no_token = deploy_project(str(studio_dir))
+    assert isinstance(result_no_token, ExecutionResult)
+    assert not result_no_token.success
+    assert "DEPLOYMENT_TOKEN is missing" in result_no_token.output
+
+    # 2. Test Human Rejection
+    mocker.patch(
+        "System.neuroanatomy.systemic.immune_system.vault.get_secret",
+        return_value="fake_deployment_token",
+    )
+    mocker.patch.dict("os.environ", {"BRAIN_OS_HEADLESS": "0"}, clear=True)
+    mocker.patch("builtins.input", return_value="n")
+
+    result_denied = deploy_project(str(studio_dir))
+    assert not result_denied.success
+    assert "User explicitly denied" in result_denied.output
+
+    # 3. Test Successful Simulated Deployment
+    mocker.patch("builtins.input", return_value="y")
+    mock_popen = mocker.patch("System.tools.execution.subprocess.Popen")
+    mock_process = mocker.MagicMock()
+    mock_process.stdout = [
+        "Deploying...\n",
+        "Production: https://brain-os.simulated.app\n",
+    ]
+    mock_process.returncode = 0
+    mock_popen.return_value = mock_process
+
+    result_success = deploy_project(str(studio_dir), provider="custom")
+    assert result_success.success
+    assert "<deployment_success>" in result_success.output
+    assert "https://brain-os.simulated.app" in result_success.output

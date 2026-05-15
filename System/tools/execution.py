@@ -227,3 +227,104 @@ def manage_background_process(
             output="Error: Invalid action. Must be 'start', 'stop', or 'list'.",
             block_reason="Invalid action.",
         )
+
+
+def deploy_project(directory_path: str, provider: str = "custom") -> ExecutionResult:
+    """Deploys a project safely to the internet without leaking credentials."""
+    from System.neuroanatomy.systemic.blood_brain_barrier import validate_execution_path
+    from System.neuroanatomy.systemic.immune_system import vault
+
+    # 1. SHIFT-LEFT: Sandbox Enforcement
+    is_safe_path_result, path_result = validate_execution_path(directory_path)
+    if not is_safe_path_result:
+        reason = (
+            f"SECURITY BLOCK: Cannot deploy from outside the sandbox. {path_result}"
+        )
+        return ExecutionResult(success=False, output=reason, block_reason=reason)
+
+    # Fetch generic deployment token
+    token = vault.get_secret("DEPLOYMENT_TOKEN")
+    if not token:
+        reason = "SECURITY BLOCK: DEPLOYMENT_TOKEN is missing from the SecretVault."
+        return ExecutionResult(success=False, output=reason, block_reason=reason)
+
+    # 2. HITL Check (Never deploy without human consent unless Headless)
+    if os.environ.get("BRAIN_OS_HEADLESS") != "1":
+        console.print(
+            f"\n[bold yellow]⚠️ Agent wants to DEPLOY project {path_result} via {provider.upper()}:[/bold yellow]"
+        )
+        try:
+            auth = input("Allow deployment? [y/N]: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            auth = "n"
+
+        if auth not in ["y", "yes"]:
+            reason = "SECURITY BLOCK: User explicitly denied deployment."
+            return ExecutionResult(success=False, output=reason, block_reason=reason)
+
+    # 3. Secure Execution Abstraction
+    try:
+        # Inject the token safely into the subprocess memory
+        deploy_env = os.environ.copy()
+        deploy_env["DEPLOYMENT_TOKEN"] = token
+
+        console.print(
+            f"\n[bold cyan]▶ Initiating {provider.upper()} deployment sequence...[/bold cyan]"
+        )
+
+        # Routing Logic for Future Providers
+        if provider.lower() == "custom":
+            # Cross-platform simulation command
+            cmd_binary = "cmd" if os.name == "nt" else "echo"
+            cmd_args = (
+                ["/c", "echo", f"Simulated deployment complete for {path_result}"]
+                if os.name == "nt"
+                else [f"Simulated deployment complete for {path_result}"]
+            )
+            command = [cmd_binary] + cmd_args
+        elif provider.lower() == "vercel":
+            command = ["npx", "vercel", "--yes", "--prod"]
+        elif provider.lower() == "netlify":
+            command = ["npx", "netlify", "deploy", "--prod"]
+        else:
+            reason = f"ERROR: Deployment provider '{provider}' is not supported yet."
+            return ExecutionResult(success=False, output=reason, block_reason=reason)
+
+        process = subprocess.Popen(
+            command,
+            shell=False,
+            cwd=path_result,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=deploy_env,
+        )
+
+        output_lines = []
+        if process.stdout:
+            for line in process.stdout:
+                console.print(f"[dim]│ {line}[/dim]", end="")
+                output_lines.append(line)
+
+        process.wait(timeout=120)
+        full_output = "".join(output_lines)
+
+        if process.returncode != 0:
+            return ExecutionResult(
+                success=False,
+                output=f"<deployment_error>\n{full_output}\n</deployment_error>",
+                block_reason=f"Deployment failed with exit code {process.returncode}",
+            )
+
+        return ExecutionResult(
+            success=True,
+            output=f"<deployment_success>\n{full_output}\n</deployment_success>",
+        )
+
+    except subprocess.TimeoutExpired:
+        process.kill()
+        reason = "ERROR: Deployment timed out after 120 seconds."
+        return ExecutionResult(success=False, output=reason, block_reason=reason)
+    except Exception as e:
+        reason = f"DEPLOYMENT ERROR: {str(e)}"
+        return ExecutionResult(success=False, output=reason, block_reason=reason)
