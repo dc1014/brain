@@ -154,11 +154,13 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
     mocker.patch("builtins.input", return_value="y")
 
     # If your test_cli.py imports execute_command from System.tools, use:
-    mock_subprocess = mocker.patch("System.tools.execution.subprocess.run")
+    mock_popen = mocker.patch("System.tools.execution.subprocess.Popen")
 
-    mock_subprocess.return_value.returncode = 0
-    mock_subprocess.return_value.stdout = "mock_ls_output"
-    mock_subprocess.return_value.stderr = ""
+    # We create a fake process where stdout acts like a streamed list of lines
+    mock_process = mocker.MagicMock()
+    mock_process.stdout = ["mock_ls_output\n"]
+    mock_process.returncode = 0
+    mock_popen.return_value = mock_process
 
     # FIX: Pass the absolute path variable, just like in Step 2!
     approve_result = execute_command("ls", str(studio_dir))

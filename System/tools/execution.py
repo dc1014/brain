@@ -86,28 +86,54 @@ def execute_command(command: str, directory_path: str) -> ExecutionResult:
                 block_reason=reason,
             )
 
-    # 5. Execution (SECURED: shell=False + shlex)
+    # 5. Execution (SECURED: shell=False + shlex + STREAMING)
     try:
         args = shlex.split(command)
-        result = subprocess.run(
+
+        console.print(f"\n[bold cyan]▶ Executing:[/bold cyan] {command}")
+
+        process = subprocess.Popen(
             args,
             shell=False,
             cwd=path_result,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # Merge stderr into stdout for continuous streaming
             text=True,
-            timeout=60,
+            bufsize=1,
+            universal_newlines=True,
         )
 
-        if result.returncode != 0:
+        output_lines = []
+        # 🎯 MYPY FIX: Ensure stdout exists before iterating to satisfy the type checker
+        if process.stdout:
+            for line in process.stdout:
+                # Stream directly to the terminal with a subtle visual prefix
+                console.print(f"[dim]│ {line}[/dim]", end="")
+                output_lines.append(line)
+
+        # Wait for the process to finish with our 60-second timeout
+        process.wait(timeout=60)
+        full_output = "".join(output_lines)
+
+        # Microglia Autonomous Bug Fixing
+        if process.returncode != 0:
             from System.neuroanatomy.systemic.microglia import trigger_immune_response
 
-            trigger_immune_response(command, result.stderr, path_result)
+            trigger_immune_response(command, full_output, path_result)
+            return ExecutionResult(
+                success=False,
+                output=f"<shell_output>\n<stderr>\n{full_output}\n</stderr>\n</shell_output>",
+                block_reason=f"Command failed with exit code {process.returncode}",
+            )
 
+        # XML Data Contract
         return ExecutionResult(
             success=True,
-            output=f"<shell_output>\n<stdout>\n{result.stdout}\n</stdout>\n<stderr>\n{result.stderr}\n</stderr>\n</shell_output>",
+            output=f"<shell_output>\n<stdout>\n{full_output}\n</stdout>\n</shell_output>",
         )
+
     except subprocess.TimeoutExpired:
+        process.kill()  # Safety First: Kill the zombie process
         reason = "ERROR: Command timed out after 60 seconds."
         return ExecutionResult(
             success=False,
@@ -115,6 +141,8 @@ def execute_command(command: str, directory_path: str) -> ExecutionResult:
             block_reason=reason,
         )
     except Exception as e:
+        if "process" in locals():
+            process.kill()
         reason = f"EXECUTION ERROR: {str(e)}"
         return ExecutionResult(
             success=False,
