@@ -6,6 +6,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from litellm import completion  # type: ignore
 from System.amygdala import scan_prompt
+from System.interoception import check_energy_levels, log_metabolism
 
 
 from System.llm import run_agent, get_system_context
@@ -70,6 +71,11 @@ def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict[str, int]]:
             elif line.startswith("DOMAIN:"):
                 domain = line.split("DOMAIN:")[1].strip()
 
+        # --- THE VAGUS NERVE: Log the Dispatcher's metabolism ---
+        from System.interoception import log_metabolism
+
+        log_metabolism(usage_data.get("total_tokens", 0))
+
         return True, "Approved.", route, domain, usage_data
 
     except Exception as e:
@@ -87,16 +93,28 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
     eval_retries = 0
     MAX_RETRIES = 1
 
+    is_exhausted, tokens_burned = check_energy_levels()
+    if is_exhausted:
+        console.print(
+            f"\n[bold yellow]⚠️ Interoception Alert: System Exhausted ({tokens_burned:,} tokens burned today). "
+            f"Downgrading cognitive load to conserve energy.[/bold yellow]"
+        )
+
     total_pipeline_tokens = 0
-    agents_invoked = []
+    agents_invoked: list[str] = []
     pipeline_aborted = False
 
     while len(pipeline) > 0:
         step = pipeline.pop(0)
         agent_cfg = AGENT_CONFIG["agents"][step["agent"]]
 
-        # ZERO-CONFIG MODEL FALLBACK
+        # ZERO-CONFIG MODEL FALLBACK & METABOLISM DOWNGRADE
         desired_model_key = agent_cfg["model"]
+
+        # Biological Fatigue: Down-shift to cheap heuristic models if exhausted
+        if is_exhausted:
+            desired_model_key = "gpt_mini"
+
         env_key_map = {
             "gpt_mini": "OPENAI_API_KEY",
             "claude_haiku": "ANTHROPIC_API_KEY",
@@ -137,8 +155,9 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
             domain=domain,
         )
 
-        total_pipeline_tokens += step_result.usage.get("total_tokens", 0)
-        agents_invoked.append(agent_cfg["name"])
+        step_tokens = step_result.usage.get("total_tokens", 0)
+        total_pipeline_tokens += step_tokens
+        log_metabolism(step_tokens)  # <-- Interoception logging
 
         display_text = step_result.text
         if step_result.actions:
