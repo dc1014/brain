@@ -1,6 +1,6 @@
 import os
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from System.runtime import analyze_task
 from typing import Any
 
@@ -223,3 +223,54 @@ def test_parallel_swarm_parsing() -> None:
     assert agents_to_run[0] == "swarm_architect"
     assert agents_to_run[1] == "[Parallel Swarm: frontend, backend]"
     assert agents_to_run[2] == "qa_auditor"
+
+
+@pytest.mark.asyncio
+# ⚡ SHIFT-LEFT: Patch the function at its source, not the destination!
+@patch("System.neuroanatomy.autonomic.vestibular.commit_transaction")
+@patch("System.runtime.run_agent_async")
+@patch("System.runtime.check_energy_levels", return_value=(False, 0))
+async def test_synaptic_consolidation_commits_mid_pipeline(
+    mock_energy, mock_run_agent, mock_commit, mocker
+):
+    """
+    Zero-Debt Test: Verifies that Synaptic Consolidation occurs after
+    builder agents, preventing the Vestibular system from wiping progress.
+    """
+    from System.runtime import execute_pipeline
+
+    # 1. Setup a fake route with a builder and an auditor
+    mocker.patch(
+        "System.runtime.AGENT_CONFIG",
+        {
+            "routes": {
+                "TEST_ROUTE": [{"agent": "frontend_engineer"}, {"agent": "qa_auditor"}]
+            },
+            "agents": {
+                "frontend_engineer": {
+                    "name": "Frontend",
+                    "model": "mock",
+                    "system_prompt": "",
+                },
+                "qa_auditor": {"name": "QA", "model": "mock", "system_prompt": ""},
+            },
+            "models": {"mock": "mock"},
+        },
+    )
+
+    # 2. Mock the agent response to return valid JSON so the QA auditor passes
+    class MockResponse:
+        def __init__(self):
+            self.text = '{"audit_result": "PASS", "reasoning": "Looks good"}'
+            self.actions = []
+            self.usage = {}
+
+    mock_run_agent.return_value = MockResponse()
+
+    # 3. Execute the pipeline
+    await execute_pipeline("Test task", "TEST_ROUTE", "STUDIO")
+
+    # 4. Strict Validation
+    assert mock_commit.call_count == 3, (
+        "Synaptic Consolidation failed to commit the builder's progress!"
+    )

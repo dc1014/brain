@@ -255,6 +255,13 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
                 f"Original Task: {description}\n\nSwarm Operations Complete:\n"
                 + "\n\n".join(swarm_outputs)
             )
+
+            # 💾 SHIFT-LEFT: Synaptic Consolidation (Save Swarm Progress)
+            commit_transaction()
+            console.print(
+                "\n[bold green]💾 Synaptic Consolidation: Swarm milestone committed to disk.[/bold green]"
+            )
+
             continue
 
         # --- 🚂 STANDARD LINEAR EXECUTION ---
@@ -307,6 +314,14 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
             console.print("\n[bold red]🛑 PIPELINE ABORTED.[/bold red]")
             pipeline_aborted = True
             break
+
+        # 💾 SHIFT-LEFT: Synaptic Consolidation (Save Linear Agent Progress)
+        # We commit the transaction as long as it's not an auditor or deployment node
+        if step["agent"] not in ["qa_auditor", "deployment_ops"]:
+            commit_transaction()
+            console.print(
+                f"\n[dim green]💾 Synaptic Consolidation: {agent_cfg['name']} milestone committed to disk.[/dim green]"
+            )
 
         # --- 🗣️ BROCA'S AREA (Data Contract Validation & RETRY LOOP) ---
         if step["agent"] == "qa_auditor":
