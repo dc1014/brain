@@ -48,6 +48,18 @@ Because `Sense` is an independent package in our `uv workspace`, it can be used 
 
 ---
 
+## 🫀 The Autonomic Nervous System (`autonomic.py`)
+
+Unlike traditional rigid `cron` jobs, Brain OS uses a stateful biological pacemaker. It does not rely on active timers. Instead, it checks the file system's reality (e.g., *“Have 4 hours passed since the user's last `agent_interactions.jsonl` entry?”*). This makes the system perfectly idempotent and immune to crashes.
+
+If the OS shuts down, the moment it boots back up, it will automatically catch up on missed sleep cycles, foraging runs, and daydreams.
+
+**To start the background processes:**
+`uv run python System/cli.py start-autonomic`
+*(Tip: Run this in a background terminal, `tmux` session, or Windows Background Service)*
+
+---
+
 ## 🛡️ Security & The Handoff Protocol
 
 Brain uses a decoupled **Handoff Protocol** to keep you safe from autonomous shell scripts or recursive file deletions.

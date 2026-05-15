@@ -299,3 +299,56 @@ def test_execute_pending(tmp_path, monkeypatch):
     assert "*Queue is currently empty.*" in mock_pending_file.read_text(
         encoding="utf-8"
     )
+
+
+def test_forage_command(monkeypatch, capsys):
+    """Proves the forage command executes the correct pipeline in headless mode."""
+    from System.cli import app
+    from typer.testing import CliRunner
+    import os
+
+    runner = CliRunner()
+
+    # Mock the pipeline execution
+    executed_args = {}
+
+    def mock_execute_pipeline(desc, route, domain):
+        executed_args["desc"] = desc
+        executed_args["route"] = route
+        executed_args["domain"] = domain
+
+    monkeypatch.setattr("System.cli.execute_pipeline", mock_execute_pipeline)
+
+    result = runner.invoke(app, ["forage", "https://example.com", "--domain", "STUDIO"])
+
+    assert result.exit_code == 0
+    assert executed_args["route"] == "SUBCONSCIOUS_FORAGE"
+    assert executed_args["domain"] == "STUDIO"
+    assert "https://example.com" in executed_args["desc"]
+    assert os.environ.get("BRAIN_OS_HEADLESS") == "1"
+
+
+def test_daydream_command(monkeypatch, capsys):
+    """Proves the daydream command executes the correct pipeline in headless mode."""
+    from System.cli import app
+    from typer.testing import CliRunner
+    import os
+
+    runner = CliRunner()
+
+    # Mock the pipeline execution
+    executed_args = {}
+
+    def mock_execute_pipeline(desc, route, domain):
+        executed_args["desc"] = desc
+        executed_args["route"] = route
+        executed_args["domain"] = domain
+
+    monkeypatch.setattr("System.cli.execute_pipeline", mock_execute_pipeline)
+
+    result = runner.invoke(app, ["daydream", "--domain", "PROFESSIONAL"])
+
+    assert result.exit_code == 0
+    assert executed_args["route"] == "SUBCONSCIOUS_DAYDREAM"
+    assert executed_args["domain"] == "PROFESSIONAL"
+    assert os.environ.get("BRAIN_OS_HEADLESS") == "1"

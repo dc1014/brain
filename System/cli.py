@@ -172,6 +172,39 @@ def execute_pending() -> None:
 
 
 @app.command()
+def forage(
+    url: str = typer.Argument(..., help="The URL to forage for signals."),
+    domain: str = typer.Option(
+        "META", "--domain", "-d", help="The domain context to store the intel."
+    ),
+) -> None:
+    """Biological Foraging: Gathers external signals and appends to the Morning Briefing."""
+    console.print(
+        f"\n[bold magenta]🌿 Initiating Subconscious Foraging for {domain}...[/bold magenta]"
+    )
+    os.environ["BRAIN_OS_HEADLESS"] = "1"
+
+    prompt = f"Please forage this URL for high-signal intelligence: {url}"
+    execute_pipeline(prompt, "SUBCONSCIOUS_FORAGE", domain.upper())
+
+
+@app.command()
+def daydream(
+    domain: str = typer.Option(
+        "META", "--domain", "-d", help="The domain to daydream about."
+    ),
+) -> None:
+    """Default Mode Network: Synthesizes recent logs into new hypotheses while idle."""
+    console.print(
+        f"\n[bold magenta]☁️ Activating Default Mode Network ({domain})...[/bold magenta]"
+    )
+    os.environ["BRAIN_OS_HEADLESS"] = "1"
+
+    prompt = "Review our recent experiments and active memory. Synthesize a new strategic hypothesis and save it to the Daydreams file."
+    execute_pipeline(prompt, "SUBCONSCIOUS_DAYDREAM", domain.upper())
+
+
+@app.command()
 def logs(
     limit: int = typer.Option(3, help="Number of recent interactions to display."),
 ) -> None:
@@ -452,6 +485,14 @@ def init() -> None:
 
     # 3. FINAL PRINT
     console.print("\n[bold green]✅ Initialization Complete![/bold green]\n")
+
+
+@app.command()
+def start_autonomic():
+    """Wakes up the Autonomic Nervous System (Background Pacemaker)."""
+    from System.autonomic import run_pacemaker
+
+    run_pacemaker()
 
 
 if __name__ == "__main__":
