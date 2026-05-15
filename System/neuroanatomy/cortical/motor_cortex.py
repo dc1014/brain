@@ -4,6 +4,7 @@ from typing import Any, Dict, Tuple, Union
 from pathlib import Path
 from rich.console import Console
 import System.tools as os_tools
+from System.core.schemas import ExecutionResult
 
 console = Console()
 
@@ -23,9 +24,9 @@ class MotorCortex:
         except RuntimeError:
             loop_id = 0
 
-        # SHIFT-LEFT FIX: Resolve path so './file' and 'file' share the exact same lock.
-        # Cast back to string to ensure consistent dictionary keys and satisfy typing.
-        resolved_path = str(Path(file_path).resolve())
+        # SHIFT-LEFT FIX: Use .absolute() instead of .resolve() to bypass Windows filesystem quirks.
+        # This guarantees deterministic lock matching for the exact same path string.
+        resolved_path = str(Path(file_path).absolute())
 
         key = (loop_id, resolved_path)
         if key not in cls._locks:
@@ -52,9 +53,12 @@ async def execute_tools(
         func_name = str(tool_call.function.name)
         tool_id = str(tool_call.id)
 
+        is_halted = False
+        raw_output = ""
+
         try:
             if not hasattr(os_tools, func_name):
-                result = f"ERROR: Unknown tool '{func_name}' in System.tools"
+                raw_output = f"ERROR: Unknown tool '{func_name}' in System.tools"
             else:
                 tool_func = getattr(os_tools, func_name)
 
@@ -78,23 +82,39 @@ async def execute_tools(
                 else:
                     result = await asyncio.to_thread(tool_func, **args)
 
-                # ⚡ FIX: Only append success if the output does NOT contain a security block!
-                if not (
-                    str(result).startswith("SECURITY BLOCK")
-                    or str(result).startswith(
-                        "<shell_output>\n<stderr>\nSECURITY BLOCK"
-                    )
-                ):
-                    action_manifest.append(
-                        f"[{func_name.upper()}] Executed successfully."
-                    )
+                # ⚡ SHIFT-LEFT: Strongly-Typed Result Parsing
+                if isinstance(result, ExecutionResult):
+                    raw_output = result.output
+                    if not result.success:
+                        action_manifest.append("[HALTED] Security clearance denied.")
+                        system_halt_text = (
+                            f"\n\n[SYSTEM HALT] {result.block_reason or raw_output}"
+                        )
+                        is_halted = True
+                    else:
+                        action_manifest.append(
+                            f"[{func_name.upper()}] Executed successfully."
+                        )
+                else:
+                    # Legacy string fallback for tools we haven't migrated yet
+                    raw_output = str(result)
+                    if (
+                        raw_output.startswith("SECURITY BLOCK")
+                        or "<stderr>\nSECURITY BLOCK" in raw_output
+                    ):
+                        action_manifest.append("[HALTED] Security clearance denied.")
+                        system_halt_text = f"\n\n[SYSTEM HALT] {raw_output}"
+                        is_halted = True
+                    else:
+                        action_manifest.append(
+                            f"[{func_name.upper()}] Executed successfully."
+                        )
 
         except Exception as e:
-            result = f"ERROR executing {func_name}: {str(e)}"
+            raw_output = f"ERROR executing {func_name}: {str(e)}"
 
         console.print(f"[dim]🔍 Tool Executed: {func_name}[/dim]")
 
-        raw_output = str(result)
         MAX_CHARS = 8000
         truncated_output = raw_output[:MAX_CHARS] + (
             f"\n\n... [SYSTEM WARNING: Truncated at {MAX_CHARS} chars]"
@@ -111,12 +131,7 @@ async def execute_tools(
             }
         )
 
-        # Shift-Left Security: If a tool hits the Blood-Brain Barrier, halt everything.
-        if str(result).startswith("SECURITY BLOCK") or str(result).startswith(
-            "<shell_output>\n<stderr>\nSECURITY BLOCK"
-        ):
-            system_halt_text = f"\n\n[SYSTEM HALT] {result}"
-            action_manifest.append("[HALTED] Security clearance denied.")
+        if is_halted:
             break
 
     return tool_messages, action_manifest, system_halt_text
