@@ -12,8 +12,16 @@ from System.tools import (
 
 
 def test_write_safe_file_allowed(tmp_path: Path, mocker) -> None:  # type: ignore
-    mocker.patch("System.tools.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Professional"})
+
+    mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
+
+    mocker.patch(
+        "System.tools.sandbox.ALLOWED_DIRECTORIES", {tmp_path / "Professional"}
+    )
     result = write_safe_file("Professional/README.md", "# Test")
     assert "SUCCESS" in result
     assert (tmp_path / "Professional/README.md").exists()
@@ -21,8 +29,16 @@ def test_write_safe_file_allowed(tmp_path: Path, mocker) -> None:  # type: ignor
 
 def test_security_blocks(tmp_path: Path, mocker) -> None:  # type: ignore
     """Test that writing, reading, and listing outside boundaries are all blocked."""
-    mocker.patch("System.tools.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Professional"})
+
+    mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
+
+    mocker.patch(
+        "System.tools.sandbox.ALLOWED_DIRECTORIES", {tmp_path / "Professional"}
+    )
 
     # Test Write Block
     write_result = write_safe_file("System/malicious.py", "print('hacked')")
@@ -43,8 +59,14 @@ def test_security_blocks(tmp_path: Path, mocker) -> None:  # type: ignore
 
 def test_bootstrap_security_block(tmp_path: Path, mocker) -> None:  # type: ignore
     """Ensure archetypes cannot be cloned outside safe boundaries."""
-    mocker.patch("System.tools.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
+
+    mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
+
+    mocker.patch("System.tools.sandbox.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
 
     result = bootstrap_project("../../malicious_project")
     assert "SECURITY BLOCK" in result
@@ -52,8 +74,14 @@ def test_bootstrap_security_block(tmp_path: Path, mocker) -> None:  # type: igno
 
 def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # type: ignore
     """Test that command execution is sandboxed and respects strict HITL."""
-    mocker.patch("System.tools.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
+
+    mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
+
+    mocker.patch("System.tools.sandbox.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
     mocker.patch.dict("os.environ", {"BRAIN_OS_HEADLESS": "0"}, clear=True)
 
     studio_dir = tmp_path / "Studio" / "TestProject"
@@ -62,10 +90,17 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
     block_result = execute_command("ls", "../../")
     assert "PATH TRAVERSAL BLOCKED" in block_result
 
+    # Add 'mocker' to the parameters
+    # ... end of test_execute_command_security_and_hitl ...
+    # (Make sure to remove the accidentally pasted test_adr_safety_blocks from inside it!)
 
-def test_adr_safety_blocks() -> None:
+
+def test_adr_safety_blocks(mocker) -> None:
     """Ensure the AI cannot autonomously write, append, or rename ADR files."""
     from System.tools import append_safe_file, rename_safe_file, write_safe_file
+
+    # Bypass the sandbox so we hit the ADR check!
+    mocker.patch("System.tools.file_system.is_safe_path", return_value=True)
 
     # Test Write Block
     write_res = write_safe_file("Studio/Project/docs/adr/001-test.md", "data")
@@ -105,7 +140,9 @@ def test_operate_forge_security(tmp_path, monkeypatch) -> None:
     # Mock the safe path using a real, OS-resolved temporary directory
     mock_root = tmp_path.resolve()
     monkeypatch.setattr(tools, "ROOT_DIR", mock_root)
-    monkeypatch.setattr(tools, "is_safe_path", lambda x, require_write=False: True)
+    monkeypatch.setattr(
+        "System.tools.forge.is_safe_path", lambda x, require_write=False: True
+    )
 
     # 2. Test Missing Engine Block
     res_missing = operate_forge("Empty-Project", "Build stuff")
@@ -131,9 +168,15 @@ def test_copy_safe_file_security(tmp_path: Path, mocker) -> None:  # type: ignor
     """Ensure copy_safe_file blocks path traversal and protects ADRs."""
     from System.tools import copy_safe_file
 
-    mocker.patch("System.tools.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
+
     mocker.patch(
-        "System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Media", tmp_path / "Studio"}
+        "System.tools.sandbox.ALLOWED_DIRECTORIES",
+        {tmp_path / "Media", tmp_path / "Studio"},
     )
 
     # Setup dummy source file
@@ -165,9 +208,14 @@ def test_search_safe_directory_security_and_metrics(tmp_path: Path, mocker) -> N
     """Ensure search_safe_directory finds text, respects the sandbox, and returns telemetry."""
     from System.tools import search_safe_directory
 
-    mocker.patch("System.tools.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
+
     mocker.patch(
-        "System.tools.ALLOWED_DIRECTORIES",
+        "System.tools.sandbox.ALLOWED_DIRECTORIES",
         {tmp_path / "Studio", tmp_path / "Professional"},
     )
 
@@ -198,8 +246,13 @@ def test_analyze_safe_syntax(tmp_path: Path, mocker) -> None:  # type: ignore
     """Ensure analyze_safe_syntax correctly wraps the local linter and respects the sandbox."""
     from System.tools import analyze_safe_syntax
 
-    mocker.patch("System.tools.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
+    mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
+
+    mocker.patch("System.tools.sandbox.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
 
     studio_dir = tmp_path / "Studio"
     studio_dir.mkdir(parents=True)
@@ -214,7 +267,7 @@ def test_analyze_safe_syntax(tmp_path: Path, mocker) -> None:  # type: ignore
     py_file = studio_dir / "test.py"
     py_file.write_text("print('hello')")
 
-    mock_subprocess = mocker.patch("System.tools.subprocess.run")
+    mock_subprocess = mocker.patch("System.tools.execution.subprocess.run")
 
     # Simulate Success
     mock_subprocess.return_value = mocker.MagicMock(returncode=0)
@@ -234,8 +287,14 @@ def test_read_file_signatures_tool(tmp_path, mocker) -> None:  # type: ignore
     from System.tools import read_file_signatures
 
     # 1. Setup our mock sandbox
-    mocker.patch("System.tools.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path})
+
+    mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
+
+    mocker.patch("System.tools.sandbox.ALLOWED_DIRECTORIES", {tmp_path})
 
     test_file = tmp_path / "test_module.py"
     test_file.write_text("def mock_func():\n    print('heavy logic')", encoding="utf-8")
@@ -263,9 +322,18 @@ def test_execute_command_headless_bypass(monkeypatch, tmp_path):
 
     safe_dir = tmp_path / "Studio"
     safe_dir.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setattr("System.tools.ROOT_DIR", tmp_path)
-    monkeypatch.setattr("System.tools.ALLOWED_DIRECTORIES", {safe_dir})
+
+    # ADD THESE TWO LINES: Force the BBB to accept the tmp_path as safe
+    monkeypatch.setattr(
+        "System.neuroanatomy.systemic.blood_brain_barrier.ROOT_DIR", tmp_path
+    )
+    monkeypatch.setattr(
+        "System.neuroanatomy.systemic.blood_brain_barrier.validate_execution_path",
+        lambda x: (True, str(safe_dir)),
+    )
+
     monkeypatch.setenv("BRAIN_OS_HEADLESS", "1")
+    # ... rest of the test ...
 
     monkeypatch.setattr(
         "builtins.input", lambda *args: pytest.fail("HITL prompt was not bypassed!")
@@ -285,8 +353,10 @@ def test_operate_forge_headless_bypass(monkeypatch, tmp_path):
     project_dir = tmp_path / "Studio" / "TestProject"
     project_dir.mkdir(parents=True)
     (project_dir / "orchestrator.py").touch()
-    monkeypatch.setattr("System.tools.ROOT_DIR", tmp_path)
-    monkeypatch.setattr("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
+    monkeypatch.setattr("System.tools.file_system.ROOT_DIR", tmp_path)
+    monkeypatch.setattr(
+        "System.tools.sandbox.ALLOWED_DIRECTORIES", {tmp_path / "Studio"}
+    )
 
     # 2. Mock execution to do nothing but succeed
     monkeypatch.setattr(
@@ -376,8 +446,13 @@ def test_speak(mocker):
 def test_analyze_audio(tmp_path, mocker):
     from System.tools import analyze_audio
 
-    mocker.patch("System.tools.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path})
+    mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
+
+    mocker.patch("System.tools.sandbox.ALLOWED_DIRECTORIES", {tmp_path})
 
     fake_audio = tmp_path / "test.wav"
     fake_audio.write_text("fake binary")

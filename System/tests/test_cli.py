@@ -105,8 +105,14 @@ def test_init_command_creates_vault(tmp_path, mocker) -> None:  # type: ignore
 
 def test_bootstrap_security_block(tmp_path: Path, mocker) -> None:  # type: ignore
     """Test that projects cannot be bootstrapped outside allowed zones."""
-    mocker.patch("System.tools.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
+
+    mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
+
+    mocker.patch("System.tools.sandbox.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
 
     # Try to clone into the root directory directly
     result = bootstrap_project("../../malicious_project")
@@ -115,9 +121,15 @@ def test_bootstrap_security_block(tmp_path: Path, mocker) -> None:  # type: igno
 
 def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # type: ignore
     """Test that command execution is sandboxed and respects HITL."""
-    mocker.patch("System.tools.ROOT_DIR", tmp_path)
+
+    mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
+
     mocker.patch("System.neuroanatomy.systemic.blood_brain_barrier.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
+    mocker.patch("System.tools.sandbox.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
 
     # <-- ADD THIS LINE: Bypass the LLM network call in the test environment
     mocker.patch(
@@ -143,7 +155,7 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
     mocker.patch("builtins.input", return_value="y")
 
     # If your test_cli.py imports execute_command from System.tools, use:
-    mock_subprocess = mocker.patch("System.tools.subprocess.run")
+    mock_subprocess = mocker.patch("System.tools.execution.subprocess.run")
 
     mock_subprocess.return_value.returncode = 0
     mock_subprocess.return_value.stdout = "mock_ls_output"

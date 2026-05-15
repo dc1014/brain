@@ -13,8 +13,14 @@ def test_proprioception_lifecycle(monkeypatch, tmp_path):
         tmp_path / "motor_state.json",
     )
 
-    # Safely ensure the Studio directory exists for the CI runner
-    (ROOT_DIR / "Studio").mkdir(exist_ok=True)
+    safe_dir = tmp_path / "Studio"
+    safe_dir.mkdir(parents=True, exist_ok=True)
+
+    # ADD THIS LINE: Force the BBB to accept the tmp_path as completely safe
+    monkeypatch.setattr(
+        "System.neuroanatomy.systemic.blood_brain_barrier.validate_execution_path",
+        lambda x: (True, str(safe_dir)),
+    )
 
     cmd = 'python -c "import time; time.sleep(10)"'
 

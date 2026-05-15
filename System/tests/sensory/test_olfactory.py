@@ -3,10 +3,10 @@ from System.tools import delete_safe_file
 
 
 def test_delete_safe_file_lysosome(tmp_path, monkeypatch):
-    monkeypatch.setattr("System.tools.ROOT_DIR", tmp_path)
+    monkeypatch.setattr("System.tools.file_system.ROOT_DIR", tmp_path)
     monkeypatch.setattr(
-        "System.tools.is_safe_path", lambda x, require_write=False: True
-    )  # <--- Bypass sandbox for test
+        "System.tools.file_system.is_safe_path", lambda x, require_write=False: True
+    )
 
     test_file = tmp_path / "Personal" / "bad_note.md"
     test_file.parent.mkdir(parents=True)

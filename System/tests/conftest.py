@@ -52,3 +52,32 @@ def block_test_logging(monkeypatch):
         return original_open(file, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "open", safe_open)
+
+
+@pytest.fixture(autouse=True)
+def autonomic_sandbox(tmp_path, monkeypatch):
+    """
+    SHIFT-LEFT: This fixture runs automatically before EVERY test.
+    It brutally intercepts any attempt by the OS to access the physical ROOT_DIR
+    and redirects it to an ephemeral tmp_path, guaranteeing 0 side effects.
+    """
+    modules_with_root_dir = [
+        "System.core.paths",
+        "System.tools.sandbox",
+        "System.tools.file_system",
+        "System.tools.execution",
+        "System.tools.sensory",
+        "System.tools.cognitive",
+        "System.tools.forge",
+        "System.neuroanatomy.systemic.blood_brain_barrier",
+        "System.neuroanatomy.cortical.occipital",
+        "System.neuroanatomy.sensory.somatosensory",
+        "System.neuroanatomy.sensory.gustatory",
+        "System.neuroanatomy.sensory.olfactory",
+    ]
+
+    for mod in modules_with_root_dir:
+        try:
+            monkeypatch.setattr(f"{mod}.ROOT_DIR", tmp_path)
+        except (AttributeError, ImportError):
+            pass  # Module might not have imported it, perfectly fine

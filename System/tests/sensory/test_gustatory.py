@@ -4,8 +4,8 @@ from System.tools import taste_safe_file
 
 def test_process_taste_profile(tmp_path, monkeypatch):
     monkeypatch.setattr("System.neuroanatomy.sensory.gustatory.ROOT_DIR", tmp_path)
-    monkeypatch.setattr("System.tools.ROOT_DIR", tmp_path)
-    monkeypatch.setattr("System.tools.is_safe_path", lambda x: True)
+    monkeypatch.setattr("System.tools.file_system.ROOT_DIR", tmp_path)
+    monkeypatch.setattr("System.tools.sensory.is_safe_path", lambda x: True)
 
     test_file = tmp_path / "test.txt"
     test_file.write_text("Hello World")

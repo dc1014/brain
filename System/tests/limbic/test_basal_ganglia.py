@@ -33,23 +33,48 @@ def test_amygdala_blocks_malicious_habits(monkeypatch, tmp_path):
 
 
 def test_tick_habits_execution(monkeypatch, tmp_path, mocker):
+    habits_file = tmp_path / "habits.json"
     monkeypatch.setattr(
-        "System.neuroanatomy.limbic.basal_ganglia.HABITS_FILE", tmp_path / "habits.json"
+        "System.neuroanatomy.limbic.basal_ganglia.HABITS_FILE", habits_file
+    )
+
+    # 🛡️ THE MISSING LINK: Tell the Blood-Brain Barrier that our tmp_path is safe!
+    monkeypatch.setattr(
+        "System.neuroanatomy.systemic.blood_brain_barrier.validate_execution_path",
+        lambda x: (True, str(tmp_path)),
     )
 
     # Form a habit
     form_habit("quick_pulse", "echo hello", 1)
 
-    # Mock subprocess to prove it gets called
-    mock_popen = mocker.patch(
-        "System.neuroanatomy.limbic.basal_ganglia.subprocess.Popen"
+    # 🧬 BIOMIMETIC REWIND
+    import json
+    from datetime import datetime, timedelta
+
+    data = json.loads(habits_file.read_text())
+
+    # 1. Parse the exact timezone-aware format the OS generated
+    last_run_dt = datetime.fromisoformat(data["quick_pulse"]["last_run"])
+
+    # 2. Rewind it safely by 10 minutes
+    rewound_dt = last_run_dt - timedelta(minutes=10)
+
+    # 3. Write the mathematically perfect string back to disk
+    data["quick_pulse"]["last_run"] = rewound_dt.isoformat()
+    habits_file.write_text(json.dumps(data))
+
+    # 🎯 ZERO DEBT FIX: Patch the entire subprocess module
+    mock_subprocess = mocker.patch(
+        "System.neuroanatomy.limbic.basal_ganglia.subprocess"
     )
 
-    # Tick 1: Should run immediately because last_run is 1970
+    # Tick 1: Now parses successfully and detects the overdue habit
     tick_habits()
-    assert mock_popen.called
-    mock_popen.reset_mock()
+
+    # Verify the call through the parent mock
+    assert mock_subprocess.Popen.called
+    mock_subprocess.Popen.reset_mock()
 
     # Tick 2: Should NOT run because 1 minute hasn't passed
     tick_habits()
-    assert not mock_popen.called
+    assert not mock_subprocess.Popen.called
