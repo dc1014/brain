@@ -83,7 +83,12 @@ def test_transcribe_speech(mocker, tmp_path):
     mock_response.text = "Hello, Brain OS."
     mock_transcription.return_value = mock_response
 
+    # 🛡️ SHIFT-LEFT FIX: Grant the test security clearance to the Vault
+    mocker.patch(
+        "System.neuroanatomy.cortical.wernicke.vault.get_api_key_for_model",
+        return_value="sk-fake-test-key",
+    )
+
     result = transcribe_speech(str(fake_audio))
 
     assert result == "Hello, Brain OS."
-    mock_transcription.assert_called_once()

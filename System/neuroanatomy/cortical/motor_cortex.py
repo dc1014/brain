@@ -1,7 +1,7 @@
 import asyncio
 import json
+from typing import Any, Dict, Tuple, Union
 from pathlib import Path
-from typing import Any
 from rich.console import Console
 import System.tools as os_tools
 
@@ -9,25 +9,25 @@ console = Console()
 
 
 class MotorCortex:
-    """
-    Coordinates file-system motor actions to prevent race conditions.
-    Locks are securely bound to their specific event loop to prevent cross-loop contamination.
-    """
-
-    _locks: dict[str, asyncio.Lock] = {}
+    # Maps (loop_id, resolved_path_string) to an asyncio.Lock to prevent cross-loop seizures
+    _locks: Dict[Tuple[int, str], asyncio.Lock] = {}
 
     @classmethod
-    def get_lock(cls, filepath: str | Path) -> asyncio.Lock:
+    def get_lock(cls, file_path: Union[str, Path]) -> asyncio.Lock:
+        """
+        Lazy-loads an asyncio Lock bound strictly to the current active event loop.
+        Zero Debt: Prevents 'attached to a different loop' crashes across CLI commands.
+        """
         try:
-            loop = asyncio.get_running_loop()
-            loop_id = str(id(loop))
+            loop_id = id(asyncio.get_running_loop())
         except RuntimeError:
-            # SHIFT-LEFT: Graceful degradation for synchronous Pytest environments
-            loop_id = "sync_test_loop"
+            loop_id = 0
 
-        # Create a unique lock key based on the active event loop ID AND the file path
-        key = f"{loop_id}_{str(Path(filepath).resolve())}"
+        # SHIFT-LEFT FIX: Resolve path so './file' and 'file' share the exact same lock.
+        # Cast back to string to ensure consistent dictionary keys and satisfy typing.
+        resolved_path = str(Path(file_path).resolve())
 
+        key = (loop_id, resolved_path)
         if key not in cls._locks:
             cls._locks[key] = asyncio.Lock()
         return cls._locks[key]

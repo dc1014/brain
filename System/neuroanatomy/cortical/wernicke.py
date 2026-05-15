@@ -41,7 +41,13 @@ def filter_semantic_relevance(query: str, raw_search_results: str) -> str:
 
     try:
         model_name = os.getenv("VISION_MODEL", "openai/gpt-4o-mini")
-        api_key = vault.get_api_key_for_model(model_name) or os.getenv("OPENAI_API_KEY")
+        # SAFETY FIRST: Strictly route through the Vault. No fallback to os.getenv.
+        api_key = vault.get_api_key_for_model(model_name)
+
+        if not api_key:
+            return (
+                "WERNICKE COMPREHENSION ERROR: API Key secured or missing from Vault."
+            )
 
         response = completion(
             model=model_name,
@@ -130,7 +136,12 @@ def transcribe_speech(filepath: str) -> str:
         console.print(
             "[dim yellow]🧠 Wernicke's Area processing speech-to-text...[/dim yellow]"
         )
-        api_key = vault.get_api_key_for_model("openai") or os.getenv("OPENAI_API_KEY")
+        # SAFETY FIRST: Strictly route through the Vault. No fallback to os.getenv.
+        api_key = vault.get_api_key_for_model("openai")
+
+        if not api_key:
+            return "TRANSCRIPTION ERROR: API Key secured or missing from Vault."
+
         with open(filepath, "rb") as audio_file:
             response = transcription(
                 model="whisper-1", file=audio_file, api_key=api_key
