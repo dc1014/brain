@@ -1,11 +1,12 @@
 import os
-import re
 import yaml  # type: ignore
 from pathlib import Path
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from litellm import completion  # type: ignore
+from System.amygdala import scan_prompt
+
 
 from System.llm import run_agent, get_system_context
 
@@ -20,33 +21,14 @@ except Exception:
 
 
 def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict[str, int]]:
-    prompt_lower = prompt.lower()
     zero_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
-    # PRE-FLIGHT (Deterministic Bouncer)
-    forbidden_actions = [r"\bdelete\b", r"\bremove\b", r"\berase\b", r"\brm\b"]
-    for action in forbidden_actions:
-        if re.search(action, prompt_lower):
-            clean_word = action.replace(r"\b", "")
-            return (
-                False,
-                f"Hard Rule: No delete tool. You asked to '{clean_word}'.",
-                "NONE",
-                "NONE",
-                zero_usage,
-            )
+    # --- 1. THE AMYGDALA (Shift-Left Threat Detection) ---
+    is_safe, threat_reason = scan_prompt(prompt)
+    if not is_safe:
+        return False, threat_reason, "NONE", "NONE", zero_usage
 
-    forbidden_targets = ["system/", ".env", "tools.py", "router.py", "cli.py"]
-    for target in forbidden_targets:
-        if target in prompt_lower:
-            return (
-                False,
-                f"Hard Rule: Sandboxed. Cannot target '{target}'.",
-                "NONE",
-                "NONE",
-                zero_usage,
-            )
-
+    # --- 2. THE PREFRONTAL CORTEX (Dispatcher LLM) ---
     dispatcher_cfg = AGENT_CONFIG["agents"]["dispatcher"]
     system_prompt = dispatcher_cfg["system_prompt"] + get_system_context(["Meta"])
 

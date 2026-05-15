@@ -21,6 +21,37 @@ Obsidian serves as the primary UI "glass pane" for viewing and queuing content, 
 
 ---
 
+## 🧬 Biomimetic Architecture (The Biological Analogs)
+
+Brain OS is not a traditional state machine or a reactive AI wrapper. It is modeled directly on human neuroanatomy and evolutionary biology, treating the operating system as a living, self-maintaining organism.
+
+### 1. Neuroanatomy & Memory (Data Persistence)
+* **The Hippocampus (Short-Term Memory):** Uses `agent_interactions.jsonl` as a volatile, append-only chronological ledger of daily interactions.
+* **The Neocortex (Long-Term Memory):** Uses an Obsidian Vault (`.md` files) as a highly structured, associative network of permanent facts linked by `[[wikilinks]]`.
+* **Amnesia (The Forgetting Curve):** Actively rotates and archives the Hippocampus logs daily to prevent context-window bloat. Forgetting noise is required to retain signal.
+
+### 2. Autonomic Nervous System (Background Drives)
+Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pacemaker (`autonomic.py`) that monitors the passage of time and triggers subconscious drives:
+* **REM Sleep (Circadian Rhythm):** At 2:00 AM, the OS wakes up, reads the Hippocampus, prunes the noise, and consolidates the remaining facts into the Neocortex using `<sleep_summary>` tags.
+* **Default Mode Network (Daydreaming):** When the system is idle for >4 hours, the Subconscious Daydreamer agent wakes up, reads recent experiment logs, and synthesizes novel `<strategic_hypothesis>` ideas. The system invents its own future work.
+* **The Forager (Ultradian Rhythm):** Every 12 hours, a subconscious agent wanders predefined external URLs (news, competitors, server logs) and appends `<foraged_intel>` to a Morning Briefing.
+
+### 3. Cognitive Segregation (Executive vs. Somatic)
+* **Prefrontal Cortex (Brain OS):** Handles executive function—goal setting, planning, routing, and QA auditing. It decides *what* to do.
+* **Somatic Muscle Memory (Forge OS):** Brain OS delegates physical execution (writing code, designing UIs, running tests) to a separate, deterministic factory (Forge). The brain does not micromanage muscle twitches.
+
+### 4. Sensory & Motor Systems (I/O)
+* **The Retina (Transduction):** The `Sense` tool acts as a sensory organ, transducing chaotic environmental noise (raw DOM/HTML) into clean, LLM-readable Markdown.
+* **The Motor Cortex:** The `execute_shell_command` tool allows the OS to physically manipulate its host environment, compiling code and moving files.
+
+### 5. Shift-Left Threat Detection (The Amygdala)
+* **The Flinch Reflex:** Before a prompt ever reaches the expensive, analytical LLM router (Prefrontal Cortex), it passes through `amygdala.py`—a sub-millisecond heuristic engine. It flinches and snaps the circuit breaker instantly if it detects prompt injections or catastrophic commands (`rm -rf`).
+
+### 6. Synaptic Clefts (Data Contracts)
+* **Neurotransmitters:** To prevent hallucinations when different parts of the brain communicate, agents pass explicit, deterministic XML tags (`<audit_result grade="FAIL">`) embedded within Markdown files, acting as strict chemical bindings between neural nodes.
+
+---
+
 ## 🏗️ Architecture & Routing
 
 ### 1. The Deterministic Router (The Bouncer)
