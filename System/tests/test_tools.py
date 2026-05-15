@@ -8,6 +8,7 @@ from System.tools import (
     append_safe_file,
     bootstrap_project,
     execute_command,
+    write_multiple_files,
 )
 
 
@@ -523,3 +524,48 @@ def test_deploy_project(tmp_path: Path, mocker) -> None:  # type: ignore
     assert result_success.success
     assert "<deployment_success>" in result_success.output
     assert "https://brain-os.simulated.app" in result_success.output
+
+
+def test_write_multiple_files_batch_and_security(monkeypatch, tmp_path):
+    """
+    Zero-Debt Test: Ensures write_multiple_files batches correctly,
+    saves tokens, and strictly obeys the Blood-Brain Barrier.
+    """
+    # 1. Sandbox the environment
+    monkeypatch.setattr("System.tools.file_system.ROOT_DIR", tmp_path)
+
+    # ⚡ SHIFT-LEFT: Mock the sandbox boundary to prevent import-time cache leakage
+    def mock_is_safe_path(target_path):
+        return "Studio" in target_path.parts
+
+    monkeypatch.setattr("System.tools.file_system.is_safe_path", mock_is_safe_path)
+
+    studio_dir = tmp_path / "Studio"
+    studio_dir.mkdir()
+
+    # 2. Provide a batch payload
+    files_payload = [
+        {"filepath": "Studio/App.jsx", "content": "export default App;"},
+        {"filepath": "Studio/index.css", "content": "body { color: black; }"},
+        {
+            "filepath": "System/core/hacked.py",
+            "content": "print('hacked')",
+        },  # Malicious!
+    ]
+
+    # 3. Execute the batch tool
+    result = write_multiple_files(files_payload)
+
+    # 4. Strict Validation
+    assert (studio_dir / "App.jsx").exists()
+    assert (studio_dir / "index.css").exists()
+    assert (studio_dir / "App.jsx").read_text(encoding="utf-8") == "export default App;"
+
+    # Malicious file MUST be blocked
+    hacked_file = tmp_path / "System" / "core" / "hacked.py"
+    assert not hacked_file.exists(), (
+        "Blood-Brain Barrier failed to block malicious batch write!"
+    )
+
+    assert "Successfully wrote: Studio/App.jsx" in result
+    assert "SECURITY BLOCK" in result

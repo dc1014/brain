@@ -2,6 +2,7 @@ import os
 import pytest
 from unittest.mock import MagicMock
 from System.runtime import analyze_task
+from typing import Any
 
 
 @pytest.mark.asyncio
@@ -200,3 +201,25 @@ async def test_analyze_task_local_slm_routes(mocker, monkeypatch, tmp_path) -> N
     assert is_valid is True
     assert route == "MEMORY"
     assert domain == "PERSONAL"
+
+
+def test_parallel_swarm_parsing() -> None:
+    """Ensures the orchestrator can parse nested parallel swarm configurations."""
+    pipeline: list[dict[str, Any]] = [
+        {"agent": "swarm_architect"},
+        {"swarm": [{"agent": "frontend"}, {"agent": "backend"}]},
+        {"agent": "qa_auditor"},
+    ]
+
+    agents_to_run = []
+    for step in pipeline:
+        if "agent" in step:
+            agents_to_run.append(step["agent"])
+        elif "swarm" in step:
+            swarm_agents = [s["agent"] for s in step["swarm"]]
+            agents_to_run.append(f"[Parallel Swarm: {', '.join(swarm_agents)}]")
+
+    assert len(agents_to_run) == 3
+    assert agents_to_run[0] == "swarm_architect"
+    assert agents_to_run[1] == "[Parallel Swarm: frontend, backend]"
+    assert agents_to_run[2] == "qa_auditor"

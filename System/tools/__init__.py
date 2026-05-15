@@ -11,6 +11,7 @@ from .file_system import (
     append_safe_file,
     copy_safe_file,
     delete_safe_file,
+    write_multiple_files,
 )
 from .execution import (
     execute_command,
@@ -83,4 +84,5 @@ __all__ = [
     "map_spatial_dependencies",
     "operate_forge",
     "bootstrap_project",
+    "write_multiple_files",
 ]

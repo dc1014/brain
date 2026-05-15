@@ -85,16 +85,23 @@ async def execute_tools(
                 # ⚡ SHIFT-LEFT: Strongly-Typed Result Parsing
                 if isinstance(result, ExecutionResult):
                     raw_output = result.output
-                    if not result.success:
+
+                    # Only halt the entire OS if it is explicitly a SECURITY BLOCK
+                    is_security_block = (
+                        not result.success
+                        and result.block_reason
+                        and "SECURITY BLOCK" in result.block_reason
+                    )
+
+                    if is_security_block:
                         action_manifest.append("[HALTED] Security clearance denied.")
                         system_halt_text = (
                             f"\n\n[SYSTEM HALT] {result.block_reason or raw_output}"
                         )
                         is_halted = True
                     else:
-                        action_manifest.append(
-                            f"[{func_name.upper()}] Executed successfully."
-                        )
+                        # Normal errors (like "Directory exists") are passed safely back to the LLM so it can learn!
+                        action_manifest.append(f"[{func_name.upper()}] Executed.")
                 else:
                     # Legacy string fallback for tools we haven't migrated yet
                     raw_output = str(result)

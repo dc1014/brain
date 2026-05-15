@@ -1,5 +1,7 @@
-from System.cli import sleep
 import json
+from pathlib import Path
+from System.neuroanatomy.systemic.lymphatic import flush_waste
+from System.cli import sleep
 
 
 def test_biological_sleep_cycle(monkeypatch, tmp_path):
@@ -99,4 +101,28 @@ def test_biological_sleep_cycle(monkeypatch, tmp_path):
     rotated_new = not (root / "System" / "logs" / "agent_interactions.jsonl").exists()
     assert rotated_classic or rotated_new, (
         "Sleep Cycle failed to rotate the interaction logs!"
+    )
+
+
+def test_glymphatic_flush_clears_token_ledger(tmp_path: Path, mocker) -> None:
+    """
+    Zero-Debt Test: Ensures the Glymphatic System successfully deletes
+    the agent_interactions.jsonl file to reset token metabolism.
+    """
+    # 1. Sandbox the environment to prevent deleting the real ledger
+    mocker.patch("System.neuroanatomy.systemic.lymphatic.ROOT_DIR", tmp_path)
+
+    # 2. Simulate metabolic waste (Burned tokens)
+    ledger_path = tmp_path / "agent_interactions.jsonl"
+    ledger_path.write_text('{"prompt_tokens": 100, "completion_tokens": 50}\n')
+
+    assert ledger_path.exists()
+    assert ledger_path.stat().st_size > 0
+
+    # 3. Trigger the biological flush
+    flush_waste(max_log_lines=0)
+
+    # 4. Strict Validation: The waste must be entirely eradicated
+    assert not ledger_path.exists(), (
+        "Glymphatic system failed to clear the token ledger!"
     )

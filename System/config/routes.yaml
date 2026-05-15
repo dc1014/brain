@@ -62,3 +62,11 @@ routes:
     - agent: "artist"
       tools: ["base", "vision", "write"]
       context: ["Meta", "Domain", "Studio", "Personal", "Professional", "Media"]
+
+  STATIC_PAGE:
+    - agent: "frontend_engineer"
+      tools: ["base", "execute", "map_spatial_dependencies"]
+      context: ["Studio"]
+    - agent: "qa_auditor"
+      tools: ["base", "execute"]
+      context: ["Meta", "Domain", "Studio"]

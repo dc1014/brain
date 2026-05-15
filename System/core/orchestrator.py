@@ -88,7 +88,13 @@ async def dispatch_task(description: str, obsidian: bool = False) -> None:
 
     # --- STANDARD TERMINAL EXECUTION ---
     pipeline = list(AGENT_CONFIG["routes"].get(route_type, []))
-    agents_to_run = [step["agent"] for step in pipeline]
+    agents_to_run = []
+    for step in pipeline:
+        if "agent" in step:
+            agents_to_run.append(step["agent"])
+        elif "swarm" in step:
+            swarm_agents = [s["agent"] for s in step["swarm"]]
+            agents_to_run.append(f"[Parallel Swarm: {', '.join(swarm_agents)}]")
 
     console.print("\n[bold yellow]⚠️  PIPELINE AUTHORIZATION[/bold yellow]")
     console.print(

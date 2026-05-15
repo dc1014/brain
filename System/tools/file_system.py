@@ -248,3 +248,27 @@ def delete_safe_file(filepath: str) -> ExecutionResult:
     except Exception as e:
         reason = f"DELETE ERROR: {str(e)}"
         return ExecutionResult(success=False, output=reason, block_reason=reason)
+
+
+def write_multiple_files(files: list[dict]) -> str:
+    """Batch writes multiple files to prevent quadratic context bleed."""
+    results = []
+    for f_obj in files:
+        filepath = f_obj.get("filepath", "")
+        content = f_obj.get("content", "")
+
+        target_path = (ROOT_DIR / filepath).resolve()
+
+        # Adhere to the Blood-Brain Barrier
+        if not is_safe_path(target_path):
+            results.append(f"[SYSTEM HALT] SECURITY BLOCK: Cannot write to {filepath}")
+            continue
+
+        try:
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(content, encoding="utf-8")
+            results.append(f"Successfully wrote: {filepath}")
+        except Exception as e:
+            results.append(f"Error writing {filepath}: {str(e)}")
+
+    return "\n".join(results)

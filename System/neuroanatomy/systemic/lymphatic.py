@@ -1,16 +1,17 @@
-from System.core.paths import ROOT_DIR
+import io
 import time
 import tarfile
 from rich.console import Console
+from System.core.paths import ROOT_DIR
 
 console = Console()
 
 
-def flush_waste(max_log_lines: int = 2000, max_bak_age_hours: int = 24) -> None:
+def flush_waste(max_log_lines: int = 0, max_bak_age_hours: int = 24) -> None:
     """
     The Lymphatic System.
-    Compresses metabolic waste (old logs, orphaned snapshots) into tarballs (Lymph Nodes)
-    to prevent hard drive bloat without permanently destroying user data.
+    Compresses metabolic waste into tarballs to prevent bloat.
+    If max_log_lines=0, it dynamically hunts, archives, and eradicates all token ledgers.
     """
     console.print(
         "[dim blue]🌊 Lymphatic System: Sweeping metabolic waste to Lymph Nodes...[/dim blue]"
@@ -24,9 +25,10 @@ def flush_waste(max_log_lines: int = 2000, max_bak_age_hours: int = 24) -> None:
     tar_path = lymph_dir / f"waste_flush_{timestamp}.tar.gz"
 
     cleared_baks = 0
+    cleared_images = 0
     trimmed_lines = 0
+    ledger_cleared = False
 
-    # Use native gzip tarball compression
     with tarfile.open(tar_path, "w:gz") as tar:
         # --- 1. Archive old Vestibular snapshots ---
         vestibular_dir = ROOT_DIR / "Meta" / "Vestibular"
@@ -41,63 +43,84 @@ def flush_waste(max_log_lines: int = 2000, max_bak_age_hours: int = 24) -> None:
                     except Exception:
                         pass
 
-        # --- 2. Archive Old Interaction Logs ---
-        log_file_path = ROOT_DIR / "logs" / "agent_interactions.jsonl"
-        if log_file_path.exists():
-            try:
-                with open(log_file_path, "r", encoding="utf-8") as f_in:
-                    lines = f_in.readlines()
+        # --- 2. APEX FIX: Recursively Hunt, Archive & Eradicate Active Logs ---
+        log_files = list(ROOT_DIR.rglob("agent_interactions.jsonl"))
+        for idx, log_path in enumerate(log_files):
+            if log_path.is_file():
+                try:
+                    lines = log_path.read_text(encoding="utf-8").splitlines()
+                    if not lines:
+                        continue
 
-                if len(lines) > max_log_lines:
-                    trimmed_lines = len(lines) - max_log_lines
-                    archived_lines = lines[:trimmed_lines]
-                    retained_lines = lines[-max_log_lines:]
+                    archived_data = ""
+                    if max_log_lines == 0:
+                        archived_data = "\n".join(lines) + "\n"
+                        log_path.unlink()  # Eradicate
+                        ledger_cleared = True
+                        trimmed_lines += len(lines)
+                    else:
+                        if len(lines) > max_log_lines:
+                            trimmed_count = len(lines) - max_log_lines
+                            archived_data = "\n".join(lines[:trimmed_count]) + "\n"
+                            log_path.write_text(
+                                "\n".join(lines[-max_log_lines:]) + "\n",
+                                encoding="utf-8",
+                            )
+                            trimmed_lines += trimmed_count
 
-                    # Write trimmed lines to a temp file, add to tarball, then delete temp
-                    temp_log = lymph_dir / f"archived_logs_{timestamp}.jsonl"
-                    temp_log.write_text("".join(archived_lines), encoding="utf-8")
-                    tar.add(
-                        temp_log,
-                        arcname=f"logs/archived_interactions_{timestamp}.jsonl",
-                    )
-                    temp_log.unlink()
+                    # Safely archive the waste before it is lost forever
+                    if archived_data:
+                        tarinfo = tarfile.TarInfo(
+                            name=f"logs/archived_interactions_{timestamp}_{idx}.jsonl"
+                        )
+                        archived_bytes = archived_data.encode("utf-8")
+                        tarinfo.size = len(archived_bytes)
+                        tar.addfile(tarinfo, io.BytesIO(archived_bytes))
+                except Exception:
+                    pass
 
-                    # Overwrite active log with only the tail
-                    with open(log_file_path, "w", encoding="utf-8") as f_out:
-                        f_out.writelines(retained_lines)
-            except Exception as e:
-                console.print(f"[dim red]Lymphatic error archiving logs: {e}[/dim red]")
+        # --- 3. APEX FIX: Recursively Hunt & Eradicate Phantom Fatigue Cache ---
+        if max_log_lines == 0:
+            for met_path in ROOT_DIR.rglob("metabolism.json"):
+                if met_path.is_file():
+                    try:
+                        met_path.unlink()
+                        ledger_cleared = True
+                    except Exception:
+                        pass
 
-        # --- 3. Clear Visual Cortex Buffer ---
+        # --- 4. Clear Visual Cortex Buffer ---
         visual_dir = ROOT_DIR / "Meta" / "Visual_Cortex"
-        cleared_images = 0
         if visual_dir.exists():
             for f in visual_dir.glob("*.png"):
                 if f.is_file():
                     try:
-                        f.unlink()  # Permanently delete ephemeral test screenshots
+                        tar.add(f, arcname=f"media/{f.name}")
+                        f.unlink()
                         cleared_images += 1
                     except Exception:
                         pass
+
         if cleared_images > 0:
             console.print(
                 f"[dim blue]🌊 Flushed {cleared_images} ephemeral screenshots from Visual Cortex.[/dim blue]"
             )
 
     # --- Cleanup empty tarballs if nothing was added ---
-    if cleared_baks == 0 and trimmed_lines == 0:
+    if cleared_baks == 0 and cleared_images == 0 and trimmed_lines == 0:
         tar_path.unlink()
+
+    if ledger_cleared:
         console.print(
-            "[dim blue]🌊 Flush complete: System tissues are clean. No waste archived.[/dim blue]"
+            "[bold blue]🌊 Flush complete: All ghost ledgers and metabolism caches eradicated. Tokens reset to 0.[/bold blue]"
         )
     else:
         console.print(
-            f"[bold blue]🌊 Flush complete: Archived {cleared_baks} snapshots and {trimmed_lines} log entries to Meta/Lymph_Nodes/{tar_path.name}.[/bold blue]"
+            "[dim blue]🌊 Flush complete: System tissues are clean. No waste archived.[/dim blue]"
         )
 
 
 def purge_waste() -> None:
-    """Explicit DevEx command: Permanently deletes the archived tarballs in the Lymph Nodes."""
     lymph_dir = ROOT_DIR / "Meta" / "Lymph_Nodes"
     if not lymph_dir.exists():
         console.print("[dim blue]Lymph Nodes are empty. Nothing to purge.[/dim blue]")

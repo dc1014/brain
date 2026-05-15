@@ -109,6 +109,23 @@ write:
 
   - type: "function"
     function:
+      name: "write_multiple_files"
+      description: "Writes multiple files to the disk in a single action. ALWAYS use this instead of write_safe_file when creating more than one file to save API tokens."
+      parameters:
+        type: "object"
+        properties:
+          files:
+            type: "array"
+            items:
+              type: "object"
+              properties:
+                filepath: { type: "string", description: "Relative path, e.g., Studio/App/src/main.jsx" }
+                content: { type: "string", description: "Complete file content" }
+              required: ["filepath", "content"]
+        required: ["files"]
+
+  - type: "function"
+    function:
       name: "rename_safe_file"
       description: "Renames file."
       parameters:
@@ -227,6 +244,7 @@ execute:
       parameters:
         type: "object"
         properties: {}
+        additionalProperties: false
 
   - type: "function"
     function:

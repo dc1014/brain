@@ -22,9 +22,15 @@ def operate_forge(project_name: str, instruction: str) -> ExecutionResult:
             )
             return ExecutionResult(success=False, output=reason, block_reason=reason)
 
+        # Check for legacy orchestrator, fallback to modern engine/cli.py
         orchestrator_path = target_path / "orchestrator.py"
         if not orchestrator_path.exists():
-            reason = f"ERROR: Forge engine not found at {orchestrator_path.relative_to(ROOT_DIR)}."
+            orchestrator_path = target_path / "engine" / "cli.py"
+
+        if not orchestrator_path.exists():
+            reason = (
+                f"ERROR: Forge engine not found at {target_path.relative_to(ROOT_DIR)}."
+            )
             return ExecutionResult(success=False, output=reason, block_reason=reason)
 
         ops_dir = target_path / "docs" / "ops"
