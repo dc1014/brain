@@ -30,6 +30,14 @@ repos:
         language: system
         pass_filenames: false
 
+      - id: pytest
+        name: Run Pytest (Zero Debt)
+        entry: uv run pytest
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+
   # Markdown Lint
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.48.0

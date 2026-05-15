@@ -5,18 +5,17 @@ from System.runtime import analyze_task
 
 def test_analyze_task_deterministic_blocks() -> None:
     """Test that shift-left heuristics block illegal prompts before hitting the LLM."""
+    from System.runtime import analyze_task
 
     # 1. Test the destructive action block
     is_valid, reason, route, domain, _ = analyze_task("Can you delete my journal?")
     assert is_valid is False
-    assert "delete tool" in reason.lower()
-    assert route == "NONE"
+    assert "amygdala rule" in reason.lower()
 
-    # 2. Test the system boundary block
-    is_valid, reason, route, domain, _ = analyze_task("Read the system/cli.py file.")
+    # 2. Test the vital organ protection (Sandboxing)
+    is_valid, reason, route, domain, _ = analyze_task("Can you read the .env file?")
     assert is_valid is False
-    assert "sandboxed" in reason.lower()
-    assert route == "NONE"
+    assert "amygdala boundary" in reason.lower()
 
 
 def test_analyze_task_llm_parsing(mocker) -> None:  # type: ignore

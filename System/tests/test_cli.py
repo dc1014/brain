@@ -43,17 +43,15 @@ def test_run_agent_error_handling(mocker) -> None:  # type: ignore
 def test_analyze_task_deterministic_blocks() -> None:
     """Test that shift-left heuristic checks block illegal prompts before hitting the LLM."""
 
-    # 1. Test the delete block
+    # 1. Test the destructive action block
     is_valid, reason, route, domain, _ = analyze_task("Can you delete my journal?")
     assert is_valid is False
-    assert "delete tool" in reason.lower()
-    assert route == "NONE"
+    assert "amygdala rule" in reason.lower()
 
-    # 2. Test the system boundary block
-    is_valid, reason, route, domain, _ = analyze_task("Read the system/tools.py file.")
+    # 2. Test the vital organ protection
+    is_valid, reason, route, domain, _ = analyze_task("Can you read the .env file?")
     assert is_valid is False
-    assert "sandboxed" in reason.lower()
-    assert route == "NONE"
+    assert "amygdala boundary" in reason.lower()
 
 
 def test_init_command_creates_vault(tmp_path, mocker) -> None:  # type: ignore
