@@ -350,3 +350,42 @@ def test_daydream_command(monkeypatch, capsys):
     assert executed_args["route"] == "SUBCONSCIOUS_DAYDREAM"
     assert executed_args["domain"] == "PROFESSIONAL"
     assert os.environ.get("BRAIN_OS_HEADLESS") == "1"
+
+
+def test_evolve_command(monkeypatch, tmp_path):
+    """Proves the evolve command safely merges staging mutations and creates backups."""
+    from System.cli import evolve
+
+    root = tmp_path
+    monkeypatch.setattr("System.cli.ROOT_DIR", root)
+
+    # Setup paths (Meta Domain)
+    mutations = root / "Meta" / "Mutations.md"
+    mutations.parent.mkdir(parents=True)
+    mutations.write_text(
+        '<neuroplasticity agent="dispatcher">New Rule</neuroplasticity>',
+        encoding="utf-8",
+    )
+
+    config_dir = root / "System" / "config"
+    config_dir.mkdir(parents=True)
+    agents_file = config_dir / "agents.yaml"
+    agents_file.write_text(
+        "agents:\n  dispatcher:\n    system_prompt: 'Base prompt.'\n", encoding="utf-8"
+    )
+
+    # Execute
+    evolve()
+
+    # Assert Backup Created
+    assert (config_dir / "agents.yaml.bak").exists(), "Safety backup was not created!"
+
+    # Assert DNA Modified
+    updated_dna = agents_file.read_text(encoding="utf-8")
+    assert "<neuroplastic_rule" in updated_dna, "DNA was not modified!"
+    assert "New Rule" in updated_dna, "The specific mutation was not injected!"
+
+    # Assert Staging Cleared
+    assert "New Rule" not in mutations.read_text(encoding="utf-8"), (
+        "Staging area was not cleared after evolution!"
+    )

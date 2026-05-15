@@ -329,7 +329,12 @@ def sleep() -> None:
 5. Discard transient noise and duplicates.
 6. Maintain the 100KB rule: Keep it strictly concise.
 7. TIMESTAMP MANDATE: Every new memory added MUST be prefixed with today's date: [{current_date_short}].
-8. OUTPUT FORMAT: First, output a <sleep_summary>...</sleep_summary> block explaining exactly what you learned, added, or pruned. Then, output ONLY the updated markdown file (including the <working_memory> tags). Do not use markdown code block formatting."""
+8. NEUROPLASTICITY: If the logs reveal a critical structural error or a strict new rule an agent must obey forever, output a <neuroplasticity agent="agent_name">The rule.</neuroplasticity> block (e.g., agent="product_manager").
+9. OUTPUT FORMAT: First, output a <sleep_summary>...</sleep_summary> block. Second, output any <neuroplasticity> blocks. Finally, output ONLY the updated markdown file (including the <working_memory> tags). Do not use markdown code block formatting."""
+
+        # --- FIX: Define the payload using the current memory and the daily logs ---
+        # Note: If your for-loop uses a different variable name for the logs (like 'log_text' or 'interactions'), change 'logs' to match it!
+        payload = f"CURRENT NEOCORTEX MEMORY:\n{current_memory}\n\nNEW DAILY HIPPOCAMPUS LOGS:\n{logs}"
 
         console.print(f"[dim]Consolidating {domain_name} memory...[/dim]")
         try:
@@ -337,20 +342,12 @@ def sleep() -> None:
                 model=model,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {
-                        "role": "user",
-                        "content": f"CURRENT NEOCORTEX MEMORY:\n{current_memory}\n\nDAILY HIPPOCAMPUS LOG:\n{daily_log}",
-                    },
+                    {"role": "user", "content": payload},
                 ],
             )
 
-            # --- EXPLAINABILITY: Print Actual Cost ---
-            actual_tokens = (
-                response.usage.total_tokens if hasattr(response, "usage") else 0
-            )
-            console.print(f"[dim]Actual Token Cost: {actual_tokens} tokens[/dim]")
-
-            raw_content = str(response.choices[0].message.content).strip()
+            # Extract the raw text from the LLM response
+            raw_content = str(response.choices[0].message.content)
 
             # --- EXPLAINABILITY: Extract and Print Summary ---
             summary_match = re.search(
@@ -365,10 +362,33 @@ def sleep() -> None:
                         border_style="magenta",
                     )
                 )
-                # Strip the summary out so we only save the pure markdown to the vault
                 new_memory = raw_content.replace(summary_match.group(0), "").strip()
             else:
                 new_memory = raw_content
+
+            # --- NEUROPLASTICITY: Guided Evolution (Staging Area) ---
+            np_matches = list(
+                re.finditer(
+                    r'<neuroplasticity agent="(.*?)">(.*?)</neuroplasticity>',
+                    new_memory,
+                    re.DOTALL,
+                )
+            )
+            if np_matches:
+                mutations_path = ROOT_DIR / "Meta" / "Mutations.md"
+                mutations_path.parent.mkdir(parents=True, exist_ok=True)
+
+                with open(mutations_path, "a", encoding="utf-8") as f:
+                    for match in np_matches:
+                        f.write(f"\n{match.group(0)}\n")
+
+                console.print(
+                    f"[bold yellow]🧬 {len(np_matches)} new genetic mutation(s) proposed! Review Personal/Mutations.md[/bold yellow]"
+                )
+
+                for match in np_matches:
+                    # Strip the XML out so it doesn't leak into the Vault Markdown
+                    new_memory = new_memory.replace(match.group(0), "").strip()
 
             # Clean accidental markdown wrappings
             if new_memory.startswith("```markdown"):
@@ -391,6 +411,85 @@ def sleep() -> None:
     console.print(
         "[bold magenta]🌙 Sleep cycle complete. Hippocampus archived. OS is ready for a new day.[/bold magenta]\n"
     )
+
+
+@app.command()
+def evolve() -> None:
+    """Cortical Inhibition: Merges approved neuroplastic mutations into the system DNA."""
+    import shutil
+    import yaml
+
+    mutations_path = ROOT_DIR / "Meta" / "Mutations.md"
+    agents_path = ROOT_DIR / "System" / "config" / "agents.yaml"
+    backup_path = ROOT_DIR / "System" / "config" / "agents.yaml.bak"
+
+    if not mutations_path.exists():
+        console.print("[dim]No pending mutations found in Personal/Mutations.md.[/dim]")
+        return
+
+    raw_mutations = mutations_path.read_text(encoding="utf-8")
+    np_matches = list(
+        re.finditer(
+            r'<neuroplasticity agent="(.*?)">(.*?)</neuroplasticity>',
+            raw_mutations,
+            re.DOTALL,
+        )
+    )
+
+    if not np_matches:
+        console.print(
+            "[dim]No valid <neuroplasticity> tags found in staging area.[/dim]"
+        )
+        return
+
+    console.print("\n[bold magenta]🧬 Initiating Guided Evolution...[/bold magenta]")
+
+    # 1. Safety Backup
+    shutil.copy2(agents_path, backup_path)
+    console.print("[green]✓ Safely backed up DNA to agents.yaml.bak[/green]")
+
+    # 2. Parse and Apply
+    try:
+        with open(agents_path, "r", encoding="utf-8") as yf:
+            agents_data = yaml.safe_load(yf)
+
+        applied_count = 0
+        from datetime import datetime
+
+        current_date = datetime.now().strftime("%Y-%m-%d")
+
+        for match in np_matches:
+            target_agent = match.group(1).strip()
+            new_rule = match.group(2).strip()
+
+            if target_agent in agents_data.get("agents", {}):
+                agents_data["agents"][target_agent]["system_prompt"] += (
+                    f'\n<neuroplastic_rule date="{current_date}">\n{new_rule}\n</neuroplastic_rule>\n'
+                )
+                console.print(
+                    f"  [cyan]↳ Rewired {target_agent}:[/cyan] {new_rule[:50]}..."
+                )
+                applied_count += 1
+            else:
+                console.print(
+                    f"  [red]↳ Unknown agent '{target_agent}'. Skipping.[/red]"
+                )
+
+        # 3. Write new DNA
+        with open(agents_path, "w", encoding="utf-8") as yf:
+            yaml.dump(agents_data, yf, default_flow_style=False, sort_keys=False)
+
+        # 4. Clear Staging Area
+        mutations_path.write_text("\n", encoding="utf-8")
+
+        console.print(
+            f"\n[bold green]✅ Evolution Complete. {applied_count} new traits assimilated.[/bold green]"
+        )
+
+    except Exception as e:
+        console.print(f"\n[bold red]🛑 EVOLUTION FAILED: {e}[/bold red]")
+        console.print("[yellow]Rolling back to backup...[/yellow]")
+        shutil.copy2(backup_path, agents_path)
 
 
 @app.command()

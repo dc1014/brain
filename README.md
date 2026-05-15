@@ -50,6 +50,12 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 6. Synaptic Clefts (Data Contracts)
 * **Neurotransmitters:** To prevent hallucinations when different parts of the brain communicate, agents pass explicit, deterministic XML tags (`<audit_result grade="FAIL">`) embedded within Markdown files, acting as strict chemical bindings between neural nodes.
 
+### 7. Metabolic Monitoring (Interoception & Vagus Nerve)
+* **Token Metabolism:** Brain OS tracks its own physical energy via `interoception.py`. If the OS burns through its daily token budget (calorie limit), the Vagus nerve signals "Exhaustion," automatically downgrading all tasks away from expensive models (like Claude Sonnet) to ultra-cheap heuristic models (GPT-4o-Mini) to conserve API cash until the next sleep cycle.
+
+### 8. Self-Modification (Neuroplasticity)
+* **Structural Rewiring:** When Brain OS sleeps, it doesn't just log memories passively. If it detects a critical failure pattern in the daily logs, the sleep cycle uses `<neuroplasticity>` XML tools to permanently physically rewrite its own `agents.yaml` source code, altering the system prompt of the offending agent. The OS literally reprograms its own synapses to get smarter over time.
+
 ---
 
 ## 🏗️ Architecture & Routing
