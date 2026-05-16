@@ -69,3 +69,21 @@ def process_sensory_input(source: str, payload: str) -> str:
     Filters, prioritizes, and formats impulses before they reach the Prefrontal Cortex.
     """
     return f"<ascending_stimulus source='{source}'>\n{payload}\n</ascending_stimulus>"
+
+
+def route_public_pulse(sender_id: str, payload: str, signature: str) -> str:
+    """
+    Sensory gating for external network traffic.
+    Instantly routes PUBLIC domain traffic to the Exocortex, keeping it isolated
+    from internal Prefrontal Cortex planning loops.
+    """
+    from rich.console import Console
+
+    Console().print(
+        "[bold magenta]👁️ Thalamus: Routing external stimulus to Exocortex...[/bold magenta]"
+    )
+
+    from System.neuroanatomy.cortical.exocortex import Exocortex
+
+    exo = Exocortex()
+    return exo.process_inbound_pulse(sender_id, payload, signature)

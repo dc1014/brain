@@ -215,7 +215,7 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 41. Inter-Brain Communication (Exocortex)
 * **The Exocortex:** The exocortex is the part of the brain that is responsible for communication and sharing with other brains, including engrams, tools, and knowledge.
 * **OS Implementation:** The OS implements the exocortex in `System/neuroanatomy/cortical/exocortex.py`.
-
+* **The ExoReceptor (Sensory Socket):** To facilitate Exocortex operations, Brain OS runs a lightweight, native `asyncio` socket receptor. External agent frameworks transmit packets to this receptor, which pushes the signal up the `Spine`. The Spine enforces an 8KB Blood-Brain Barrier limit to prevent Denial of Service or Context Window explosions before the `Thalamus` routes the verified signal to the Exocortex.
 ---
 
 ## 🏗️ Architecture & Routing

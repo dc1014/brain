@@ -117,3 +117,22 @@ def afferent_receptor(source_name: str, stimulus_type: str = "exteroceptive"):
         return wrapper
 
     return decorator
+
+
+def transmit_public_signal(sender_id: str, payload: str, signature: str) -> str:
+    """
+    The ascending sensory tract for external telepathic pulses.
+    Bypasses standard DMN/PFC internal queues and strikes the Thalamus directly.
+    """
+    # 🛡️ SHIFT-LEFT SECURITY: Blood-Brain Barrier payload rejection
+    if len(payload) > 8192:
+        from rich.console import Console
+
+        Console().print(
+            "[bold red]🛑 Spine: Payload exceeds Blood-Brain Barrier limits. Signal dropped.[/bold red]"
+        )
+        return "413 Payload Too Large: BBB Rejected"
+
+    from System.neuroanatomy.limbic.thalamus import route_public_pulse
+
+    return route_public_pulse(sender_id, payload, signature)
