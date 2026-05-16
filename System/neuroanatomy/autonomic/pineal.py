@@ -47,18 +47,26 @@ def is_host_asleep(idle_hours_threshold: float = 4.0) -> bool:
 def enter_sleep_cycle() -> None:
     """
     The Circadian Rhythm trigger.
-    When the Pineal gland detects sleep, it first flushes the brain (Lymphatic),
-    and then triggers REM sleep (DMN Daydreams).
+    When the Pineal gland detects sleep, it consolidates memory, flushes waste, and triggers REM sleep.
     """
     console.print(
         "\n[bold magenta]🌙 Brain OS is entering Deep Sleep...[/bold magenta]"
     )
 
+    # 0. Hippocampus Consolidation (Save memories to long-term storage)
+    try:
+        # ⚡ SHIFT-LEFT: Local import to prevent circular dependencies
+        from System.neuroanatomy.limbic.hippocampus import consolidate_short_term_memory
+
+        consolidate_short_term_memory()
+    except Exception as e:
+        console.print(f"[dim red]Hippocampus consolidation failed: {e}[/dim red]")
+
     # 1. Glymphatic Flush (Clean the brain)
     try:
         from System.neuroanatomy.systemic.lymphatic import flush_waste
 
-        flush_waste()
+        flush_waste(max_log_lines=0)
     except Exception as e:
         console.print(f"[dim red]Lymphatic flush failed during sleep: {e}[/dim red]")
 
@@ -67,9 +75,9 @@ def enter_sleep_cycle() -> None:
         from System.neuroanatomy.autonomic.dmn import trigger_daydreams  # type: ignore
 
         trigger_daydreams()
-    except (ImportError, AttributeError):
-        console.print("[dim]DMN not fully online yet. Skipping REM sleep.[/dim]")
+    except Exception as e:
+        console.print(f"[dim red]DMN failed to trigger daydreams: {e}[/dim red]")
 
     console.print(
-        "[bold magenta]☀️ Sleep Cycle Complete. System optimized and waiting for host.[/bold magenta]\n"
+        "[bold yellow]☀️ Sleep Cycle Complete. System optimized and waiting for host.[/bold yellow]"
     )
