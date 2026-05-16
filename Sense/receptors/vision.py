@@ -1,7 +1,7 @@
-from pathlib import Path
-from rich.console import Console
 import base64
 import cv2
+from pathlib import Path
+from rich.console import Console
 
 console = Console()
 

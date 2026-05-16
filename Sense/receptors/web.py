@@ -4,10 +4,9 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from markdownify import markdownify  # type: ignore
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
-from System.neuroanatomy.pathways.spine import transduce_to_spine
+from System.neuroanatomy.pathways.spine import afferent_receptor
 
-# ⚡ ECONOMIC SHIFT-LEFT: Hard cap on sensory input to prevent Context Window Collapse
-MAX_SENSORY_CHARS = 25000  # Roughly 5,000 to 6,000 tokens
+MAX_SENSORY_CHARS = 25000
 
 
 class SecurityBlockError(Exception):
@@ -39,74 +38,62 @@ class TargetValidator:
         return url
 
 
+# ⚡ SHIFT-LEFT: The decorator handles ALL spine routing and error catching automatically!
+@afferent_receptor(source_name="web", stimulus_type="exteroceptive")
 def transduce_web_page(url: str) -> str:
-    try:
-        safe_url = TargetValidator.validate_url(url)
+    safe_url = TargetValidator.validate_url(url)
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 BrainOS/1.0"
-            )
-            page = context.new_page()
-
-            # 🛡️ SECURITY SHIFT-LEFT: Intercept and block all massive bandwidth sinks
-            page.route(
-                "**/*",
-                lambda route: (
-                    route.abort()
-                    if route.request.resource_type
-                    in ["image", "media", "font", "stylesheet"]
-                    else route.continue_()
-                ),
-            )
-
-            try:
-                page.goto(safe_url, timeout=15000, wait_until="networkidle")
-                html_content = page.content()
-            except PlaywrightTimeoutError:
-                html_content = page.content()
-            finally:
-                browser.close()
-
-        soup = BeautifulSoup(html_content, "html.parser")
-
-        for element in soup(
-            [
-                "script",
-                "style",
-                "nav",
-                "footer",
-                "header",
-                "aside",
-                "noscript",
-                "iframe",
-                "svg",
-            ]
-        ):
-            element.decompose()
-
-        markdown_content = markdownify(str(soup), heading_style="ATX").strip()
-
-        if not markdown_content:
-            return transduce_to_spine(
-                safe_url,
-                "Page rendered successfully but contained no extractable text.",
-                "exteroceptive",
-            )
-
-        # ⚡ ECONOMIC SHIFT-LEFT: The Token Guillotine
-        if len(markdown_content) > MAX_SENSORY_CHARS:
-            markdown_content = (
-                markdown_content[:MAX_SENSORY_CHARS]
-                + "\n\n... [TRUNCATED BY BRAIN OS TO PREVENT TOKEN EXHAUSTION] ..."
-            )
-
-        return transduce_to_spine(safe_url, markdown_content, "exteroceptive")
-
-    except SecurityBlockError as e:
-        return f'<sensory_error source="{url}">\n{str(e)}\n</sensory_error>'
-    except Exception as e:
-        return (
-            f'<sensory_error source="{url}">\nNETWORK ERROR: {str(e)}\n</sensory_error>'
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 BrainOS/1.0"
         )
+        page = context.new_page()
+
+        page.route(
+            "**/*",
+            lambda route: (
+                route.abort()
+                if route.request.resource_type
+                in ["image", "media", "font", "stylesheet"]
+                else route.continue_()
+            ),
+        )
+
+        try:
+            page.goto(safe_url, timeout=15000, wait_until="networkidle")
+            html_content = page.content()
+        except PlaywrightTimeoutError:
+            html_content = page.content()
+        finally:
+            browser.close()
+
+    soup = BeautifulSoup(html_content, "html.parser")
+
+    for element in soup(
+        [
+            "script",
+            "style",
+            "nav",
+            "footer",
+            "header",
+            "aside",
+            "noscript",
+            "iframe",
+            "svg",
+        ]
+    ):
+        element.decompose()
+
+    markdown_content = markdownify(str(soup), heading_style="ATX").strip()
+
+    if not markdown_content:
+        return "Page rendered successfully but contained no extractable text."
+
+    if len(markdown_content) > MAX_SENSORY_CHARS:
+        markdown_content = (
+            markdown_content[:MAX_SENSORY_CHARS]
+            + "\n\n... [TRUNCATED BY BRAIN OS TO PREVENT TOKEN EXHAUSTION] ..."
+        )
+
+    return markdown_content
