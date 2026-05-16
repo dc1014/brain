@@ -107,6 +107,14 @@ base:
           api_prefix: { type: "string", description: "The API route prefix to proxy (default: '/api')" }
         required: ["project_name", "backend_port"]
 
+  - type: "function"
+    function:
+      name: "map_system_topology"
+      description: "META: Generates a visual Mermaid diagram of the current Brain OS architecture and autonomic state, saving it to Meta/system_topology.md. Use this to document your own brain state."
+      parameters:
+        type: "object"
+        properties: {}
+
 write:
   - type: "function"
     function:

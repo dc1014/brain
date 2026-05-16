@@ -190,3 +190,14 @@ def configure_synaptic_routing_tool(
     return ExecutionResult(
         success=success, output=output, block_reason="" if success else output
     )
+
+
+def map_system_topology_tool() -> ExecutionResult:
+    """Standardized tool wrapper for the topology engine."""
+    from System.tools.topology import map_system_topology
+
+    output = map_system_topology()
+    success = "Success" in output
+    return ExecutionResult(
+        success=success, output=output, block_reason="" if success else output
+    )

@@ -1,6 +1,7 @@
 import subprocess  # Re-expose for tests that mock System.tools.subprocess
 from System.core.paths import ROOT_DIR  # Re-expose for external organs
 from .sandbox import is_safe_path, ALLOWED_DIRECTORIES, READ_ONLY_DIRECTORIES
+from .cognitive import map_system_topology_tool as map_system_topology
 
 # 1. 📂 FILE SYSTEM ORGAN FUNCTIONS
 from .file_system import (
@@ -96,4 +97,5 @@ __all__ = [
     "map_system_topology",
     "operate_forge",
     "bootstrap_project",
+    "map_system_topology",
 ]
