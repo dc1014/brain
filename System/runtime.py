@@ -31,7 +31,9 @@ def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict[str, int]]:
 
     # --- 2. THE PREFRONTAL CORTEX (Dispatcher LLM) ---
     dispatcher_cfg = AGENT_CONFIG["agents"]["dispatcher"]
-    system_prompt = dispatcher_cfg["system_prompt"] + get_system_context(["Meta"])
+    system_prompt = dispatcher_cfg["system_prompt"] + get_system_context(
+        ["Meta"], prompt=prompt
+    )
 
     try:
         response = completion(
@@ -147,7 +149,7 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
             active_tools.extend(available_tools.get(t_group, []))
 
         full_system_prompt = agent_cfg["system_prompt"] + get_system_context(
-            step.get("context", []), domain
+            step.get("context", []), domain, prompt=current_payload
         )
 
         console.print(f"\n[bold cyan]⏳ {agent_cfg['name']} is working...[/bold cyan]")

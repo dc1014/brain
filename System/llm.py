@@ -61,9 +61,9 @@ def log_interaction(
 
 
 def get_system_context(
-    requested_contexts: list[str], current_domain: str = "NONE"
+    context_tags: list[str], domain: str = "NONE", prompt: str = ""
 ) -> str:
-    """Dynamically loads specific canonical folders as defined in the YAML config."""
+    """Dynamically loads specific canonical folders and passes them through the Thalamus."""
     context = ""
     root_dir = Path(__file__).parent.parent
     memory_config_path = Path(__file__).parent / "config" / "memory.yaml"
@@ -74,14 +74,22 @@ def get_system_context(
     except Exception:
         memory_map = {}
 
-    for req in requested_contexts:
-        target_folder = current_domain if req == "Domain" else req.upper()
+    for req in context_tags:
+        target_folder = domain if req == "Domain" else req.upper()
         rel_path = memory_map.get(target_folder)
 
         if rel_path:
             path = root_dir / rel_path
             if path.exists():
-                context += f"\n\n--- {target_folder} MEMORY ---\n{path.read_text(encoding='utf-8')}\n------------------------------\n"
+                content = path.read_text(encoding="utf-8")
+
+                # --- 🧠 THALAMUS TRIGGER (Semantic Attention) ---
+                if prompt:
+                    from System.thalamus import filter_attention
+
+                    content = filter_attention(prompt, content)
+
+                context += f"\n\n--- {target_folder} MEMORY ---\n{content}\n------------------------------\n"
 
     return context
 

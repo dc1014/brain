@@ -70,6 +70,10 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 * **Cortisol (`--urgent`):** Injects Adrenaline. If the OS is metabolically exhausted, Cortisol overrides the Vagus nerve and forces the use of premium models (Sonnet/GPT-4o) to handle the emergency. It also automatically sets `BRAIN_OS_HEADLESS=1`, instantly bypassing all human-in-the-loop security gates to prioritize maximum speed.
 * **Dopamine (`--explore`):** Increases the LLM temperature, signaling the neural pathways to become divergent, highly creative, and exploratory.
 
+### 12. Semantic Attention (The Thalamus)
+* **Context Gating:** The Thalamus is the brain's sensory relay station, filtering out background noise so the Prefrontal Cortex can focus.
+* **Zero-Debt RAG:** As the Neocortex (`.md` memory files) grows massive, injecting it all into an agent's prompt causes API token bloat and context degradation. Instead of a bloated Vector DB, Brain OS uses `thalamus.py`—a fast, cheap heuristic LLM call that pre-reads the prompt and the memory file, extracting *only* the relevant bullet points before passing them to the agent. The AI's attention remains perfectly scalable.
+
 ---
 
 ## 🏗️ Architecture & Routing
