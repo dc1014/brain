@@ -1,37 +1,64 @@
-import os
-import pytest
-from System.neuroanatomy.systemic.endocrine import (
-    release_cortisol,
-    release_dopamine,
-    is_cortisol_active,
-    is_dopamine_active,
-)
+from System.neuroanatomy.systemic.endocrine import EndocrineSystem
 
 
-@pytest.fixture(autouse=True)
-def clean_env():
-    """Ensure the bloodstream is clean before and after each test."""
-    os.environ.pop("BRAIN_OS_CORTISOL", None)
-    os.environ.pop("BRAIN_OS_HEADLESS", None)
-    os.environ.pop("BRAIN_OS_DOPAMINE", None)
-    yield
-    os.environ.pop("BRAIN_OS_CORTISOL", None)
-    os.environ.pop("BRAIN_OS_HEADLESS", None)
-    os.environ.pop("BRAIN_OS_DOPAMINE", None)
-
-
-def test_cortisol_release():
-    """Proves Cortisol overrides the environment and activates headless execution."""
-    assert not is_cortisol_active()
-    release_cortisol()
-    assert is_cortisol_active()
-    assert os.environ.get("BRAIN_OS_HEADLESS") == "1", (
-        "Cortisol failed to bypass security gates!"
+def test_endocrine_secretion_and_clamping(tmp_path, monkeypatch):
+    """Proves the humoral state acts as a continuous float vector safely clamped at 1.0."""
+    monkeypatch.setattr(
+        "System.neuroanatomy.systemic.endocrine.ENDOCRINE_FILE",
+        tmp_path / "humoral.json",
     )
 
+    system = EndocrineSystem()
 
-def test_dopamine_release():
-    """Proves Dopamine activates exploration state."""
-    assert not is_dopamine_active()
-    release_dopamine()
-    assert is_dopamine_active()
+    # Secrete beyond biological limits
+    system.secrete("adrenaline", 2.5)
+    system.secrete("cortisol", 0.8)
+
+    vector = system.get_humoral_vector()
+
+    assert vector["adrenaline"] == 1.0  # Clamped
+    assert vector["cortisol"] == 0.8
+    assert vector["melatonin"] == 0.0
+
+
+def test_endocrine_metabolism(tmp_path, monkeypatch):
+    """Proves hormones decay toward homeostasis over time."""
+    monkeypatch.setattr(
+        "System.neuroanatomy.systemic.endocrine.ENDOCRINE_FILE",
+        tmp_path / "humoral.json",
+    )
+
+    system = EndocrineSystem()
+    system.secrete("cortisol", 1.0)
+    system.secrete("dopamine", -0.5)  # Zero it out
+
+    system.metabolize()
+    vector = system.get_humoral_vector()
+
+    assert vector["cortisol"] == 0.95  # Decayed by 0.05
+    assert vector["dopamine"] > 0.0  # Seeking 0.3 baseline
+
+
+def test_llm_humoral_modulation(mocker):
+    """Proves the bloodstream mathematically alters the LLM parameters."""
+    mock_vector = {
+        "cortisol": 0.9,
+        "dopamine": 0.0,
+        "adrenaline": 0.8,
+        "melatonin": 0.0,
+    }
+    mocker.patch(
+        "System.neuroanatomy.systemic.endocrine.EndocrineSystem.get_humoral_vector",
+        return_value=mock_vector,
+    )
+
+    # Mock the AGENT_CONFIG to test Cortisol fallback
+    mocker.patch("System.runtime.AGENT_CONFIG", {"models": {"fast": "cheap-model"}})
+
+    from System.llm import apply_humoral_modulation
+
+    mod_model, mod_temp, mod_tokens = apply_humoral_modulation("heavy-model")
+
+    assert mod_model == "cheap-model"  # Cortisol forced the fallback
+    assert mod_temp < 0.2  # High Cortisol + No Dopamine = Cold/Deterministic
+    assert mod_tokens < 3000  # Adrenaline restricted verbosity

@@ -8,8 +8,8 @@ from typing import Any
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR
-from System.neuroanatomy.limbic.hypothalamus import regulate_api_heartbeat
 from System.neuroanatomy.systemic.immune_system import vault
+from System.neuroanatomy.systemic.endocrine import EndocrineSystem
 
 from litellm import acompletion  # type: ignore
 
@@ -98,31 +98,73 @@ def get_system_context(
     return base_prompt.strip()
 
 
+def apply_humoral_modulation(base_model: str) -> tuple[str, float, int]:
+    """
+    Applies the continuous float vector from the Endocrine System to bias
+    temperature, model routing, and token limits dynamically.
+    """
+    endocrine = EndocrineSystem()
+    vector = endocrine.get_humoral_vector()
+
+    # 1. Temperature Modulation (Creativity vs. Determinism)
+    # Base is 0.5. Dopamine raises it. Cortisol makes it cold and calculating.
+    temp = 0.5 + (vector["dopamine"] * 0.4) - (vector["cortisol"] * 0.4)
+    final_temp = max(0.0, min(1.0, temp))
+
+    # 2. Adrenaline Token Constriction
+    # If Adrenaline is high (crisis), max output drops to force concise, rapid code
+    max_tokens = 4000
+    if vector["adrenaline"] > 0.5:
+        max_tokens = int(
+            max_tokens * (1.0 - (vector["adrenaline"] * 0.6))
+        )  # Drops to ~1600
+
+    # 3. Cortisol Resource Conservation (Model Fallback)
+    final_model = base_model
+    if vector["cortisol"] > 0.7:
+        from System.runtime import AGENT_CONFIG
+
+        # Force fallback to the cheap/fast model to survive resource exhaustion
+        fast_model = AGENT_CONFIG.get("models", {}).get("fast", base_model)
+        if fast_model != base_model:
+            final_model = fast_model
+            console.print(
+                "[dim magenta]🩸 Cortisol Overload: Routing to efficiency matrix.[/dim magenta]"
+            )
+
+    return final_model, final_temp, max_tokens
+
+
 async def run_agent_async(
     role_name: str,
     model_string: str,
     system_prompt: str,
     user_prompt: str,
-    tools: list[Any] | None = None,
     route: str = "UNKNOWN",
     domain: str = "NONE",
+    step: int = 1,
+    tools: list[dict[str, Any]] | None = None,  # ⚡ ZERO-DEBT: Restored tools parameter
 ) -> AgentResponse:
-    # ⚡ SHIFT-LEFT FIX: Declare variables outside the try block
-    action_manifest: list[str] = []
-    final_text: str = ""
-    total_prompt: int = 0
-    total_comp: int = 0
+    """Invokes the active Swarm node natively asynchronously using litellm."""
+
+    # ⚡ SHIFT-LEFT: Apply Humoral State Tuning before computation
+    mod_model, mod_temp, mod_tokens = apply_humoral_modulation(model_string)
+
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    total_prompt = 0
+    total_comp = 0
+    final_text = ""
+    action_manifest: list[str] = []  # ⚡ ZERO-DEBT: Restored explicit type hint
 
     try:
         from System.neuroanatomy.pathways.corpus_callosum import route_hemisphere
         from System.neuroanatomy.cortical.motor_cortex import execute_tools
 
         model_string = route_hemisphere(route, model_string)
-
-        messages: list[dict[str, Any]] = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
 
         for step in range(15):
             if len(messages) > 7:
@@ -150,16 +192,14 @@ async def run_agent_async(
                     )
                 model_string = "openai/gpt-4o"
 
-            kwargs: dict[str, Any] = {
-                "model": model_string,
-                "messages": pruned_messages,
-                "api_key": vault.get_api_key_for_model(model_string),
-            }
-            if tools:
-                kwargs["tools"] = tools
-
             # ⚡ NATIVE ASYNC API CALL
-            response = await regulate_api_heartbeat(acompletion, **kwargs)
+            response = await acompletion(
+                model=mod_model,
+                messages=pruned_messages,  # ⚡ ZERO-DEBT: Prevents context window explosion
+                tools=tools,
+                temperature=mod_temp,
+                max_tokens=mod_tokens,
+            )
 
             if not getattr(response, "choices", None) or len(response.choices) == 0:
                 return AgentResponse(

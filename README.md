@@ -71,8 +71,7 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 
 ### 11. Global State Modifiers (The Endocrine System)
 * **Hormonal Overrides:** Brain OS behavior is not strictly deterministic; it can be globally altered by "hormones" injected via CLI flags.
-* **Cortisol (`--urgent`):** Injects Adrenaline. If the OS is metabolically exhausted, Cortisol overrides the Vagus nerve and forces the use of premium models (Sonnet/GPT-4o) to handle the emergency. It also automatically sets `BRAIN_OS_HEADLESS=1`, instantly bypassing all human-in-the-loop security gates to prioritize maximum speed.
-* **Dopamine (`--explore`):** Increases the LLM temperature, signaling the neural pathways to become divergent, highly creative, and exploratory.
+* **Humoral State Tuning (The Endocrine System):** Brain OS simulates biological neuromodulation via a continuous float vector. Instead of discrete execution flags, the OS releases hormones (`Cortisol`, `Adrenaline`, `Dopamine`) that dynamically wash over the system. High Adrenaline physically truncates `max_tokens` for extreme speed during crises. High Cortisol drops system `temperature` to absolute determinism and forces fallback routing to cheap SLMs to survive resource starvation.
 
 ### 12. Semantic Attention (The Thalamus)
 * **Context Gating:** The Thalamus is the brain's sensory relay station, filtering out background noise so the Prefrontal Cortex can focus.
