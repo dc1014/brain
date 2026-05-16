@@ -112,3 +112,39 @@ def forage(
             domain,
         )
     )
+
+
+def compile():
+    """⚙️ Compiles the most recent successful memory into a Zero-Token Engram."""
+    from System.neuroanatomy.limbic.episodic import MEMORY_FILE
+    from System.neuroanatomy.autonomic.cerebellum import CerebellarCompiler
+    import json
+
+    if not MEMORY_FILE.exists():
+        console.print("[bold red]No episodic memory found to compile.[/bold red]")
+        return
+
+    try:
+        with open(MEMORY_FILE, "r", encoding="utf-8") as f:
+            episodes = [json.loads(line) for line in f if line.strip()]
+
+        successful_episodes = [
+            ep for ep in episodes if "Success" in ep.get("outcome", "")
+        ]
+
+        if not successful_episodes:
+            console.print(
+                "[bold yellow]No successful episodes found in recent memory.[/bold yellow]"
+            )
+            return
+
+        latest = successful_episodes[-1]
+        telemetry = f"Steps executed: {', '.join(latest['tasks_executed'])}"
+
+        compiler = CerebellarCompiler()
+        compiler.compile_engram(latest["objective"], telemetry)
+
+    except Exception as e:
+        console.print(
+            f"[bold red]Failed to access memory for compilation: {e}[/bold red]"
+        )

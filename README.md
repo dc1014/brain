@@ -61,6 +61,8 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 9. Procedural Muscle Memory (The Cerebellum)
 * **Engram Synthesis:** When the Prefrontal Cortex (LLM) successfully figures out a complex, multi-step execution (like bootstrapping a React app or configuring Docker), it doesn't waste tokens rethinking it next time. It uses the `<create_engram>` tool to compile those shell steps into a permanent, reusable Bash script stored in the Cerebellum.
 * **Instant Execution:** On future tasks, the OS simply uses `<execute_engram>` to instantly fire the muscle memory script, injecting parameters where appropriate. The system gets exponentially faster and cheaper the more you use it.
+* **Cerebellum Compiler:** Compiling previously executed code into executable and shareable modules for use by other agents or by the user.
+
 
 ### 10. Autonomous Bug Fixing (The Microglia)
 * **The Immune System:** When a biological cell gets infected or damaged, Microglia cells swarm the area and destroy the bad cells automatically without you ever consciously knowing you were in danger.

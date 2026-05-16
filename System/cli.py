@@ -110,6 +110,7 @@ app.command(name="task")(task)
 app.command(name="daydream")(daydream)
 app.command(name="evolve")(evolve)
 app.command(name="forage")(forage)
+app.command(name="compile")(compile)
 
 # Somatic (Reflexes)
 app.command(name="map-topology")(map_topology)
