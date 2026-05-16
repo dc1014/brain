@@ -60,6 +60,11 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 * **Engram Synthesis:** When the Prefrontal Cortex (LLM) successfully figures out a complex, multi-step execution (like bootstrapping a React app or configuring Docker), it doesn't waste tokens rethinking it next time. It uses the `<create_engram>` tool to compile those shell steps into a permanent, reusable Bash script stored in the Cerebellum.
 * **Instant Execution:** On future tasks, the OS simply uses `<execute_engram>` to instantly fire the muscle memory script. The system gets exponentially faster and cheaper the more you use it.
 
+### 10. Autonomous Bug Fixing (The Microglia)
+* **The Immune System:** When a biological cell gets infected or damaged, Microglia cells swarm the area and destroy the bad cells automatically without you ever consciously knowing you were in danger.
+* **Global Interception:** In Brain OS, if *any* agent (Brain or Forge) runs a shell command that crashes or throws a traceback, it is instantly intercepted by `microglia.py` before the error is returned to the Prefrontal Cortex.
+* **Antibody Synthesis:** The Microglia uses an ultra-fast, cheap heuristic model to read the traceback, synthesize an antibody (a quick patch command like `pip install` or an inline `sed` replacement), execute it, and retry the original command. The OS heals its own runtime errors autonomously.
+
 ---
 
 ## 🏗️ Architecture & Routing

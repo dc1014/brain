@@ -253,38 +253,40 @@ def execute_command(command: str, directory_path: str) -> str:
         if user_input not in ["y", "yes"]:
             return "SECURITY BLOCK: User explicitly denied command execution."
 
-        console.print(f"[dim]Executing '{command}'... (Terminal I/O mapped)[/dim]\n")
+        console.print(f"[dim]Executing '{command}'...[/dim]\n")
 
-        # Subprocess without capture_output maps stdin/stdout straight to terminal
-        result = subprocess.run(command, shell=True, cwd=target_path)
+        # 1. Execute and capture output so Microglia can analyze tracebacks, XML framing and attention
+        result = subprocess.run(
+            command, shell=True, cwd=target_path, capture_output=True, text=True
+        )
+
         console.print(
             f"\n[dim]Execution completed with exit code {result.returncode}[/dim]"
         )
 
-        # SHIFT-LEFT: Strictly decode bytes to strings for MyPy safety
-        out_raw = result.stdout
-        err_raw = result.stderr
-
-        output = (
-            out_raw.decode("utf-8", errors="replace").strip()
-            if isinstance(out_raw, bytes)
-            else str(out_raw or "").strip()
-        )
-        error = (
-            err_raw.decode("utf-8", errors="replace").strip()
-            if isinstance(err_raw, bytes)
-            else str(err_raw or "").strip()
-        )
-
+        # Extract output cleanly
+        output = result.stdout.strip() if result.stdout else ""
+        error = result.stderr.strip() if result.stderr else ""
         combined = output
         if error:
             combined += f"\nSTDERR:\n{error}"
 
-        # SHIFT-LEFT: XML Framing for Prompt Caching & Attention
-        if result.returncode == 0:
-            return f'<shell_output command="{command}">\n{combined if combined else "SUCCESS"}\n</shell_output>'
-        else:
-            return f'<shell_error command="{command}">\n{combined}\n</shell_error>'
+        # 2. Check for injury (Non-zero exit code)
+        if result.returncode != 0:
+            # --- 🦠 MICROGLIA TRIGGER (Immune System) ---
+            from System.microglia import trigger_immune_response
+
+            healed, new_output = trigger_immune_response(
+                command, error, str(target_path)
+            )
+
+            if healed:
+                return f'<shell_output command="{command} (HEALED BY MICROGLIA)">\n{new_output}\n</shell_output>'
+            else:
+                return f'<shell_error command="{command}">\n{combined}\n--- MICROGLIA FAILURE ---\n{new_output}\n</shell_error>'
+
+        # 3. Return successful output if no injury occurred
+        return f'<shell_output command="{command}">\n{combined if combined else "SUCCESS"}\n</shell_output>'
     except subprocess.TimeoutExpired:
         return "ERROR: Command timed out after 60 seconds."
     except Exception as e:
