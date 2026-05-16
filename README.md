@@ -245,12 +245,12 @@ Brain uses a fast, automated setup script to install dependencies (like `uv`) an
 
 **Mac / Linux Users:**
 ```bash
-./setup.sh
+uv run python -m System.cli init
 ```
 
 **Windows Users:**
 ```powershell
-./setup.ps1
+uv run python -m System.cli init
 ```
 
 ### 2. API Keys

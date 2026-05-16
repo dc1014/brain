@@ -57,6 +57,21 @@ def init():
         )
         console.print(f"[dim]Secured Git hooks for repository: {ROOT_DIR.name}[/dim]")
 
+    # ⚡ SHIFT-LEFT: Autonomously seed the visual cortex (Playwright binaries)
+    console.print("[dim]Seeding Occipital/Web Receptor binaries (Chromium)...[/dim]")
+    try:
+        subprocess.run(
+            ["uv", "run", "playwright", "install", "chromium"],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            check=True,
+        )
+        console.print("[dim]Chromium visual cortex seeded successfully.[/dim]")
+    except subprocess.CalledProcessError as e:
+        console.print(
+            f"[bold red]Failed to seed Chromium: {e.stderr.decode()}[/bold red]"
+        )
+
     console.print("[bold green]🧠 Brain OS Initialized Successfully.[/bold green]")
 
 
