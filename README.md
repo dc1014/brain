@@ -171,7 +171,7 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 33. The Corpus Callosum (Hemispheric Bridging & Local SLMs)
 * **Biological Function:** The nerve bundle bridging the left and right hemispheres of the brain, routing analytical vs. creative tasks.
 * **OS Implementation:** Acts as a dynamic API router. By enabling `USE_LOCAL_SLM=true` in your `.env`, the OS splits tasks based on complexity.
-* **Left Brain (Local SLMs):** Tasks requiring high privacy or deterministic analysis (Threat Detection, Dispatching, Personal Journaling, Basic File Reading) are routed locally to Ollama (`llama3`, `phi3`), ensuring 0 API cost and 100% offline privacy.
+* **Left Brain (Local SLMs):** Tasks requiring high privacy or deterministic analysis (Threat Detection, Dispatching, Personal Journaling, Basic File Reading, formatting, maintenance, indexing, etc.) are routed locally to Ollama (`llama3`, `phi3`), ensuring 0 API cost and 100% offline privacy.
 * **Right Brain (Cloud LLMs):** Complex synthesis, multi-agent swarming, and software engineering (`FORGE`) are strictly reserved for powerful cloud models (Claude 3.5 Sonnet, GPT-4o).
 
 ### 34. Boot Validation (Polymerase)

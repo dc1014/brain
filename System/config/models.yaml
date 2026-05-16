@@ -3,3 +3,4 @@ models:
   claude_haiku: "anthropic/claude-haiku-4-5"
   gpt_mini: "openai/gpt-4o-mini"
   claude_sonnet: "anthropic/claude-sonnet-4-5"
+  local_slm: "ollama/llama3" # Fallback SLM for local left-brain processing
