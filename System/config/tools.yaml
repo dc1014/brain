@@ -446,4 +446,8 @@ vision:
         properties:
           name: { type: "string" }
           target_dir: { type: "string", description: "The directory to run the engram in (e.g., 'Studio/My-App')" }
+          params:
+            type: "object"
+            description: "Optional key-value variables to inject into the engram (e.g., passing {'message': 'fix bug'} replaces ${message} inside the engram script)."
+            additionalProperties: true
         required: ["name", "target_dir"]

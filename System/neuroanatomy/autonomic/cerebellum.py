@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 from rich.console import Console
 from System.core.paths import ROOT_DIR
 from System.tools.execution import execute_command
@@ -11,7 +12,6 @@ def create_engram(name: str, description: str, commands: list[str]) -> str:
     """Saves a sequence of verified shell commands as a permanent muscle memory."""
     try:
         ENGRAM_DIR.mkdir(parents=True, exist_ok=True)
-        # Force snake_case naming
         safe_name = name.lower().replace(" ", "_").replace("-", "_")
         engram_path = ENGRAM_DIR / f"{safe_name}.json"
 
@@ -26,8 +26,8 @@ def create_engram(name: str, description: str, commands: list[str]) -> str:
         return f"Failed to save engram: {e}"
 
 
-def execute_engram(name: str, target_dir: str) -> str:
-    """Instantly fires a sequence of shell commands without LLM reasoning."""
+def execute_engram(name: str, target_dir: str, params: Optional[dict] = None) -> str:
+    """Instantly fires a sequence of shell commands with dynamic variable injection."""
     safe_name = name.lower().replace(" ", "_").replace("-", "_")
     engram_path = ENGRAM_DIR / f"{safe_name}.json"
 
@@ -41,13 +41,20 @@ def execute_engram(name: str, target_dir: str) -> str:
         return f"Failed to read engram '{safe_name}': {e}"
 
     console.print(
-        f"[bold cyan]⚡ Cerebellum: Firing muscle memory '{safe_name}'...[/bold cyan]"
+        f"[bold cyan]⚡ Cerebellum: Firing parametric muscle memory '{safe_name}'...[/bold cyan]"
     )
 
+    params = params or {}
     results = []
+
     for cmd in commands:
+        # ⚡ SHIFT-LEFT: Dynamic Parametric Injection
+        for k, v in params.items():
+            # Support both ${var} and $var bash syntax
+            cmd = cmd.replace(f"${{{k}}}", str(v)).replace(f"${k}", str(v))
+
         console.print(f"[dim]│ Reflex: {cmd}[/dim]")
-        # 🦠 This automatically inherits the Microglia auto-healing!
+        # 🦠 Automatically inherits Microglia auto-healing!
         res = execute_command(cmd, target_dir)
 
         if not res.success:

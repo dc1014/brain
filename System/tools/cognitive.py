@@ -147,11 +147,13 @@ def list_engrams_tool() -> ExecutionResult:
     return ExecutionResult(success=True, output=output)
 
 
-def execute_engram_tool(name: str, target_dir: str) -> ExecutionResult:
+def execute_engram_tool(
+    name: str, target_dir: str, params: dict | None = None
+) -> ExecutionResult:
     """Instantly executes a learned engram (bash script)."""
     from System.neuroanatomy.autonomic.cerebellum import execute_engram
 
-    output = execute_engram(name, target_dir)
+    output = execute_engram(name, target_dir, params)
     if (
         "failed" in output.lower()
         or "error" in output.lower()
