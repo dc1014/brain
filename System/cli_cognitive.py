@@ -1,24 +1,64 @@
 import asyncio
+import json
+import os
 import typer
 import shutil
+import time
+
 from rich.console import Console
 from System.core.paths import ROOT_DIR
-from System.core.orchestrator import dispatch_task
 from System.runtime import execute_pipeline
 
 console = Console()
 
 
 def task(
-    prompt: str = typer.Argument(..., help="The cognitive task to execute."),
+    description: str = typer.Argument(
+        ..., help="The objective for the Swarm to accomplish."
+    ),
+    domain: str = typer.Option(
+        "GENERAL", help="The environmental domain (e.g., STUDIO, PERSONAL)."
+    ),
+    route: str = typer.Option(
+        "WORKSPACE", help="The targeted neuro-route (e.g., WORKSPACE, TERMINAL)."
+    ),
     obsidian: bool = typer.Option(
         False,
         "--obsidian",
-        help="Route to the pending queue instead of immediate execution.",
+        help="Queues the task into Obsidian instead of running immediately.",
     ),
 ):
-    """Executes a cognitive task via the Prefrontal Cortex."""
-    asyncio.run(dispatch_task(prompt, obsidian=obsidian))
+    """🧠 Engages the Prefrontal Cortex to execute a cognitive task."""
+
+    if obsidian:
+        # Route to queue instead of executing
+        queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
+        pending_file = ROOT_DIR / "Personal" / "pending-tasks.md"
+
+        queue_file.parent.mkdir(parents=True, exist_ok=True)
+        pending_file.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(queue_file, "a", encoding="utf-8") as f:
+            f.write(
+                json.dumps({"prompt": description, "route": route, "domain": domain})
+                + "\n"
+            )
+
+        with open(pending_file, "a", encoding="utf-8") as f:
+            timestamp = time.strftime("%Y-%m-%d %H:%M")
+            f.write(
+                f"### ⏳ Pending Task ({timestamp})\n**Prompt:** {description}\n---\n"
+            )
+
+        console.print(
+            "[bold green]✅ Task safely queued into Obsidian vault![/bold green]"
+        )
+        return
+
+    from System.neuroanatomy.cortical.prefrontal import PrefrontalCortex
+
+    pfc = PrefrontalCortex()
+    asyncio.run(pfc.execute_goal(description, domain, route))
 
 
 def daydream():
@@ -29,7 +69,7 @@ def daydream():
 
 
 def evolve():
-    """Triggers self-improvement and codebase evolution routines."""
+    """🧬 Analyzes System/logs and codebase evolution routines."""
     console.print("[magenta]🧬 Triggering Evolutionary Algorithms...[/magenta]")
 
     agents_file = ROOT_DIR / "System" / "config" / "agents.yaml"
@@ -57,17 +97,18 @@ def evolve():
 
 
 def forage(
-    topic: str = typer.Argument(..., help="The topic to research."),
+    topic: str = typer.Argument(..., help="The search query or URL to forage."),
     domain: str = typer.Option(
-        "STUDIO", "--domain", help="Domain context for foraging."
+        "GENERAL", help="The environmental domain (e.g., STUDIO)."
     ),
 ):
     """Information foraging and web scraping for a specific topic."""
+    os.environ["BRAIN_OS_HEADLESS"] = "1"
     console.print(f"[green]🌿 Foraging for information on:[/green] {topic} in {domain}")
     asyncio.run(
         execute_pipeline(
-            f"Forage the web and build a comprehensive research dossier on: {topic}",
-            "SUBCONSCIOUS_FORAGE",
+            f"Search the web and gather comprehensive information about: {topic}",
+            "WEB",
             domain,
         )
     )

@@ -1,33 +1,73 @@
-import os
-from System.runtime import execute_pipeline
-
-
 import pytest
+from System.neuroanatomy.cortical.prefrontal import PrefrontalCortex
+
+
+def test_pfc_working_memory():
+    """Proves the PFC rolling working memory respects maximum limits."""
+    pfc = PrefrontalCortex()
+    pfc.max_memory = 2
+
+    pfc._remember("Task 1")
+    pfc._remember("Task 2")
+    pfc._remember("Task 3")
+
+    assert len(pfc.working_memory) == 2
+    assert pfc.working_memory == ["Task 2", "Task 3"]
+    assert "Task 2" in pfc.get_working_memory_context()
+
+
+def test_pfc_decompose_fallback(mocker):
+    """Proves the PFC safely catches API errors and passes the raw objective."""
+    mocker.patch(
+        "System.neuroanatomy.cortical.prefrontal.completion",
+        side_effect=Exception("API Down"),
+    )
+
+    pfc = PrefrontalCortex()
+    tasks = pfc.decompose_goal("Do everything")
+
+    assert len(tasks) == 1
+    assert tasks[0] == "Do everything"
+
+
+def test_pfc_decompose_success(mocker):
+    """Proves the PFC successfully parses JSON arrays from the LLM."""
+
+    class MockMessage:
+        content = '["Step 1", "Step 2"]'
+
+    class MockChoice:
+        message = MockMessage()
+
+    class MockResponse:
+        choices = [MockChoice()]
+
+    mocker.patch(
+        "System.neuroanatomy.cortical.prefrontal.completion",
+        return_value=MockResponse(),
+    )
+
+    pfc = PrefrontalCortex()
+    tasks = pfc.decompose_goal("Do everything")
+
+    assert len(tasks) == 2
+    assert tasks[0] == "Step 1"
 
 
 @pytest.mark.asyncio
-async def test_prefrontal_swarm_execution(mocker):
-    # 1. Mock the API call to return immediately
-    from System.llm import AgentResponse
+async def test_pfc_execute_goal(mocker):
+    """Proves the PFC orchestrates multiple pulses and updates memory accordingly."""
+    pfc = PrefrontalCortex()
 
-    async def mock_run_agent(*args, **kwargs):
-        return AgentResponse(
-            text=f"Task complete by {kwargs.get('role_name')}",
-            usage={"total_tokens": 100},
-        )
+    # Mock decomposition into 2 pulses
+    mocker.patch.object(pfc, "decompose_goal", return_value=["Task A", "Task B"])
 
-    mocker.patch("System.runtime.run_agent_async", side_effect=mock_run_agent)
-    mocker.patch("System.neuroanatomy.autonomic.vestibular.commit_transaction")
-    mocker.patch("System.neuroanatomy.autonomic.vestibular.restore_balance")
-    mocker.patch.dict(os.environ, {"BRAIN_OS_HEADLESS": "1"})
+    # Mock the dispatcher to avoid actual execution
+    mock_dispatch = mocker.AsyncMock()
+    mocker.patch("System.core.orchestrator.dispatch_task", mock_dispatch)
 
-    # 2. Run the newly defined SWARM_FORGE pipeline
-    try:
-        await execute_pipeline("Build a fullstack app", "SWARM", "STUDIO")
-        success = True
-    except Exception as e:
-        success = False
-        print(f"Swarm failed: {e}")
+    await pfc.execute_goal("Goal", "STUDIO", "FORGE")
 
-    # 3. Assert it completed without thread collisions
-    assert success is True
+    assert mock_dispatch.call_count == 2
+    assert "Task A" in pfc.working_memory[0]
+    assert "Task B" in pfc.working_memory[1]
