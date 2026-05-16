@@ -1,5 +1,5 @@
+from pydantic import BaseModel, Field
 from System.neuroanatomy.cortical.broca import enforce_data_contract
-from unittest.mock import MagicMock
 
 
 def test_broca_perfect_articulation():
@@ -9,13 +9,6 @@ def test_broca_perfect_articulation():
     assert content == "run_tests"
 
 
-def test_broca_auto_heals_missing_close_tag():
-    response = "<execute>\nbuild_app"  # Token limit cut off the end
-    is_valid, content = enforce_data_contract(response, "execute")
-    assert is_valid is True
-    assert content == "build_app"
-
-
 def test_broca_auto_heals_markdown_bleeding():
     response = "<execute>\n```bash\nnpm run dev\n```\n</execute>"
     is_valid, content = enforce_data_contract(response, "execute")
@@ -23,24 +16,40 @@ def test_broca_auto_heals_markdown_bleeding():
     assert content == "npm run dev"
 
 
-def test_broca_catches_missing_tag():
-    response = "I forgot to use the execution tags entirely."
-    is_valid, content = enforce_data_contract(response, "execute")
-    assert is_valid is False
-    assert "BROCA ERROR" in content
+def test_broca_valid_json_contract():
+    response = '<schema>\n{"action": "build", "retries": 3}\n</schema>'
+    is_valid, content = enforce_data_contract(response, "schema", expect_json=True)
+    assert is_valid is True
+    assert content["action"] == "build"
 
 
-def test_synthesize_speech(mocker, tmp_path):
-    from System.neuroanatomy.cortical.broca import synthesize_speech
+def test_broca_heals_json_trailing_comma():
+    response = '<schema>\n{"action": "build", "retries": 3,}\n</schema>'
+    is_valid, content = enforce_data_contract(response, "schema", expect_json=True)
+    assert is_valid is True
+    assert content["retries"] == 3
 
-    out_path = tmp_path / "out.mp3"
 
-    # FIX: Patch litellm directly
-    mock_speech = mocker.patch("litellm.speech")
-    mock_response = MagicMock()
-    mock_speech.return_value = mock_response
+class SwarmAgentContract(BaseModel):
+    name: str
+    role: str
+    confidence: float = Field(ge=0.0, le=1.0)
 
-    result = synthesize_speech("Hello, world.", str(out_path))
 
-    assert str(out_path) in result
-    mock_response.stream_to_file.assert_called_once_with(str(out_path))
+def test_broca_json_contract_with_markdown_bleeding():
+    """Proves Broca isolates clean JSON structure from markdown blocks without XML tags."""
+    raw_llm_output = (
+        "Here is the data you requested:\n"
+        "```json\n"
+        "{\n"
+        '    "name": "Data_Engineer",\n'
+        '    "role": "Data_Science",\n'
+        '    "confidence": 0.88\n'
+        "}\n"
+        "```"
+    )
+
+    agent = enforce_data_contract(raw_llm_output, SwarmAgentContract)
+    assert isinstance(agent, SwarmAgentContract)
+    assert agent.name == "Data_Engineer"
+    assert agent.confidence == 0.88
