@@ -211,6 +211,11 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 * **Functionality:**
     * **Learning from Mistakes:** The system learns from its mistakes by updating its behavior based on the outcome of its actions. When the system fails to complete a task, it updates its behavior to avoid repeating the same mistake in the future.
     * **Learning from Success:** The system learns from its successes by updating its behavior to repeat the same actions in the future.
+
+### 41. Inter-Brain Communication (Exocortex)
+* **The Exocortex:** The exocortex is the part of the brain that is responsible for communication and sharing with other brains, including engrams, tools, and knowledge.
+* **OS Implementation:** The OS implements the exocortex in `System/neuroanatomy/cortical/exocortex.py`.
+
 ---
 
 ## 🏗️ Architecture & Routing
