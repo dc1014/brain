@@ -2,8 +2,7 @@ import subprocess  # Re-expose for tests that mock System.tools.subprocess
 from System.core.paths import ROOT_DIR  # Re-expose for external organs
 from .sandbox import is_safe_path, ALLOWED_DIRECTORIES, READ_ONLY_DIRECTORIES
 
-
-# Re-export all motor functions
+# 1. 📂 FILE SYSTEM ORGAN FUNCTIONS
 from .file_system import (
     write_safe_file,
     read_safe_file,
@@ -14,11 +13,15 @@ from .file_system import (
     delete_safe_file,
     write_multiple_files,
 )
+
+# 2. 🚂 MOTOR CORTEX EXECUTION FUNCTIONS
 from .execution import (
     execute_command,
     analyze_safe_syntax,
     manage_background_process,
 )
+
+# 3. 👁️ SENSORY RECEPTOR FUNCTIONS
 from .sensory import (
     sense_environment,
     analyze_image,
@@ -32,23 +35,28 @@ from .sensory import (
     memorize_user_appearance,
     record_user_video,
 )
+
+# 4. 🧠 COGNITIVE & AUTONOMIC PATHWAY WRAPPERS
 from .cognitive import (
     read_file_signatures,
     search_safe_directory,
     semantic_search,
     search_hippocampus,
-    create_engram_tool,
-    list_engrams_tool,
-    execute_engram_tool,
+    create_engram_tool as create_engram,
+    list_engrams_tool as list_engrams,
+    execute_engram_tool as execute_engram,
     map_spatial_dependencies,
+    configure_synaptic_routing_tool as configure_synaptic_routing,
 )
+
+# 5. 🛠️ FORGE ANTHROPOMORPHIC EVOLUTION FUNCTIONS
 from .forge import (
     operate_forge,
     bootstrap_project,
 )
 
+# 🛡️ EXPLICIT EXPORT CONTRACT
 __all__ = [
-    "sandbox",
     "subprocess",
     "ROOT_DIR",
     "is_safe_path",
@@ -61,6 +69,7 @@ __all__ = [
     "append_safe_file",
     "copy_safe_file",
     "delete_safe_file",
+    "write_multiple_files",
     "execute_command",
     "analyze_safe_syntax",
     "manage_background_process",
@@ -79,14 +88,12 @@ __all__ = [
     "search_safe_directory",
     "semantic_search",
     "search_hippocampus",
-    "create_engram_tool",
-    "list_engrams_tool",
-    "execute_engram_tool",
+    "create_engram",
+    "list_engrams",
+    "execute_engram",
     "map_spatial_dependencies",
+    "configure_synaptic_routing",
+    "map_system_topology",
     "operate_forge",
     "bootstrap_project",
-    "write_multiple_files",
-    "create_engram",
-    "execute_engram",
-    "list_engrams_tool",
 ]

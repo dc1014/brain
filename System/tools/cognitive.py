@@ -177,3 +177,16 @@ def map_spatial_dependencies(
 
     output = generate_spatial_map(str(target_path), output_format, map_type)
     return ExecutionResult(success=True, output=output)
+
+
+def configure_synaptic_routing_tool(
+    project_name: str, backend_port: int, api_prefix: str = "/api"
+) -> ExecutionResult:
+    """Standardized tool wrapper for dynamic Vite proxy injection."""
+    from System.neuroanatomy.pathways.synaptic_routing import configure_synaptic_routing
+
+    output = configure_synaptic_routing(project_name, backend_port, api_prefix)
+    success = "Success" in output or "already established" in output
+    return ExecutionResult(
+        success=success, output=output, block_reason="" if success else output
+    )

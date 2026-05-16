@@ -176,6 +176,10 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 34. Boot Validation (Polymerase)
 * **Biological Function:** DNA Polymerase proofreads the DNA sequence for errors before DNA replication.
 * **OS Implementation:** Ensures the `agents.yaml` configuration is syntactically correct and free of errors before the OS boots up.
+
+### 35. CORS and API Proxy Determinism (Synaptic Pathways)
+* **Biological Function:** The Synaptic Pathways are the routes through which signals travel between neurons.
+* **OS Implementation:** Brain OS uses a deterministic API proxy to route signals between neurons. It uses a CORS (Cross-Origin Resource Sharing) policy to ensure that only authorized origins can access the API.
 ---
 
 ## 🏗️ Architecture & Routing

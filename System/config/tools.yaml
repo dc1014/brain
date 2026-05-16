@@ -95,6 +95,18 @@ base:
             description: "Whether to map software imports ('code') or Obsidian memory links ('notes')."
         required: ["directory_path"]
 
+  - type: "function"
+    function:
+      name: "configure_synaptic_routing"
+      description: "PATHWAY: Autonomously injects a CORS proxy into a Vite configuration file to link the frontend to a backend API (e.g., FastAPI, Express). Use this instead of manually rewriting vite.config.ts to save tokens and prevent syntax errors."
+      parameters:
+        type: "object"
+        properties:
+          project_name: { type: "string", description: "The folder name inside Studio/ (e.g., 'My-App')" }
+          backend_port: { type: "integer", description: "The local port the backend runs on (e.g., 8000)" }
+          api_prefix: { type: "string", description: "The API route prefix to proxy (default: '/api')" }
+        required: ["project_name", "backend_port"]
+
 write:
   - type: "function"
     function:
