@@ -117,3 +117,44 @@ execute:
             type: string
             description: "The HTTP or HTTPS URL to read."
         required: ["url"]
+
+  - type: function
+    function:
+      name: create_engram_tool
+      description: "Saves a sequence of bash/shell commands into procedural muscle memory. Use this when you successfully complete a complex, multi-step task that will likely be repeated in the future."
+      parameters:
+        type: object
+        properties:
+          name:
+            type: string
+            description: "A short, snake_case name for the engram (e.g., bootstrap_react_app)."
+          description:
+            type: string
+            description: "A human-readable description of what this script does."
+          commands:
+            type: string
+            description: "The raw bash/shell commands to save. Use standard cross-platform conventions where possible."
+        required: ["name", "description", "commands"]
+
+  - type: function
+    function:
+      name: list_engrams_tool
+      description: "Lists all available muscle memory scripts (engrams) the system knows how to do instantly. ALWAYS check this before writing manual shell commands for complex tasks."
+      parameters:
+        type: object
+        properties: {}
+
+  - type: function
+    function:
+      name: execute_engram_tool
+      description: "Instantly executes a learned engram (bash script). Use this instead of manually executing shell commands if an engram already exists."
+      parameters:
+        type: object
+        properties:
+          name:
+            type: string
+            description: "The name of the engram to execute (e.g., bootstrap_react_app)."
+          args:
+            type: string
+            description: "Optional arguments to pass to the script."
+        required: ["name"]

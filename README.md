@@ -56,6 +56,10 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 8. Self-Modification (Neuroplasticity)
 * **Structural Rewiring:** When Brain OS sleeps, it doesn't just log memories passively. If it detects a critical failure pattern in the daily logs, the sleep cycle uses `<neuroplasticity>` XML tools to permanently physically rewrite its own `agents.yaml` source code, altering the system prompt of the offending agent. The OS literally reprograms its own synapses to get smarter over time.
 
+### 9. Procedural Muscle Memory (The Cerebellum)
+* **Engram Synthesis:** When the Prefrontal Cortex (LLM) successfully figures out a complex, multi-step execution (like bootstrapping a React app or configuring Docker), it doesn't waste tokens rethinking it next time. It uses the `<create_engram>` tool to compile those shell steps into a permanent, reusable Bash script stored in the Cerebellum.
+* **Instant Execution:** On future tasks, the OS simply uses `<execute_engram>` to instantly fire the muscle memory script. The system gets exponentially faster and cheaper the more you use it.
+
 ---
 
 ## 🏗️ Architecture & Routing

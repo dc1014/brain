@@ -519,3 +519,30 @@ def sense_environment(url: str) -> str:
 
     except Exception as e:
         return f'<sensory_error source="{url}">\nFailed to invoke Sense organ: {str(e)}\n</sensory_error>'
+
+
+def create_engram_tool(name: str, description: str, commands: str) -> str:
+    """
+    Saves a sequence of bash/shell commands into procedural muscle memory.
+    Use this when you successfully complete a complex, multi-step task that will likely be repeated.
+    """
+    from System.cerebellum import save_engram
+
+    return save_engram(name, description, commands)
+
+
+def list_engrams_tool() -> str:
+    """Lists all available muscle memory scripts (engrams) the system knows how to do instantly."""
+    from System.cerebellum import list_engrams
+
+    return list_engrams()
+
+
+def execute_engram_tool(name: str, args: str = "") -> str:
+    """
+    Instantly executes a learned engram (bash script).
+    Use this instead of manually executing shell commands if an engram already exists.
+    """
+    from System.cerebellum import execute_engram
+
+    return execute_engram(name, args)
