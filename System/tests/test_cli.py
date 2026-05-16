@@ -5,7 +5,7 @@ import asyncio
 import os
 from System.runtime import analyze_task
 from System.cli import app, init
-from System.tools import bootstrap_project, execute_command
+from System.tools import bootstrap_project
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -118,8 +118,9 @@ def test_bootstrap_security_block(tmp_path: Path, mocker) -> None:  # type: igno
     assert "SECURITY BLOCK" in result
 
 
-def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # type: ignore
+def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:
     """Test that command execution is sandboxed and respects HITL."""
+    from System.tools.execution import execute_command
 
     mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
@@ -130,7 +131,7 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
     mocker.patch("System.neuroanatomy.systemic.blood_brain_barrier.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.sandbox.ALLOWED_DIRECTORIES", {tmp_path / "Studio"})
 
-    # <-- ADD THIS LINE: Bypass the LLM network call in the test environment
+    # Bypass the LLM network call in the test environment
     mocker.patch(
         "System.neuroanatomy.limbic.amygdala.scan_command", return_value=(True, "Safe")
     )
@@ -140,7 +141,7 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
 
     # 1. Test Security Boundary
     block_result = execute_command("ls", "../../")
-    assert "PATH TRAVERSAL BLOCKED" in block_result
+    assert "PATH TRAVERSAL BLOCKED" in block_result.output
 
     # 2. Test HITL Strict Rejection
     mocker.patch("builtins.input", return_value="n")
@@ -148,26 +149,20 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
 
     # Pass the exact path so subprocess finds the temp directory
     deny_result = execute_command("ls", str(studio_dir))
-    assert "SECURITY BLOCK: User explicitly denied" in deny_result
+    assert "SECURITY BLOCK: User explicitly denied" in deny_result.output
 
     # 3. Test Execution Approval (Standard 'y')
     mocker.patch("builtins.input", return_value="y")
 
-    # If your test_cli.py imports execute_command from System.tools, use:
-    mock_popen = mocker.patch("System.tools.execution.subprocess.Popen")
+    # ⚡ ZERO-DEBT FIX: Remove the brittle `subprocess.Popen` mock completely!
+    # Instead, we execute a cross-platform command that natively works in async.
+    approve_result = execute_command(
+        "python -c \"print('mock_ls_output')\"", str(studio_dir)
+    )
 
-    # We create a fake process where stdout acts like a streamed list of lines
-    mock_process = mocker.MagicMock()
-    mock_process.stdout = ["mock_ls_output\n"]
-    mock_process.returncode = 0
-    mock_popen.return_value = mock_process
-
-    # FIX: Pass the absolute path variable, just like in Step 2!
-    approve_result = execute_command("ls", str(studio_dir))
-
-    # FIX: Assert the restored XML data contract
-    assert "<shell_output>" in approve_result
-    assert "mock_ls_output" in approve_result
+    # ⚡ Assert explicitly against the .output property of the ExecutionResult dataclass
+    assert "<shell_output>" in approve_result.output
+    assert "mock_ls_output" in approve_result.output
 
 
 def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:  # type: ignore

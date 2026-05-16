@@ -1,6 +1,8 @@
 import os
 import shlex
 import subprocess
+import asyncio
+import threading
 from rich.console import Console
 from System.core.paths import ROOT_DIR
 from .sandbox import is_safe_path
@@ -13,15 +15,13 @@ from typing import Optional, Dict
 # The Motor Cortex's active memory of running background servers
 ACTIVE_PROCESSES: Dict[str, subprocess.Popen] = {}
 
-
 console = Console()
 
 
-def execute_command(command: str, directory_path: str) -> ExecutionResult:
-    """Runs a terminal command strictly within the BBB Sandbox and demands Human Approval."""
+async def execute_command_async(command: str, directory_path: str) -> ExecutionResult:
+    """Runs a terminal command strictly within the BBB Sandbox (Fully Asynchronous)."""
     from System.neuroanatomy.systemic.blood_brain_barrier import validate_execution_path
     from System.neuroanatomy.limbic.amygdala import scan_command
-    from System.neuroanatomy.systemic.microglia import trigger_immune_response
 
     # 1. SHIFT-LEFT: Sandbox Enforcement
     is_safe_path_result, path_result = validate_execution_path(directory_path)
@@ -41,17 +41,63 @@ def execute_command(command: str, directory_path: str) -> ExecutionResult:
             block_reason=command_result,
         )
 
-    # 3. SHIFT-LEFT: HITL Validation (Human In The Loop)
-    if os.environ.get("BRAIN_OS_HEADLESS") != "1":
-        console.print("\n[bold red]⚠️  PIPELINE AUTHORIZATION[/bold red]")
-        console.print(f"Agent requested to execute: [bold cyan]{command}[/bold cyan]")
-        console.print(f"Directory: [dim]{path_result}[/dim]")
-        approval = input("Authorize execution? [y/N]: ").strip().lower()
-        if approval != "y":
-            reason = "SECURITY BLOCK: User explicitly denied"
-            return ExecutionResult(success=False, output=reason, block_reason=reason)
+    # 3. SHIFT-LEFT: AST MEMBRANE & BINARY WHITELIST (Payload inspection)
+    try:
+        from System.neuroanatomy.systemic.blood_brain_barrier import (
+            scan_python_ast,
+            wrap_with_apoptosis,
+        )
 
-    # 4. NPM HANG PREVENTION & WINDOWS FORMATTING
+        args = shlex.split(command)
+        if args:
+            binary = args[0].lower()
+            if binary in ["bash", "sh", "zsh", "powershell", "pwsh", "cmd"]:
+                reason = "SECURITY BLOCK: Executing raw shell binaries is forbidden. Write Python scripts instead."
+                return ExecutionResult(
+                    success=False,
+                    output=f"<shell_output>\n<stderr>\n{reason}\n</stderr>\n</shell_output>",
+                    block_reason=reason,
+                )
+
+            if binary in ["python", "python3", "py", "uv"]:
+                for idx, arg in enumerate(args):
+                    if arg.endswith(".py") and arg != "orchestrator.py":
+                        script_path = os.path.join(path_result, arg)
+                        is_safe_ast, ast_reason = scan_python_ast(script_path)
+                        if not is_safe_ast:
+                            return ExecutionResult(
+                                success=False,
+                                output=f"<shell_output>\n<stderr>\n{ast_reason}\n</stderr>\n</shell_output>",
+                                block_reason=ast_reason,
+                            )
+                        membrane_script = wrap_with_apoptosis(script_path)
+                        args[idx] = membrane_script
+                        break
+    except ValueError:
+        pass
+
+    # 4. HITL Check (Async Non-Blocking Prompt)
+    if os.environ.get("BRAIN_OS_HEADLESS") != "1":
+        console.print(
+            f"\n[bold yellow]⚠️ Agent wants to execute command in {path_result}:[/bold yellow]"
+        )
+        console.print(f"[cyan]{command}[/cyan]")
+        try:
+            # ⚡ Prevent input() from blocking the Async Event Loop
+            auth = await asyncio.to_thread(input, "Allow execution? [y/N]: ")
+            auth = auth.strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            auth = "n"
+
+        if auth not in ["y", "yes"]:
+            reason = "SECURITY BLOCK: User explicitly denied command execution."
+            return ExecutionResult(
+                success=False,
+                output=f"<shell_output>\n<stderr>\n{reason}\n</stderr>\n</shell_output>",
+                block_reason=reason,
+            )
+
+    # 5. NPM HANG PREVENTION & WINDOWS FORMATTING
     if sys.platform == "win32":
         if command.startswith("npm "):
             command = command.replace("npm ", "npm.cmd ", 1)
@@ -61,33 +107,54 @@ def execute_command(command: str, directory_path: str) -> ExecutionResult:
     if "npm install" in command and "--no-audit" not in command:
         command += " --no-audit --no-fund"
 
-    # 5. EXECUTION
+    # 6. Execution (SECURED & ASYNCHRONOUS)
     try:
         args = shlex.split(command)
-        process = subprocess.Popen(
-            args,
-            shell=False,
+
+        console.print(f"\n[bold cyan]▶ Executing:[/bold cyan] {command}")
+
+        # ⚡ Spawn non-blocking subprocess
+        process = await asyncio.create_subprocess_exec(
+            *args,
             cwd=path_result,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
         )
 
         output_lines = []
         if process.stdout:
-            for line in process.stdout:
-                console.print(f"[dim]│ {line}[/dim]", end="")
+            while True:
+                line_bytes = await process.stdout.readline()
+                if not line_bytes:
+                    break
+                line = line_bytes.decode(errors="replace")
+                console.print(f"[dim]│ {line.rstrip()}[/dim]")
                 output_lines.append(line)
 
-        process.wait(timeout=180)
+        try:
+            # ⚡ Await without blocking the OS heartbeat
+            await asyncio.wait_for(process.wait(), timeout=180)
+        except asyncio.TimeoutError:
+            process.kill()
+            reason = "ERROR: Command timed out after 180 seconds. Do not use this tool for blocking servers (like npm run dev)."
+            return ExecutionResult(
+                success=False,
+                output=f"<shell_output>\n<stderr>\n{reason}\n</stderr>\n</shell_output>",
+                block_reason=reason,
+            )
+
         full_output = "".join(output_lines)
 
+        # 🦠 Microglia Autonomous Bug Fixing Integration
         if process.returncode != 0:
-            # 🦠 MICROGLIA INTERCEPTION
-            console.print(
-                "\n[bold yellow]⚠️ Execution failed. Triggering Microglia immune response...[/bold yellow]"
+            from System.neuroanatomy.systemic.microglia import (
+                trigger_immune_response_async,
             )
-            healed, heal_msg = trigger_immune_response(
+
+            console.print(
+                "\n[bold yellow]⚠️ Execution failed. Triggering Async Microglia immune response...[/bold yellow]"
+            )
+            healed, heal_msg = await trigger_immune_response_async(
                 command, full_output, str(path_result)
             )
 
@@ -108,13 +175,38 @@ def execute_command(command: str, directory_path: str) -> ExecutionResult:
             output=f"<shell_output>\n<stdout>\n{full_output}\n</stdout>\n</shell_output>",
         )
 
-    except subprocess.TimeoutExpired:
-        process.kill()
-        reason = "ERROR: Command timed out after 180 seconds. Do not use this tool for blocking servers (like npm run dev)."
-        return ExecutionResult(success=False, output=reason, block_reason=reason)
     except Exception as e:
         reason = f"EXECUTION ERROR: {str(e)}"
-        return ExecutionResult(success=False, output=reason, block_reason=reason)
+        return ExecutionResult(
+            success=False,
+            output=f"<shell_output>\n<stderr>\n{reason}\n</stderr>\n</shell_output>",
+            block_reason=reason,
+        )
+
+
+def execute_command(command: str, directory_path: str) -> ExecutionResult:
+    """Synchronous wrapper for backward compatibility across the OS pipeline."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        # 🎯 MYPY FIX: Strictly type the fallback result
+        result: ExecutionResult = ExecutionResult(
+            success=False, output="Thread failed", block_reason="Thread failed"
+        )
+
+        def run_in_thread() -> None:
+            nonlocal result
+            result = asyncio.run(execute_command_async(command, directory_path))
+
+        t = threading.Thread(target=run_in_thread)
+        t.start()
+        t.join()
+        return result
+    else:
+        return asyncio.run(execute_command_async(command, directory_path))
 
 
 def analyze_safe_syntax(filepath: str) -> ExecutionResult:
