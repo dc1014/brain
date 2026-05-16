@@ -362,6 +362,7 @@ def test_execute_pending(tmp_path, monkeypatch):
 def test_forage_command(monkeypatch, capsys):
     """Proves the forage command executes the correct pipeline in headless mode."""
     from typer.testing import CliRunner
+    from System.cli import app
 
     runner = CliRunner()
     executed_args = {}
@@ -371,8 +372,8 @@ def test_forage_command(monkeypatch, capsys):
         executed_args["route"] = route
         executed_args["domain"] = domain
 
-    # 🛡️ THE FIX: Patch the CLI's direct import!
-    monkeypatch.setattr("System.cli.execute_pipeline", mock_execute_pipeline)
+    # 🛡️ THE FIX: Patch the module where the command actually lives now!
+    monkeypatch.setattr("System.cli_cognitive.execute_pipeline", mock_execute_pipeline)
 
     result = runner.invoke(app, ["forage", "https://example.com", "--domain", "STUDIO"])
 
@@ -386,6 +387,7 @@ def test_forage_command(monkeypatch, capsys):
 def test_daydream_command(monkeypatch, capsys):
     """Proves the daydream command executes the correct pipeline in headless mode."""
     from typer.testing import CliRunner
+    from System.cli import app
 
     runner = CliRunner()
     executed_args = {}
@@ -395,8 +397,8 @@ def test_daydream_command(monkeypatch, capsys):
         executed_args["route"] = route
         executed_args["domain"] = domain
 
-    # 🛡️ THE FIX: Patch the CLI's direct import!
-    monkeypatch.setattr("System.cli.execute_pipeline", mock_execute_pipeline)
+    # 🛡️ THE FIX: Patch the module where the command actually lives now!
+    monkeypatch.setattr("System.cli_cognitive.execute_pipeline", mock_execute_pipeline)
 
     result = runner.invoke(app, ["daydream", "--domain", "PROFESSIONAL"])
 
@@ -412,7 +414,8 @@ def test_evolve_command(monkeypatch, tmp_path):
 
     root = tmp_path
     monkeypatch.setattr("System.core.orchestrator.ROOT_DIR", root)
-    monkeypatch.setattr("System.cli.ROOT_DIR", root)
+    # 🛡️ THE FIX: Patch ROOT_DIR in cli_cognitive as well!
+    monkeypatch.setattr("System.cli_cognitive.ROOT_DIR", root)
 
     # Setup paths (Meta Domain)
     mutations = root / "Meta" / "Mutations.md"
@@ -429,11 +432,11 @@ def test_evolve_command(monkeypatch, tmp_path):
         "agents:\n  dispatcher:\n    system_prompt: 'Base prompt.'\n", encoding="utf-8"
     )
 
-    # 🛡️ THE FIX: Stop the live network call!
+    # 🛡️ THE FIX: Stop the live network call in the new module!
     async def mock_execute_pipeline(*args, **kwargs):
         return None
 
-    monkeypatch.setattr("System.cli.execute_pipeline", mock_execute_pipeline)
+    monkeypatch.setattr("System.cli_cognitive.execute_pipeline", mock_execute_pipeline)
 
     # Execute
     evolve()

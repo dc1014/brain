@@ -9,8 +9,11 @@ console = Console()
 def map_system_topology() -> str:
     """
     Generates a UI-agnostic Mermaid diagram of the OS's FULL active topology.
+    It dynamically maps the physical file dependencies using the Parietal Lobe.
     """
     try:
+        from System.neuroanatomy.cortical.parietal import generate_spatial_map
+
         topology_file = ROOT_DIR / "Meta" / "system_topology.md"
         topology_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -32,42 +35,30 @@ def map_system_topology() -> str:
             len(list(engram_dir.glob("*.json"))) if engram_dir.exists() else 0
         )
 
-        # ⚡ SHIFT-LEFT: The Complete Biological Architecture Map
+        # 4. 🧠 DYNAMIC PARIETAL LOBE CRAWL
+        # We invoke the spatial mapper on the System folder to dynamically trace file dependencies
+        system_dir = ROOT_DIR / "System"
+        dynamic_mermaid_graph = generate_spatial_map(
+            str(system_dir), output_format="mermaid", map_type="code"
+        )
+
+        # ⚡ SHIFT-LEFT: Strip the markdown fences from the dynamic graph so we can combine it with the vitals
+        clean_dynamic_graph = dynamic_mermaid_graph.replace(
+            "```mermaid\ngraph TD\n", ""
+        ).replace("\n```", "")
+
+        # 5. The True Biological Architecture Map (Combined Vitals + Dynamic Crawl)
         mermaid_graph = textwrap.dedent(f"""\
         ```mermaid
         graph TD
-            %% Input & Security Layer
-            User((Host Environment)) --> CLI[Neural Interface / CLI]
-            CLI --> BBB{{Blood-Brain Barrier / Sandbox}}
-            BBB -- Safe --> Amygdala{{Amygdala / Threat Scan}}
+            %% --- LIVE AUTONOMIC VITALS ---
+            CLI[Neural Interface / CLI] -.-> Interoception[Interoception / Vitals]
+            Hippo[(Hippocampus: {hippo_state})]
+            Motor[Motor Cortex / Execution] -.-> ActiveProcs[{active_nodes} Active Background Processes]
+            Cerebellum[Cerebellum / {engram_count} Engrams]
 
-            %% Indeterministic Cognitive Pathway
-            Amygdala -- Approved --> PFC[Prefrontal Cortex / Dispatcher]
-            PFC --> CC[Corpus Callosum / Model Routing]
-            CC --> Swarm[Cortical Swarm / Agents]
-
-            %% Memory & Sensory Centers
-            Swarm <--> Hippo[(Hippocampus: {hippo_state})]
-            Swarm <--> Wernicke[Wernicke / Semantic Filter]
-            Swarm <--> Occipital[Occipital / Vision]
-
-            %% Output & formatting
-            Swarm --> Broca[Broca / Data Contracts]
-            Broca --> Motor[Motor Cortex / Execution]
-
-            %% Autonomic Healing & Motor
-            Motor --> Microglia{{Microglia / Auto-Heal}}
-            Motor -.-> ActiveProcs[{active_nodes} Active Background Processes]
-
-            %% Deterministic Somatic Reflexes
-            CLI -. Reflex Arc .-> Cerebellum[Cerebellum / {engram_count} Engrams]
-            CLI -. Reflex Arc .-> Interoception[Interoception / Vitals]
-            Cerebellum --> Motor
-
-            %% Autonomic Sleep Cycle
-            Pineal[Pineal Gland / Idle Monitor] --> DMN[Default Mode Network / Daydreams]
-            DMN --> REM[REM Paralysis / Git Sandbox]
-            REM -. Commits .-> User
+            %% --- DYNAMIC PHYSICAL FILE TOPOLOGY ---
+        {clean_dynamic_graph}
         ```
         """)
 
@@ -76,7 +67,7 @@ def map_system_topology() -> str:
 
         topology_file.write_text(content, encoding="utf-8")
         console.print(
-            f"[bold green]🗺️ Complete Topology Map generated at {topology_file.relative_to(ROOT_DIR)}[/bold green]"
+            f"[bold green]🗺️ True Dynamic Topology Map generated at {topology_file.relative_to(ROOT_DIR)}[/bold green]"
         )
 
         return "Success: System topology successfully mapped."
