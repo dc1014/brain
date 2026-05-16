@@ -65,12 +65,35 @@ def reflex(
         console.print(f"\n[bold red]❌ Reflex failed: {res.output}[/bold red]")
 
 
-def sleep():
-    """Triggers the autonomic sleep cycle (Backups & Neuroplasticity)."""
-    from System.neuroanatomy.autonomic.pineal import enter_sleep_cycle
+def flush():
+    """🌊 Flushes the lymphatic system (cleans temporary logs/backups)."""
+    from rich.console import Console
 
-    console.print("[blue]🌙 Initiating Sleep Cycle...[/blue]")
-    enter_sleep_cycle()
+    console = Console()
+    console.print("[dim cyan]🌊 Triggering Lymphatic Flush...[/dim cyan]")
+    try:
+        from System.neuroanatomy.systemic.lymphatic import flush_lymph_nodes
+
+        flush_lymph_nodes()
+        console.print("[bold green]✅ Lymphatic system flushed.[/bold green]")
+    except ImportError:
+        console.print(
+            "[yellow]⚠️ Lymphatic routing unavailable, skipping flush.[/yellow]"
+        )
+    except Exception as e:
+        console.print(f"[bold red]❌ Lymphatic error: {e}[/bold red]")
+
+
+def sleep():
+    """🌙 Forces a deep sleep cycle (Lymphatic flush + DMN Daydreaming)."""
+    from rich.console import Console
+    from System.neuroanatomy.autonomic.dmn import trigger_daydreams
+
+    console = Console()
+
+    console.print("[bold blue]🌙 System entering deep sleep phase...[/bold blue]")
+    flush()
+    trigger_daydreams()
 
 
 def expose_dermis(port: int = 8080) -> str:

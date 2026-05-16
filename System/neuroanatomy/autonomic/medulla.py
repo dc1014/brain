@@ -32,14 +32,14 @@ class MedullaOblongata:
     circadian schedules, queue processing, and operational homeostasis.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.config_path = ROOT_DIR / "System" / "config" / "medulla.yaml"
         self.is_alive = False
         self.daemons: dict[str, threading.Thread] = {}
         self.config_data = self._load_blueprint()
         self._main_pid = os.getpid()
 
-    def _load_blueprint(self) -> dict[str, Any]:  # ⚡ ZERO-DEBT: Strict return typing
+    def _load_blueprint(self) -> dict[str, Any]:
         if not self.config_path.exists():
             medulla_logger.warning(
                 "medulla.yaml mapping missing. Yielding to defaults."

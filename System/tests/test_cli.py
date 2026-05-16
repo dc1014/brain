@@ -368,27 +368,26 @@ def test_forage_command(monkeypatch, capsys):
 
 
 def test_daydream_command(monkeypatch, capsys):
-    """Proves the daydream command executes the correct pipeline in headless mode."""
+    """Proves the daydream command correctly triggers the autonomic DMN cycle."""
     from typer.testing import CliRunner
     from System.cli import app
 
     runner = CliRunner()
-    executed_args = {}
+    mock_called = []
 
-    async def mock_execute_pipeline(desc, route, domain):
-        executed_args["desc"] = desc
-        executed_args["route"] = route
-        executed_args["domain"] = domain
+    def mock_trigger_daydreams():
+        mock_called.append(True)
 
-    # 🛡️ THE FIX: Patch the module where the command actually lives now!
-    monkeypatch.setattr("System.cli_cognitive.execute_pipeline", mock_execute_pipeline)
+    # Patch the exact DMN function that the CLI routes to
+    monkeypatch.setattr(
+        "System.neuroanatomy.autonomic.dmn.trigger_daydreams", mock_trigger_daydreams
+    )
 
-    result = runner.invoke(app, ["daydream", "--domain", "PROFESSIONAL"])
+    # Invoke purely, without legacy Swarm arguments
+    result = runner.invoke(app, ["daydream"])
 
     assert result.exit_code == 0
-    assert executed_args["route"] == "SUBCONSCIOUS_DAYDREAM"
-    assert executed_args["domain"] == "PROFESSIONAL"
-    assert os.environ.get("BRAIN_OS_HEADLESS") == "1"
+    assert len(mock_called) == 1
 
 
 def test_evolve_command(monkeypatch, tmp_path):

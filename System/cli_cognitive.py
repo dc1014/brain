@@ -21,18 +21,11 @@ def task(
     asyncio.run(dispatch_task(prompt, obsidian=obsidian))
 
 
-def daydream(
-    domain: str = typer.Option("PERSONAL", "--domain", help="Domain context for DMN."),
-):
-    """Default Mode Network (DMN): Background processing and memory consolidation."""
-    console.print(f"[blue]☁️  Entering Daydream state for {domain}...[/blue]")
-    asyncio.run(
-        execute_pipeline(
-            "Run Default Mode Network background processing.",
-            "SUBCONSCIOUS_DAYDREAM",
-            domain,
-        )
-    )
+def daydream():
+    """🌌 Activates the Default Mode Network to process idle thoughts."""
+    from System.neuroanatomy.autonomic.dmn import trigger_daydreams
+
+    trigger_daydreams()
 
 
 def evolve():
