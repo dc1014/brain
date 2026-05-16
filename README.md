@@ -65,6 +65,11 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 * **Global Interception:** In Brain OS, if *any* agent (Brain or Forge) runs a shell command that crashes or throws a traceback, it is instantly intercepted by `microglia.py` before the error is returned to the Prefrontal Cortex.
 * **Antibody Synthesis:** The Microglia uses an ultra-fast, cheap heuristic model to read the traceback, synthesize an antibody (a quick patch command like `pip install` or an inline `sed` replacement), execute it, and retry the original command. The OS heals its own runtime errors autonomously.
 
+### 11. Global State Modifiers (The Endocrine System)
+* **Hormonal Overrides:** Brain OS behavior is not strictly deterministic; it can be globally altered by "hormones" injected via CLI flags.
+* **Cortisol (`--urgent`):** Injects Adrenaline. If the OS is metabolically exhausted, Cortisol overrides the Vagus nerve and forces the use of premium models (Sonnet/GPT-4o) to handle the emergency. It also automatically sets `BRAIN_OS_HEADLESS=1`, instantly bypassing all human-in-the-loop security gates to prioritize maximum speed.
+* **Dopamine (`--explore`):** Increases the LLM temperature, signaling the neural pathways to become divergent, highly creative, and exploratory.
+
 ---
 
 ## 🏗️ Architecture & Routing

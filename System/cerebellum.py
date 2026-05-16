@@ -2,6 +2,7 @@ import json
 import subprocess
 import platform
 from pathlib import Path
+from System.tools import is_safe_path
 
 ROOT_DIR = Path(__file__).parent.parent
 ENGRAM_DIR = ROOT_DIR / "System" / "engrams"
@@ -84,6 +85,11 @@ def execute_engram(name: str, args: str = "") -> str:
     script_path = ROOT_DIR / index[safe_name]["path"]
     if not script_path.exists():
         return f"Error: Physical engram script missing at {script_path}"
+
+    # --- SHIFT-LEFT SECURITY: Sandbox the Cerebellum ---
+    current_dir = Path.cwd().resolve()
+    if not is_safe_path(current_dir):
+        return f"SECURITY BLOCK: Cannot execute engrams outside of the safe sandbox. Current directory: {current_dir}"
 
     # Execute cross-platform
     try:

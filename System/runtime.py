@@ -113,7 +113,14 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
 
         # Biological Fatigue: Down-shift to cheap heuristic models if exhausted
         if is_exhausted:
-            desired_model_key = "gpt_mini"
+            from System.endocrine import is_cortisol_active
+
+            if is_cortisol_active():
+                console.print(
+                    "[dim red]↳ Cortisol Override: Ignoring metabolic exhaustion. Burning emergency token reserves.[/dim red]"
+                )
+            else:
+                desired_model_key = "gpt_mini"
 
         env_key_map = {
             "gpt_mini": "OPENAI_API_KEY",

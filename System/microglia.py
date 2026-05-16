@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from litellm import completion  # type: ignore
 from rich.console import Console
+from System.tools import is_safe_path
 
 console = Console()
 ROOT_DIR = Path(__file__).parent.parent
@@ -75,6 +76,14 @@ Error Traceback:
             )
 
             # 3. Apply the antibody (execute the fix)
+            # --- SHIFT-LEFT SECURITY: Sandbox the Immune System ---
+            target_path = Path(cwd).resolve()
+            if not is_safe_path(target_path):
+                return (
+                    False,
+                    f"SECURITY BLOCK: Microglia attempted to execute fix outside sandbox ({cwd}).",
+                )
+
             fix_result = subprocess.run(
                 antibody_cmd, cwd=cwd, capture_output=True, text=True, shell=True
             )

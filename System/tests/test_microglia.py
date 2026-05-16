@@ -30,6 +30,8 @@ def test_microglia_successful_heal(monkeypatch, tmp_path):
         )(),
     )
 
+    monkeypatch.setattr("System.microglia.is_safe_path", lambda x: True)
+
     # 2. Trigger an intentional failure (reading a file that doesn't exist using python)
     failed_cmd = "python -c \"open('missing_file.txt', 'r').read()\""
     initial_stderr = "FileNotFoundError: No such file or directory: 'missing_file.txt'"
@@ -65,6 +67,8 @@ def test_microglia_failed_heal(monkeypatch, tmp_path):
             },
         )(),
     )
+
+    monkeypatch.setattr("System.microglia.is_safe_path", lambda x: True)
 
     failed_cmd = 'python -c "import nonexistent_module_12345"'
     initial_stderr = "ModuleNotFoundError: No module named 'nonexistent_module_12345'"

@@ -43,12 +43,30 @@ def task(
         "--obsidian",
         help="Route task to the Pending Queue instead of terminal execution.",
     ),
+    urgent: bool = typer.Option(
+        False,
+        "--urgent",
+        help="Release Cortisol: Bypass safety gates and burn emergency tokens.",
+    ),
+    explore: bool = typer.Option(
+        False,
+        "--explore",
+        help="Release Dopamine: Increase creativity and neural temperature.",
+    ),
 ) -> None:
+    from System.endocrine import release_cortisol, release_dopamine
+
+    if urgent is True:
+        release_cortisol()
+    if explore is True:
+        release_dopamine()
+
     console.print(
         f"\n[bold green]🚀 Initializing Life OS task:[/bold green] '{description}'\n"
     )
 
     with console.status(
+        # ... the rest of the function remains exactly the same ...
         "[bold yellow]🛡️ Dispatcher is analyzing the task...[/bold yellow]",
         spinner="dots",
     ):
