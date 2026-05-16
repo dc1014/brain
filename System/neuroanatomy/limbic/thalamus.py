@@ -61,3 +61,11 @@ Keep it as dense and short as possible."""
         console.print(f"[dim red]Thalamus API Error. Bypassing filter. ({e})[/dim red]")
         # Structural fallback: just grab the most recent 4000 characters
         return raw_memory[-4000:]
+
+
+def process_sensory_input(source: str, payload: str) -> str:
+    """
+    The Thalamic gateway for ascending sensory data from the Spine.
+    Filters, prioritizes, and formats impulses before they reach the Prefrontal Cortex.
+    """
+    return f"<ascending_stimulus source='{source}'>\n{payload}\n</ascending_stimulus>"

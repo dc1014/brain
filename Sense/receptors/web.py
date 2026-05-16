@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from markdownify import markdownify  # type: ignore
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+from System.neuroanatomy.pathways.spine import transduce_to_spine
 
 # ⚡ ECONOMIC SHIFT-LEFT: Hard cap on sensory input to prevent Context Window Collapse
 MAX_SENSORY_CHARS = 25000  # Roughly 5,000 to 6,000 tokens
@@ -88,7 +89,11 @@ def transduce_web_page(url: str) -> str:
         markdown_content = markdownify(str(soup), heading_style="ATX").strip()
 
         if not markdown_content:
-            return f'<sensory_input source="{safe_url}" status="EMPTY">\nPage rendered successfully but contained no extractable text.\n</sensory_input>'
+            return transduce_to_spine(
+                safe_url,
+                "Page rendered successfully but contained no extractable text.",
+                "exteroceptive",
+            )
 
         # ⚡ ECONOMIC SHIFT-LEFT: The Token Guillotine
         if len(markdown_content) > MAX_SENSORY_CHARS:
@@ -97,7 +102,7 @@ def transduce_web_page(url: str) -> str:
                 + "\n\n... [TRUNCATED BY BRAIN OS TO PREVENT TOKEN EXHAUSTION] ..."
             )
 
-        return f'<sensory_input source="{safe_url}" status="SUCCESS">\n{markdown_content}\n</sensory_input>'
+        return transduce_to_spine(safe_url, markdown_content, "exteroceptive")
 
     except SecurityBlockError as e:
         return f'<sensory_error source="{url}">\n{str(e)}\n</sensory_error>'
