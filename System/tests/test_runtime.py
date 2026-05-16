@@ -251,8 +251,14 @@ async def test_synaptic_consolidation_commits_mid_pipeline(
                     "name": "Frontend",
                     "model": "mock",
                     "system_prompt": "",
+                    "creates_milestone": True,  # <--- Explicitly true
                 },
-                "qa_auditor": {"name": "QA", "model": "mock", "system_prompt": ""},
+                "qa_auditor": {
+                    "name": "QA",
+                    "model": "mock",
+                    "system_prompt": "",
+                    "creates_milestone": False,  # <--- Explicitly false
+                },
             },
             "models": {"mock": "mock"},
         },

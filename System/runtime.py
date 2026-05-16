@@ -315,9 +315,8 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
             pipeline_aborted = True
             break
 
-        # 💾 SHIFT-LEFT: Synaptic Consolidation (Save Linear Agent Progress)
-        # We commit the transaction as long as it's not an auditor or deployment node
-        if step["agent"] not in ["qa_auditor", "deployment_ops"]:
+        # 💾 SHIFT-LEFT: Synaptic Consolidation (Decoupled Milestone Logic)
+        if agent_cfg.get("creates_milestone", True):
             commit_transaction()
             console.print(
                 f"\n[dim green]💾 Synaptic Consolidation: {agent_cfg['name']} milestone committed to disk.[/dim green]"

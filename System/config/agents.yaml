@@ -122,6 +122,7 @@ agents:
   qa_auditor:
     name: "QA Auditor (gemini_flash)"
     model: "gemini_flash"
+    creates_milestone: false
     system_prompt: |
       <system_instructions>
       <persona>
@@ -138,6 +139,7 @@ agents:
   deployment_ops:
     name: "Deployment Ops"
     model: "gpt_mini"
+    creates_milestone: false
     system_prompt: |
       <system_instructions>
       <persona>
