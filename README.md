@@ -188,6 +188,14 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 37. Inbound Web Traffic (Dermis)
 * **The Dermis (Network Skin):** A zero-dependency, background HTTP receptor that acts as the system's skin. It cryptographically verifies inbound webhooks (GitHub, Stripe, etc.), compresses massive JSON payloads into token-efficient sentences, and fires them down the Spine.
 
+### 38. Master Daemon (Medulla Oblongata)
+* **The Medulla Oblongata (Brainstem Master Daemon):** The central nervous system's lower brainstem, responsible for the body's automatic control of breathing, heart rate, and blood pressure. In Brain OS, it acts as the system's life-support system, supervising involuntary system lifecycles, background daemons, circadian schedules, queue processing, and operational homeostasis.
+* **Autonomic Processing:** Runs as a persistent background thread that "never sleeps," ensuring that the system's core functions are always running and that the system recovers automatically from crashes. (e.g. if the Dermis crashes, the Medulla will automatically restart it)
+* **Self-Monitoring Loops:** The Medulla Oblongata is made up of three separate self-monitoring loops that work together to ensure the system's core functions are always running and that the system recovers automatically from crashes.
+    * **Cognitive Heartbeat:** Autonomously processes the pending cognitive task queue (Obsidian notes).
+    * **Homeostasis:** Tracks internal vitals, token budgets, and circadian timing adjustments.
+    * **Respiratory Supervision:** Monitors operational threads, automatically resuscitating crashed organs.
+
 ---
 
 ## 🏗️ Architecture & Routing

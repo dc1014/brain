@@ -1,28 +1,24 @@
 import threading
+from collections import defaultdict
+from typing import Any
 
 
 class BiologicalLock:
     """
-    Global OS Mutex (Cellular Membrane Lock).
-    Ensures that active Swarm agents, background webhooks, and the file watcher
-    do not write to the same memory file at the exact same millisecond.
+    Regional Tissue Lock (Granular Mutex).
+    Prevents cross-thread collisions on specific files or resources without bottlenecking
+    the entire organism. Defaults to a 'global' lock if no resource is specified.
     """
 
-    _lock = threading.Lock()
+    _locks: dict[str, threading.Lock] = defaultdict(threading.Lock)
 
-    @classmethod
-    def acquire(cls):
-        cls._lock.acquire()
+    def __init__(self, resource_id: str = "global"):
+        self.resource_id = str(resource_id)
 
-    @classmethod
-    def release(cls):
-        cls._lock.release()
+    def __enter__(self) -> "BiologicalLock":
+        self._lock = self._locks[self.resource_id]
+        self._lock.acquire()
+        return self
 
-    @classmethod
-    def __enter__(cls):
-        cls.acquire()
-        return cls
-
-    @classmethod
-    def __exit__(cls, exc_type, exc_val, exc_tb):
-        cls.release()
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self._lock.release()

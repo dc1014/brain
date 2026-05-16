@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import yaml  # type: ignore
+from typing import Any
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -30,10 +31,22 @@ CONFIG_DIR = ROOT_DIR / "System" / "config"
 try:
     # 🧬 DNA POLYMERASE: Proofread the OS genetic code before booting
     proofread_yaml_dna(CONFIG_DIR)
-    AGENT_CONFIG = {}
-    for file in ["models.yaml", "agents.yaml", "routes.yaml"]:
-        with open(CONFIG_DIR / file, "r", encoding="utf-8") as f:
-            AGENT_CONFIG.update(yaml.safe_load(f))
+    AGENT_CONFIG: dict[str, Any] = {}
+
+    # ⚡ SHIFT-LEFT: Unifying the Limbic Config
+    config_files = [
+        "models.yaml",
+        "agents.yaml",
+        "routes.yaml",
+        "medulla.yaml",
+        "webhooks.yaml",
+        "tools.yaml",
+    ]
+    for file in config_files:
+        filepath = CONFIG_DIR / file
+        if filepath.exists():
+            with open(filepath, "r", encoding="utf-8") as f:
+                AGENT_CONFIG.update(yaml.safe_load(f) or {})
 except Exception as e:
     console.print(f"[bold red]BOOT WARNING: Config failed to load ({e}).[/bold red]")
     AGENT_CONFIG = {"agents": {}, "routes": {}, "models": {}}

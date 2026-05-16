@@ -4,6 +4,7 @@ import threading
 import logging
 import psutil
 import os
+from typing import Any
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR
@@ -38,7 +39,7 @@ class MedullaOblongata:
         self.config_data = self._load_blueprint()
         self._main_pid = os.getpid()
 
-    def _load_blueprint(self) -> dict:
+    def _load_blueprint(self) -> dict[str, Any]:  # ⚡ ZERO-DEBT: Strict return typing
         if not self.config_path.exists():
             medulla_logger.warning(
                 "medulla.yaml mapping missing. Yielding to defaults."

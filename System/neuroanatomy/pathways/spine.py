@@ -71,7 +71,23 @@ class Spine:
 
         # ⚡ ASYNC SHIFT: Push to Thalamus in a background thread so the Spine never blocks
         def _ascend():
-            process_sensory_input(source, safe_payload)
+            try:
+                process_sensory_input(source, safe_payload)
+            except Exception as e:
+                # 💥 Nociceptor (Pain Receptor) activated on silent thread crash
+                console.print(
+                    "\n[bold red]💥 NOCICEPTOR ACTIVATED: Ascending Thalamic thread crashed![/bold red]"
+                )
+                console.print(
+                    f"[dim red]Stimulus Origin: {source} | Error: {str(e)}[/dim red]"
+                )
+
+                # Send the pain signal to the local logging system (Memory of pain)
+                import logging
+
+                logging.getLogger("Spine").error(
+                    f"Nociceptor triggered by {source}: {str(e)}"
+                )
 
         threading.Thread(target=_ascend, daemon=True).start()
         return f"Stimulus from {source} safely scrubbed and queued for cognition."
