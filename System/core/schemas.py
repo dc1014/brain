@@ -53,3 +53,24 @@ class ExecutionResult(BaseModel):
     # 🎯 FIX 3: Teaches the Dataclass how to .strip() itself for the Somatosensory organ!
     def strip(self) -> str:
         return self.output.strip()
+
+
+class WebhookConfig(BaseModel):
+    route_name: str = Field(
+        ..., description="The URL path endpoint (e.g., 'github_push')"
+    )
+    secret_env_var: str = Field(
+        ..., description="The local environment variable holding the HMAC secret"
+    )
+    signature_header: str = Field(
+        ..., description="The HTTP header containing the cryptographic signature"
+    )
+    payload_mapping: dict[str, str] = Field(
+        ..., description="Dot-notation mapping to extract text fields"
+    )
+    target_action: str = Field(
+        ..., description="Spinal route: 'reflex', 'visceral', or 'exteroceptive'"
+    )
+    template: str = Field(
+        ..., description="The token-optimized string template to send to the Spine"
+    )

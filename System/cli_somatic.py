@@ -71,3 +71,27 @@ def sleep():
 
     console.print("[blue]🌙 Initiating Sleep Cycle...[/blue]")
     enter_sleep_cycle()
+
+
+def expose_dermis(port: int = 8080) -> str:
+    """Somatic Reflex: Opens a temporary secure tunnel to the Dermis using native SSH."""
+    import subprocess
+    from rich.console import Console
+
+    console = Console()
+
+    console.print(
+        f"[bold cyan]🌐 Opening secure reverse tunnel to Dermis on port {port}...[/bold cyan]"
+    )
+    console.print(
+        "[dim yellow]Press Ctrl+C to close the tunnel and retract the skin.[/dim yellow]"
+    )
+
+    try:
+        # Uses localhost.run (free, zero-install, native SSH reverse proxy)
+        subprocess.run(["ssh", "-R", f"80:localhost:{port}", "nokey@localhost.run"])
+        return "Tunnel closed successfully."
+    except KeyboardInterrupt:
+        return "Tunnel manually closed by user."
+    except Exception as e:
+        return f"Tunnel failure: {str(e)}"

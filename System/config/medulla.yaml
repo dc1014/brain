@@ -1,0 +1,24 @@
+medulla:
+  autonomic_daemons:
+    # 🫁 Breathing (Somatosensory Cortex)
+    file_watcher:
+      enabled: true
+      targets: ["Personal", "Professional", "Studio"]
+      throttle_ms: 1500
+
+    # 💓 Heartbeat (Dermis / PNS)
+    dermis_receptor:
+      enabled: true
+      port: 8080
+      expose_tunnel_on_boot: false  # Auto-triggers the somatic SSH reflex
+
+    # 🌙 Circadian Rhythm (Pineal Gland & Lymphatics)
+    sleep_cycle:
+      enabled: true
+      trigger_time: "03:00" # 24h format clock
+      auto_flush_lymphatics: true # Sweeps old logs to .tar.gz archives
+
+  # 📊 Metabolism & Blood Pressure (Interoception)
+  homeostasis:
+    max_daily_token_burn: 500000
+    alert_on_crash: true

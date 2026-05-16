@@ -93,7 +93,7 @@ def record_webcam_video(save_path: str, duration_seconds: int = 5) -> str:
         frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = 20.0
 
-        fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
+        fourcc = cv2.VideoWriter.fourcc(*"mp4v")
         out = cv2.VideoWriter(save_path, fourcc, fps, (frame_width, frame_height))
 
         start_time = time.time()

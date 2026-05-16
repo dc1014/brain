@@ -182,7 +182,12 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 * **Biological Function:** The Synaptic Pathways are the routes through which signals travel between neurons.
 * **OS Implementation:** Brain OS uses a deterministic API proxy to route signals between neurons. It uses a CORS (Cross-Origin Resource Sharing) policy to ensure that only authorized origins can access the API.
 
+### 36. Peripherals (The Spine)
 * **The Spine (True PNS Routing):** Sensory receptors (`Sense/`) are decoupled from cognition. All inbound peripheral data flows through `spine.py`. This executes high-speed, zero-token routing: critical faults trigger Somatic Reflexes instantly, state updates hit the Enteric gut, and only novel stimuli ascend to the Thalamus for conscious LLM processing.
+
+### 37. Inbound Web Traffic (Dermis)
+* **The Dermis (Network Skin):** A zero-dependency, background HTTP receptor that acts as the system's skin. It cryptographically verifies inbound webhooks (GitHub, Stripe, etc.), compresses massive JSON payloads into token-efficient sentences, and fires them down the Spine.
+
 ---
 
 ## 🏗️ Architecture & Routing

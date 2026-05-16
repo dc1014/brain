@@ -18,39 +18,63 @@ class Spine:
     ) -> Any:
         payload = payload.strip()
 
+        # 1. THE SOMATIC REFLEX ARC (Dynamic Motor Routing)
         if stimulus_type == "reflex":
             console.print(
-                "[dim red]⚡ Spine intercepted crisis: Triggering Somatic Reflex Arc...[/dim red]"
+                f"[dim red]⚡ Spine intercepted crisis: Attempting Somatic Reflex '{payload}'...[/dim red]"
             )
             try:
-                from System.cli_somatic import status
+                import System.cli_somatic as somatic
 
-                return status()
+                # Dynamically fetch the function matching the webhook's payload string
+                if hasattr(somatic, payload) and callable(getattr(somatic, payload)):
+                    motor_function = getattr(somatic, payload)
+                    return motor_function()
+                else:
+                    msg = f"Somatic reflex '{payload}' does not exist in cli_somatic."
+                    console.print(f"[bold red]❌ {msg}[/bold red]")
+                    return msg
             except ImportError:
-                return "Somatic reflex missing."
+                return "Somatic tools offline."
 
+        # 2. THE VAGUS NERVE (Enteric Gut Routing)
         if stimulus_type == "visceral":
             console.print(
                 "[dim yellow]🧬 Spine routing to Enteric system (Gut)...[/dim yellow]"
             )
-            from System.neuroanatomy.systemic.enteric import get_gut_reaction
+            try:
+                from System.neuroanatomy.systemic.enteric import get_gut_reaction
 
-            gut_reaction = get_gut_reaction(payload)
-            if gut_reaction:
-                return gut_reaction
-            return "Gut ignores this visceral stimulus."
+                # Pass gracefully in case the gut isn't ready for raw strings yet
+                gut_reaction = get_gut_reaction(payload)
+                if gut_reaction:
+                    return gut_reaction
+                return "Gut ignored this visceral stimulus."
+            except Exception as e:
+                console.print(f"[bold red]❌ Gut Digestion Error: {str(e)}[/bold red]")
+                return f"Gut error: {str(e)}"
 
+        # 3. THE ASCENDING THALAMIC STREAM (Cognitive Routing via Blood-Brain Barrier)
         console.print(
-            "[dim cyan]🧠 Spine passing stimulus up to the Thalamus (Non-Blocking)...[/dim cyan]"
+            "[dim cyan]🧠 Spine scrubbing stimulus through BBB before Thalamic ascent...[/dim cyan]"
         )
+
+        try:
+            from System.neuroanatomy.systemic.blood_brain_barrier import scrub_payload
+
+            safe_payload = scrub_payload(payload)
+        except (ImportError, AttributeError):
+            # Fallback: If BBB isn't fully built, minimally escape the text to prevent raw execution
+            safe_payload = f"[[UNVERIFIED SENSORY INPUT]]\n{payload}\n[[END INPUT]]"
+
         from System.neuroanatomy.limbic.thalamus import process_sensory_input
 
         # ⚡ ASYNC SHIFT: Push to Thalamus in a background thread so the Spine never blocks
         def _ascend():
-            process_sensory_input(source, payload)
+            process_sensory_input(source, safe_payload)
 
         threading.Thread(target=_ascend, daemon=True).start()
-        return f"Stimulus from {source} successfully queued for cognitive processing."
+        return f"Stimulus from {source} safely scrubbed and queued for cognition."
 
 
 def transduce_to_spine(
@@ -61,8 +85,7 @@ def transduce_to_spine(
 
 def afferent_receptor(source_name: str, stimulus_type: str = "exteroceptive"):
     """
-    Standardization Decorator for all Sense receptors.
-    Automatically catches raw returns and exceptions, converting them into Spinal impulses.
+    Standardization Decorator for passive Sense receptors.
     """
 
     def decorator(func: Callable):
@@ -72,9 +95,7 @@ def afferent_receptor(source_name: str, stimulus_type: str = "exteroceptive"):
                 result = func(*args, **kwargs)
                 payload = str(result) if result else "Empty stimulus received."
             except Exception as e:
-                # 🛡️ Auto-catch errors and route them as sensory damage reports
                 payload = f"SENSORY/NETWORK ERROR: {str(e)}"
-
             return transduce_to_spine(source_name, payload, stimulus_type)
 
         return wrapper

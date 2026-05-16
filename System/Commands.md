@@ -45,3 +45,6 @@ View the most recent AI interactions, reasoning, and token usage.
 Run these to ensure Zero-Debt compliance before committing code.
 * `uv run pytest System/tests` - *Run the biomimetic test suite.*
 * `uv run pre-commit run --all-files` - *Run Shift-Left linting and typing checks.*
+
+### Listen on Web
+* `expose_dermis(port=8080)`: Fires a somatic reflex to open a zero-install, native SSH reverse tunnel. Exposes the local Dermis port to a public URL so external services can send webhooks to the local Brain OS.

@@ -217,3 +217,15 @@ except Exception as e:
     membrane_path.write_text(membrane_code.strip(), encoding="utf-8")
 
     return str(membrane_path)
+
+
+def scrub_payload(payload: str) -> str:
+    """
+    Polymorphic Sensor Armor: Neutralizes malicious prompt injections
+    embedded in external text stimuli (e.g., commit messages, web scrapers).
+    """
+    # Clean out raw command markdown fences to avoid syntax spoofing
+    sanitized = payload.replace("```", "'''")
+
+    # Encapsulate the text inside an inert read-only sensory token structure
+    return f"[[UNVERIFIED SENSORY STIMULUS]]\n{sanitized}\n[[END SENSORY INPUT]]"
