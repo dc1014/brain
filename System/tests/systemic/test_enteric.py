@@ -40,3 +40,37 @@ def test_enteric_forbids_dangerous_routes(monkeypatch, tmp_path):
         json.dump(cache, f)
 
     assert get_gut_reaction("deploy to staging") is None
+
+
+def test_enteric_cerebellum_reflex_interception(monkeypatch, tmp_path):
+    """Proves the Enteric system can intercept a natural language prompt and fire an engram."""
+    from System.neuroanatomy.systemic.enteric import trigger_cerebellum_reflex
+
+    monkeypatch.setattr("System.neuroanatomy.systemic.enteric.ROOT_DIR", tmp_path)
+
+    engram_dir = tmp_path / "Meta" / "Engrams"
+    engram_dir.mkdir(parents=True)
+
+    # Generate a dummy engram
+    engram_file = engram_dir / "init_vite_react.json"
+    engram_file.write_text(
+        '{"description": "Scaffolds a Vite app", "commands": []}', encoding="utf-8"
+    )
+
+    # Mock the execute tool so we don't actually run shell commands in the test loop
+    from System.core.schemas import ExecutionResult
+
+    monkeypatch.setattr(
+        "System.tools.execute_engram",
+        lambda name, target: ExecutionResult(success=True, output="Executed Engram!"),
+    )
+
+    # Test 1: Match by spaced name + dynamic folder path extraction
+    res = trigger_cerebellum_reflex("Please init vite react in Studio/TestApp")
+    assert res is not None
+    assert res[0] is False  # Must be False to abort the LLM Pipeline!
+    assert "ENTERIC REFLEX SUCCESS" in res[1]
+
+    # Test 2: Unrelated prompt should be ignored by the Gut
+    res_none = trigger_cerebellum_reflex("Please build a python server")
+    assert res_none is None
