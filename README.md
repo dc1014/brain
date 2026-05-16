@@ -196,6 +196,14 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
     * **Homeostasis:** Tracks internal vitals, token budgets, and circadian timing adjustments.
     * **Respiratory Supervision:** Monitors operational threads, automatically resuscitating crashed organs.
 
+### 39. Episodic Memory (Limbic System Enhancement)
+* **The Hippocampus:** The hippocampus is a brain structure located in the temporal lobe that is involved in learning and memory.
+* **OS Implementation:** The OS implements episodic memory in `System/neuroanatomy/limbic/episodic.py`.
+* **Functionality:**
+  * **The Prefrontal Cortex (Executive Function):** Brain OS no longer suffers from "Swarm Panic." Massive monolithic tasks are intercepted by the PFC, decomposed into actionable sequences, and passed to the Swarm one step at a time via a rolling Working Memory buffer. If a step fails, the PFC halts the cascade.
+  * **Episodic Memory (The Autobiographical Self):** The OS has conquered Anterograde Amnesia. The system permanently encodes its executed goals, steps, and outcomes (success/failure) into an `autobiography.jsonl` engram. The PFC recalls these past experiences before acting, ensuring it never repeats historical mistakes.
+  * **The Default Mode Network (Daydreaming):** During the Medulla's autonomic sleep cycle, the DMN activates, safely surfing your `System/logs` and Obsidian notes to hallucinate codebase refactors and philosophical insights, encoding them as "Epiphanies" for you to review when you wake up.
+
 ---
 
 ## 🏗️ Architecture & Routing

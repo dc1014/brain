@@ -57,10 +57,19 @@ def test_pfc_decompose_success(mocker):
 @pytest.mark.asyncio
 async def test_pfc_execute_goal(mocker):
     """Proves the PFC orchestrates multiple pulses and updates memory accordingly."""
+    from System.neuroanatomy.cortical.prefrontal import PrefrontalCortex
+
     pfc = PrefrontalCortex()
 
     # Mock decomposition into 2 pulses
     mocker.patch.object(pfc, "decompose_goal", return_value=["Task A", "Task B"])
+
+    # Mock Episodic Memory to isolate the test
+    mocker.patch(
+        "System.neuroanatomy.cortical.prefrontal.recall_recent_episodes",
+        return_value="No history.",
+    )
+    mock_encode = mocker.patch("System.neuroanatomy.cortical.prefrontal.encode_episode")
 
     # Mock the dispatcher to avoid actual execution
     mock_dispatch = mocker.AsyncMock()
@@ -71,3 +80,4 @@ async def test_pfc_execute_goal(mocker):
     assert mock_dispatch.call_count == 2
     assert "Task A" in pfc.working_memory[0]
     assert "Task B" in pfc.working_memory[1]
+    mock_encode.assert_called_once_with("Goal", ["Task A", "Task B"], "Success")
