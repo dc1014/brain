@@ -74,6 +74,9 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 * **Context Gating:** The Thalamus is the brain's sensory relay station, filtering out background noise so the Prefrontal Cortex can focus.
 * **Zero-Debt RAG:** As the Neocortex (`.md` memory files) grows massive, injecting it all into an agent's prompt causes API token bloat and context degradation. Instead of a bloated Vector DB, Brain OS uses `thalamus.py`—a fast, cheap heuristic LLM call that pre-reads the prompt and the memory file, extracting *only* the relevant bullet points before passing them to the agent. The AI's attention remains perfectly scalable.
 
+### 13. Semantic Caching (Enteric Nervous System)
+* **The "Second Brain":** The Enteric Nervous System handles highly familiar, instinctual situations instantly without consulting the Prefrontal Cortex.
+* **Gut Reflexes:** In Brain OS, if you submit a prompt that is >90% semantically similar to a prompt you have used before (e.g., "Run my python tests" vs "Run my python test"), the `enteric.py` organ completely bypasses the expensive Dispatcher LLM. It instantly regurgitates the cached routing configuration, bringing the routing latency from ~5 seconds to 0.01 seconds and costing exactly $0.00 in API tokens.
 ---
 
 ## 🏗️ Architecture & Routing

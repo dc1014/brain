@@ -21,7 +21,15 @@ except Exception:
     AGENT_CONFIG = {"agents": {}, "routes": {}, "models": {}}
 
 
-def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict[str, int]]:
+def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
+    """Analyzes a user prompt using the Dispatcher to determine validity, routing, and domain context."""
+
+    # --- 🦠 ENTERIC NERVOUS SYSTEM (Gut Reaction) ---
+    from System.organs.enteric import get_gut_reaction, save_gut_reaction
+
+    gut_reflex = get_gut_reaction(prompt)
+    if gut_reflex:
+        return gut_reflex
     zero_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
     # --- 1. THE AMYGDALA (Shift-Left Threat Detection) ---
@@ -77,6 +85,11 @@ def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict[str, int]]:
         from System.interoception import log_metabolism
 
         log_metabolism(usage_data.get("total_tokens", 0))
+
+        # --- 🦠 ENTERIC NERVOUS SYSTEM (Save Memory) ---
+        from System.organs.enteric import save_gut_reaction
+
+        save_gut_reaction(prompt, True, "Approved.", route, domain)
 
         return True, "Approved.", route, domain, usage_data
 
@@ -153,6 +166,7 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
         )
 
         console.print(f"\n[bold cyan]⏳ {agent_cfg['name']} is working...[/bold cyan]")
+        agents_invoked.append(agent_cfg["name"])
 
         step_result = run_agent(
             role_name=agent_cfg["name"],

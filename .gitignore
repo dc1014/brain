@@ -37,13 +37,6 @@ Thumbs.db
 .claude/
 .windsurf/
 
-# The Private Vault Boundary (DO NOT TRACK)
-Personal/
-Professional/
-Studio/
-Meta/
-Media/
-
 # 🧠 SYNAPTIC MEMORY WEIGHTS (DO NOT TRACK)
 Meta/Synapses/
 *.safetensors
@@ -85,3 +78,13 @@ System/Pending_Actions.md
 # --- Sleep Cycle Archives ---
 logs/archive/
 logs/backups/
+
+# Brain OS Biological Data
+System/config/gut_memory.json
+logs/
+Personal/
+Professional/
+Studio/
+Meta/
+Media/
+System/Pending_Actions.md

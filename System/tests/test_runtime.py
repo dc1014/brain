@@ -20,7 +20,12 @@ def test_analyze_task_deterministic_blocks() -> None:
 
 def test_analyze_task_llm_parsing(mocker) -> None:  # type: ignore
     """Test that the dispatcher correctly extracts ROUTE and DOMAIN from the LLM."""
+
+    # --- Disable the Gut Reflex so the signal reaches the LLM ---
+    mocker.patch("System.organs.enteric.get_gut_reaction", return_value=None)
+
     mock_completion = mocker.patch("System.runtime.completion")
+    # ... rest of the function remains the same ...
 
     # Setup mock LLM response returning the exact format we demand
     msg = MagicMock()
