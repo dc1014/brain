@@ -92,7 +92,7 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 16. Supply Chain Defense (The Blood-Brain Barrier)
 * **Toxin Filtration:** The Blood-Brain Barrier strictly blocks foreign substances from infecting the central nervous system.
 * **Network Isolation:** While Brain OS is operating autonomously in REM Sleep (`BRAIN_OS_HEADLESS=1`), the `blood_brain_barrier.py` organ physically intercepts shell commands. The AI is permitted to execute standard code (`npm run build`, `pytest`), but if it attempts to download external code (`npm install`, `pip install`, `curl | bash`), the barrier rejects the command. This completely immunizes the autonomous dreaming engine from supply-chain attacks, remote code execution, and dependency typo-squatting.
-* **Apoptosis:** If the Blood-Brain Barrier detects an incoming command that could compromise the system using Audit Hooks, it will trigger a shutdown.
+* **Apoptosis:** If a script manages to bypass the AST static analysis, it is executed inside a membrane utilizing native CPython Audit Hooks (`sys.addaudithook`). If the script attempts to invoke a destructive kernel event (`os.remove`, `socket.connect`), the OS triggers apoptosis and instantly kills the execution thread before the system is harmed.
 
 ### 17. Event-Driven Reflexes (Somatosensory Cortex)
 * **Sense of Touch:** The Somatosensory Cortex processes physical sensations.

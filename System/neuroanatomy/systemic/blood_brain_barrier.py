@@ -71,13 +71,22 @@ def validate_execution_path(target_path: str) -> tuple[bool, str]:
         return False, f"PATH VALIDATION ERROR: {str(e)}"
 
 
-# --- NEW: THE AST MEMBRANE ---
+# --- NEW: THE AST MEMBRANE 2.0 ---
 class ToxinDetector(ast.NodeVisitor):
     def __init__(self):
         self.is_toxic = False
         self.threat_reason = ""
         # The lethal imports an autonomous agent should NEVER need for basic logic
-        self.forbidden_modules = {"os", "subprocess", "sys", "pty", "shutil", "socket"}
+        self.forbidden_modules = {
+            "os",
+            "subprocess",
+            "sys",
+            "pty",
+            "shutil",
+            "socket",
+            "urllib",
+            "requests",
+        }
 
     def visit_Import(self, node):
         for alias in node.names:
@@ -98,8 +107,16 @@ class ToxinDetector(ast.NodeVisitor):
 
     def visit_Call(self, node):
         # Prevent dynamic import obfuscation like __import__("os") or eval/exec
+        # SHIFT-LEFT: Block getattr/setattr to prevent getattr(os, 'system') bypasses
         if isinstance(node.func, ast.Name):
-            if node.func.id in {"eval", "exec", "__import__", "compile"}:
+            if node.func.id in {
+                "eval",
+                "exec",
+                "__import__",
+                "compile",
+                "getattr",
+                "setattr",
+            }:
                 self.is_toxic = True
                 self.threat_reason = f"AST MEMBRANE BLOCK: Forbidden dynamic execution function '{node.func.id}' detected."
         self.generic_visit(node)
@@ -158,21 +175,27 @@ def scan_python_ast_string(code: str) -> tuple[bool, str]:
 
 def wrap_with_apoptosis(target_script_path: str) -> str:
     """
-    CELLULAR APOPTOSIS: Generates a temporary membrane script.
-    It installs a strict Python Audit Hook to physically block OS-level execution
-    from inside the Python interpreter, then runs the target script.
+    CELLULAR APOPTOSIS 2.0: Generates a temporary membrane script.
+    Installs a strict Python Audit Hook to physically block OS-level execution,
+    file deletions, and unauthorized socket connections from inside the interpreter.
     """
     membrane_code = f"""
 import sys
 import runpy
 
 def apoptosis_hook(event, args):
-    # The lethal systemic calls we do not allow autonomous agents to execute
+    # DEEP APOPTOSIS: The lethal systemic calls we do not allow autonomous agents to execute natively
     forbidden_events = {{
         "os.system",
         "os.exec",
         "os.posix_spawn",
         "subprocess.Popen",
+        "os.remove",
+        "os.unlink",
+        "os.rmdir",
+        "os.rename",
+        "socket.connect",
+        "urllib.Request"
     }}
     if event in forbidden_events:
         print(f"\\n[APOPTOSIS TRIGGERED] SecurityError: Blocked unauthorized syscall '{{event}}'.", file=sys.stderr)

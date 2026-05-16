@@ -143,3 +143,27 @@ def test_bbb_ast_membrane_toxic_string():
     is_safe, reason = scan_python_ast_string("__import__('subprocess').Popen('ls')")
     assert not is_safe
     assert "AST MEMBRANE BLOCK" in reason
+
+
+def test_ast_membrane_blocks_getattr_bypass(tmp_path):
+    """Proves the AST membrane blocks getattr() reflection attacks."""
+    from System.neuroanatomy.systemic.blood_brain_barrier import scan_python_ast
+
+    toxic_file = tmp_path / "toxic.py"
+    # Agent tries to bypass static analysis by using getattr on a safe string
+    toxic_file.write_text("import math\nfunc = getattr(math, 'ceil')")
+
+    is_safe, reason = scan_python_ast(str(toxic_file))
+    assert not is_safe
+    assert "AST MEMBRANE BLOCK" in reason
+    assert "'getattr'" in reason
+
+
+def test_ast_membrane_blocks_setattr_bypass():
+    """Proves inline scripts cannot use setattr to mutate environment boundaries."""
+    from System.neuroanatomy.systemic.blood_brain_barrier import scan_python_ast_string
+
+    is_safe, reason = scan_python_ast_string("setattr(obj, 'prop', 1)")
+    assert not is_safe
+    assert "AST MEMBRANE BLOCK" in reason
+    assert "'setattr'" in reason
