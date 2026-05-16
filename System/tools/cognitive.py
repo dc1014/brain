@@ -127,12 +127,14 @@ def search_hippocampus(query: str) -> ExecutionResult:
     return ExecutionResult(success=True, output=output)
 
 
-def create_engram_tool(name: str, description: str, commands: str) -> ExecutionResult:
+def create_engram_tool(
+    name: str, description: str, commands: list[str]
+) -> ExecutionResult:
     """Saves a sequence of bash/shell commands into procedural muscle memory."""
-    from System.neuroanatomy.autonomic.cerebellum import save_engram
+    from System.neuroanatomy.autonomic.cerebellum import create_engram
 
-    output = save_engram(name, description, commands)
-    if "ERROR" in output or "SECURITY BLOCK" in output:
+    output = create_engram(name, description, commands)
+    if "Failed" in output or "Error" in output:
         return ExecutionResult(success=False, output=output, block_reason=output)
     return ExecutionResult(success=True, output=output)
 
@@ -145,12 +147,16 @@ def list_engrams_tool() -> ExecutionResult:
     return ExecutionResult(success=True, output=output)
 
 
-def execute_engram_tool(name: str, args: str = "") -> ExecutionResult:
+def execute_engram_tool(name: str, target_dir: str) -> ExecutionResult:
     """Instantly executes a learned engram (bash script)."""
     from System.neuroanatomy.autonomic.cerebellum import execute_engram
 
-    output = execute_engram(name, args)
-    if "ERROR" in output or "SECURITY BLOCK" in output:
+    output = execute_engram(name, target_dir)
+    if (
+        "failed" in output.lower()
+        or "error" in output.lower()
+        or "SECURITY BLOCK" in output
+    ):
         return ExecutionResult(success=False, output=output, block_reason=output)
     return ExecutionResult(success=True, output=output)
 

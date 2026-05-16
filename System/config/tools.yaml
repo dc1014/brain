@@ -421,3 +421,29 @@ vision:
             type: "string"
             description: "The deployment provider to use. Supported options: 'custom', 'vercel', 'netlify'. Defaults to 'custom'."
         required: ["directory_path"]
+
+  - type: "function"
+    function:
+      name: "create_engram"
+      description: "CEREBELLUM: Saves a sequence of terminal commands as a permanent 'muscle memory' script. Use this when you figure out how to scaffold a complex framework (like Vite/React) so you never have to think about it again."
+      parameters:
+        type: "object"
+        properties:
+          name: { type: "string", description: "A short, snake_case name for the engram (e.g., init_vite_react)" }
+          description: { type: "string", description: "What this engram does." }
+          commands:
+            type: "array"
+            items: { type: "string" }
+            description: "The exact, ordered list of shell commands to execute."
+        required: ["name", "description", "commands"]
+
+  - type: "function"
+    function:
+      name: "execute_engram"
+      description: "CEREBELLUM: Instantly fires a saved muscle memory script (a sequence of shell commands) to save API tokens and time. Always use list_engrams_tool first to see what is available."
+      parameters:
+        type: "object"
+        properties:
+          name: { type: "string" }
+          target_dir: { type: "string", description: "The directory to run the engram in (e.g., 'Studio/My-App')" }
+        required: ["name", "target_dir"]

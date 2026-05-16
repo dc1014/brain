@@ -2,6 +2,7 @@ import subprocess  # Re-expose for tests that mock System.tools.subprocess
 from System.core.paths import ROOT_DIR  # Re-expose for external organs
 from .sandbox import is_safe_path, ALLOWED_DIRECTORIES, READ_ONLY_DIRECTORIES
 
+
 # Re-export all motor functions
 from .file_system import (
     write_safe_file,
@@ -85,4 +86,7 @@ __all__ = [
     "operate_forge",
     "bootstrap_project",
     "write_multiple_files",
+    "create_engram",
+    "execute_engram",
+    "list_engrams_tool",
 ]

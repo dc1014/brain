@@ -1,111 +1,82 @@
-from System.core.paths import ROOT_DIR
 import json
-import subprocess
-import platform
-from pathlib import Path
-from System.tools import is_safe_path
+from rich.console import Console
+from System.core.paths import ROOT_DIR
+from System.tools.execution import execute_command
+
+console = Console()
+ENGRAM_DIR = ROOT_DIR / "Meta" / "Engrams"
 
 
-ENGRAM_DIR = ROOT_DIR / "System" / "engrams"
-INDEX_FILE = ENGRAM_DIR / "index.json"
-
-
-def _ensure_setup():
-    """Initializes the procedural memory center."""
-    ENGRAM_DIR.mkdir(parents=True, exist_ok=True)
-    if not INDEX_FILE.exists():
-        with open(INDEX_FILE, "w", encoding="utf-8") as f:
-            json.dump({}, f)
-
-
-def save_engram(name: str, description: str, commands: str) -> str:
-    """Saves a successful sequence of shell commands into muscle memory."""
-    _ensure_setup()
-
-    # Sanitize the engram name
-    safe_name = "".join(c for c in name if c.isalnum() or c == "_").lower()
-
-    # We save as cross-platform shell commands
-    script_path = ENGRAM_DIR / f"{safe_name}.sh"
-
-    # Normalize line endings to LF for cross-platform execution (Zero Debt)
-    normalized_commands = commands.replace("\r\n", "\n")
-
-    with open(script_path, "w", encoding="utf-8", newline="\n") as f:
-        f.write("#!/bin/bash\n")
-        f.write(f"# {description}\n\n")
-        f.write(normalized_commands)
-        f.write("\n")
-
-    # Make executable (Linux/macOS)
+def create_engram(name: str, description: str, commands: list[str]) -> str:
+    """Saves a sequence of verified shell commands as a permanent muscle memory."""
     try:
-        script_path.chmod(0o755)
-    except Exception:
-        pass
+        ENGRAM_DIR.mkdir(parents=True, exist_ok=True)
+        # Force snake_case naming
+        safe_name = name.lower().replace(" ", "_").replace("-", "_")
+        engram_path = ENGRAM_DIR / f"{safe_name}.json"
 
-    # Update the neural index
-    with open(INDEX_FILE, "r", encoding="utf-8") as f:
-        index = json.load(f)
+        data = {"description": description, "commands": commands}
+        engram_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
-    index[safe_name] = {
-        "description": description,
-        "path": str(script_path.relative_to(ROOT_DIR).as_posix()),
-    }
+        console.print(
+            f"[bold green]🧠 Cerebellum: Muscle memory '{safe_name}' consolidated.[/bold green]"
+        )
+        return f"Engram '{safe_name}' successfully saved to the Cerebellum."
+    except Exception as e:
+        return f"Failed to save engram: {e}"
 
-    with open(INDEX_FILE, "w", encoding="utf-8") as f:
-        json.dump(index, f, indent=2)
 
-    return f"🧬 CEREBELLUM UPDATED: Engram '{safe_name}' permanently saved to muscle memory."
+def execute_engram(name: str, target_dir: str) -> str:
+    """Instantly fires a sequence of shell commands without LLM reasoning."""
+    safe_name = name.lower().replace(" ", "_").replace("-", "_")
+    engram_path = ENGRAM_DIR / f"{safe_name}.json"
+
+    if not engram_path.exists():
+        return f"Error: Engram '{safe_name}' not found. You must create it first."
+
+    try:
+        data = json.loads(engram_path.read_text(encoding="utf-8"))
+        commands = data.get("commands", [])
+    except Exception as e:
+        return f"Failed to read engram '{safe_name}': {e}"
+
+    console.print(
+        f"[bold cyan]⚡ Cerebellum: Firing muscle memory '{safe_name}'...[/bold cyan]"
+    )
+
+    results = []
+    for cmd in commands:
+        console.print(f"[dim]│ Reflex: {cmd}[/dim]")
+        # 🦠 This automatically inherits the Microglia auto-healing!
+        res = execute_command(cmd, target_dir)
+
+        if not res.success:
+            error_msg = f"Engram '{safe_name}' failed on command: `{cmd}`\nOutput:\n{res.output}"
+            console.print(f"[bold red]{error_msg}[/bold red]")
+            return error_msg
+
+        results.append(f"SUCCESS: {cmd}")
+
+    console.print(
+        f"[bold green]✨ Cerebellum: '{safe_name}' executed flawlessly.[/bold green]"
+    )
+    return f"Engram '{safe_name}' executed flawlessly.\n" + "\n".join(results)
 
 
 def list_engrams() -> str:
-    """Returns all available muscle memory."""
-    _ensure_setup()
-    with open(INDEX_FILE, "r", encoding="utf-8") as f:
-        index = json.load(f)
+    """Lists all available muscle memory scripts."""
+    if not ENGRAM_DIR.exists():
+        return "No engrams found in the Cerebellum."
 
-    if not index:
-        return "The Cerebellum is currently empty. No engrams learned yet."
+    engrams = []
+    for f in ENGRAM_DIR.glob("*.json"):
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+            engrams.append(f"- {f.stem}: {data.get('description', 'No description')}")
+        except Exception:
+            pass
 
-    output = "🧠 AVAILABLE MUSCLE MEMORY (ENGRAMS):\n"
-    for name, data in index.items():
-        output += f"- [{name}]: {data['description']}\n"
-    return output
+    if not engrams:
+        return "No valid engrams found."
 
-
-def execute_engram(name: str, args: str = "") -> str:
-    """Fires a learned engram (script) instantaneously without LLM logic."""
-    _ensure_setup()
-    with open(INDEX_FILE, "r", encoding="utf-8") as f:
-        index = json.load(f)
-
-    safe_name = name.lower()
-    if safe_name not in index:
-        return f"Error: Engram '{safe_name}' not found in the Cerebellum."
-
-    script_path = ROOT_DIR / index[safe_name]["path"]
-    if not script_path.exists():
-        return f"Error: Physical engram script missing at {script_path}"
-
-    # --- SHIFT-LEFT SECURITY: Sandbox the Cerebellum ---
-    current_dir = Path.cwd().resolve()
-    if not is_safe_path(current_dir):
-        return f"SECURITY BLOCK: Cannot execute engrams outside of the safe sandbox. Current directory: {current_dir}"
-
-    # Execute cross-platform
-    try:
-        cmd = ["bash", str(script_path)]
-        if args:
-            cmd.extend(args.split())
-
-        # We use shell=True on Windows if bash is not in standard path, but typically Git Bash handles it.
-        use_shell = platform.system() == "Windows"
-
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, check=True, shell=use_shell
-        )
-        return f"🧬 Engram Executed Successfully:\n{result.stdout}"
-    except subprocess.CalledProcessError as e:
-        return f"🛑 Engram Failed:\n{e.stderr}"
-    except Exception as e:
-        return f"🛑 Execution Error: {str(e)}"
+    return "Available Muscle Memories (Engrams):\n" + "\n".join(engrams)
