@@ -30,6 +30,12 @@ class PrefrontalCortex:
         return "\n".join(f"- {mem}" for mem in self.working_memory)
 
     def decompose_goal(self, objective: str, past_experiences: str = "") -> list[str]:
+        import os
+
+        # ⚡ ZERO-DEBT: Biological bypass only when explicitly requested by legacy execution tests
+        if os.environ.get("BRAIN_OS_BYPASS_PFC") == "1":
+            return [objective]
+
         console.print(
             "[dim cyan]🧠 PFC: Consulting past experiences and decomposing objective...[/dim cyan]"
         )
@@ -54,7 +60,7 @@ class PrefrontalCortex:
             )
             raw_text = response.choices[0].message.content.strip()
 
-            # Safe parsing block to avoid UI UI triggers
+            # Safe parsing block to avoid UI triggers
             if "```json" in raw_text:
                 raw_text = raw_text.replace("```json", "")
             if "```" in raw_text:

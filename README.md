@@ -204,6 +204,12 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
   * **Episodic Memory (The Autobiographical Self):** The OS has conquered Anterograde Amnesia. The system permanently encodes its executed goals, steps, and outcomes (success/failure) into an `autobiography.jsonl` engram. The PFC recalls these past experiences before acting, ensuring it never repeats historical mistakes.
   * **The Default Mode Network (Daydreaming):** During the Medulla's autonomic sleep cycle, the DMN activates, safely surfing your `System/logs` and Obsidian notes to hallucinate codebase refactors and philosophical insights, encoding them as "Epiphanies" for you to review when you wake up.
 
+### 40. Reinforcement Learning (Nucleus Accumbens)
+* **The Nucleus Accumbens:** The nucleus accumbens is a brain structure located in the temporal lobe that is involved in learning and memory.
+* **OS Implementation:** The OS implements reinforcement learning in `System/neuroanatomy/limbic/nucleus_accumbens.py`.
+* **Functionality:**
+    * **Learning from Mistakes:** The system learns from its mistakes by updating its behavior based on the outcome of its actions. When the system fails to complete a task, it updates its behavior to avoid repeating the same mistake in the future.
+    * **Learning from Success:** The system learns from its successes by updating its behavior to repeat the same actions in the future.
 ---
 
 ## 🏗️ Architecture & Routing

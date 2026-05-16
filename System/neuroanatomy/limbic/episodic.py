@@ -3,6 +3,7 @@ import time
 from rich.console import Console
 from System.core.paths import ROOT_DIR
 from System.core.locks import BiologicalLock
+from System.neuroanatomy.limbic.nucleus_accumbens import process_dopaminergic_reward
 
 console = Console()
 MEMORY_FILE = ROOT_DIR / "Meta" / "autobiography.jsonl"
@@ -19,10 +20,12 @@ def encode_episode(objective: str, tasks: list[str], outcome: str) -> None:
         "outcome": outcome,
     }
 
-    # ⚡ SHIFT-LEFT: Use the granular regional tissue lock to prevent cross-thread corruption
     with BiologicalLock(str(MEMORY_FILE)):
         with open(MEMORY_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(episode) + "\n")
+
+    # ⚡ SHIFT-LEFT: Immediately pass the outcome to the Nucleus Accumbens for behavioral adjustment
+    process_dopaminergic_reward(objective, outcome)
 
 
 def recall_recent_episodes(limit: int = 5) -> str:

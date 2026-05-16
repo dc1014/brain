@@ -167,8 +167,11 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:
 def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:  # type: ignore
     """Test that the pipeline immediately aborts if user denies autonomous retry."""
 
-    # 0. Clear test state contamination
+    # 0. Clear test state contamination and enforce PFC integration bypass
     monkeypatch.delenv("BRAIN_OS_HEADLESS", raising=False)
+    monkeypatch.setenv(
+        "BRAIN_OS_BYPASS_PFC", "1"
+    )  # ⚡ Force the bypass on legacy routing tests
 
     mocker.patch(
         "System.core.orchestrator.analyze_task",

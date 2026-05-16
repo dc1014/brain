@@ -1,6 +1,5 @@
 import asyncio
 import json
-import yaml  # type: ignore
 import litellm  # type: ignore
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -11,6 +10,7 @@ from rich.console import Console
 from System.core.paths import ROOT_DIR
 from System.neuroanatomy.limbic.hypothalamus import regulate_api_heartbeat
 from System.neuroanatomy.systemic.immune_system import vault
+
 from litellm import acompletion  # type: ignore
 
 litellm.telemetry = False
@@ -65,34 +65,37 @@ async def log_interaction(
 
 
 def get_system_context(
-    context_tags: list[str], domain: str = "NONE", prompt: str = ""
+    role_name: str | list[str], system_prompt: str = "", prompt: str = "", **kwargs
 ) -> str:
-    context = ""
-    memory_config_path = ROOT_DIR / "System" / "config" / "memory.yaml"
+    """Generates the absolute biological reality for the active Swarm agent(s)."""
+    from System.runtime import AGENT_CONFIG
 
+    roles = role_name if isinstance(role_name, list) else [role_name]
+
+    base_prompt = system_prompt + "\n" if system_prompt else ""
+
+    for r in roles:
+        agent_data = AGENT_CONFIG.get("agents", {}).get(r.lower(), {})
+        base_prompt += (
+            agent_data.get("system_prompt", f"You are the {r} node of Brain OS.") + "\n"
+        )
+
+    if prompt:
+        base_prompt += f"\n{prompt}\n"
+
+    # ⚡ SHIFT-LEFT: Retrieve dynamically learned life lessons and inject them into the AI's DNA
     try:
-        with open(memory_config_path, "r", encoding="utf-8") as f:
-            memory_map = yaml.safe_load(f).get("domains", {})
-    except Exception:
-        memory_map = {}
+        from System.neuroanatomy.limbic.nucleus_accumbens import get_plasticity_rules
 
-    for req in context_tags:
-        target_folder = domain if req == "Domain" else req.upper()
-        rel_path = memory_map.get(target_folder)
+        plasticity = get_plasticity_rules()
+        if plasticity:
+            base_prompt += (
+                f"\n\nCRITICAL LEARNED BEHAVIORS (From Past Failures):\n{plasticity}\n"
+            )
+    except ImportError:
+        pass  # Failsafe in case the Limbic system is temporarily offline
 
-        if rel_path:
-            path = ROOT_DIR / rel_path
-            if path.exists():
-                content = path.read_text(encoding="utf-8")
-
-                if prompt:
-                    from System.neuroanatomy.limbic.thalamus import filter_attention
-
-                    content = filter_attention(prompt, content)
-
-                context += f"\n\n--- {target_folder} MEMORY ---\n{content}\n------------------------------\n"
-
-    return context
+    return base_prompt.strip()
 
 
 async def run_agent_async(
