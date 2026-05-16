@@ -29,13 +29,13 @@ def test_pineal_gland_sleep_detection(monkeypatch, tmp_path):
 def test_rem_paralysis_git_sandbox(monkeypatch, tmp_path):
     monkeypatch.setattr("System.neuroanatomy.autonomic.dmn.ROOT_DIR", tmp_path)
 
-    # 1. Target dir doesn't exist -> fails safely
-    assert enforce_rem_paralysis("ghost_project") is None
+    # 1. Target dir doesn't exist -> fails safely (Returns tuple None, None)
+    assert enforce_rem_paralysis("ghost_project") == (None, None)
 
-    # 2. Target dir exists but isn't a git repo -> fails safely
+    # 2. Target dir exists but isn't a git repo -> fails safely (Returns tuple None, None)
     project_dir = tmp_path / "Studio" / "test_project"
     project_dir.mkdir(parents=True)
-    assert enforce_rem_paralysis("test_project") is None
+    assert enforce_rem_paralysis("test_project") == (None, None)
 
     # (Note: We skip testing actual git commands here to avoid heavy CI dependencies,
     # but the safety aborts are mathematically proven above).

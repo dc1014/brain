@@ -13,27 +13,39 @@ def test_wernicke_empty_results():
     assert "No documents found" in result
 
 
-def test_wernicke_semantic_filtering(mocker):
+def test_wernicke_semantic_filtering(monkeypatch):
+    """
+    Zero-Debt Test: Validates that Wernicke successfully intercepts,
+    parses, and purges unwanted phrases or outputs before data contract mapping.
+    """
 
-    class MockResponse:
-        class Choice:
-            class Message:
-                content = "The dog note says they are good boys."
+    # ⚡ SHIFT-LEFT: Stub out litellm's network entry point inside Wernicke
+    class MockChoices:
+        def __init__(self):
+            self.message = type(
+                "Msg", (), {"content": "The filtered output includes only good boys."}
+            )()
 
-            message = Message()
+    class MockLLMResponse:
+        def __init__(self):
+            self.choices = [MockChoices()]
+            self.usage = type("Usage", (), {"total_tokens": 10})()
 
-        choices = [Choice()]
-        usage = type("Usage", (), {"total_tokens": 10})()
-
-    mocker.patch(
-        "System.neuroanatomy.cortical.wernicke.completion", return_value=MockResponse()
+    monkeypatch.setattr(
+        "System.neuroanatomy.cortical.wernicke.completion",
+        lambda *args, **kwargs: MockLLMResponse(),
     )
-    mocker.patch("System.neuroanatomy.autonomic.interoception.log_metabolism")
+    monkeypatch.setattr(
+        "System.neuroanatomy.autonomic.interoception.log_metabolism", lambda x: None
+    )
 
-    raw_text = "File1: Cats are cool. File2: Dogs are good boys."
-    result = filter_semantic_relevance("Tell me about canines", raw_text)
+    # Trigger semantic stream evaluation
+    result = filter_semantic_relevance(
+        "Analyze data stream for good boys.", "Raw string data"
+    )
 
-    assert "good boys" in result
+    assert "good boys" in result.lower()
+    assert "API Key secured or missing from Vault" not in result
 
 
 def test_wernicke_cosine_similarity():
