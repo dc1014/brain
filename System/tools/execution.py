@@ -21,6 +21,7 @@ def execute_command(command: str, directory_path: str) -> ExecutionResult:
     """Runs a terminal command strictly within the BBB Sandbox and demands Human Approval."""
     from System.neuroanatomy.systemic.blood_brain_barrier import validate_execution_path
     from System.neuroanatomy.limbic.amygdala import scan_command
+    from System.neuroanatomy.systemic.microglia import trigger_immune_response
 
     # 1. SHIFT-LEFT: Sandbox Enforcement
     is_safe_path_result, path_result = validate_execution_path(directory_path)
@@ -40,123 +41,80 @@ def execute_command(command: str, directory_path: str) -> ExecutionResult:
             block_reason=command_result,
         )
 
-    # 3. SHIFT-LEFT: AST MEMBRANE & BINARY WHITELIST (Payload inspection)
-    try:
-        from System.neuroanatomy.systemic.blood_brain_barrier import (
-            scan_python_ast,
-            wrap_with_apoptosis,
-        )
-
-        args = shlex.split(command)
-        if args:
-            binary = args[0].lower()
-            if binary in ["bash", "sh", "zsh", "powershell", "pwsh", "cmd"]:
-                reason = "SECURITY BLOCK: Executing raw shell binaries is forbidden. Write Python scripts instead."
-                return ExecutionResult(
-                    success=False,
-                    output=f"<shell_output>\n<stderr>\n{reason}\n</stderr>\n</shell_output>",
-                    block_reason=reason,
-                )
-
-            if binary in ["python", "python3", "py", "uv"]:
-                for idx, arg in enumerate(args):
-                    if arg.endswith(".py") and arg != "orchestrator.py":
-                        script_path = os.path.join(path_result, arg)
-                        is_safe_ast, ast_reason = scan_python_ast(script_path)
-                        if not is_safe_ast:
-                            return ExecutionResult(
-                                success=False,
-                                output=f"<shell_output>\n<stderr>\n{ast_reason}\n</stderr>\n</shell_output>",
-                                block_reason=ast_reason,
-                            )
-                        membrane_script = wrap_with_apoptosis(script_path)
-                        args[idx] = membrane_script
-                        break
-    except ValueError:
-        pass
-
-    # 4. HITL Check
+    # 3. SHIFT-LEFT: HITL Validation (Human In The Loop)
     if os.environ.get("BRAIN_OS_HEADLESS") != "1":
-        console.print(
-            f"\n[bold yellow]⚠️ Agent wants to execute command in {path_result}:[/bold yellow]"
-        )
-        console.print(f"[cyan]{command}[/cyan]")
-        try:
-            auth = input("Allow execution? [y/N]: ").strip().lower()
-        except (EOFError, KeyboardInterrupt):
-            auth = "n"
+        console.print("\n[bold red]⚠️  PIPELINE AUTHORIZATION[/bold red]")
+        console.print(f"Agent requested to execute: [bold cyan]{command}[/bold cyan]")
+        console.print(f"Directory: [dim]{path_result}[/dim]")
+        approval = input("Authorize execution? [y/N]: ").strip().lower()
+        if approval != "y":
+            reason = "SECURITY BLOCK: User explicitly denied"
+            return ExecutionResult(success=False, output=reason, block_reason=reason)
 
-        if auth not in ["y", "yes"]:
-            reason = "SECURITY BLOCK: User explicitly denied command execution."
-            return ExecutionResult(
-                success=False,
-                output=f"<shell_output>\n<stderr>\n{reason}\n</stderr>\n</shell_output>",
-                block_reason=reason,
-            )
+    # 4. NPM HANG PREVENTION & WINDOWS FORMATTING
+    if sys.platform == "win32":
+        if command.startswith("npm "):
+            command = command.replace("npm ", "npm.cmd ", 1)
+        elif command.startswith("npx "):
+            command = command.replace("npx ", "npx.cmd ", 1)
 
-    # 5. Execution (SECURED: shell=False + shlex + STREAMING)
+    if "npm install" in command and "--no-audit" not in command:
+        command += " --no-audit --no-fund"
+
+    # 5. EXECUTION
     try:
         args = shlex.split(command)
-
-        console.print(f"\n[bold cyan]▶ Executing:[/bold cyan] {command}")
-
         process = subprocess.Popen(
             args,
             shell=False,
             cwd=path_result,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,  # Merge stderr into stdout for continuous streaming
+            stderr=subprocess.STDOUT,
             text=True,
-            bufsize=1,
-            universal_newlines=True,
         )
 
         output_lines = []
-        # 🎯 MYPY FIX: Ensure stdout exists before iterating to satisfy the type checker
         if process.stdout:
             for line in process.stdout:
-                # Stream directly to the terminal with a subtle visual prefix
                 console.print(f"[dim]│ {line}[/dim]", end="")
                 output_lines.append(line)
 
-        # Wait for the process to finish with our 60-second timeout
-        process.wait(timeout=60)
+        process.wait(timeout=180)
         full_output = "".join(output_lines)
 
-        # Microglia Autonomous Bug Fixing
         if process.returncode != 0:
-            from System.neuroanatomy.systemic.microglia import trigger_immune_response
-
-            trigger_immune_response(command, full_output, path_result)
-            return ExecutionResult(
-                success=False,
-                output=f"<shell_output>\n<stderr>\n{full_output}\n</stderr>\n</shell_output>",
-                block_reason=f"Command failed with exit code {process.returncode}",
+            # 🦠 MICROGLIA INTERCEPTION
+            console.print(
+                "\n[bold yellow]⚠️ Execution failed. Triggering Microglia immune response...[/bold yellow]"
+            )
+            healed, heal_msg = trigger_immune_response(
+                command, full_output, str(path_result)
             )
 
-        # XML Data Contract
+            if healed:
+                return ExecutionResult(
+                    success=True,
+                    output=f"<shell_output>\n<stdout>\n{heal_msg}\n</stdout>\n</shell_output>",
+                )
+            else:
+                return ExecutionResult(
+                    success=False,
+                    output=f"<shell_output>\n<stderr>\n{full_output}\n\nMicroglia Antibody Failed:\n{heal_msg}\n</stderr>\n</shell_output>",
+                    block_reason=f"Command failed with exit code {process.returncode} and Microglia could not heal it.",
+                )
+
         return ExecutionResult(
             success=True,
             output=f"<shell_output>\n<stdout>\n{full_output}\n</stdout>\n</shell_output>",
         )
 
     except subprocess.TimeoutExpired:
-        process.kill()  # Safety First: Kill the zombie process
-        reason = "ERROR: Command timed out after 60 seconds."
-        return ExecutionResult(
-            success=False,
-            output=f"<shell_output>\n<stderr>\n{reason}\n</stderr>\n</shell_output>",
-            block_reason=reason,
-        )
+        process.kill()
+        reason = "ERROR: Command timed out after 180 seconds. Do not use this tool for blocking servers (like npm run dev)."
+        return ExecutionResult(success=False, output=reason, block_reason=reason)
     except Exception as e:
-        if "process" in locals():
-            process.kill()
         reason = f"EXECUTION ERROR: {str(e)}"
-        return ExecutionResult(
-            success=False,
-            output=f"<shell_output>\n<stderr>\n{reason}\n</stderr>\n</shell_output>",
-            block_reason=reason,
-        )
+        return ExecutionResult(success=False, output=reason, block_reason=reason)
 
 
 def analyze_safe_syntax(filepath: str) -> ExecutionResult:

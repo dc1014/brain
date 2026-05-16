@@ -325,7 +325,6 @@ def test_execute_command_headless_bypass(monkeypatch, tmp_path):
     safe_dir = tmp_path / "Studio"
     safe_dir.mkdir(parents=True, exist_ok=True)
 
-    # ADD THESE TWO LINES: Force the BBB to accept the tmp_path as safe
     monkeypatch.setattr(
         "System.neuroanatomy.systemic.blood_brain_barrier.ROOT_DIR", tmp_path
     )
@@ -341,7 +340,7 @@ def test_execute_command_headless_bypass(monkeypatch, tmp_path):
         "builtins.input", lambda *args: pytest.fail("HITL prompt was not bypassed!")
     )
 
-    result = execute_command("echo 'test'", "Studio")
+    result = execute_command("python --version", "Studio")
 
     assert "PATH TRAVERSAL BLOCKED" not in result
     assert "<shell_output>" in result  # Check for the restored XML contract

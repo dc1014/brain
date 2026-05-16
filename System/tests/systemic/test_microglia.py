@@ -4,7 +4,7 @@ from System.neuroanatomy.systemic.microglia import trigger_immune_response
 def test_microglia_successful_heal(monkeypatch, tmp_path):
     """Proves the immune system can intercept a failure, generate a patch, and retry successfully."""
 
-    # 1. Mock the LLM to return a cross-platform valid fix command
+    # 1. Mock the LLM to return a valid fix command
     monkeypatch.setattr(
         "System.neuroanatomy.systemic.microglia.completion",
         lambda *args, **kwargs: type(
@@ -20,7 +20,7 @@ def test_microglia_successful_heal(monkeypatch, tmp_path):
                                 "Msg",
                                 (),
                                 {
-                                    "content": "python -c \"open('missing_file.txt', 'w').close()\""
+                                    "content": f"python -c \"open('{tmp_path.as_posix()}/missing_file.txt', 'w').close()\""
                                 },
                             )()
                         },
@@ -30,13 +30,16 @@ def test_microglia_successful_heal(monkeypatch, tmp_path):
         )(),
     )
 
+    # Mock Amygdala to pass the command
     monkeypatch.setattr(
-        "System.neuroanatomy.systemic.microglia.is_safe_path", lambda x: True
+        "System.neuroanatomy.systemic.microglia.scan_command", lambda x: (True, "Safe")
     )
 
-    # 2. Trigger an intentional failure (reading a file that doesn't exist using python)
-    failed_cmd = "python -c \"open('missing_file.txt', 'r').read()\""
-    initial_stderr = "FileNotFoundError: No such file or directory: 'missing_file.txt'"
+    # 2. Trigger an intentional failure (reading a file that doesn't exist)
+    failed_cmd = (
+        f"python -c \"open('{tmp_path.as_posix()}/missing_file.txt', 'r').read()\""
+    )
+    initial_stderr = "FileNotFoundError: No such file or directory"
 
     # 3. Activate Microglia
     healed, output = trigger_immune_response(failed_cmd, initial_stderr, str(tmp_path))
@@ -52,7 +55,6 @@ def test_microglia_successful_heal(monkeypatch, tmp_path):
 def test_microglia_failed_heal(monkeypatch, tmp_path):
     """Proves the immune system gracefully fails if the antibody doesn't work."""
 
-    # Mock LLM to return a useless fix
     monkeypatch.setattr(
         "System.neuroanatomy.systemic.microglia.completion",
         lambda *args, **kwargs: type(
@@ -71,11 +73,11 @@ def test_microglia_failed_heal(monkeypatch, tmp_path):
     )
 
     monkeypatch.setattr(
-        "System.neuroanatomy.systemic.microglia.is_safe_path", lambda x: True
+        "System.neuroanatomy.systemic.microglia.scan_command", lambda x: (True, "Safe")
     )
 
     failed_cmd = 'python -c "import nonexistent_module_12345"'
-    initial_stderr = "ModuleNotFoundError: No module named 'nonexistent_module_12345'"
+    initial_stderr = "ModuleNotFoundError"
 
     healed, output = trigger_immune_response(failed_cmd, initial_stderr, str(tmp_path))
 
