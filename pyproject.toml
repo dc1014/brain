@@ -23,6 +23,7 @@ dependencies = [
     "pypdf>=6.11.0",
     "pydantic>=2.12.5",
     "opencv-python-headless>=4.9.0.80",
+    "opencv-python>=4.13.0.92",
 ]
 
 [dependency-groups]

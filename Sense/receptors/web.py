@@ -4,7 +4,6 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from markdownify import markdownify  # type: ignore
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
-from System.neuroanatomy.pathways.spine import afferent_receptor
 
 MAX_SENSORY_CHARS = 25000
 
@@ -38,10 +37,11 @@ class TargetValidator:
         return url
 
 
-# ⚡ SHIFT-LEFT: The decorator handles ALL spine routing and error catching automatically!
-@afferent_receptor(source_name="web", stimulus_type="exteroceptive")
 def transduce_web_page(url: str) -> str:
-    safe_url = TargetValidator.validate_url(url)
+    try:
+        safe_url = TargetValidator.validate_url(url)
+    except SecurityBlockError as e:
+        return f'<sensory_error source="{url}">\n{str(e)}\n</sensory_error>'
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
