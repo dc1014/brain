@@ -17,7 +17,7 @@ FORBIDDEN_CACHE_ROUTES = [
 ]
 
 
-def _ensure_gut():
+def _ensure_gut() -> None:
     """Initializes the Enteric memory bank."""
     GUT_MEMORY_FILE.parent.mkdir(parents=True, exist_ok=True)
     if not GUT_MEMORY_FILE.exists():
@@ -40,7 +40,7 @@ def trigger_cerebellum_reflex(prompt: str) -> tuple | None:
         engram_name = f.stem
         engram_name_spaced = engram_name.replace("_", " ")
 
-        # Heuristic: If the prompt explicitly mentions the engram by name or spaced name
+        # Heuristic: If the prompt explicitly mentions the engram by name
         if engram_name in prompt_lower or engram_name_spaced in prompt_lower:
             # Extract target directory heuristic
             path_match = re.search(
@@ -79,10 +79,7 @@ def trigger_cerebellum_reflex(prompt: str) -> tuple | None:
 
 
 def get_gut_reaction(prompt: str) -> tuple | None:
-    """
-    Checks if the gut has a biological reflex for this prompt.
-    Returns the routing tuple if a match is found.
-    """
+    """Checks if the gut has a biological reflex for this prompt."""
     # 1. ⚡ Check for Muscle Memory (Engram) Interception First
     reflex_tuple = trigger_cerebellum_reflex(prompt)
     if reflex_tuple:
@@ -110,7 +107,6 @@ def get_gut_reaction(prompt: str) -> tuple | None:
         console.print(
             "[bold green]🦠 Enteric Reflex Triggered: Bypassing Dispatcher. Gut routing exact match found.[/bold green]"
         )
-
         return (
             data["is_valid"],
             data["reason"],

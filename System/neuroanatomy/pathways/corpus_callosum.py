@@ -14,7 +14,6 @@ def route_hemisphere(route: str, cloud_model: str) -> str:
         return cloud_model
 
     # LEFT BRAIN: Fast, analytical, high-privacy, zero-cost.
-    # We route all background/autonomic tasks here to save API tokens.
     LEFT_BRAIN_ROUTES = {
         "DISPATCHER",
         "WORKSPACE",
@@ -29,10 +28,8 @@ def route_hemisphere(route: str, cloud_model: str) -> str:
         "WERNICKE",  # Semantic filtering
     }
 
-    # RIGHT BRAIN (Implicit Fallback): Creative, abstract, expensive, synthesis-heavy.
-    # Reserved STRICTLY for software engineering ("FORGE") and complex reasoning ("SWARM").
-
     if route.upper() in LEFT_BRAIN_ROUTES:
         return local_model
 
+    # RIGHT BRAIN: Creative, abstract, expensive (FORGE, SWARM)
     return cloud_model
