@@ -11,6 +11,7 @@ from System.tools import (
     write_multiple_files,
 )
 from System.tools.execution import manage_background_process
+from System.tools.diagnostic import get_system_vitals
 
 
 def test_write_safe_file_allowed(tmp_path: Path, mocker) -> None:  # type: ignore
@@ -595,3 +596,46 @@ def test_motor_cortex_background_proprioception(mocker):
     assert "Success" in result
     assert "Port 5173 is active" in result
     assert mock_popen.called
+
+
+def test_diagnostic_vital_compilation(monkeypatch, tmp_path):
+    """
+    Zero-Debt Test: Verifies that get_system_vitals dynamically tracks
+    metabolic costs and intercepts historical immune interventions.
+    """
+    from rich.console import Console
+
+    monkeypatch.setattr("System.tools.diagnostic.ROOT_DIR", tmp_path)
+    monkeypatch.setenv("BRAIN_OS_HEADLESS", "1")
+
+    # 1. Setup a dummy ledger tracking a successful microglia response and token metadata
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir(parents=True)
+    log_file = log_dir / "agent_interactions.jsonl"
+
+    log_file.write_text(
+        '{"response": "Microglia Successfully Healed the System.", "tokens": {"total_tokens": 12500}}\n'
+        '{"response": "Normal response.", "tokens": {"total_tokens": 5000}}\n',
+        encoding="utf-8",
+    )
+
+    # 2. Setup an engram file
+    engram_dir = tmp_path / "Meta" / "Engrams"
+    engram_dir.mkdir(parents=True)
+    (engram_dir / "test_reflex.json").write_text("{}", encoding="utf-8")
+
+    # 3. Compile Vitals Panel
+    panel = get_system_vitals()
+
+    # 4. Strict Validation using Rich's native capture engine
+    console = Console(width=150)  # Provide ample width to prevent text wrapping
+    with console.capture() as capture:
+        console.print(panel)
+
+    full_telemetry_dump = capture.get()
+
+    # 5. Assertions
+    assert "REM Sleep Mode" in full_telemetry_dump
+    assert "1 active Engrams" in full_telemetry_dump
+    assert "1 successful cellular healings" in full_telemetry_dump
+    assert "17,500 tokens burned" in full_telemetry_dump

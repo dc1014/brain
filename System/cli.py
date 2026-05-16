@@ -8,6 +8,7 @@ from System.core.paths import ROOT_DIR
 from System.core.boot import bootstrap
 from System.core.orchestrator import dispatch_task, run_pending_queue
 from System.runtime import execute_pipeline
+from System.tools.diagnostic import get_system_vitals
 
 console = Console()
 app = typer.Typer(
@@ -60,6 +61,19 @@ def init():
         console.print(f"[dim]Secured Git hooks for repository: {ROOT_DIR.name}[/dim]")
 
     console.print("[bold green]🧠 Brain OS Initialized Successfully.[/bold green]")
+
+
+@app.command()
+def status() -> None:
+    """Interoceptive summary of the OS's health, token spend, and sandbox integrity."""
+    from rich.console import Console
+
+    console = Console()
+
+    panel = get_system_vitals()
+    console.print("\n")
+    console.print(panel)
+    console.print("\n")
 
 
 @app.command()
