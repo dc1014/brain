@@ -1,5 +1,6 @@
 import hmac
 import hashlib
+from typing import cast
 from Sense.receptors.dermis import (
     verify_signature,
     _extract_field,
@@ -38,7 +39,8 @@ def test_dermis_allostatic_load_rate_limiting():
     class MockHandler:
         client_address = ("192.168.1.100", 8080)
 
-    handler = MockHandler()
+    # ⚡ ZERO-DEBT: Safely cast the duck-typed mock to satisfy strict MyPy compilation
+    handler = cast(WebhookHandler, MockHandler())
 
     # Fire the exact maximum number of allowed requests
     for _ in range(MAX_REQUESTS_PER_WINDOW):

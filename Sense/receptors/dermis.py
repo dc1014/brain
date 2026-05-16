@@ -177,6 +177,12 @@ class WebhookHandler(BaseHTTPRequestHandler):
             )
 
 
+class ResilientHTTPServer(ThreadingHTTPServer):
+    """Overrides default socket bindings to forcefully reclaim the port if it was left hanging."""
+
+    allow_reuse_address = True
+
+
 class Dermis:
     def __init__(self, port: int = 8080):
         self.port = port
@@ -197,7 +203,7 @@ class Dermis:
         if not WebhookHandler.config_routes:
             return
 
-        self.server = ThreadingHTTPServer(("127.0.0.1", self.port), WebhookHandler)
+        self.server = ResilientHTTPServer(("127.0.0.1", self.port), WebhookHandler)
         thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         thread.start()
 

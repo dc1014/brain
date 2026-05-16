@@ -74,3 +74,24 @@ class WebhookConfig(BaseModel):
     template: str = Field(
         ..., description="The token-optimized string template to send to the Spine"
     )
+
+
+class DaemonConfig(BaseModel):
+    enabled: bool
+    polling_throttle_ms: int = 1000
+    targets: list[str] = []
+    secure_port: int = 8080
+    auto_tunnel_on_wake: bool = False
+
+
+class CircadianConfig(BaseModel):
+    sleep_trigger_time: str
+    daydream_duration_minutes: int
+    auto_purge_lymph_nodes: bool
+
+
+class MedullaConfig(BaseModel):
+    awake_port: int
+    max_daily_token_budget: int
+    circadian_rhythm: CircadianConfig
+    background_daemons: dict[str, DaemonConfig]

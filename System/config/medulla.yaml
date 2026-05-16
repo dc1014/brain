@@ -1,24 +1,20 @@
 medulla:
-  autonomic_daemons:
-    # 🫁 Breathing (Somatosensory Cortex)
+  state_parameters:
+    awake_port: 8080
+    max_daily_token_budget: 500000
+
+  circadian_rhythm:
+    sleep_trigger_time: "03:00"      # 24h cycle trigger clock
+    daydream_duration_minutes: 45
+    auto_purge_lymph_nodes: false    # If true, runs 'purge' instead of just 'flush'
+
+  background_daemons:
     file_watcher:
       enabled: true
+      polling_throttle_ms: 1000
       targets: ["Personal", "Professional", "Studio"]
-      throttle_ms: 1500
 
-    # 💓 Heartbeat (Dermis / PNS)
     dermis_receptor:
       enabled: true
-      port: 8080
-      expose_tunnel_on_boot: false  # Auto-triggers the somatic SSH reflex
-
-    # 🌙 Circadian Rhythm (Pineal Gland & Lymphatics)
-    sleep_cycle:
-      enabled: true
-      trigger_time: "03:00" # 24h format clock
-      auto_flush_lymphatics: true # Sweeps old logs to .tar.gz archives
-
-  # 📊 Metabolism & Blood Pressure (Interoception)
-  homeostasis:
-    max_daily_token_burn: 500000
-    alert_on_crash: true
+      secure_port: 8080
+      auto_tunnel_on_wake: false    # Automatically runs the SSH expose reflex on start
