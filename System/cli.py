@@ -64,19 +64,6 @@ def init():
 
 
 @app.command()
-def status() -> None:
-    """Interoceptive summary of the OS's health, token spend, and sandbox integrity."""
-    from rich.console import Console
-
-    console = Console()
-
-    panel = get_system_vitals()
-    console.print("\n")
-    console.print(panel)
-    console.print("\n")
-
-
-@app.command()
 def task(
     prompt: str = typer.Argument(..., help="The cognitive task to execute."),
     obsidian: bool = typer.Option(
@@ -168,6 +155,84 @@ def sleep():
 
     # 🎯 THE FIX: Just call it directly without asyncio!
     enter_sleep_cycle()
+
+
+@app.command()
+def map_topology():
+    """Reflex Arc: Deterministically generates a UI-agnostic Mermaid diagram of the OS's current active topology."""
+    from System.tools.topology import map_system_topology
+
+    console.print(
+        "[dim cyan]⚡ Reflex Arc Triggered: Bypassing Prefrontal Cortex...[/dim cyan]"
+    )
+    result = map_system_topology()
+
+    if "Success" in result:
+        console.print("[bold green]✅ Topology mapped successfully.[/bold green]")
+    else:
+        console.print(f"[bold red]❌ Topology mapping failed: {result}[/bold red]")
+
+
+# ==============================================================================
+# SOMATIC REFLEXES (Deterministic Commands - Zero Token Cost)
+# ==============================================================================
+
+
+@app.command()
+def status():
+    """Reflex Arc: Displays real-time interoceptive vitals (Token burn, Immune responses)."""
+    from rich.console import Console
+
+    console = Console()
+
+    console.print(
+        "[dim cyan]⚡ Reflex Arc Triggered: Bypassing Prefrontal Cortex...[/dim cyan]"
+    )
+    panel = get_system_vitals()
+    console.print("\n")
+    console.print(panel)
+    console.print("\n")
+
+
+@app.command()
+def list_reflexes():
+    """Reflex Arc: Lists all consolidated muscle memories (Engrams) in the Cerebellum."""
+    from System.tools.cognitive import list_engrams
+    from rich.console import Console
+
+    console = Console()
+
+    console.print(
+        "[dim cyan]⚡ Reflex Arc Triggered: Querying Cerebellum...[/dim cyan]\n"
+    )
+    res = list_engrams()
+    console.print(res)
+
+
+@app.command()
+def reflex(
+    name: str = typer.Argument(
+        ..., help="The name of the engram to execute (e.g., 'init_vite_react')"
+    ),
+    target_dir: str = typer.Argument(
+        ..., help="The directory to run the reflex in (e.g., 'Studio/My-App')"
+    ),
+):
+    """Reflex Arc: Deterministically executes a saved muscle memory (Engram) for zero tokens."""
+    from System.tools.cognitive import execute_engram_tool
+    from rich.console import Console
+
+    console = Console()
+
+    console.print(
+        f"[dim cyan]⚡ Reflex Arc Triggered: Firing muscle memory '{name}' directly...[/dim cyan]\n"
+    )
+    res = execute_engram_tool(name, target_dir)
+
+    if res.success:
+        console.print("\n[bold green]✅ Reflex executed successfully.[/bold green]")
+    else:
+        console.print(f"\n[bold red]❌ Reflex failed: {res.output}[/bold red]")
 
 
 if __name__ == "__main__":

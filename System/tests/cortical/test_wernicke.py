@@ -18,8 +18,15 @@ def test_wernicke_semantic_filtering(monkeypatch):
     Zero-Debt Test: Validates that Wernicke successfully intercepts,
     parses, and purges unwanted phrases or outputs before data contract mapping.
     """
+    from System.neuroanatomy.cortical.wernicke import filter_semantic_relevance
 
-    # ⚡ SHIFT-LEFT: Stub out litellm's network entry point inside Wernicke
+    # 🛡️ SHIFT-LEFT: Grant the test local clearance to bypass the secure Vault block
+    monkeypatch.setattr(
+        "System.neuroanatomy.cortical.wernicke.vault.get_api_key_for_model",
+        lambda x: "sk-fake-test-key",
+    )
+
+    # ⚡ Stub out litellm's network entry point inside Wernicke
     class MockChoices:
         def __init__(self):
             self.message = type(

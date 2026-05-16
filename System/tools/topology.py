@@ -8,8 +8,7 @@ console = Console()
 
 def map_system_topology() -> str:
     """
-    Generates a UI-agnostic Mermaid diagram of the OS's current active topology.
-    Saves directly to the Meta/ directory for any front-end to parse.
+    Generates a UI-agnostic Mermaid diagram of the OS's FULL active topology.
     """
     try:
         topology_file = ROOT_DIR / "Meta" / "system_topology.md"
@@ -33,35 +32,54 @@ def map_system_topology() -> str:
             len(list(engram_dir.glob("*.json"))) if engram_dir.exists() else 0
         )
 
-        # ⚡ SHIFT-LEFT: Construct the Agnostic Mermaid Payload without indentation leakage
+        # ⚡ SHIFT-LEFT: The Complete Biological Architecture Map
         mermaid_graph = textwrap.dedent(f"""\
         ```mermaid
         graph TD
+            %% Input & Security Layer
             User((Host Environment)) --> CLI[Neural Interface / CLI]
-            CLI --> PFC[Prefrontal Cortex / Dispatcher]
+            CLI --> BBB{{Blood-Brain Barrier / Sandbox}}
+            BBB -- Safe --> Amygdala{{Amygdala / Threat Scan}}
 
-            PFC --> Hippo[(Hippocampus: {hippo_state})]
-            PFC --> Wernicke[Wernicke's Area / Semantic Filter]
+            %% Indeterministic Cognitive Pathway
+            Amygdala -- Approved --> PFC[Prefrontal Cortex / Dispatcher]
+            PFC --> CC[Corpus Callosum / Model Routing]
+            CC --> Swarm[Cortical Swarm / Agents]
 
-            PFC --> Motor[Motor Cortex / Execution]
+            %% Memory & Sensory Centers
+            Swarm <--> Hippo[(Hippocampus: {hippo_state})]
+            Swarm <--> Wernicke[Wernicke / Semantic Filter]
+            Swarm <--> Occipital[Occipital / Vision]
+
+            %% Output & formatting
+            Swarm --> Broca[Broca / Data Contracts]
+            Broca --> Motor[Motor Cortex / Execution]
+
+            %% Autonomic Healing & Motor
             Motor --> Microglia{{Microglia / Auto-Heal}}
-            Motor --> Cerebellum[Cerebellum / {engram_count} Engrams]
-
             Motor -.-> ActiveProcs[{active_nodes} Active Background Processes]
+
+            %% Deterministic Somatic Reflexes
+            CLI -. Reflex Arc .-> Cerebellum[Cerebellum / {engram_count} Engrams]
+            CLI -. Reflex Arc .-> Interoception[Interoception / Vitals]
+            Cerebellum --> Motor
+
+            %% Autonomic Sleep Cycle
+            Pineal[Pineal Gland / Idle Monitor] --> DMN[Default Mode Network / Daydreams]
+            DMN --> REM[REM Paralysis / Git Sandbox]
+            REM -. Commits .-> User
         ```
         """)
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        content = f"# Brain OS Architecture Map\n*Last generated: {timestamp}*\n\n{mermaid_graph}\n"
+        content = f"# Brain OS Complete Architecture Map\n*Last generated: {timestamp}*\n\n{mermaid_graph}\n"
 
         topology_file.write_text(content, encoding="utf-8")
         console.print(
-            f"[bold green]🗺️ Topology Map generated at {topology_file.relative_to(ROOT_DIR)}[/bold green]"
+            f"[bold green]🗺️ Complete Topology Map generated at {topology_file.relative_to(ROOT_DIR)}[/bold green]"
         )
 
-        return (
-            "Success: System topology successfully mapped to Meta/system_topology.md."
-        )
+        return "Success: System topology successfully mapped."
 
     except Exception as e:
         return f"Error generating topology map: {str(e)}"

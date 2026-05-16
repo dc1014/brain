@@ -21,6 +21,7 @@ def test_map_system_topology_generation(monkeypatch, tmp_path):
 
     # Check that textwrap.dedent successfully aligned the codeblocks
     assert "```mermaid\ngraph TD" in content, "Indentation leaked into the Markdown!"
-    assert "Brain OS Architecture Map" in content
+    # ⚡ ZERO-DEBT FIX: Match the updated title exactly
+    assert "Brain OS Complete Architecture Map" in content
     assert "Prefrontal Cortex" in content
     assert "Motor Cortex" in content
