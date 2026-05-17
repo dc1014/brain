@@ -98,6 +98,11 @@ def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
 
 
 def execute_pipeline(description: str, route_type: str, domain: str) -> None:
+    from System.organs.vestibular import commit_transaction, restore_balance
+
+    # Ensure no leftover state from a previous hard-crash
+    commit_transaction()
+
     # Load Tools
     tools_path = Path(__file__).parent / "config" / "tools.yaml"
     with open(tools_path, "r", encoding="utf-8") as f:
@@ -293,14 +298,20 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
     state_path = log_dir / "pipeline_state.md"
 
     if pipeline_aborted:
-        console.print("\n[bold red]🛑 Task Aborted.[/bold red]\n")
+        # --- ⚖️ VESTIBULAR REFLEX: Catch the fall ---
+        restore_balance()
+        console.print(
+            "\n[bold red]🛑 Task Aborted. Environment safely rolled back.[/bold red]\n"
+        )
         log_dir.mkdir(parents=True, exist_ok=True)
         with open(state_path, "w", encoding="utf-8") as f:
             f.write(
-                "STATUS: ABORTED\nREASON: Pipeline hit a critical circuit breaker (Security Halt, API Failure, or Max Retries).\n"
+                "STATUS: ABORTED\nREASON: Pipeline hit a critical circuit breaker.\n"
             )
     else:
-        console.print("\n[bold green]✅ Task Complete.[/bold green]\n")
+        # --- ⚖️ VESTIBULAR REFLEX: Step completed successfully ---
+        commit_transaction()
+        console.print("\n[bold green]✅ Task Complete. Files committed.[/bold green]\n")
         log_dir.mkdir(parents=True, exist_ok=True)
         with open(state_path, "w", encoding="utf-8") as f:
             f.write("STATUS: COMPLETE\nREASON: Terminal state reached.\n")

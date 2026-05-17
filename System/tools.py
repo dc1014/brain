@@ -6,6 +6,7 @@ import os
 import shutil
 import time
 from System.ast_parser import extract_signatures
+from System.organs.vestibular import create_snapshot
 
 # Define the absolute root of the Brain OS
 ROOT_DIR: Path = Path(__file__).parent.parent.resolve()
@@ -43,6 +44,9 @@ def write_safe_file(filepath: str, content: str) -> str:
         # SHIFT-LEFT SAFETY: Block any modification to Architectural Decision Records
         if "adr" in target_path.parts:
             return f"SECURITY BLOCK: Cannot modify ADRs. Human approval required for {filepath}."
+
+        # --- ⚖️ VESTIBULAR REFLEX (Take Snapshot) ---
+        create_snapshot(filepath)
 
         target_path.parent.mkdir(parents=True, exist_ok=True)
         target_path.write_text(content, encoding="utf-8")
@@ -151,6 +155,9 @@ def append_safe_file(filepath: str, content: str) -> str:
         # SHIFT-LEFT SAFETY: Block any modification to Architectural Decision Records
         if "adr" in target_path.parts:
             return f"SECURITY BLOCK: Cannot modify ADRs. Human approval required for {filepath}."
+
+        # --- ⚖️ VESTIBULAR REFLEX (Take Snapshot) ---
+        create_snapshot(filepath)
 
         target_path.parent.mkdir(parents=True, exist_ok=True)
         # Check if the file currently exists and ensure it ends with a newline
