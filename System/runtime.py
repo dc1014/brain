@@ -184,7 +184,9 @@ def get_resolved_model(desired_model_key: str, is_exhausted: bool) -> str:
     return desired_model_str
 
 
-async def execute_pipeline(description: str, route_type: str, domain: str) -> None:
+async def execute_pipeline(
+    description: str, route_type: str, domain: str, resume_pipeline: list | None = None
+) -> None:
     from System.neuroanatomy.autonomic.vestibular import (
         commit_transaction,
         restore_balance,
@@ -197,7 +199,12 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
     with open(tools_path, "r", encoding="utf-8") as f:
         available_tools = yaml.safe_load(f)
 
-    pipeline = list(AGENT_CONFIG["routes"].get(route_type, []))
+    # ⚡ ZERO-DEBT: Use the injected resume state, or fetch a fresh one from DNA
+    pipeline = (
+        resume_pipeline
+        if resume_pipeline is not None
+        else list(AGENT_CONFIG["routes"].get(route_type, []))
+    )
     eval_retries = 0
     MAX_RETRIES = 1
 

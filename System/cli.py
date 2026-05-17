@@ -3,6 +3,11 @@ import subprocess
 import time
 from rich.console import Console
 
+import json
+import os
+import asyncio
+from System.runtime import execute_pipeline
+
 from System.core.paths import ROOT_DIR
 from System.core.boot import bootstrap
 from System.core.orchestrator import run_pending_queue
@@ -19,8 +24,85 @@ app = typer.Typer(
 
 @app.callback()
 def main():
+    """
+    Global CLI bootloader. Checks for interrupted tasks before running any command.
+    """
     if not bootstrap():
         raise typer.Exit(code=1)
+
+    queue_file = ROOT_DIR / "System" / "execution_queue.json"
+
+    # 🧠 PREFRONTAL CORTEX: Autonomic Resume Check
+    if queue_file.exists():
+        try:
+            with open(queue_file, "r", encoding="utf-8") as f:
+                queue_data = json.load(f)
+
+            console.print(
+                "\n[bold yellow]⚠️ Interrupted Pipeline Detected![/bold yellow]"
+            )
+            console.print(
+                f"[cyan]Pending Task:[/cyan] {queue_data.get('original_task')}"
+            )
+            console.print(
+                f"[cyan]Remaining Steps:[/cyan] {len(queue_data.get('remaining_steps', []))}"
+            )
+
+            if os.environ.get("BRAIN_OS_HEADLESS") == "1":
+                auth = "y"
+            else:
+                try:
+                    auth = input("\nResume this task? [Y/n]: ").strip().lower()
+                except (EOFError, KeyboardInterrupt):
+                    auth = "n"
+
+            if auth in ["", "y", "yes"]:
+                console.print("[bold green]Resuming pipeline...[/bold green]\n")
+
+                # ⚡ ZERO-DEBT: Prevent loop collisions inside Pytest/Asyncio runtimes
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+
+                if loop and loop.is_running():
+                    loop.create_task(
+                        execute_pipeline(
+                            description=queue_data.get("original_task", "Resumed Task"),
+                            route_type=queue_data.get("route_type", "WORKSPACE"),
+                            domain=queue_data.get("domain", "GENERAL"),
+                            resume_pipeline=queue_data.get("remaining_steps"),
+                        )
+                    )
+                else:
+                    asyncio.run(
+                        execute_pipeline(
+                            description=queue_data.get("original_task", "Resumed Task"),
+                            route_type=queue_data.get("route_type", "WORKSPACE"),
+                            domain=queue_data.get("domain", "GENERAL"),
+                            resume_pipeline=queue_data.get("remaining_steps"),
+                        )
+                    )
+
+                # Halt Typer routing after resume completes or schedules
+                raise typer.Exit(code=0)
+            else:
+                # User declined, clear the stale memory
+                if queue_file.exists():
+                    os.remove(queue_file)
+                console.print("[dim]Stale execution queue cleared.[/dim]\n")
+        except typer.Exit:
+            # ⚡ Re-raise Typer structural exits so they exit cleanly instead of hitting the raw Exception block
+            raise
+        except Exception as e:
+            console.print(
+                f"[bold red]Failed to read execution queue. Corrupted memory purged: {e}[/bold red]"
+            )
+            if queue_file.exists():
+                try:
+                    os.remove(queue_file)
+                except OSError:
+                    pass
 
 
 @app.command()

@@ -2,10 +2,14 @@ from unittest.mock import MagicMock
 from pathlib import Path
 from System.llm import run_agent_async
 import asyncio
+import typer
 from System.runtime import analyze_task
 from System.cli import app, init
 from System.tools import bootstrap_project
 from typer.testing import CliRunner
+
+import json
+import pytest
 
 runner = CliRunner()
 
@@ -411,3 +415,44 @@ def test_evolve_command(monkeypatch, tmp_path):
     updated_dna = agents_file.read_text(encoding="utf-8")
     assert "<neuroplastic_rule" in updated_dna, "DNA was not modified!"
     assert "New Rule" in updated_dna, "The specific mutation was not injected!"
+
+
+def test_autonomic_resume_interception(monkeypatch, tmp_path, mocker):
+    """Proves the CLI detects the execution queue and resumes the pipeline via Typer's callback."""
+    # 1. Mock the file system
+    monkeypatch.setattr("System.cli.ROOT_DIR", tmp_path)
+    queue_file = tmp_path / "System" / "execution_queue.json"
+    queue_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # 2. Inject a fake interrupted pipeline
+    mock_queue = {
+        "original_task": "Build a react app",
+        "route_type": "WORKSPACE",
+        "domain": "STUDIO",
+        "remaining_steps": [{"agent": "product_manager"}],
+    }
+    queue_file.write_text(json.dumps(mock_queue), encoding="utf-8")
+
+    # 3. Force the CLI to auto-approve the resume
+    monkeypatch.setenv("BRAIN_OS_HEADLESS", "1")
+
+    # 4. Mock the runtime executor and bootstrap to prevent deep boot errors
+    mock_execute = mocker.patch(
+        "System.cli.execute_pipeline", new_callable=mocker.AsyncMock
+    )
+    monkeypatch.setattr("System.cli.bootstrap", lambda: True)
+
+    # 5. Run the CLI main callback
+    from System.cli import main
+
+    with pytest.raises(typer.Exit) as exc_info:
+        main()
+
+    # Proves it exited gracefully with code 0
+    assert exc_info.value.exit_code == 0
+
+    # 6. Strict Validation
+    mock_execute.assert_called_once()
+    args, kwargs = mock_execute.call_args
+    assert kwargs["description"] == "Build a react app"
+    assert kwargs["resume_pipeline"] == [{"agent": "product_manager"}]
