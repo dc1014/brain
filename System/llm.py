@@ -71,7 +71,7 @@ def get_system_context(
     role_name: str | list[str], system_prompt: str = "", prompt: str = "", **kwargs
 ) -> str:
     """Generates the absolute biological reality for the active Swarm agent(s)."""
-    from System.runtime import AGENT_CONFIG
+    from System.core.dna import AGENT_CONFIG
 
     roles = role_name if isinstance(role_name, list) else [role_name]
 

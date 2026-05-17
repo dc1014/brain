@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import yaml  # type: ignore
-from typing import Any
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -15,10 +14,10 @@ from System.neuroanatomy.autonomic.interoception import (
     check_energy_levels,
     log_metabolism,
 )
-from System.neuroanatomy.pathways.polymerase import (
-    proofread_yaml_dna,
-)
 from System.llm import acompletion, run_agent_async, get_system_context
+
+# ⚡ ZERO-DEBT: Import the isolated OS DNA
+from System.core.dna import AGENT_CONFIG
 
 load_dotenv()
 
@@ -26,42 +25,6 @@ load_dotenv()
 vault.secure_environment()
 
 console = Console()
-
-CONFIG_DIR = ROOT_DIR / "System" / "config"
-AGENT_CONFIG: dict[str, Any] = {}
-
-try:
-    # 🧬 DNA POLYMERASE: Proofread the OS genetic code before booting
-    proofread_yaml_dna(CONFIG_DIR)
-
-    # ⚡ SHIFT-LEFT: Unifying the Limbic Config
-    config_files = [
-        "models.yaml",
-        "agents.yaml",
-        "routes.yaml",
-        "medulla.yaml",
-        "webhooks.yaml",
-        "tools.yaml",
-    ]
-
-    raw_config: dict[str, Any] = {}
-    for file in config_files:
-        filepath = CONFIG_DIR / file
-        if filepath.exists():
-            with open(filepath, "r", encoding="utf-8") as f:
-                raw_config.update(yaml.safe_load(f) or {})
-
-    # 🛡️ IMMUNE SYSTEM: Validate structural integrity of the YAML DNA
-    from System.core.config_proofreader import proofread_global_config
-
-    validated_dna = proofread_global_config(raw_config)
-
-    # ⚡ Convert back to standard dict to preserve legacy runtime compatibility
-    AGENT_CONFIG = validated_dna.model_dump()
-
-except Exception as e:
-    console.print(f"[bold red]BOOT WARNING: Config failed to load ({e}).[/bold red]")
-    AGENT_CONFIG = {"agents": {}, "routes": {}, "models": {}}
 
 
 async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:

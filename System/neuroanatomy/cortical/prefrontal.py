@@ -4,7 +4,7 @@ from rich.console import Console
 from litellm import completion  # type: ignore
 
 from System.llm import acompletion
-from System.runtime import AGENT_CONFIG
+from System.core.dna import AGENT_CONFIG
 from System.neuroanatomy.limbic.episodic import recall_recent_episodes, encode_episode
 from System.neuroanatomy.systemic.immune_system import vault
 

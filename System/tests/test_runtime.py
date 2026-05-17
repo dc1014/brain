@@ -240,6 +240,7 @@ async def test_synaptic_consolidation_commits_mid_pipeline(
     from System.runtime import execute_pipeline
 
     # 1. Setup a fake route with a builder and an auditor
+    # ⚡ PATCH THE LOCAL RUNTIME REFERENCE, NOT THE DNA MODULE
     mocker.patch(
         "System.runtime.AGENT_CONFIG",
         {
