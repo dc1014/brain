@@ -5,6 +5,7 @@ import atexit
 import socket
 import time
 import sys
+import os
 from typing import Optional
 from pathlib import Path
 from rich.console import Console
@@ -32,38 +33,59 @@ def _save_state(state: dict) -> None:
 
 
 def sweep_zombies() -> None:
-    """Kills all tracked processes to prevent port locking on shutdown."""
+    """Kills tracked processes tied to this session, or orphaned by an OS hard crash."""
     import psutil
 
     state = _load_state()
     if not state:
         return
 
+    current_pid = os.getpid()
     killed_count = 0
+    keys_to_delete = []
+
     for name, info in list(state.items()):
         pid = info.get("pid")
+        parent_pid = info.get("parent_pid")
+
         if not pid:
+            keys_to_delete.append(name)
             continue
-        try:
-            if psutil.pid_exists(pid):
-                parent = psutil.Process(pid)
-                for child in parent.children(recursive=True):
-                    child.kill()
-                parent.kill()
-                killed_count += 1
-        except Exception:
-            pass
+
+        # 🛡️ SHIFT-LEFT: Safe ownership tracking.
+        # We kill it if we spawned it, OR if the original parent is dead (Zombie).
+        is_ours = parent_pid == current_pid
+        is_orphan = False
+
+        if parent_pid and parent_pid != current_pid:
+            if not psutil.pid_exists(parent_pid):
+                is_orphan = True
+
+        if is_ours or is_orphan:
+            try:
+                if psutil.pid_exists(pid):
+                    parent = psutil.Process(pid)
+                    for child in parent.children(recursive=True):
+                        child.kill()
+                    parent.kill()
+                    killed_count += 1
+            except Exception:
+                pass
+            keys_to_delete.append(name)
 
     if killed_count > 0:
         # Use native print as rich console may be torn down during OS exit
         print(
-            f"\n🧠 Proprioception: Swept {killed_count} zombie processes on shutdown."
+            f"\n🧠 Proprioception: Swept {killed_count} background processes (Session end / Orphan cleanup)."
         )
 
-    _save_state({})
+    if keys_to_delete:
+        for k in keys_to_delete:
+            state.pop(k, None)
+        _save_state(state)
 
 
-# ⚡ ZERO-DEBT: Bind the death sweep to the OS lifecycle
+# ⚡ ZERO-DEBT: Bind the death sweep to the graceful OS lifecycle
 atexit.register(sweep_zombies)
 
 
@@ -92,6 +114,9 @@ def start_process(
     if not is_safe_path:
         return safe_cwd
 
+    # ⚡ ZERO-DEBT: Automatically clean up any pre-existing orphans before starting a new process
+    sweep_zombies()
+
     state = _load_state()
     if name in state:
         if psutil.pid_exists(state[name]["pid"]):
@@ -105,7 +130,9 @@ def start_process(
             command = command.replace("npx ", "npx.cmd ", 1)
 
     try:
-        # We use posix mapping to ensure Windows backslashes aren't destroyed by shlex
+        # ⚡ ZERO-DEBT: Cross-Platform Environment Variable Guarantee
+        env_dict = os.environ.copy()
+
         args = shlex.split(command, posix=(sys.platform != "win32"))
         process = subprocess.Popen(
             args,
@@ -113,9 +140,15 @@ def start_process(
             cwd=safe_cwd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            env=env_dict,  # Explicit environment pass-through
         )
 
-        state[name] = {"pid": process.pid, "command": command, "cwd": safe_cwd}
+        state[name] = {
+            "pid": process.pid,
+            "command": command,
+            "cwd": safe_cwd,
+            "parent_pid": os.getpid(),  # 🛡️ Track ownership to prevent multi-CLI collision
+        }
         _save_state(state)
 
         # 🧠 PROPRIOCEPTION: The Health Check
@@ -162,7 +195,7 @@ def stop_process(name: str) -> str:
 
 
 def list_processes() -> str:
-    """Lists running background processes."""
+    """Lists running background processes without triggering a full session sweep."""
     import psutil
 
     state = _load_state()
