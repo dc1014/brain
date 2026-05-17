@@ -214,7 +214,22 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
     # 🧠 Initialize the Semantic Compressor Buffer
     pfc_memory = WorkingMemory(description)
 
+    queue_file_path = ROOT_DIR / "System" / "execution_queue.json"
+
     while len(pipeline) > 0:
+        # 💾 SHIFT-LEFT: Persist the active queue to disk to survive hard OS crashes
+        with open(queue_file_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "original_task": description,
+                    "route_type": route_type,
+                    "domain": domain,
+                    "remaining_steps": pipeline,
+                },
+                f,
+                indent=2,
+            )
+
         step = pipeline.pop(0)
 
         # Hydrate the input payload context dynamically from the PFC working memory
@@ -458,3 +473,10 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
         console.print("\n[bold green]✅ Task Complete. Files committed.[/bold green]\n")
         with open(state_path, "w", encoding="utf-8") as f:
             f.write("STATUS: COMPLETE\n")
+
+    # 🧹 LYMPHATIC SYSTEM: Clear the execution queue upon graceful termination
+    if queue_file_path.exists():
+        try:
+            os.remove(queue_file_path)
+        except OSError:
+            pass
