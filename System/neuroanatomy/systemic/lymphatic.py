@@ -1,8 +1,10 @@
+import aiosqlite
 import io
 import time
 import tarfile
 from rich.console import Console
 from System.core.paths import ROOT_DIR
+
 
 console = Console()
 
@@ -137,3 +139,60 @@ def purge_waste() -> None:
     console.print(
         f"[bold red]🔥 Permanently purged {purged} waste archives from Lymph Nodes.[/bold red]"
     )
+
+
+DB_FILE_PATH = ROOT_DIR / "Meta" / "hippocampus.db"
+
+
+class LymphaticSweeper:
+    """
+    Continuous Lymphatic Drainage Engine.
+    Handles automated LRU database cache pruning and runtime SQLite compaction.
+    """
+
+    def __init__(self, max_records: int = 5000):
+        self.max_records = max_records
+
+    async def execute_drainage_cycle(self) -> None:
+        """Executes a non-blocking background drainage cycle on the system indexes."""
+        if not DB_FILE_PATH.exists():
+            return
+
+        from rich.console import Console
+
+        console = Console()
+        console.print(
+            "[dim magenta]🧼 Lymphatic System: Initiating autonomic background sweep...[/dim magenta]"
+        )
+
+        try:
+            async with aiosqlite.connect(DB_FILE_PATH) as db:
+                # 1. Enforce a clean Least Recently Used (LRU) boundary
+                async with db.execute(
+                    "SELECT COUNT(*) FROM short_term_memory"
+                ) as cursor:
+                    row = await cursor.fetchone()
+                    count = row[0] if row else 0
+
+                if count > self.max_records:
+                    excess = count - self.max_records
+                    console.print(
+                        f"[dim magenta]🧼 Lymphatic System: Pruning {excess} legacy records...[/dim magenta]"
+                    )
+                    # Prune old records based on creation timestamp (assuming ID is sequential)
+                    await db.execute(
+                        "DELETE FROM short_term_memory WHERE id IN (SELECT id FROM short_term_memory ORDER BY id ASC LIMIT ?)",
+                        (excess,),
+                    )
+                    await db.commit()
+
+                # 2. Run clean async DB compaction to prevent disk footprint bloat
+                await db.execute("PRAGMA optimize;")
+                await db.execute("VACUUM;")
+                await db.commit()
+
+            console.print(
+                "[dim green]✅ Lymphatic drainage cycle successful.[/dim green]"
+            )
+        except Exception as e:
+            console.print(f"[dim red]❌ Lymphatic sweep skipped: {e}[/dim red]")

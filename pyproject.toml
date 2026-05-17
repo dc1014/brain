@@ -24,6 +24,7 @@ dependencies = [
     "pydantic>=2.12.5",
     "opencv-python-headless>=4.9.0.80",
     "aiohttp>=3.13.4",
+    "aiosqlite>=0.22.1",
 ]
 
 [dependency-groups]

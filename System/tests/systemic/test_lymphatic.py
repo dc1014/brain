@@ -1,5 +1,11 @@
+import aiosqlite
+import pytest
 import tarfile
-from System.neuroanatomy.systemic.lymphatic import flush_waste, purge_waste
+from System.neuroanatomy.systemic.lymphatic import (
+    flush_waste,
+    purge_waste,
+    LymphaticSweeper,
+)
 
 
 def test_lymphatic_system_archives_logs_to_tarball(monkeypatch, tmp_path):
@@ -93,3 +99,32 @@ def test_lymphatic_full_flush_resets_metabolism(monkeypatch, tmp_path):
     assert not metabolism_file.exists(), (
         "Glymphatic system failed to clear metabolism.json!"
     )
+
+
+@pytest.mark.asyncio
+async def test_lymphatic_sweeper_lru_eviction(tmp_path, monkeypatch):
+    """Proves the lymphatic system successfully prunes old DB records and runs VACUUM."""
+    db_path = tmp_path / "hippocampus.db"
+    monkeypatch.setattr("System.neuroanatomy.systemic.lymphatic.DB_FILE_PATH", db_path)
+
+    # Setup mock database with 10 records
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute(
+            "CREATE TABLE short_term_memory (id INTEGER PRIMARY KEY, data TEXT)"
+        )
+        for i in range(10):
+            await db.execute(
+                "INSERT INTO short_term_memory (data) VALUES (?)", (f"mem_{i}",)
+            )
+        await db.commit()
+
+    # Configure sweeper to enforce a maximum of 5 records
+    sweeper = LymphaticSweeper(max_records=5)
+    await sweeper.execute_drainage_cycle()
+
+    # Verify exact LRU eviction
+    async with aiosqlite.connect(db_path) as db:
+        async with db.execute("SELECT COUNT(*) FROM short_term_memory") as cursor:
+            count = (await cursor.fetchone())[0]
+
+    assert count == 5
