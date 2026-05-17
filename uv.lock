@@ -215,6 +215,7 @@ name = "brain"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "aiohttp" },
     { name = "litellm" },
     { name = "numpy" },
     { name = "opencv-python-headless" },
@@ -248,6 +249,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiohttp", specifier = ">=3.13.4" },
     { name = "litellm", specifier = ">=1.83.14" },
     { name = "numpy", specifier = ">=2.4.4" },
     { name = "opencv-python-headless", specifier = ">=4.9.0.80" },

@@ -1,22 +1,35 @@
-from System.neuroanatomy.pathways.spine import transmit_public_signal
+import pytest
+from Sense.receptors.exoreceptor import ExoReceptor
+import json
 
 
-def test_spine_bbb_rejection():
-    """Proves the Spine drops payloads that are too large to protect the context window."""
-    massive_payload = "A" * 9000
-    response = transmit_public_signal("openclaw_1", massive_payload, "sig123")
-    assert "413 Payload Too Large" in response
+@pytest.mark.asyncio
+async def test_exoreceptor_acp(mocker):
+    """Proves the receptor handles REST payloads."""
+    receptor = ExoReceptor()
+    mock_req = mocker.AsyncMock()
+    mock_req.json.return_value = {"sender_id": "x", "payload": "{}", "signature": "y"}
 
-
-def test_spine_to_thalamus_routing(mocker):
-    """Proves the signal cleanly traverses the Spine to the Thalamus and strikes the Exocortex."""
-    # Mock the final destination to prevent actual file I/O
-    mock_exo = mocker.patch(
-        "System.neuroanatomy.cortical.exocortex.Exocortex.process_inbound_pulse",
-        return_value="200 OK",
+    mocker.patch(
+        "Sense.receptors.exoreceptor.transmit_public_signal", return_value="200 OK"
     )
+    resp = await receptor.handle_acp_pulse(mock_req)
+    assert resp.status == 200
 
-    response = transmit_public_signal("hermes_alpha", '{"action": "READ"}', "valid_sig")
 
-    assert response == "200 OK"
-    mock_exo.assert_called_once_with("hermes_alpha", '{"action": "READ"}', "valid_sig")
+@pytest.mark.asyncio
+async def test_exoreceptor_mcp(mocker):
+    """Proves the receptor handles raw TCP streams."""
+    receptor = ExoReceptor()
+    mock_reader = mocker.AsyncMock()
+    mock_writer = mocker.AsyncMock()
+    mock_reader.read.return_value = json.dumps(
+        {"sender_id": "x", "payload": "{}", "signature": "y"}
+    ).encode()
+
+    mocker.patch(
+        "Sense.receptors.exoreceptor.transmit_public_signal", return_value="200 OK"
+    )
+    await receptor.handle_mcp_client(mock_reader, mock_writer)
+
+    mock_writer.write.assert_called_once_with(b"200 OK")

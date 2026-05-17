@@ -1,6 +1,5 @@
 import json
 import hashlib
-import asyncio
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR
@@ -103,13 +102,12 @@ class Exocortex:
         return compiler.quarantine_external_engram(engram_name, code)
 
     async def transmit_outbound_pulse(
-        self, target_node_id: str, action: str, target: str = ""
+        self, target_node_id: str, action: str, target: str = "", protocol: str = "acp"
     ) -> str:
         """
-        The Efferent Pathway: Actively transmits a secure cognitive pulse to an external framework.
-        Used by the Prefrontal Cortex to command secondary agent swarms.
+        The Efferent Pathway: Transmits a secure cognitive pulse.
+        Supports both 'acp' (REST/HTTP) and 'mcp' (Raw TCP).
         """
-        # 1. Look up the target node's coordinates in the biological membrane
         if not self.secure_nodes_file.exists():
             return "404 Target Node Not Found (No secure_nodes.jsonl)"
 
@@ -129,14 +127,12 @@ class Exocortex:
             return f"404 Target Node '{target_node_id}' not found in secure membrane."
 
         host = node_info.get("host", "127.0.0.1")
-        port = node_info.get("port", 8765)
+        acp_port = node_info.get("acp_port", node_info.get("port", 8765))
+        mcp_port = node_info.get("mcp_port", 8766)
         shared_key = node_info.get("public_key", "")
 
-        # 2. Formulate and sign the synaptic payload
         payload_dict = {"action": action, "target": target}
         payload_str = json.dumps(payload_dict)
-
-        # 🛡️ SHIFT-LEFT: Cryptographic outbound signature
         signature = hashlib.sha256(f"{payload_str}{shared_key}".encode()).hexdigest()
 
         packet = {
@@ -145,28 +141,47 @@ class Exocortex:
             "signature": signature,
         }
 
-        console.print(
-            f"[bold magenta]⚡ Exocortex: Transmitting '{action}' pulse to {target_node_id} ({host}:{port})...[/bold magenta]"
-        )
-
-        # 3. Fire across the network
-        try:
-            reader, writer = await asyncio.open_connection(host, port)
-            writer.write(json.dumps(packet).encode("utf-8"))
-            await writer.drain()
-
-            data = await reader.read(8192)  # Await the external brain's response
-
-            writer.close()
-            await writer.wait_closed()
-
-            response = data.decode("utf-8")
+        if protocol.lower() == "mcp":
             console.print(
-                f"[dim green]🌐 Exocortex Response received: {response[:100]}...[/dim green]"
+                f"[bold magenta]⚡ Exocortex: Transmitting '{action}' via MCP (TCP) to {target_node_id} ({host}:{mcp_port})...[/bold magenta]"
             )
-            return response
+            try:
+                import asyncio
 
-        except ConnectionRefusedError:
-            return f"503 Service Unavailable: {target_node_id} is asleep or offline."
-        except Exception as e:
-            return f"500 Transmission Error: {str(e)}"
+                reader, writer = await asyncio.open_connection(host, mcp_port)
+                writer.write(json.dumps(packet).encode("utf-8"))
+                await writer.drain()
+                data = await reader.read(8192)
+                writer.close()
+                await writer.wait_closed()
+
+                response = data.decode("utf-8")
+                console.print(
+                    f"[dim green]🌐 MCP Response: {response[:100]}...[/dim green]"
+                )
+                return response
+            except ConnectionRefusedError:
+                return f"503 Service Unavailable: {target_node_id} MCP port is closed."
+            except Exception as e:
+                return f"500 MCP Transmission Error: {str(e)}"
+        else:
+            url = f"http://{host}:{acp_port}/acp/pulse"
+            console.print(
+                f"[bold magenta]⚡ Exocortex: Transmitting '{action}' via ACP (REST) to {target_node_id} ({url})...[/bold magenta]"
+            )
+            try:
+                import aiohttp
+
+                # ⚡ ZERO-DEBT: Strict ClientTimeout object to satisfy MyPy and prevent hanging
+                timeout = aiohttp.ClientTimeout(total=10)
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url, json=packet, timeout=timeout) as resp:
+                        response_text = await resp.text()
+                        console.print(
+                            f"[dim green]🌐 ACP Response: {response_text[:100]}...[/dim green]"
+                        )
+                        return response_text
+            except aiohttp.ClientConnectorError:
+                return f"503 Service Unavailable: {target_node_id} ACP port is closed."
+            except Exception as e:
+                return f"500 ACP Transmission Error: {str(e)}"

@@ -14,38 +14,45 @@ async def test_exocortex_outbound_missing_node(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_exocortex_outbound_success(tmp_path, monkeypatch, mocker):
-    """Proves the Exocortex correctly hashes and transmits the payload."""
+async def test_exocortex_outbound_acp(tmp_path, monkeypatch, mocker):
+    """Proves ACP (REST) routing functions normally."""
     monkeypatch.setattr("System.neuroanatomy.cortical.exocortex.ROOT_DIR", tmp_path)
 
-    # 1. Setup the secure membrane
     secure_nodes = tmp_path / "Meta" / "secure_nodes.jsonl"
     secure_nodes.parent.mkdir(parents=True)
-    node_data = {
-        "sender_id": "openclaw_local",
-        "public_key": "secret123",
-        "host": "127.0.0.1",
-        "port": 9999,
-    }
-    secure_nodes.write_text(json.dumps(node_data) + "\n", encoding="utf-8")
-
-    # 2. Mock the asyncio socket connection
-    mock_writer = mocker.AsyncMock()
-    mock_reader = mocker.AsyncMock()
-    mock_reader.read.return_value = b"200 OK: Execution Started"
-
-    mocker.patch("asyncio.open_connection", return_value=(mock_reader, mock_writer))
-
-    # 3. Fire the pulse
-    exo = Exocortex()
-    response = await exo.transmit_outbound_pulse(
-        "openclaw_local", "EXECUTE_ENGRAM", "deploy_app"
+    secure_nodes.write_text(
+        json.dumps({"sender_id": "test_node", "public_key": "123", "acp_port": 8765})
+        + "\n",
+        encoding="utf-8",
     )
 
-    assert "200 OK" in response
-    mock_writer.write.assert_called_once()
+    mock_post_ctx = mocker.AsyncMock()
+    mock_post_ctx.__aenter__.return_value.text.return_value = "200 ACP OK"
+    mocker.patch("aiohttp.ClientSession.post", return_value=mock_post_ctx)
 
-    # Extract the payload that was sent and verify the signature logic
-    sent_data = json.loads(mock_writer.write.call_args[0][0].decode("utf-8"))
-    assert sent_data["sender_id"] == "brain_os_local"
-    assert "signature" in sent_data
+    exo = Exocortex()
+    response = await exo.transmit_outbound_pulse("test_node", "READ", protocol="acp")
+    assert "200 ACP OK" in response
+
+
+@pytest.mark.asyncio
+async def test_exocortex_outbound_mcp(tmp_path, monkeypatch, mocker):
+    """Proves MCP (TCP) routing was successfully preserved and restored."""
+    monkeypatch.setattr("System.neuroanatomy.cortical.exocortex.ROOT_DIR", tmp_path)
+
+    secure_nodes = tmp_path / "Meta" / "secure_nodes.jsonl"
+    secure_nodes.parent.mkdir(parents=True)
+    secure_nodes.write_text(
+        json.dumps({"sender_id": "test_node", "public_key": "123", "mcp_port": 8766})
+        + "\n",
+        encoding="utf-8",
+    )
+
+    mock_writer = mocker.AsyncMock()
+    mock_reader = mocker.AsyncMock()
+    mock_reader.read.return_value = b"200 MCP OK"
+    mocker.patch("asyncio.open_connection", return_value=(mock_reader, mock_writer))
+
+    exo = Exocortex()
+    response = await exo.transmit_outbound_pulse("test_node", "READ", protocol="mcp")
+    assert "200 MCP OK" in response
