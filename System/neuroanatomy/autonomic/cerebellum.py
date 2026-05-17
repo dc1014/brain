@@ -1,30 +1,32 @@
-from typing import Optional
-from System.tools import execute_command
-import json
 import re
+import ast
+import json
+import shutil
+from typing import Optional
 from rich.console import Console
 from rich.panel import Panel
 from litellm import completion  # type: ignore
 
+from System.tools import execute_command
 from System.core.paths import ROOT_DIR
 from System.core.locks import BiologicalLock
 from System.runtime import AGENT_CONFIG
 
 console = Console()
 ENGRAM_DIR = ROOT_DIR / "System" / "tools" / "engrams"
+QUARANTINE_DIR = ENGRAM_DIR / "quarantine"
 
 
 class CerebellarCompiler:
     """
     Procedural Memory & Exocortex Staging.
-    Converts expensive LLM Swarm execution traces into raw, deterministic,
-    zero-token Python scripts (Engrams).
+    Converts internal LLM tasks into Python Engrams, and Quarantines inbound external Engrams.
     """
 
     def __init__(self) -> None:
         ENGRAM_DIR.mkdir(parents=True, exist_ok=True)
-        # Ensure it is treated as a Python module so we can import reflexes natively
         (ENGRAM_DIR / "__init__.py").touch(exist_ok=True)
+        QUARANTINE_DIR.mkdir(parents=True, exist_ok=True)
 
     def compile_engram(self, objective: str, episode_telemetry: str) -> str | None:
         """Transforms an episodic memory trace into a hardcoded somatic engram."""
@@ -61,7 +63,6 @@ class CerebellarCompiler:
             )
             raw_text = response.choices[0].message.content.strip()
 
-            # Safe extraction logic without string matching traps
             match = re.search(r"```python\n(.*?)\n```", raw_text, re.DOTALL)
             code = (
                 match.group(1).strip()
@@ -78,10 +79,15 @@ class CerebellarCompiler:
                 with open(engram_path, "w", encoding="utf-8") as f:
                     f.write(code)
 
+            try:
+                display_path = str(engram_path.relative_to(ROOT_DIR))
+            except ValueError:
+                display_path = str(engram_path)
+
             console.print(
                 Panel(
                     f"[bold cyan]⚙️ Procedural Engram Compiled Successfully![/bold cyan]\n\n"
-                    f"File: [yellow]{engram_path.relative_to(ROOT_DIR)}[/yellow]\n"
+                    f"File: [yellow]{display_path}[/yellow]\n"
                     f"Run anytime via: [bold]uv run System/cli.py reflex {engram_name}[/bold]\n"
                     f"[dim]Exocortex sharing manifest validated.[/dim]",
                     border_style="green",
@@ -95,6 +101,76 @@ class CerebellarCompiler:
                 f"[bold red]❌ Cerebellar compilation failed: {str(e)}[/bold red]"
             )
             return None
+
+    def quarantine_external_engram(self, engram_name: str, code_content: str) -> str:
+        """Receives an engram from the Exocortex and locks it in the Quarantine Zone."""
+        console.print(
+            f"[bold yellow]🛡️ Cerebellum: Quarantining external engram '{engram_name}'...[/bold yellow]"
+        )
+
+        safe_name = re.sub(r"[^a-z0-9_]", "", engram_name.lower())
+        if not safe_name:
+            safe_name = "unnamed_external"
+
+        quarantine_path = QUARANTINE_DIR / f"{safe_name}.py"
+
+        with BiologicalLock(str(quarantine_path)):
+            with open(quarantine_path, "w", encoding="utf-8") as f:
+                f.write(code_content)
+
+        return f"201 Created: Engram '{safe_name}' quarantined pending manual AST assimilation."
+
+    def assimilate_engram(self, engram_name: str) -> tuple[bool, str]:
+        """Runs a brutal Spinal AST scan on a quarantined engram. Moves to active memory if safe."""
+        quarantine_path = QUARANTINE_DIR / f"{engram_name}.py"
+        target_path = ENGRAM_DIR / f"{engram_name}.py"
+
+        if not quarantine_path.exists():
+            return False, f"Quarantined engram '{engram_name}' not found."
+
+        try:
+            code_content = quarantine_path.read_text(encoding="utf-8")
+            tree = ast.parse(code_content)
+            dangerous_calls = {
+                "remove",
+                "rmdir",
+                "rmtree",
+                "system",
+                "popen",
+                "eval",
+                "exec",
+            }
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call):
+                    if (
+                        isinstance(node.func, ast.Name)
+                        and node.func.id in dangerous_calls
+                    ):
+                        quarantine_path.unlink()
+                        return (
+                            False,
+                            f"Lethal call '{node.func.id}' detected. Engram destroyed.",
+                        )
+                    elif (
+                        isinstance(node.func, ast.Attribute)
+                        and node.func.attr in dangerous_calls
+                    ):
+                        quarantine_path.unlink()
+                        return (
+                            False,
+                            f"Lethal call '{node.func.attr}' detected. Engram destroyed.",
+                        )
+
+        except SyntaxError:
+            quarantine_path.unlink()
+            return False, "Syntax error detected. Engram destroyed."
+
+        shutil.move(str(quarantine_path), str(target_path))
+        return True, f"Engram '{engram_name}' safely assimilated."
+
+
+# --- LEGACY MUSCLE MEMORY TOOLS (JSON-based parametric execution) ---
 
 
 def create_engram(name: str, description: str, commands: list[str]) -> str:
@@ -139,7 +215,6 @@ def execute_engram(name: str, target_dir: str, params: Optional[dict] = None) ->
     for cmd in commands:
         # ⚡ SHIFT-LEFT: Dynamic Parametric Injection
         for k, v in params.items():
-            # Support both ${var} and $var bash syntax
             cmd = cmd.replace(f"${{{k}}}", str(v)).replace(f"${k}", str(v))
 
         console.print(f"[dim]│ Reflex: {cmd}[/dim]")

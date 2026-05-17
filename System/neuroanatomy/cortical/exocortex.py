@@ -68,6 +68,11 @@ class Exocortex:
                 return self._handle_read(str(data.get("target", "")))
             elif action == "EXECUTE_ENGRAM":
                 return self._handle_engram(str(data.get("engram_name", "")))
+            # ⚡ ZERO-DEBT: Adding the external sharing endpoint
+            elif action == "SHARE_ENGRAM":
+                return self._handle_share(
+                    str(data.get("engram_name", "")), str(data.get("code", ""))
+                )
             else:
                 return "400 Bad Request: Unknown Action"
         except json.JSONDecodeError:
@@ -86,6 +91,16 @@ class Exocortex:
             f"[dim green]🌐 Exocortex: Authorized execution for engram {engram_name}.[/dim green]"
         )
         return f"Execution of {engram_name} initiated."
+
+    def _handle_share(self, engram_name: str, code: str) -> str:
+        """Receives a shared engram and routes it to the Cerebellar Quarantine."""
+        from System.neuroanatomy.autonomic.cerebellum import CerebellarCompiler
+
+        console.print(
+            f"[dim yellow]🌐 Exocortex: Receiving shared engram '{engram_name}'.[/dim yellow]"
+        )
+        compiler = CerebellarCompiler()
+        return compiler.quarantine_external_engram(engram_name, code)
 
     async def transmit_outbound_pulse(
         self, target_node_id: str, action: str, target: str = ""

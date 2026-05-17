@@ -183,3 +183,28 @@ def reflex(
         )
     except Exception as e:
         console.print(f"[bold red]❌ Somatic error: {e}[/bold red]")
+
+
+def assimilate(
+    engram_name: str = typer.Argument(
+        ..., help="The quarantined engram to assimilate."
+    ),
+):
+    """🧬 Scans a quarantined external engram and integrates it into permanent muscle memory."""
+    from rich.console import Console
+    from System.neuroanatomy.autonomic.cerebellum import CerebellarCompiler
+
+    console = Console()
+
+    console.print(
+        f"[dim cyan]🧬 Initiating Spinal AST Scan on quarantined '{engram_name}'...[/dim cyan]"
+    )
+
+    compiler = CerebellarCompiler()
+    success, message = compiler.assimilate_engram(engram_name)
+
+    if success:
+        console.print(f"[bold green]✅ {message}[/bold green]")
+        console.print(f"[dim]Run via: uv run System/cli.py reflex {engram_name}[/dim]")
+    else:
+        console.print(f"[bold red]🛑 Security Block: {message}[/bold red]")
