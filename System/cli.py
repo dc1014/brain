@@ -691,5 +691,17 @@ def observe(
     observe_human_behavior(target, is_writing=writing)
 
 
+@app.command()
+def watch(
+    target: str = typer.Option(
+        "Studio", "--target", "-t", help="The directory to physically feel for changes."
+    ),
+) -> None:
+    """Somatosensory Cortex: Runs a background watcher to trigger local reflexes on file saves."""
+    from System.organs.somatosensory import start_local_watcher
+
+    start_local_watcher(target)
+
+
 if __name__ == "__main__":
     app()
