@@ -73,3 +73,18 @@ async def test_biological_lock_concurrency(tmp_path):
         "start_1",
         "end_1",
     ]
+
+
+def test_biological_lock_medulla_failsafe_fallback(tmp_path, monkeypatch):
+    """Proves that instantiating a BiologicalLock with no parameters automatically maps to a safe fallback path."""
+    from System.core.locks import BiologicalLock
+
+    # Force ROOT_DIR redirect to test-isolated tmp_path
+    monkeypatch.setattr("System.core.locks.ROOT_DIR", tmp_path)
+
+    # Launching parameterless lock - should resolve silently using our failsafe default path
+    lock = BiologicalLock()
+
+    assert "brain_master_autonomic.lock" in lock.lock_file
+    with lock:
+        assert (tmp_path / "Meta" / "brain_master_autonomic.lock").exists()

@@ -2,8 +2,11 @@ import os
 import time
 import asyncio
 import threading
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from rich.console import Console
+
+# ⚡ ZERO-DEBT: Move to module level to expose it to testing frameworks and monkeypatch hooks
+from System.core.paths import ROOT_DIR
 
 console = Console()
 
@@ -18,9 +21,25 @@ class BiologicalLock:
     _local_async_locks: Dict[str, asyncio.Lock] = {}
     _local_sync_locks: Dict[str, threading.Lock] = {}
 
-    def __init__(self, lock_file_path: str, timeout: float = 10.0) -> None:
-        self.lock_file: str = f"{lock_file_path}.lock"
+    def __init__(
+        self, lock_file_path: Optional[str] = None, timeout: float = 10.0
+    ) -> None:
+        """
+        Hardened Dual-Protocol Lock Constructor.
+        If no lock_file_path is explicitly declared (legacy/medulla fallback),
+        defaults securely to a centralized master lock boundary.
+        """
+        if lock_file_path is None:
+            # 🛡️ SHIFT-LEFT FAILSAFE: Self-resolves legacy unparameterized lock invocations
+            target_path = str(ROOT_DIR / "Meta" / "brain_master_autonomic")
+        else:
+            target_path = lock_file_path
+
+        self.lock_file: str = f"{target_path}.lock"
         self.timeout: float = timeout
+
+        # ⚡ ZERO-DEBT: Guarantee the target directory exists so os.open doesn't throw a silent FileNotFoundError
+        os.makedirs(os.path.dirname(self.lock_file), exist_ok=True)
 
         # Async memory lock (for asyncio loop safety)
         if self.lock_file not in self._local_async_locks:
