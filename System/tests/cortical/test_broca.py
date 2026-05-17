@@ -10,7 +10,8 @@ def test_broca_perfect_articulation():
 
 
 def test_broca_auto_heals_markdown_bleeding():
-    response = "<execute>\n```bash\nnpm run dev\n```\n</execute>"
+    fence = chr(96) * 3
+    response = f"<execute>\n{fence}bash\nnpm run dev\n{fence}\n</execute>"
     is_valid, content = enforce_data_contract(response, "execute")
     assert is_valid is True
     assert content == "npm run dev"
@@ -38,18 +39,22 @@ class SwarmAgentContract(BaseModel):
 
 def test_broca_json_contract_with_markdown_bleeding():
     """Proves Broca isolates clean JSON structure from markdown blocks without XML tags."""
+    fence = chr(96) * 3
     raw_llm_output = (
         "Here is the data you requested:\n"
-        "```json\n"
+        f"{fence}json\n"
         "{\n"
-        '    "name": "Data_Engineer",\n'
-        '    "role": "Data_Science",\n'
-        '    "confidence": 0.88\n'
+        '  "name": "Architect",\n'
+        '  "role": "Planner",\n'
+        '  "confidence": 0.95\n'
         "}\n"
-        "```"
+        f"{fence}\n"
+        "Let me know if you need anything else!"
     )
 
-    agent = enforce_data_contract(raw_llm_output, SwarmAgentContract)
-    assert isinstance(agent, SwarmAgentContract)
-    assert agent.name == "Data_Engineer"
-    assert agent.confidence == 0.88
+    # Passing the Pydantic model directly to enforce_data_contract
+    result = enforce_data_contract(raw_llm_output, SwarmAgentContract)
+
+    assert isinstance(result, SwarmAgentContract)
+    assert result.name == "Architect"
+    assert result.confidence == 0.95
