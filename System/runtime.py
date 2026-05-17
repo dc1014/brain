@@ -55,6 +55,8 @@ try:
     from System.core.config_proofreader import proofread_global_config
 
     validated_dna = proofread_global_config(raw_config)
+
+    # ⚡ Convert back to standard dict to preserve legacy runtime compatibility
     AGENT_CONFIG = validated_dna.model_dump()
 
 except Exception as e:

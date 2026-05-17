@@ -1,4 +1,5 @@
 import aiosqlite
+import asyncio
 import io
 import time
 import tarfile
@@ -144,6 +145,9 @@ def purge_waste() -> None:
 DB_FILE_PATH = ROOT_DIR / "Meta" / "hippocampus.db"
 
 
+DB_FILE_PATH = ROOT_DIR / "Meta" / "hippocampus.db"
+
+
 class LymphaticSweeper:
     """
     Continuous Lymphatic Drainage Engine.
@@ -160,8 +164,7 @@ class LymphaticSweeper:
 
         from rich.console import Console
 
-        console = Console()
-        console.print(
+        Console().print(
             "[dim magenta]🧼 Lymphatic System: Initiating autonomic background sweep...[/dim magenta]"
         )
 
@@ -176,23 +179,28 @@ class LymphaticSweeper:
 
                 if count > self.max_records:
                     excess = count - self.max_records
-                    console.print(
+                    Console().print(
                         f"[dim magenta]🧼 Lymphatic System: Pruning {excess} legacy records...[/dim magenta]"
                     )
-                    # Prune old records based on creation timestamp (assuming ID is sequential)
+                    # Prune old records by ID (FIFO)
                     await db.execute(
                         "DELETE FROM short_term_memory WHERE id IN (SELECT id FROM short_term_memory ORDER BY id ASC LIMIT ?)",
                         (excess,),
                     )
                     await db.commit()
 
-                # 2. Run clean async DB compaction to prevent disk footprint bloat
+                # 2. Run clean async DB compaction to protect disk footprint
                 await db.execute("PRAGMA optimize;")
                 await db.execute("VACUUM;")
                 await db.commit()
 
-            console.print(
+            Console().print(
                 "[dim green]✅ Lymphatic drainage cycle successful.[/dim green]"
             )
         except Exception as e:
-            console.print(f"[dim red]❌ Lymphatic sweep skipped: {e}[/dim red]")
+            Console().print(f"[dim red]❌ Lymphatic sweep skipped: {e}[/dim red]")
+
+
+def trigger_lymphatic_sweep_sync() -> None:
+    """Synchronous wrapper so CLI tools can easily trigger a deep clean."""
+    asyncio.run(LymphaticSweeper().execute_drainage_cycle())

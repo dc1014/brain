@@ -3,11 +3,13 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class AgentNodeConfig(BaseModel):
+    # ⚡ SHIFT-LEFT: Allow extra fields so custom agent properties don't crash the bootloader
     model_config = ConfigDict(extra="allow")
+
     name: str
     model: str
     system_prompt: str
-    tools: List[Any] = Field(default_factory=list)
+    tools: List[str] = Field(default_factory=list)
 
 
 class BrainDNAConfig(BaseModel):

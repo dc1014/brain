@@ -122,9 +122,10 @@ async def test_lymphatic_sweeper_lru_eviction(tmp_path, monkeypatch):
     sweeper = LymphaticSweeper(max_records=5)
     await sweeper.execute_drainage_cycle()
 
-    # Verify exact LRU eviction
+    # Verify exact LRU - ⚡ ZERO-DEBT: Safe async row unpacking
     async with aiosqlite.connect(db_path) as db:
         async with db.execute("SELECT COUNT(*) FROM short_term_memory") as cursor:
-            count = (await cursor.fetchone())[0]
+            row = await cursor.fetchone()
+            count = row[0] if row is not None else 0
 
     assert count == 5

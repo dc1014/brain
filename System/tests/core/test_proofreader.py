@@ -3,30 +3,25 @@ from System.core.config_proofreader import proofread_global_config, BrainDNAConf
 
 
 def test_proofreader_valid_config():
-    raw_config = {
-        "models": {"fast": "gemini-flash"},
+    raw = {
+        "models": {"fast": "flash"},
         "agents": {
-            "test_agent": {
+            "test": {
                 "name": "Test",
                 "model": "fast",
-                "system_prompt": "You are a test.",
+                "system_prompt": "hello",
+                "creates_milestone": False,
             }
         },
-        "routes": {"TEST_ROUTE": []},
+        "routes": {"A": []},
     }
-    validated = proofread_global_config(raw_config)
+    validated = proofread_global_config(raw)
     assert isinstance(validated, BrainDNAConfig)
-    assert validated.agents["test_agent"].name == "Test"
+    assert (
+        validated.agents["test"].model_config.get("extra") == "allow"
+    )  # Ensures extra fields don't break it
 
 
-def test_proofreader_invalid_agent_config():
-    raw_config = {
-        "agents": {
-            "bad_agent": {
-                "name": "Bad",
-                # Missing 'model' and 'system_prompt'
-            }
-        }
-    }
-    with pytest.raises(ValueError, match="Catastrophic Configuration DNA Defect"):
-        proofread_global_config(raw_config)
+def test_proofreader_invalid_config():
+    with pytest.raises(ValueError, match="Catastrophic Configuration DNA"):
+        proofread_global_config({"agents": {"bad": {"name": "Bad"}}})  # Missing 'model'

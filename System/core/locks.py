@@ -33,14 +33,15 @@ class BiologicalLock:
         self.local_sync_lock: threading.Lock = self._local_sync_locks[self.lock_file]
 
     def _try_acquire_file_lock(self) -> bool:
-        """Synchronous file IO for cross-process locking."""
-        if os.path.exists(self.lock_file):
-            return False
+        """Synchronous file IO for cross-process locking using Atomic OS operations."""
         try:
-            with open(self.lock_file, "w", encoding="utf-8") as f:
+            # ⚡ ZERO-DEBT: os.O_CREAT | os.O_EXCL ensures atomic creation.
+            # This completely eliminates TOCTOU (Time-Of-Check-To-Time-Of-Use) race conditions.
+            fd = os.open(self.lock_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.write(str(os.getpid()))
             return True
-        except IOError:
+        except (FileExistsError, OSError):
             return False
 
     def _release_file_lock(self) -> None:

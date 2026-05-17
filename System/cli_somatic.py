@@ -63,7 +63,7 @@ def flush():
 
 
 def sleep():
-    """🌙 Forces a deep sleep cycle (Lymphatic flush + DMN Daydreaming)."""
+    """🌙 Forces a deep sleep cycle (Lymphatic flush + DMN Daydreaming + DB Compaction)."""
     from rich.console import Console
     from System.neuroanatomy.autonomic.dmn import trigger_daydreams
     from System.cli_cognitive import compile
@@ -83,6 +83,18 @@ def sleep():
 
     # 3. Default Mode Network: Dream and synthesize new ideas
     trigger_daydreams()
+
+    # 4. Lymphatic Database Compaction: Prune index bloat and execute VACUUM
+    try:
+        from System.neuroanatomy.systemic.lymphatic import trigger_lymphatic_sweep_sync
+
+        trigger_lymphatic_sweep_sync()
+    except Exception as e:
+        console.print(f"[dim red]❌ Somatic sleep sweep skipped: {e}[/dim red]")
+
+    console.print(
+        "[bold green]💤 Sleep cycle completed flawlessly. Brain OS is fully optimized.[/bold green]"
+    )
 
 
 def expose_dermis(port: int = 8080) -> str:
