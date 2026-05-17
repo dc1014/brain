@@ -115,6 +115,24 @@ base:
         type: "object"
         properties: {}
 
+  - type: function
+    function:
+      name: transmit_telepathy
+      description: "Commands an external AI framework (OpenClaw/Hermes) or peer Brain OS node via the Exocortex. Use to delegate execution or read public resources from peers."
+      parameters:
+        type: object
+        properties:
+          target_node_id:
+            type: string
+            description: "The secure ID of the external node (e.g., 'openclaw_local')."
+          action:
+            type: string
+            description: "The MCP action (e.g., 'EXECUTE_ENGRAM' or 'READ_RESOURCE')."
+          target:
+            type: string
+            description: "The name of the engram or resource to interact with."
+        required: [target_node_id, action]
+
 write:
   - type: "function"
     function:

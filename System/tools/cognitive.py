@@ -201,3 +201,22 @@ def map_system_topology_tool() -> ExecutionResult:
     return ExecutionResult(
         success=success, output=output, block_reason="" if success else output
     )
+
+
+async def transmit_telepathy(target_node_id: str, action: str, target: str = "") -> str:
+    """
+    Commands an external AI framework or peer Brain OS node via the Exocortex.
+    Use this to delegate tasks to OpenClaw, Hermes, or read Public resources from peer brains.
+
+    Args:
+        target_node_id: The ID of the external node (e.g., 'openclaw_local', 'hermes_1').
+        action: The MCP action to trigger (e.g., 'EXECUTE_ENGRAM', 'READ_RESOURCE').
+        target: The specific engram name or resource file to target.
+    """
+    from System.neuroanatomy.cortical.exocortex import Exocortex
+
+    exo = Exocortex()
+
+    # ⚡ Execute the outbound network call asynchronously
+    response = await exo.transmit_outbound_pulse(target_node_id, action, target)
+    return response

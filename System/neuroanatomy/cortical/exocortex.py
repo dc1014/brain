@@ -1,5 +1,6 @@
 import json
 import hashlib
+import asyncio
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR
@@ -85,3 +86,72 @@ class Exocortex:
             f"[dim green]🌐 Exocortex: Authorized execution for engram {engram_name}.[/dim green]"
         )
         return f"Execution of {engram_name} initiated."
+
+    async def transmit_outbound_pulse(
+        self, target_node_id: str, action: str, target: str = ""
+    ) -> str:
+        """
+        The Efferent Pathway: Actively transmits a secure cognitive pulse to an external framework.
+        Used by the Prefrontal Cortex to command secondary agent swarms.
+        """
+        # 1. Look up the target node's coordinates in the biological membrane
+        if not self.secure_nodes_file.exists():
+            return "404 Target Node Not Found (No secure_nodes.jsonl)"
+
+        node_info = None
+        try:
+            with BiologicalLock(str(self.secure_nodes_file)):
+                with open(self.secure_nodes_file, "r", encoding="utf-8") as f:
+                    for line in f:
+                        node = json.loads(line)
+                        if node.get("sender_id") == target_node_id:
+                            node_info = node
+                            break
+        except Exception as e:
+            return f"500 Internal Error reading membrane: {str(e)}"
+
+        if not node_info:
+            return f"404 Target Node '{target_node_id}' not found in secure membrane."
+
+        host = node_info.get("host", "127.0.0.1")
+        port = node_info.get("port", 8765)
+        shared_key = node_info.get("public_key", "")
+
+        # 2. Formulate and sign the synaptic payload
+        payload_dict = {"action": action, "target": target}
+        payload_str = json.dumps(payload_dict)
+
+        # 🛡️ SHIFT-LEFT: Cryptographic outbound signature
+        signature = hashlib.sha256(f"{payload_str}{shared_key}".encode()).hexdigest()
+
+        packet = {
+            "sender_id": "brain_os_local",
+            "payload": payload_str,
+            "signature": signature,
+        }
+
+        console.print(
+            f"[bold magenta]⚡ Exocortex: Transmitting '{action}' pulse to {target_node_id} ({host}:{port})...[/bold magenta]"
+        )
+
+        # 3. Fire across the network
+        try:
+            reader, writer = await asyncio.open_connection(host, port)
+            writer.write(json.dumps(packet).encode("utf-8"))
+            await writer.drain()
+
+            data = await reader.read(8192)  # Await the external brain's response
+
+            writer.close()
+            await writer.wait_closed()
+
+            response = data.decode("utf-8")
+            console.print(
+                f"[dim green]🌐 Exocortex Response received: {response[:100]}...[/dim green]"
+            )
+            return response
+
+        except ConnectionRefusedError:
+            return f"503 Service Unavailable: {target_node_id} is asleep or offline."
+        except Exception as e:
+            return f"500 Transmission Error: {str(e)}"
