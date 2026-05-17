@@ -81,3 +81,13 @@ def autonomic_sandbox(tmp_path, monkeypatch):
             monkeypatch.setattr(f"{mod}.ROOT_DIR", tmp_path)
         except (AttributeError, ImportError):
             pass  # Module might not have imported it, perfectly fine
+
+
+@pytest.fixture(autouse=True)
+def protect_host_os(monkeypatch):
+    """
+    🛡️ SHIFT-LEFT SECURITY: Globally disables os.system during Pytest.
+    Ensures that no test (especially the Vestibular system) can ever accidentally
+    execute 'git checkout' or 'rm -rf' on the host machine.
+    """
+    monkeypatch.setattr("os.system", lambda cmd: None)

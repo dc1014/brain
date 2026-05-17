@@ -1,76 +1,156 @@
-from System.core.paths import ROOT_DIR
-import json
+import os
 import shutil
+import json
+from typing import Set, Dict
 from pathlib import Path
 from rich.console import Console
+from System.core.paths import ROOT_DIR
+from System.core.locks import BiologicalLock
 
 console = Console()
-
-VESTIBULAR_DIR = ROOT_DIR / "Meta" / "Vestibular"
-LEDGER_PATH = VESTIBULAR_DIR / "ledger.json"
-
-
-def _get_ledger() -> dict:
-    if not LEDGER_PATH.exists():
-        return {}
-    with open(LEDGER_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+VESTIBULAR_STATE_FILE = ROOT_DIR / "Meta" / "vestibular_state.json"
+BACKUP_DIR = ROOT_DIR / "Meta" / "vestibular_backups"
 
 
-def _save_ledger(ledger: dict) -> None:
-    VESTIBULAR_DIR.mkdir(parents=True, exist_ok=True)
-    with open(LEDGER_PATH, "w", encoding="utf-8") as f:
-        json.dump(ledger, f)
+class VestibularSystem:
+    """
+    Sense of Balance & Homeostasis (Rollback).
+    Takes structural snapshots of the workspace before execution and cleanly
+    reverses file modifications AND orphaned directory trees upon task abortion.
+    """
+
+    def __init__(self) -> None:
+        VESTIBULAR_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        self.protected_dirs = {
+            ROOT_DIR / ".git",
+            ROOT_DIR / "System",
+            ROOT_DIR / "Meta",
+            ROOT_DIR / ".venv",
+        }
+
+    def _get_workspace_snapshot(self) -> tuple[Dict[str, float], Set[str]]:
+        """Maps the exact state of files and all directories."""
+        files_state: Dict[str, float] = {}
+        dirs_state: Set[str] = set()
+
+        for root, dirs, files in os.walk(ROOT_DIR):
+            root_path = Path(root)
+
+            if any(
+                protected in root_path.parents or protected == root_path
+                for protected in self.protected_dirs
+            ):
+                continue
+
+            dirs_state.add(str(root_path))
+
+            for file in files:
+                file_path = root_path / file
+                try:
+                    files_state[str(file_path)] = file_path.stat().st_mtime
+                except OSError:
+                    pass
+
+        return files_state, dirs_state
+
+    def commit_transaction(self) -> None:
+        """Saves a stable snapshot of the workspace structure."""
+        files_state, dirs_state = self._get_workspace_snapshot()
+        state = {"files": files_state, "dirs": list(dirs_state)}
+
+        with BiologicalLock(str(VESTIBULAR_STATE_FILE)):
+            with open(VESTIBULAR_STATE_FILE, "w", encoding="utf-8") as f:
+                json.dump(state, f)
+
+        # Clear old backups on a fresh transaction
+        if BACKUP_DIR.exists():
+            shutil.rmtree(BACKUP_DIR, ignore_errors=True)
+
+    def snapshot_file(self, filepath: str) -> None:
+        """Saves a targeted backup of a specific file before it is mutated."""
+        try:
+            target = (ROOT_DIR / filepath).resolve()
+            if target.exists() and target.is_file():
+                BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+                # Use a safe delimiter to map the relative path in a flat directory
+                safe_name = str(target.relative_to(ROOT_DIR)).replace(os.sep, "___")
+                shutil.copy2(target, BACKUP_DIR / safe_name)
+        except Exception:
+            pass
+
+    def restore_balance(self) -> None:
+        """
+        Rolls back the workspace.
+        1. Restores modified files via git checkout (if tracked).
+        2. Restores targeted file backups (for untracked file mutations).
+        3. ⚡ SHIFT-LEFT: Obliterates newly created orphaned directory trees.
+        """
+        if not VESTIBULAR_STATE_FILE.exists():
+            return
+
+        try:
+            with BiologicalLock(str(VESTIBULAR_STATE_FILE)):
+                with open(VESTIBULAR_STATE_FILE, "r", encoding="utf-8") as f:
+                    state = json.load(f)
+
+            baseline_dirs: Set[str] = set(state.get("dirs", []))
+
+            console.print(
+                "[dim yellow]⚖️ Vestibular System: Restoring file modifications...[/dim yellow]"
+            )
+
+            # 1. Standard File Reversion (Using git for tracked files)
+            os.system(f"cd {ROOT_DIR} && git checkout -- .")
+            os.system(f"cd {ROOT_DIR} && git clean -fd")
+
+            # 2. Restore targeted untracked file backups
+            if BACKUP_DIR.exists():
+                for backup_file in BACKUP_DIR.glob("*"):
+                    try:
+                        rel_path = backup_file.name.replace("___", os.sep)
+                        target = ROOT_DIR / rel_path
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(backup_file, target)
+                    except Exception:
+                        pass
+                shutil.rmtree(BACKUP_DIR, ignore_errors=True)
+
+            # 3. Deep Directory Pruning
+            current_files, current_dirs = self._get_workspace_snapshot()
+            orphaned_dirs = current_dirs - baseline_dirs
+
+            # Sort descending to delete deepest children first
+            orphaned_dirs_sorted = sorted(list(orphaned_dirs), key=len, reverse=True)
+
+            pruned_count = 0
+            for dir_path_str in orphaned_dirs_sorted:
+                dir_path = Path(dir_path_str)
+                if dir_path.exists() and dir_path.is_dir():
+                    try:
+                        shutil.rmtree(dir_path)
+                        pruned_count += 1
+                    except OSError:
+                        pass
+
+            if pruned_count > 0:
+                console.print(
+                    f"[dim yellow]⚖️ Vestibular System: Obliterated {pruned_count} orphaned directory trees.[/dim yellow]"
+                )
+
+        except Exception as e:
+            console.print(
+                f"[bold red]❌ Vestibular Rollback Error: {str(e)}[/bold red]"
+            )
 
 
-def create_snapshot(filepath: str) -> None:
-    """Takes a snapshot of a file before it is modified by an AI tool."""
-    target_path = (ROOT_DIR / filepath).resolve()
-
-    # For this iteration, we only protect existing files from being mangled.
-    if not target_path.exists() or not target_path.is_file():
-        return
-
-    ledger = _get_ledger()
-    rel_path = str(target_path.relative_to(ROOT_DIR))
-
-    # If we already snapshotted this file during this execution pipeline, don't overwrite it.
-    if rel_path in ledger:
-        return
-
-    VESTIBULAR_DIR.mkdir(parents=True, exist_ok=True)
-    backup_name = f"{len(ledger)}.bak"
-    backup_path = VESTIBULAR_DIR / backup_name
-
-    shutil.copy2(target_path, backup_path)
-    ledger[rel_path] = str(backup_path)
-    _save_ledger(ledger)
-
-    console.print(
-        f"[dim]⚖️  Vestibular: Equilibrium state saved for {target_path.name}[/dim]"
-    )
+# --- Global Synaptic Hooks ---
+def commit_transaction() -> None:
+    VestibularSystem().commit_transaction()
 
 
 def restore_balance() -> None:
-    """Restores all modified files to their original snapshotted state."""
-    ledger = _get_ledger()
-    if not ledger:
-        return
-
-    console.print(
-        "\n[bold red]⚖️  Vestibular Reflex Triggered: System lost balance! Restoring file equilibrium...[/bold red]"
-    )
-    for rel_path, backup_str in ledger.items():
-        original_path = ROOT_DIR / rel_path
-        backup_path = Path(backup_str)
-        if backup_path.exists():
-            shutil.copy2(backup_path, original_path)
-            console.print(f"[dim]↳ Restored {original_path.name}[/dim]")
-
-    commit_transaction()  # Clear the ledger after restoring
+    VestibularSystem().restore_balance()
 
 
-def commit_transaction() -> None:
-    """Clears the snapshots because the execution pipeline completed successfully."""
-    if VESTIBULAR_DIR.exists():
-        shutil.rmtree(VESTIBULAR_DIR)
+def create_snapshot(filepath: str) -> None:
+    VestibularSystem().snapshot_file(filepath)

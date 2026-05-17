@@ -48,9 +48,16 @@ async def test_exocortex_outbound_mcp(tmp_path, monkeypatch, mocker):
         encoding="utf-8",
     )
 
-    mock_writer = mocker.AsyncMock()
+    # ⚡ ZERO-DEBT: Accurately mock standard asyncio.StreamWriter
+    mock_writer = mocker.Mock()
+    mock_writer.write = mocker.Mock()  # Sync
+    mock_writer.close = mocker.Mock()  # Sync
+    mock_writer.drain = mocker.AsyncMock()  # Async
+    mock_writer.wait_closed = mocker.AsyncMock()  # Async
+
     mock_reader = mocker.AsyncMock()
     mock_reader.read.return_value = b"200 MCP OK"
+
     mocker.patch("asyncio.open_connection", return_value=(mock_reader, mock_writer))
 
     exo = Exocortex()
