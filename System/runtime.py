@@ -18,6 +18,7 @@ from System.llm import acompletion, run_agent_async, get_system_context
 
 # ⚡ ZERO-DEBT: Import the isolated OS DNA
 from System.core.dna import AGENT_CONFIG
+from System.neuroanatomy.systemic.endocrine import get_resolved_model
 
 load_dotenv()
 
@@ -121,30 +122,6 @@ async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
 
     except Exception as e:
         return False, f"Dispatcher API Error: {str(e)}", "NONE", "NONE", zero_usage
-
-
-def get_resolved_model(desired_model_key: str, is_exhausted: bool) -> str:
-    """Helper to resolve the fallback LLM models securely using the Vault."""
-    if is_exhausted:
-        from System.neuroanatomy.systemic.endocrine import is_cortisol_active
-
-        if not is_cortisol_active():
-            desired_model_key = "gpt_mini"
-
-    desired_model_str = AGENT_CONFIG["models"].get(desired_model_key, "")
-
-    # 🛡️ IMMUNE SYSTEM: Check the Secure Vault, not os.environ!
-    if vault.get_api_key_for_model(desired_model_str):
-        return desired_model_str
-
-    if vault.get_api_key_for_model("openai/gpt"):
-        return AGENT_CONFIG["models"].get("gpt_mini", "openai/gpt-4o-mini")
-    elif vault.get_api_key_for_model("anthropic/claude"):
-        return AGENT_CONFIG["models"].get("claude_haiku", "anthropic/claude-haiku-4-5")
-    elif vault.get_api_key_for_model("gemini/"):
-        return AGENT_CONFIG["models"].get("gemini_flash", "gemini/gemini-2.5-flash")
-
-    return desired_model_str
 
 
 async def execute_pipeline(

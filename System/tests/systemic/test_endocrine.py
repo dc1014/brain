@@ -1,4 +1,4 @@
-from System.neuroanatomy.systemic.endocrine import EndocrineSystem
+from System.neuroanatomy.systemic.endocrine import EndocrineSystem, get_resolved_model
 
 
 def test_endocrine_secretion_and_clamping(tmp_path, monkeypatch):
@@ -39,26 +39,61 @@ def test_endocrine_metabolism(tmp_path, monkeypatch):
     assert vector["dopamine"] > 0.0  # Seeking 0.3 baseline
 
 
-def test_llm_humoral_modulation(mocker):
-    """Proves the bloodstream mathematically alters the LLM parameters."""
-    mock_vector = {
-        "cortisol": 0.9,
-        "dopamine": 0.0,
-        "adrenaline": 0.8,
-        "melatonin": 0.0,
-    }
-    mocker.patch(
-        "System.neuroanatomy.systemic.endocrine.EndocrineSystem.get_humoral_vector",
-        return_value=mock_vector,
+def test_endocrine_model_downgrade_under_stress(monkeypatch, tmp_path, mocker):
+    """Proves the Endocrine system overrides premium models with efficiency models during exhaustion."""
+    monkeypatch.setattr(
+        "System.neuroanatomy.systemic.endocrine.ENDOCRINE_FILE",
+        tmp_path / "humoral.json",
     )
 
-    # Mock the AGENT_CONFIG to test Cortisol fallback
-    mocker.patch("System.runtime.AGENT_CONFIG", {"models": {"fast": "cheap-model"}})
+    # 1. Mock the DNA configuration
+    mocker.patch(
+        "System.core.dna.AGENT_CONFIG",
+        {
+            "models": {
+                "premium_model": "openai/gpt-4o",
+                "gpt_mini": "openai/gpt-4o-mini",
+            }
+        },
+    )
 
-    from System.llm import apply_humoral_modulation
+    # 2. Mock the Immune Vault
+    mocker.patch(
+        "System.neuroanatomy.systemic.immune_system.vault.get_api_key_for_model",
+        return_value="sk-fake",
+    )
 
-    mod_model, mod_temp, mod_tokens = apply_humoral_modulation("heavy-model")
+    # 3. Request a premium model while the system is EXHAUSTED
+    # This should automatically trigger secrete("cortisol") and force a downgrade
+    system = EndocrineSystem()
+    system.secrete("cortisol", 1.0)  # Pre-load the stress
+    resolved = get_resolved_model("premium_model", is_exhausted=True)
 
-    assert mod_model == "cheap-model"  # Cortisol forced the fallback
-    assert mod_temp < 0.2  # High Cortisol + No Dopamine = Cold/Deterministic
-    assert mod_tokens < 3000  # Adrenaline restricted verbosity
+    # 4. Strict Validation
+    assert resolved == "openai/gpt-4o-mini"
+
+
+def test_endocrine_maintains_model_when_healthy(monkeypatch, tmp_path, mocker):
+    """Proves the Endocrine system allows premium models when healthy."""
+    monkeypatch.setattr(
+        "System.neuroanatomy.systemic.endocrine.ENDOCRINE_FILE",
+        tmp_path / "humoral.json",
+    )
+
+    mocker.patch(
+        "System.core.dna.AGENT_CONFIG",
+        {
+            "models": {
+                "premium_model": "openai/gpt-4o",
+                "gpt_mini": "openai/gpt-4o-mini",
+            }
+        },
+    )
+    mocker.patch(
+        "System.neuroanatomy.systemic.immune_system.vault.get_api_key_for_model",
+        return_value="sk-fake",
+    )
+
+    # Baseline health
+    resolved = get_resolved_model("premium_model", is_exhausted=False)
+    assert resolved == "openai/gpt-4o"

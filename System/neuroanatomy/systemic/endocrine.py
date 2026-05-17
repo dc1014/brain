@@ -44,18 +44,21 @@ class EndocrineSystem:
                 "dopamine": 0.5,
                 "adrenaline": 0.0,
                 "melatonin": 0.0,
+                "last_updated": time.time(),
             }
 
     def _write_state(self, state: dict[str, Any]) -> None:
         state["last_updated"] = time.time()
-        # Clamp all values between 0.0 and 1.0 to respect biological limits
-        for key in ["cortisol", "dopamine", "adrenaline", "melatonin"]:
-            if key in state:
-                state[key] = max(0.0, min(1.0, float(state[key])))
-
-        with BiologicalLock(str(ENDOCRINE_FILE)):
-            with open(ENDOCRINE_FILE, "w", encoding="utf-8") as f:
-                json.dump(state, f, indent=2)
+        # Clamp values between 0.0 and 1.0
+        for k in ["cortisol", "dopamine", "adrenaline", "melatonin"]:
+            if k in state:
+                state[k] = max(0.0, min(1.0, float(state[k])))
+        try:
+            with BiologicalLock(str(ENDOCRINE_FILE)):
+                with open(ENDOCRINE_FILE, "w", encoding="utf-8") as f:
+                    json.dump(state, f, indent=2)
+        except Exception as e:
+            console.print(f"[bold red]Endocrine Error: {e}[/bold red]")
 
     def secrete(self, hormone: str, amount: float) -> None:
         """Releases a hormone into the bloodstream, spiking its current levels."""
@@ -90,9 +93,45 @@ class EndocrineSystem:
 
 
 def is_cortisol_active() -> bool:
-    """Legacy reflex check: Returns True if Cortisol is critically high."""
-    try:
-        endocrine = EndocrineSystem()
-        return endocrine.get_humoral_vector()["cortisol"] > 0.7
-    except Exception:
-        return False
+    """Utility check for severe systemic exhaustion."""
+    system = EndocrineSystem()
+    vector = system.get_humoral_vector()
+    return vector["cortisol"] > 0.7
+
+
+def get_resolved_model(desired_model_key: str, is_exhausted: bool) -> str:
+    """
+    HUMORAL ROUTING: Resolves the fallback LLM models securely using the Vault.
+    Downgrades to efficiency models if Cortisol (exhaustion) is active.
+    """
+    from System.core.dna import AGENT_CONFIG
+    from System.neuroanatomy.systemic.immune_system import vault
+
+    if is_exhausted:
+        # ⚡ BIOMIMICRY: Actually trigger the hormonal spike natively!
+        system = EndocrineSystem()
+        system.secrete("cortisol", 0.5)
+
+        if is_cortisol_active():
+            desired_model_key = "gpt_mini"
+
+    # Safely extract from the DNA global configuration
+    desired_model_str = AGENT_CONFIG.get("models", {}).get(desired_model_key, "")
+
+    # 🛡️ IMMUNE SYSTEM: Check the Secure Vault, not os.environ!
+    if vault.get_api_key_for_model(desired_model_str):
+        return desired_model_str
+
+    # Automatic provider fallback matrix
+    if vault.get_api_key_for_model("openai/gpt"):
+        return AGENT_CONFIG.get("models", {}).get("gpt_mini", "openai/gpt-4o-mini")
+    elif vault.get_api_key_for_model("anthropic/claude"):
+        return AGENT_CONFIG.get("models", {}).get(
+            "claude_haiku", "anthropic/claude-haiku-4-5"
+        )
+    elif vault.get_api_key_for_model("gemini/"):
+        return AGENT_CONFIG.get("models", {}).get(
+            "gemini_flash", "gemini/gemini-2.5-flash"
+        )
+
+    return desired_model_str
