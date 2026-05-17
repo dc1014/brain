@@ -235,11 +235,21 @@ def execute_command(command: str, directory_path: str) -> str:
         if not target_path.exists() or not target_path.is_dir():
             return f"ERROR: Directory not found at {target_path.relative_to(ROOT_DIR)}"
 
+        # --- 🩸 BLOOD-BRAIN BARRIER: Supply Chain Defense ---
+        from System.organs.blood_brain_barrier import inspect_toxins
+
+        is_safe_blood, barrier_reason = inspect_toxins(command)
+        if not is_safe_blood:
+            return barrier_reason
+        # ----------------------------------------------------
+
         console.print("\n[bold red]⚠️  SECURITY ALERT: EXECUTION REQUESTED[/bold red]")
         console.print(
             f"[yellow]Brain OS wants to run:[/yellow] '{command}'\n"
             f"[yellow]in directory:[/yellow] '{target_path.relative_to(ROOT_DIR)}'"
         )
+
+        # ... (The rest of your HITL y/N prompt and execution remains exactly the same) ...
 
         # --- SHIFT-LEFT: STRICT Opt-In Gate ---
         if os.environ.get("BRAIN_OS_HEADLESS") == "1":

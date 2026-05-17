@@ -81,6 +81,15 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 14. Empathy & Alignment (Mirror Neurons)
 * **Biological Imitation:** Mirror neurons fire when observing another entity, mapping their behavior onto your own brain to foster social alignment.
 * **Stylistic Mimicry:** By running `brain observe <project_name>`, the `mirror_neurons.py` organ scans the code you have manually written. It deduces your exact stylistic preferences (variable casing, commenting structures, architectural patterns) and stages `<neuroplasticity>` tags in the `Mutations.md` file. Once evolved, Brain OS permanently aligns its coding output to match your personal developer DNA.
+
+### 15. Autonomous Prototyping (DMN & Pineal Gland)
+* **The Pineal Gland:** Monitors human interaction logs (`pineal.py`). If the system is idle for hours, it releases Melatonin, signaling the system that it is safe to dream.
+* **REM Paralysis (Git Sandbox):** You can trigger software dreaming via `brain daydream --code --project=my_app`. To protect reality from AI hallucinations, the DMN (`dmn.py`) enforces REM Paralysis. It autonomously creates a new Git branch (e.g., `dream/hypothesis_1234`), traps the AI inside it, and bypasses the `[y/N]` HITL gates. The AI builds entirely new features while you sleep.
+* **Asynchronous HITL:** You wake up, review the git branch diff, and either delete the nightmare or merge the genius directly into `main`. Architectural constraints (ADRs) remain locked.
+
+### 16. Supply Chain Defense (The Blood-Brain Barrier)
+* **Toxin Filtration:** The Blood-Brain Barrier strictly blocks foreign substances from infecting the central nervous system.
+* **Network Isolation:** While Brain OS is operating autonomously in REM Sleep (`BRAIN_OS_HEADLESS=1`), the `blood_brain_barrier.py` organ physically intercepts shell commands. The AI is permitted to execute standard code (`npm run build`, `pytest`), but if it attempts to download external code (`npm install`, `pip install`, `curl | bash`), the barrier rejects the command. This completely immunizes the autonomous dreaming engine from supply-chain attacks, remote code execution, and dependency typo-squatting.
 ---
 
 ## 🏗️ Architecture & Routing

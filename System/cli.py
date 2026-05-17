@@ -211,15 +211,69 @@ def daydream(
     domain: str = typer.Option(
         "META", "--domain", "-d", help="The domain to daydream about."
     ),
+    code: bool = typer.Option(
+        False,
+        "--code",
+        "-c",
+        help="Enter REM Sleep: Allow Forge to autonomously write software prototypes.",
+    ),
+    project: str = typer.Option(
+        "forge",
+        "--project",
+        "-p",
+        help="The Studio project to dream in (required if --code is used).",
+    ),
 ) -> None:
-    """Default Mode Network: Synthesizes recent logs into new hypotheses while idle."""
-    console.print(
-        f"\n[bold magenta]☁️ Activating Default Mode Network ({domain})...[/bold magenta]"
-    )
-    os.environ["BRAIN_OS_HEADLESS"] = "1"
+    """Default Mode Network: Synthesizes thoughts, or safely prototypes software via REM Paralysis."""
+    from System.organs.pineal import is_host_asleep
+    from System.organs.dmn import enforce_rem_paralysis
 
-    prompt = "Review our recent experiments and active memory. Synthesize a new strategic hypothesis and save it to the Daydreams file."
-    execute_pipeline(prompt, "SUBCONSCIOUS_DAYDREAM", domain.upper())
+    # 1. Pineal Gland Check (Optional safeguard, mostly for autonomous pacemakers, but good to log)
+    if not is_host_asleep(idle_hours_threshold=0.1):  # Just a check for demo purposes
+        console.print(
+            "[dim]Note: Host is active, but forcing Daydream state anyway.[/dim]"
+        )
+
+    if not code:
+        # --- THOUGHT DREAMING (Passive, Safe) ---
+        console.print(
+            f"\n[bold magenta]☁️ Activating Default Mode Network ({domain}). Synthesizing thoughts...[/bold magenta]"
+        )
+        os.environ["BRAIN_OS_HEADLESS"] = "1"
+        prompt = "Review our recent experiments and active memory. Synthesize a new strategic hypothesis and save it to the Daydreams file."
+        execute_pipeline(prompt, "SUBCONSCIOUS_DAYDREAM", domain.upper())
+
+    else:
+        # --- REM SLEEP (Active Software Prototyping) ---
+        console.print(
+            "\n[bold magenta]💤 Entering REM Sleep. Forge is initiating autonomous software prototyping...[/bold magenta]"
+        )
+
+        # 1. Enforce REM Paralysis (Git Sandbox)
+        branch = enforce_rem_paralysis(project)
+        if not branch:
+            return  # Safety abort
+
+        # 2. Bypass HITL ONLY because we are sandboxed
+        os.environ["BRAIN_OS_HEADLESS"] = "1"
+
+        # 3. Token Economics Guardrail
+        # We explicitly instruct the PM to limit scope so it doesn't burn $20 in one dream.
+        prompt = (
+            f"You are operating in a REM Sleep Dream State (Branch: {branch}). "
+            f"Look at the code in Studio/{project}. Formulate ONE small, highly experimental feature or refactor. "
+            f"Use the operate_forge tool to build it. "
+            f"CRITICAL TOKEN ECONOMICS: Limit the Forge execution to a single focused task. Do not rewrite the whole app."
+        )
+
+        execute_pipeline(prompt, "FORGE", "STUDIO")
+
+        console.print(
+            f"\n[bold green]🌅 Host awakened. Dream safely preserved in Git branch: {branch}.[/bold green]"
+        )
+        console.print(
+            "[dim]Use 'git diff main' in that directory to review the AI's autonomous work.[/dim]"
+        )
 
 
 @app.command()
