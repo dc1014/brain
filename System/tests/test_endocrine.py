@@ -1,6 +1,6 @@
 import os
 import pytest
-from System.endocrine import (
+from System.organs.endocrine import (
     release_cortisol,
     release_dopamine,
     is_cortisol_active,

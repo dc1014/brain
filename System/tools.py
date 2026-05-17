@@ -274,7 +274,7 @@ def execute_command(command: str, directory_path: str) -> str:
         # 2. Check for injury (Non-zero exit code)
         if result.returncode != 0:
             # --- 🦠 MICROGLIA TRIGGER (Immune System) ---
-            from System.microglia import trigger_immune_response
+            from System.organs.microglia import trigger_immune_response
 
             healed, new_output = trigger_immune_response(
                 command, error, str(target_path)
@@ -528,14 +528,14 @@ def create_engram_tool(name: str, description: str, commands: str) -> str:
     Saves a sequence of bash/shell commands into procedural muscle memory.
     Use this when you successfully complete a complex, multi-step task that will likely be repeated.
     """
-    from System.cerebellum import save_engram
+    from System.organs.cerebellum import save_engram
 
     return save_engram(name, description, commands)
 
 
 def list_engrams_tool() -> str:
     """Lists all available muscle memory scripts (engrams) the system knows how to do instantly."""
-    from System.cerebellum import list_engrams
+    from System.organs.cerebellum import list_engrams
 
     return list_engrams()
 
@@ -545,6 +545,6 @@ def execute_engram_tool(name: str, args: str = "") -> str:
     Instantly executes a learned engram (bash script).
     Use this instead of manually executing shell commands if an engram already exists.
     """
-    from System.cerebellum import execute_engram
+    from System.organs.cerebellum import execute_engram
 
     return execute_engram(name, args)

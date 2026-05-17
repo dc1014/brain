@@ -1,13 +1,17 @@
-from System.interoception import log_metabolism, check_energy_levels, DAILY_TOKEN_LIMIT
+from System.organs.interoception import (
+    log_metabolism,
+    check_energy_levels,
+    DAILY_TOKEN_LIMIT,
+)
 
 
 def test_metabolism_tracking(monkeypatch, tmp_path):
     """Proves the Vagus nerve correctly tracks token burn and triggers exhaustion."""
     # 1. Sandbox the file system
     monkeypatch.setattr(
-        "System.interoception.METABOLISM_FILE", tmp_path / "metabolism.json"
+        "System.organs.interoception.METABOLISM_FILE", tmp_path / "metabolism.json"
     )
-    monkeypatch.setattr("System.interoception.LOG_DIR", tmp_path)
+    monkeypatch.setattr("System.organs.interoception.LOG_DIR", tmp_path)
 
     # 2. Initially zero
     is_exhausted, tokens = check_energy_levels()

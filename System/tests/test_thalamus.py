@@ -1,4 +1,4 @@
-from System.thalamus import filter_attention
+from System.organs.thalamus import filter_attention
 
 
 def test_thalamus_fast_path():
@@ -18,7 +18,7 @@ def test_thalamus_filtering(monkeypatch):
 
     # Mock the LLM to return a specific filtered string
     monkeypatch.setattr(
-        "System.thalamus.completion",
+        "System.organs.thalamus.completion",
         lambda *args, **kwargs: type(
             "Mock",
             (),

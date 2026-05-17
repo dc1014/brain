@@ -54,7 +54,7 @@ def task(
         help="Release Dopamine: Increase creativity and neural temperature.",
     ),
 ) -> None:
-    from System.endocrine import release_cortisol, release_dopamine
+    from System.organs.endocrine import release_cortisol, release_dopamine
 
     if urgent is True:
         release_cortisol()
@@ -607,7 +607,7 @@ def init() -> None:
 @app.command()
 def start_autonomic():
     """Wakes up the Autonomic Nervous System (Background Pacemaker)."""
-    from System.autonomic import run_pacemaker
+    from System.organs.autonomic import run_pacemaker
 
     run_pacemaker()
 

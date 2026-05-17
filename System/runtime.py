@@ -5,8 +5,8 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from litellm import completion  # type: ignore
-from System.amygdala import scan_prompt
-from System.interoception import check_energy_levels, log_metabolism
+from System.organs.amygdala import scan_prompt
+from System.organs.interoception import check_energy_levels, log_metabolism
 
 
 from System.llm import run_agent, get_system_context
@@ -82,7 +82,7 @@ def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
                 domain = line.split("DOMAIN:")[1].strip()
 
         # --- THE VAGUS NERVE: Log the Dispatcher's metabolism ---
-        from System.interoception import log_metabolism
+        from System.organs.interoception import log_metabolism
 
         log_metabolism(usage_data.get("total_tokens", 0))
 
@@ -128,7 +128,7 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
 
         # Biological Fatigue: Down-shift to cheap heuristic models if exhausted
         if is_exhausted:
-            from System.endocrine import is_cortisol_active
+            from System.organs.endocrine import is_cortisol_active
 
             if is_cortisol_active():
                 console.print(

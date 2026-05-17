@@ -1,15 +1,15 @@
 def test_cerebellum_muscle_memory(monkeypatch, tmp_path):
     """Proves the Cerebellum can save, list, and index procedural muscle memory."""
-    from System.cerebellum import save_engram, list_engrams
+    from System.organs.cerebellum import save_engram, list_engrams
 
     # 1. Sandbox the Cerebellum
     root = tmp_path
     engram_dir = root / "System" / "engrams"
     index_file = engram_dir / "index.json"
 
-    monkeypatch.setattr("System.cerebellum.ROOT_DIR", root)
-    monkeypatch.setattr("System.cerebellum.ENGRAM_DIR", engram_dir)
-    monkeypatch.setattr("System.cerebellum.INDEX_FILE", index_file)
+    monkeypatch.setattr("System.organs.cerebellum.ROOT_DIR", root)
+    monkeypatch.setattr("System.organs.cerebellum.ENGRAM_DIR", engram_dir)
+    monkeypatch.setattr("System.organs.cerebellum.INDEX_FILE", index_file)
 
     # 2. Save an Engram
     result = save_engram(

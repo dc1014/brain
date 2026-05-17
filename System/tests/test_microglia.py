@@ -1,4 +1,4 @@
-from System.microglia import trigger_immune_response
+from System.organs.microglia import trigger_immune_response
 
 
 def test_microglia_successful_heal(monkeypatch, tmp_path):
@@ -6,7 +6,7 @@ def test_microglia_successful_heal(monkeypatch, tmp_path):
 
     # 1. Mock the LLM to return a cross-platform valid fix command
     monkeypatch.setattr(
-        "System.microglia.completion",
+        "System.organs.microglia.completion",
         lambda *args, **kwargs: type(
             "Mock",
             (),
@@ -30,7 +30,7 @@ def test_microglia_successful_heal(monkeypatch, tmp_path):
         )(),
     )
 
-    monkeypatch.setattr("System.microglia.is_safe_path", lambda x: True)
+    monkeypatch.setattr("System.organs.microglia.is_safe_path", lambda x: True)
 
     # 2. Trigger an intentional failure (reading a file that doesn't exist using python)
     failed_cmd = "python -c \"open('missing_file.txt', 'r').read()\""
@@ -52,7 +52,7 @@ def test_microglia_failed_heal(monkeypatch, tmp_path):
 
     # Mock LLM to return a useless fix
     monkeypatch.setattr(
-        "System.microglia.completion",
+        "System.organs.microglia.completion",
         lambda *args, **kwargs: type(
             "Mock",
             (),
@@ -68,7 +68,7 @@ def test_microglia_failed_heal(monkeypatch, tmp_path):
         )(),
     )
 
-    monkeypatch.setattr("System.microglia.is_safe_path", lambda x: True)
+    monkeypatch.setattr("System.organs.microglia.is_safe_path", lambda x: True)
 
     failed_cmd = 'python -c "import nonexistent_module_12345"'
     initial_stderr = "ModuleNotFoundError: No module named 'nonexistent_module_12345'"

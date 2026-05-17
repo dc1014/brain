@@ -85,7 +85,7 @@ def get_system_context(
 
                 # --- 🧠 THALAMUS TRIGGER (Semantic Attention) ---
                 if prompt:
-                    from System.thalamus import filter_attention
+                    from System.organs.thalamus import filter_attention
 
                     content = filter_attention(prompt, content)
 

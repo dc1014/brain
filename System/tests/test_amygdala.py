@@ -1,4 +1,4 @@
-from System.amygdala import scan_prompt
+from System.organs.amygdala import scan_prompt
 
 
 def test_amygdala_safe_prompt():
