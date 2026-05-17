@@ -1,4 +1,5 @@
 import textwrap
+import json
 from datetime import datetime
 from rich.console import Console
 from System.core.paths import ROOT_DIR
@@ -17,13 +18,18 @@ def map_system_topology() -> str:
         topology_file = ROOT_DIR / "Meta" / "system_topology.md"
         topology_file.parent.mkdir(parents=True, exist_ok=True)
 
-        # 1. Read Active Motor Cortex State
-        try:
-            from System.tools.execution import ACTIVE_PROCESSES
-
-            active_nodes = len(ACTIVE_PROCESSES)
-        except ImportError:
-            active_nodes = 0
+        # 1. Read Active Motor Cortex State from Proprioceptive Json Registry
+        # ⚡ ZERO-DEBT: Decoupled from execution memory loops, reading standard tracking paths
+        state_file = ROOT_DIR / "Meta" / "Proprioception" / "motor_state.json"
+        active_nodes = 0
+        if state_file.exists():
+            try:
+                with open(state_file, "r", encoding="utf-8") as f:
+                    state_data = json.load(f)
+                    if isinstance(state_data, dict):
+                        active_nodes = len(state_data)
+            except Exception:
+                active_nodes = 0
 
         # 2. Read Hippocampus FTS5 State
         db_path = ROOT_DIR / "System" / "config" / "hippocampus.db"
@@ -36,13 +42,12 @@ def map_system_topology() -> str:
         )
 
         # 4. 🧠 DYNAMIC PARIETAL LOBE CRAWL
-        # We invoke the spatial mapper on the System folder to dynamically trace file dependencies
         system_dir = ROOT_DIR / "System"
         dynamic_mermaid_graph = generate_spatial_map(
             str(system_dir), output_format="mermaid", map_type="code"
         )
 
-        # ⚡ SHIFT-LEFT: Strip the markdown fences from the dynamic graph so we can combine it with the vitals
+        # ⚡ SHIFT-LEFT: Strip the markdown fences from the dynamic graph
         clean_dynamic_graph = dynamic_mermaid_graph.replace(
             "```mermaid\ngraph TD\n", ""
         ).replace("\n```", "")

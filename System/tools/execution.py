@@ -7,13 +7,10 @@ from rich.console import Console
 from System.core.paths import ROOT_DIR
 from .sandbox import is_safe_path
 from System.core.schemas import ExecutionResult
+from typing import Optional
 import socket
-import time
 import sys
-from typing import Optional, Dict
 
-# The Motor Cortex's active memory of running background servers
-ACTIVE_PROCESSES: Dict[str, subprocess.Popen] = {}
 
 console = Console()
 
@@ -155,7 +152,7 @@ async def execute_command_async(command: str, directory_path: str) -> ExecutionR
                 "\n[bold yellow]⚠️ Execution failed. Triggering Async Microglia immune response...[/bold yellow]"
             )
             healed, heal_msg = await trigger_immune_response_async(
-                command, full_output, str(path_result)
+                command, full_output, path_result
             )
 
             if healed:
@@ -263,68 +260,15 @@ def manage_background_process(
 ) -> str:
     """
     MOTOR CORTEX: Manages non-blocking background servers (like Vite/React).
-    Includes health checks to ensure the server actually bound to the port.
+    Delegates to the Proprioceptive system to prevent zombie processes.
     """
-    global ACTIVE_PROCESSES
+    from System.neuroanatomy.autonomic.proprioception import (
+        manage_background_process as proprioceptive_manage,
+    )
 
-    if action == "list":
-        if not ACTIVE_PROCESSES:
-            return "No active background processes."
-        return "Active processes:\n" + "\n".join(
-            [f"PID {p.pid}: {cmd}" for cmd, p in ACTIVE_PROCESSES.items()]
-        )
-
-    if action == "stop":
-        stopped = 0
-        for cmd, p in list(ACTIVE_PROCESSES.items()):
-            p.terminate()
-            del ACTIVE_PROCESSES[cmd]
-            stopped += 1
-        return f"Stopped {stopped} active processes."
-
-    if action == "start":
-        if not command:
-            return "Error: Command required to start a process."
-
-        # ⚡ SHIFT-LEFT: Cure the Windows Subprocess Bug
-        if sys.platform == "win32":
-            if command.startswith("npm "):
-                command = command.replace("npm ", "npm.cmd ", 1)
-            elif command.startswith("npx "):
-                command = command.replace("npx ", "npx.cmd ", 1)
-
-        try:
-            target_dir = (ROOT_DIR / cwd_path).resolve()
-            target_dir.mkdir(parents=True, exist_ok=True)
-
-            # Start detached process so the LLM doesn't hang forever
-            process = subprocess.Popen(
-                command,
-                shell=True,
-                cwd=str(target_dir),
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            ACTIVE_PROCESSES[command] = process
-
-            # 🧠 PROPRIOCEPTION: The Health Check
-            if port:
-                for _ in range(15):  # Poll for 15 seconds
-                    if is_port_in_use(port):
-                        return f"Success: Background process started. Health check passed: Port {port} is active."
-                    time.sleep(1)
-
-                # If it failed to bind, kill it and report the crash
-                process.terminate()
-                del ACTIVE_PROCESSES[command]
-                return f"Error: Process started but failed to bind to port {port} within 15 seconds. The server crashed (likely due to missing npm packages)."
-
-            return f"Success: Background process started (PID {process.pid}). No port health check requested."
-
-        except Exception as e:
-            return f"Error starting background process: {str(e)}"
-
-    return "Error: Invalid action. Use 'start', 'stop', or 'list'."
+    return proprioceptive_manage(
+        action=action, name="", command=command, cwd=cwd_path, port=port
+    )
 
 
 def deploy_project(directory_path: str, provider: str = "custom") -> ExecutionResult:

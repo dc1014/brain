@@ -574,28 +574,32 @@ def test_write_multiple_files_batch_and_security(monkeypatch, tmp_path):
 
 def test_motor_cortex_background_proprioception(mocker):
     """
-    Zero-Debt Test: Ensures manage_background_process correctly applies Windows
-    formatting, polls ports for health checks, and returns success.
+    Zero-Debt Test: Ensures manage_background_process correctly targets the unified
+    Proprioceptive background subsystem and triggers execution tracking accurately.
     """
-    # 1. Mock the subprocess and the port scanner
-    mock_popen = mocker.patch("System.tools.execution.subprocess.Popen")
-    mock_popen.return_value.pid = 9999
-
-    # Simulate port successfully opening after 2 seconds
-    mocker.patch(
-        "System.tools.execution.is_port_in_use", side_effect=[False, False, True]
+    # 1. Mock the unified proprioceptive management handler instead of execution internals
+    mock_proprio = mocker.patch(
+        "System.neuroanatomy.autonomic.proprioception.manage_background_process",
+        return_value="SUCCESS: Process started and verified bound to port 3000.",
     )
-    mocker.patch("System.tools.execution.time.sleep")  # Speed up test
 
-    # 2. Execute
+    # 2. Fire execution parameters through the Motor Cortex tool bridge
     result = manage_background_process(
-        action="start", command="npm run dev", port=5173, cwd_path="Studio"
+        action="start",
+        command="npm run dev",
+        port=3000,
+        cwd_path="Studio/Brain-Website",
     )
 
-    # 3. Validation
-    assert "Success" in result
-    assert "Port 5173 is active" in result
-    assert mock_popen.called
+    # 3. Strict Validation: Ensure validation pipelines pass cleanly through the bridge
+    assert "SUCCESS" in result
+    mock_proprio.assert_called_once_with(
+        action="start",
+        name="",
+        command="npm run dev",
+        cwd="Studio/Brain-Website",
+        port=3000,
+    )
 
 
 def test_diagnostic_vital_compilation(monkeypatch, tmp_path):

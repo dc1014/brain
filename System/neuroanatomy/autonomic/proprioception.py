@@ -1,6 +1,11 @@
 import json
 import subprocess
 import shlex
+import atexit
+import socket
+import time
+import sys
+from typing import Optional
 from pathlib import Path
 from rich.console import Console
 
@@ -26,19 +31,62 @@ def _save_state(state: dict) -> None:
         json.dump(state, f, indent=2)
 
 
-# FIX 1: Add the | None to satisfy Mypy
-def start_process(name: str, command: str, cwd: str | None = None) -> str:
+def sweep_zombies() -> None:
+    """Kills all tracked processes to prevent port locking on shutdown."""
+    import psutil
+
+    state = _load_state()
+    if not state:
+        return
+
+    killed_count = 0
+    for name, info in list(state.items()):
+        pid = info.get("pid")
+        if not pid:
+            continue
+        try:
+            if psutil.pid_exists(pid):
+                parent = psutil.Process(pid)
+                for child in parent.children(recursive=True):
+                    child.kill()
+                parent.kill()
+                killed_count += 1
+        except Exception:
+            pass
+
+    if killed_count > 0:
+        # Use native print as rich console may be torn down during OS exit
+        print(
+            f"\n🧠 Proprioception: Swept {killed_count} zombie processes on shutdown."
+        )
+
+    _save_state({})
+
+
+# ⚡ ZERO-DEBT: Bind the death sweep to the OS lifecycle
+atexit.register(sweep_zombies)
+
+
+def is_port_in_use(port: int) -> bool:
+    """Proprioceptive sensory check: verifies if a port is actually transmitting."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(("localhost", port)) == 0
+
+
+def start_process(
+    name: str, command: str, cwd: str | None = None, port: Optional[int] = None
+) -> str:
     """Starts a long-running background process securely."""
     from System.neuroanatomy.limbic.amygdala import scan_command
     from System.neuroanatomy.systemic.blood_brain_barrier import validate_execution_path
-    from System.tools import ROOT_DIR
+    from System.core.paths import ROOT_DIR
+    import psutil
 
     # Amygdala Threat Scan
     is_safe_command, reason = scan_command(command)
     if not is_safe_command:
         return reason
 
-    # Default to a safe zone (Studio) instead of ROOT_DIR
     target_cwd = cwd if cwd else str(ROOT_DIR / "Studio")
     is_safe_path, safe_cwd = validate_execution_path(target_cwd)
     if not is_safe_path:
@@ -46,11 +94,19 @@ def start_process(name: str, command: str, cwd: str | None = None) -> str:
 
     state = _load_state()
     if name in state:
-        return f"ERROR: Process '{name}' is already running. Please stop it first."
+        if psutil.pid_exists(state[name]["pid"]):
+            return f"ERROR: Process '{name}' is already running. Please stop it first."
 
-    # 3. Secure Execution (shell=False + shlex parsing)
+    # ⚡ SHIFT-LEFT: Cure the Windows Subprocess Bug
+    if sys.platform == "win32":
+        if command.startswith("npm "):
+            command = command.replace("npm ", "npm.cmd ", 1)
+        elif command.startswith("npx "):
+            command = command.replace("npx ", "npx.cmd ", 1)
+
     try:
-        args = shlex.split(command)
+        # We use posix mapping to ensure Windows backslashes aren't destroyed by shlex
+        args = shlex.split(command, posix=(sys.platform != "win32"))
         process = subprocess.Popen(
             args,
             shell=False,
@@ -61,6 +117,18 @@ def start_process(name: str, command: str, cwd: str | None = None) -> str:
 
         state[name] = {"pid": process.pid, "command": command, "cwd": safe_cwd}
         _save_state(state)
+
+        # 🧠 PROPRIOCEPTION: The Health Check
+        if port:
+            for _ in range(15):  # Poll for 15 seconds
+                if is_port_in_use(port):
+                    return f"SUCCESS: Process '{name}' started and verified bound to port {port}."
+                time.sleep(1)
+
+            # If it failed to bind, slaughter it
+            stop_process(name)
+            return f"ERROR: Process '{name}' started but failed to bind to port {port} within 15 seconds. It crashed."
+
         return (
             f"SUCCESS: Process '{name}' started with PID {process.pid} in {safe_cwd}."
         )
@@ -115,22 +183,31 @@ def list_processes() -> str:
         _save_state(state)
         output += f"\n(Cleaned up {len(dead_procs)} dead processes)"
 
+    if len(state) == 0:
+        return "No background processes running."
+
     return output
 
 
 def manage_background_process(
-    action: str, name: str = "", command: str = "", cwd: str = ""
+    action: str,
+    name: str = "",
+    command: str = "",
+    cwd: str = "",
+    port: Optional[int] = None,
 ) -> str:
     """Tool interface for managing background processes."""
     action = action.lower()
     if action == "start":
-        if not name or not command:
-            return "ERROR: 'name' and 'command' required to start."
-        return start_process(name, command, cwd)
+        if not command:
+            return "ERROR: 'command' required to start."
+        proc_name = name if name else command.split()[0]
+        return start_process(proc_name, command, cwd, port)
     elif action == "stop":
-        if not name:
-            return "ERROR: 'name' required to stop."
-        return stop_process(name)
+        if not name and not command:
+            return "ERROR: 'name' or 'command' required to stop."
+        proc_name = name if name else command.split()[0]
+        return stop_process(proc_name)
     elif action == "list":
         return list_processes()
     else:
