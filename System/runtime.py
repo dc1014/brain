@@ -189,6 +189,7 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
         commit_transaction,
         restore_balance,
     )
+    from System.neuroanatomy.cortical.prefrontal import WorkingMemory
 
     commit_transaction()
 
@@ -197,7 +198,6 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
         available_tools = yaml.safe_load(f)
 
     pipeline = list(AGENT_CONFIG["routes"].get(route_type, []))
-    current_payload = description
     eval_retries = 0
     MAX_RETRIES = 1
 
@@ -211,8 +211,14 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
     agents_invoked: list[str] = []
     pipeline_aborted = False
 
+    # 🧠 Initialize the Semantic Compressor Buffer
+    pfc_memory = WorkingMemory(description)
+
     while len(pipeline) > 0:
         step = pipeline.pop(0)
+
+        # Hydrate the input payload context dynamically from the PFC working memory
+        current_payload = pfc_memory.get_current_context()
 
         # --- 🧠 PREFRONTAL CORTEX: Parallel Swarm Execution ---
         if "swarm" in step:
@@ -220,8 +226,6 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
             console.print(
                 f"\n[bold magenta]🧠 Prefrontal Cortex: Spawning swarm of {len(swarm_steps)} agents in parallel...[/bold magenta]"
             )
-
-            swarm_outputs = []
 
             async def _execute_swarm_batch():
                 async def _task(sub_step):
@@ -254,9 +258,7 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
             for agent_name, step_result in swarm_results:
                 step_tokens = step_result.usage.get("total_tokens", 0)
                 total_pipeline_tokens += step_tokens
-                await asyncio.to_thread(
-                    log_metabolism, step_tokens
-                )  # ⚡ Prevent Async Block
+                await asyncio.to_thread(log_metabolism, step_tokens)
                 agents_invoked.append(agent_name)
 
                 display_text = step_result.text
@@ -272,21 +274,18 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
                         border_style="magenta",
                     )
                 )
-                swarm_outputs.append(
-                    f"--- {agent_name} Output ---\n{step_result.text}\nActions: {step_result.actions}"
-                )
 
-            current_payload = (
-                f"Original Task: {description}\n\nSwarm Operations Complete:\n"
-                + "\n\n".join(swarm_outputs)
-            )
+                # ⚡ ZERO-DEBT: Direct, non-interleaved logging to the PFC Semantic Compressor
+                out_summary = f"--- {agent_name} Output ---\n{step_result.text}\nActions: {step_result.actions}"
+                pfc_memory.add_event("Swarm Cohort", out_summary, [])
 
-            # 💾 SHIFT-LEFT: Synaptic Consolidation (Save Swarm Progress)
+            # Autonomically evaluate memory weight and compress to block token leakage
+            await pfc_memory.compress_if_bloated()
+
             commit_transaction()
             console.print(
                 "\n[bold green]💾 Synaptic Consolidation: Swarm milestone committed to disk.[/bold green]"
             )
-
             continue
 
         # --- 🚂 STANDARD LINEAR EXECUTION ---
@@ -316,7 +315,7 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
 
         step_tokens = step_result.usage.get("total_tokens", 0)
         total_pipeline_tokens += step_tokens
-        await asyncio.to_thread(log_metabolism, step_tokens)  # ⚡ Prevent Async Block
+        await asyncio.to_thread(log_metabolism, step_tokens)
 
         display_text = step_result.text
         if step_result.actions:
@@ -340,17 +339,19 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
             pipeline_aborted = True
             break
 
-        # 💾 SHIFT-LEFT: Synaptic Consolidation (Decoupled Milestone Logic)
         if agent_cfg.get("creates_milestone", True):
             commit_transaction()
             console.print(
                 f"\n[dim green]💾 Synaptic Consolidation: {agent_cfg['name']} milestone committed to disk.[/dim green]"
             )
 
+        # Update and myelinate current pipeline state transitions
+        pfc_memory.add_event(agent_cfg["name"], step_result.text, step_result.actions)
+        await pfc_memory.compress_if_bloated()
+
         # --- 🗣️ BROCA'S AREA (Data Contract Validation & RETRY LOOP) ---
         if step["agent"] == "qa_auditor":
             try:
-                # ⚡ BULLETPROOF JSON PARSING
                 clean_text = step_result.text.strip()
                 if clean_text.startswith("```json"):
                     clean_text = clean_text[7:-3].strip()
@@ -415,7 +416,8 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
                         },
                     )
 
-                    current_payload = f"Original Task: {description}\n\n{critique_msg}"
+                    # Inject error critiques straight into the semantic memory track
+                    pfc_memory.add_event("QA System", critique_msg, [])
                     eval_retries += 1
                     continue
                 else:
@@ -424,8 +426,6 @@ async def execute_pipeline(description: str, route_type: str, domain: str) -> No
                     )
                     pipeline_aborted = True
                     break
-
-        current_payload = f"Original Task: {description}\n\nPrevious Output:\n{step_result.text}\n\nActions Taken:\n{step_result.actions}"
 
     agent_summary = ", ".join(
         [f"{agent} (x{agents_invoked.count(agent)})" for agent in set(agents_invoked)]

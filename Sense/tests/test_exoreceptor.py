@@ -75,4 +75,4 @@ async def test_exoreceptor_synaptic_fatigue_ddos(mocker):
     # Pulse 3: Synaptic Fatigue (429 Too Many Requests)
     resp3 = await receptor.handle_acp_pulse(mock_req)
     assert resp3.status == 429
-    assert "Synaptic Fatigue" in resp3.text
+    assert "Synaptic Fatigue" in str(resp3.text)
