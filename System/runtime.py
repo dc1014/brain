@@ -28,10 +28,11 @@ vault.secure_environment()
 console = Console()
 
 CONFIG_DIR = ROOT_DIR / "System" / "config"
+AGENT_CONFIG: dict[str, Any] = {}
+
 try:
     # 🧬 DNA POLYMERASE: Proofread the OS genetic code before booting
     proofread_yaml_dna(CONFIG_DIR)
-    AGENT_CONFIG: dict[str, Any] = {}
 
     # ⚡ SHIFT-LEFT: Unifying the Limbic Config
     config_files = [
@@ -42,11 +43,20 @@ try:
         "webhooks.yaml",
         "tools.yaml",
     ]
+
+    raw_config: dict[str, Any] = {}
     for file in config_files:
         filepath = CONFIG_DIR / file
         if filepath.exists():
             with open(filepath, "r", encoding="utf-8") as f:
-                AGENT_CONFIG.update(yaml.safe_load(f) or {})
+                raw_config.update(yaml.safe_load(f) or {})
+
+    # 🛡️ IMMUNE SYSTEM: Validate structural integrity of the YAML DNA
+    from System.core.config_proofreader import proofread_global_config
+
+    validated_dna = proofread_global_config(raw_config)
+    AGENT_CONFIG = validated_dna.model_dump()
+
 except Exception as e:
     console.print(f"[bold red]BOOT WARNING: Config failed to load ({e}).[/bold red]")
     AGENT_CONFIG = {"agents": {}, "routes": {}, "models": {}}
