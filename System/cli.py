@@ -614,16 +614,27 @@ def start_autonomic():
 
 @app.command()
 def observe(
-    project: str = typer.Argument(
-        ..., help="The name of the project folder in the Studio directory to observe."
+    target: str = typer.Argument(
+        ...,
+        help="The path to the project folder (for code) or specific file (for writing).",
+    ),
+    writing: bool = typer.Option(
+        False,
+        "--writing",
+        "-w",
+        help="Observe writing style instead of code style. Requires a specific file path.",
     ),
 ) -> None:
-    """Mirror Neurons: Scans human code to deduce style and proposes genetic alignment mutations."""
+    """Mirror Neurons: Scans human code or prose to deduce style and proposes genetic alignment mutations."""
     from System.organs.mirror_neurons import observe_human_behavior
 
-    # Headless mode for tool bypass
     os.environ["BRAIN_OS_HEADLESS"] = "1"
-    observe_human_behavior(project)
+
+    # We add Studio/ automatically if it's not a writing file for backwards compatibility
+    if not writing and not target.startswith("Studio/"):
+        target = f"Studio/{target}"
+
+    observe_human_behavior(target, is_writing=writing)
 
 
 if __name__ == "__main__":
