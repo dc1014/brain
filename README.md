@@ -77,6 +77,10 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 13. Semantic Caching (Enteric Nervous System)
 * **The "Second Brain":** The Enteric Nervous System handles highly familiar, instinctual situations instantly without consulting the Prefrontal Cortex.
 * **Gut Reflexes:** In Brain OS, if you submit a prompt that is >90% semantically similar to a prompt you have used before (e.g., "Run my python tests" vs "Run my python test"), the `enteric.py` organ completely bypasses the expensive Dispatcher LLM. It instantly regurgitates the cached routing configuration, bringing the routing latency from ~5 seconds to 0.01 seconds and costing exactly $0.00 in API tokens.
+
+### 14. Empathy & Alignment (Mirror Neurons)
+* **Biological Imitation:** Mirror neurons fire when observing another entity, mapping their behavior onto your own brain to foster social alignment.
+* **Stylistic Mimicry:** By running `brain observe <project_name>`, the `mirror_neurons.py` organ scans the code you have manually written. It deduces your exact stylistic preferences (variable casing, commenting structures, architectural patterns) and stages `<neuroplasticity>` tags in the `Mutations.md` file. Once evolved, Brain OS permanently aligns its coding output to match your personal developer DNA.
 ---
 
 ## 🏗️ Architecture & Routing

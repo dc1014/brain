@@ -612,5 +612,19 @@ def start_autonomic():
     run_pacemaker()
 
 
+@app.command()
+def observe(
+    project: str = typer.Argument(
+        ..., help="The name of the project folder in the Studio directory to observe."
+    ),
+) -> None:
+    """Mirror Neurons: Scans human code to deduce style and proposes genetic alignment mutations."""
+    from System.organs.mirror_neurons import observe_human_behavior
+
+    # Headless mode for tool bypass
+    os.environ["BRAIN_OS_HEADLESS"] = "1"
+    observe_human_behavior(project)
+
+
 if __name__ == "__main__":
     app()
