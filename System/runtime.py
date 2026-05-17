@@ -9,12 +9,11 @@ from dotenv import load_dotenv
 
 from System.core.paths import ROOT_DIR
 from System.neuroanatomy.systemic.immune_system import vault
-from System.neuroanatomy.limbic.amygdala import scan_prompt
 from System.neuroanatomy.autonomic.interoception import (
     check_energy_levels,
     log_metabolism,
 )
-from System.llm import acompletion, run_agent_async, get_system_context
+from System.llm import run_agent_async, get_system_context
 
 # ⚡ ZERO-DEBT: Import the isolated OS DNA
 from System.core.dna import AGENT_CONFIG
@@ -26,102 +25,6 @@ load_dotenv()
 vault.secure_environment()
 
 console = Console()
-
-
-async def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
-    """Analyzes a user prompt using the Dispatcher to determine validity, routing, and domain context."""
-
-    # --- 🦠 ENTERIC NERVOUS SYSTEM (Gut Reaction) ---
-    from System.neuroanatomy.systemic.enteric import get_gut_reaction, save_gut_reaction
-
-    # ⚡ SHIFT-LEFT: Prevent Async Blocking on File I/O
-    gut_reflex = await asyncio.to_thread(get_gut_reaction, prompt)
-    if gut_reflex:
-        return gut_reflex
-    zero_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-
-    # --- 1. THE AMYGDALA (Shift-Left Threat Detection) ---
-    is_safe, threat_reason = await asyncio.to_thread(scan_prompt, prompt)
-    if not is_safe:
-        return False, threat_reason, "NONE", "NONE", zero_usage
-
-    # --- 2. THE PREFRONTAL CORTEX (Dispatcher LLM) ---
-    dispatcher_cfg = AGENT_CONFIG["agents"]["dispatcher"]
-    system_prompt = dispatcher_cfg["system_prompt"] + get_system_context(
-        ["Meta"], prompt=prompt
-    )
-
-    try:
-        base_model = AGENT_CONFIG["models"][dispatcher_cfg["model"]]
-
-        # 🧠 CORPUS CALLOSUM: Route Dispatcher (Analytical) to Left Brain
-        from System.neuroanatomy.pathways.corpus_callosum import route_hemisphere
-
-        actual_model = route_hemisphere("DISPATCHER", base_model)
-
-        response = await acompletion(
-            model=actual_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.0,
-            response_format={"type": "json_object"},
-            api_key=vault.get_api_key_for_model(actual_model),  # 🛡️ SECURE INJECTION
-        )
-        raw_text = str(response.choices[0].message.content).strip()
-
-        usage_data = zero_usage.copy()
-        if hasattr(response, "usage") and response.usage:
-            usage_data["prompt_tokens"] = int(
-                getattr(response.usage, "prompt_tokens", 0)
-            )
-            usage_data["completion_tokens"] = int(
-                getattr(response.usage, "completion_tokens", 0)
-            )
-            usage_data["total_tokens"] = int(getattr(response.usage, "total_tokens", 0))
-
-        if "REJECTED:" in raw_text.upper():
-            reason = raw_text.upper().split("REJECTED:")[1].strip(" \"'}\n").strip()
-            return False, reason, "NONE", "NONE", usage_data
-
-        try:
-            clean_text = raw_text.strip()
-            if clean_text.startswith("```json"):
-                clean_text = clean_text[7:]
-            if clean_text.endswith("```"):
-                clean_text = clean_text[:-3]
-            clean_text = clean_text.strip()
-
-            from System.core.schemas import DispatcherResult
-
-            data = DispatcherResult.model_validate_json(clean_text)
-            route = data.route.strip().upper()
-            domain = data.domain.strip().upper()
-
-            # Print the Thalamus reasoning so humans can observe the cognitive routing
-            console.print(
-                f"[dim green]🧠 Thalamus Reasoning: {data.reasoning}[/dim green]"
-            )
-
-        except Exception as e:
-            route = "UNKNOWN"
-            domain = "NONE"
-            console.print(f"[dim red]Thalamus Parsing Error: {e}[/dim red]")
-
-        # --- THE VAGUS NERVE: Log the Dispatcher's metabolism ---
-        # ⚡ SHIFT-LEFT: Prevent Async Blocking
-        await asyncio.to_thread(log_metabolism, usage_data.get("total_tokens", 0))
-
-        # --- 🦠 ENTERIC NERVOUS SYSTEM (Save Memory) ---
-        await asyncio.to_thread(
-            save_gut_reaction, prompt, True, "Approved.", route, domain
-        )
-
-        return True, "Approved.", route, domain, usage_data
-
-    except Exception as e:
-        return False, f"Dispatcher API Error: {str(e)}", "NONE", "NONE", zero_usage
 
 
 async def execute_pipeline(

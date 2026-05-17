@@ -2,9 +2,9 @@ import asyncio
 import json
 from rich.console import Console
 from rich.panel import Panel
-
+from System.neuroanatomy.limbic.thalamus import route_sensory_input
 from System.core.paths import ROOT_DIR
-from System.runtime import analyze_task, execute_pipeline
+from System.runtime import execute_pipeline
 
 console = Console()
 
@@ -19,7 +19,7 @@ async def dispatch_task(description: str, obsidian: bool = False) -> None:
         "[bold yellow]🛡️ Routing pulse through Basal Ganglia...[/bold yellow]",
         spinner="dots",
     ):
-        is_valid, reason, route_type, domain, _ = await analyze_task(description)
+        is_valid, reason, route_type, domain, _ = await route_sensory_input(description)
 
     if not is_valid:
         console.print(

@@ -87,3 +87,100 @@ def route_public_pulse(sender_id: str, payload: str, signature: str) -> str:
 
     exo = Exocortex()
     return exo.process_inbound_pulse(sender_id, payload, signature)
+
+
+async def route_sensory_input(prompt: str) -> tuple[bool, str, str, str, dict]:
+    """
+    THALAMUS: The Sensory Switchboard.
+    Analyzes an autonomous prompt using the Dispatcher to determine validity, routing, and domain.
+    """
+    import asyncio
+    from rich.console import Console
+    from System.neuroanatomy.systemic.enteric import get_gut_reaction, save_gut_reaction
+    from System.neuroanatomy.limbic.amygdala import scan_prompt
+    from System.core.dna import AGENT_CONFIG
+    from System.llm import acompletion, get_system_context
+    from System.neuroanatomy.systemic.immune_system import vault
+    from System.neuroanatomy.pathways.corpus_callosum import route_hemisphere
+    from System.core.schemas import DispatcherResult
+    from System.neuroanatomy.autonomic.interoception import log_metabolism
+
+    console = Console()
+
+    # --- 🦠 ENTERIC NERVOUS SYSTEM (Gut Reaction) ---
+    gut_reflex = await asyncio.to_thread(get_gut_reaction, prompt)
+    if gut_reflex:
+        return gut_reflex
+    zero_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+    # --- 🚨 THE AMYGDALA (Threat Detection) ---
+    is_safe, threat_reason = await asyncio.to_thread(scan_prompt, prompt)
+    if not is_safe:
+        return False, threat_reason, "NONE", "NONE", zero_usage
+
+    # --- 🧠 PREFRONTAL DISPATCHER (LLM Routing) ---
+    dispatcher_cfg = AGENT_CONFIG["agents"]["dispatcher"]
+    system_prompt = dispatcher_cfg["system_prompt"] + get_system_context(
+        ["Meta"], prompt=prompt
+    )
+
+    try:
+        base_model = AGENT_CONFIG["models"][dispatcher_cfg["model"]]
+        actual_model = route_hemisphere("DISPATCHER", base_model)
+
+        response = await acompletion(
+            model=actual_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.0,
+            response_format={"type": "json_object"},
+            api_key=vault.get_api_key_for_model(actual_model),
+        )
+        raw_text = str(response.choices[0].message.content).strip()
+
+        usage_data = zero_usage.copy()
+        if hasattr(response, "usage") and response.usage:
+            usage_data["prompt_tokens"] = int(
+                getattr(response.usage, "prompt_tokens", 0)
+            )
+            usage_data["completion_tokens"] = int(
+                getattr(response.usage, "completion_tokens", 0)
+            )
+            usage_data["total_tokens"] = int(getattr(response.usage, "total_tokens", 0))
+
+        if "REJECTED:" in raw_text.upper():
+            reason = raw_text.upper().split("REJECTED:")[1].strip(" \"'}\n").strip()
+            return False, reason, "NONE", "NONE", usage_data
+
+        try:
+            clean_text = raw_text.strip()
+            if clean_text.startswith("```json"):
+                clean_text = clean_text[7:-3]
+            elif clean_text.startswith("```"):
+                clean_text = clean_text[3:-3]
+
+            data = DispatcherResult.model_validate_json(clean_text.strip())
+            route = data.route.strip().upper()
+            domain = data.domain.strip().upper()
+
+            console.print(
+                f"[dim green]🧠 Thalamus Reasoning: {data.reasoning}[/dim green]"
+            )
+
+        except Exception as e:
+            route = "UNKNOWN"
+            domain = "NONE"
+            console.print(f"[dim red]Thalamus Parsing Error: {e}[/dim red]")
+
+        # --- THE VAGUS NERVE: Log metabolism & save memory ---
+        await asyncio.to_thread(log_metabolism, usage_data.get("total_tokens", 0))
+        await asyncio.to_thread(
+            save_gut_reaction, prompt, True, "Approved.", route, domain
+        )
+
+        return True, "Approved.", route, domain, usage_data
+
+    except Exception as e:
+        return False, f"Dispatcher API Error: {str(e)}", "NONE", "NONE", zero_usage
