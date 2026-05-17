@@ -58,8 +58,11 @@ async def log_interaction(
     async with MotorCortex.get_lock(LOG_FILE):
 
         def _write():
+            # 🛡️ IMMUNE SYSTEM: Final Outbound Efferent Scrubbing for JSON logs
+            raw_json = json.dumps(log_entry, default=str)
+            safe_json = vault.mask_secrets(raw_json)
             with open(LOG_FILE, "a", encoding="utf-8") as f:
-                f.write(json.dumps(log_entry, default=str) + "\n")
+                f.write(safe_json + "\n")
 
         await asyncio.to_thread(_write)
 
@@ -247,22 +250,28 @@ async def run_agent_async(
             "completion_tokens": total_comp,
             "total_tokens": total_prompt + total_comp,
         }
+
+        # 🛡️ IMMUNE SYSTEM: Scrub the LLM payload before it reaches the OS or Console
+        safe_final_text = vault.mask_secrets(final_text.strip())
+        safe_action_manifest = [vault.mask_secrets(a) for a in action_manifest]
+
         await log_interaction(
             role_name,
             model_string,
             system_prompt,
             user_prompt,
-            final_text + "\n\nACTIONS:\n" + "\n".join(action_manifest),
+            safe_final_text + "\n\nACTIONS:\n" + "\n".join(safe_action_manifest),
             usage_data,
             route,
             domain,
         )
         return AgentResponse(
-            text=final_text.strip(), actions=action_manifest, usage=usage_data
+            text=safe_final_text, actions=safe_action_manifest, usage=usage_data
         )
 
     except Exception as e:
-        error_msg = f"API/Execution Error: {str(e)}"
+        # 🛡️ IMMUNE SYSTEM: Scrub Python exception traces
+        error_msg = vault.mask_secrets(f"API/Execution Error: {str(e)}")
         usage_data = {
             "prompt_tokens": total_prompt,
             "completion_tokens": total_comp,

@@ -72,6 +72,22 @@ class SecretVault:
         """Safely retrieve an arbitrary protected secret for an internal organ."""
         return self._secrets.get(key)
 
+    def mask_secrets(self, text: str) -> str:
+        """
+        🛡️ EFFERENT SHIELD: Scrubs loaded vault secrets from any outbound text stream.
+        Prevents plain-text credential leaks to the console or log files.
+        """
+        if not text:
+            return text
+
+        scrubbed_text = str(text)
+        for key, secret in self._secrets.items():
+            # Defense in depth: Ignore empty strings or extremely short accidental matches
+            if secret and len(secret) > 4:
+                scrubbed_text = scrubbed_text.replace(secret, f"[{key}_REDACTED]")
+
+        return scrubbed_text
+
 
 # The Singleton Vault instance
 vault = SecretVault()

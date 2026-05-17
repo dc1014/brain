@@ -52,3 +52,28 @@ def test_nuclear_option_scrubbing(monkeypatch):
     # 4. Prove the Vault safely retained the keys in memory
     assert vault.get_api_key_for_model("openai/gpt-4o") == "sk-fake123"
     assert vault.get_api_key_for_model("anthropic/claude-3-5-sonnet") == "sk-ant-fake"
+
+
+def test_efferent_shield_secret_masking(monkeypatch):
+    """Proves the vault completely redacts active secrets from outbound text streams."""
+    # 1. Simulate the .env loading process with mock secrets
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-proj-super-secret-12345")
+    monkeypatch.setenv("DEPLOYMENT_TOKEN", "vercel_deploy_999")
+
+    # 2. Engage the Immune System Vault
+    vault = SecretVault()
+    vault.secure_environment()
+
+    # 3. Simulate an LLM accidentally leaking secrets in a response
+    raw_output = (
+        "Here is the key: sk-proj-super-secret-12345 and token vercel_deploy_999."
+    )
+
+    # 4. Pass through the Efferent Shield
+    safe_output = vault.mask_secrets(raw_output)
+
+    # 5. Strict Validation
+    assert "sk-proj-super-secret-12345" not in safe_output
+    assert "vercel_deploy_999" not in safe_output
+    assert "[OPENAI_API_KEY_REDACTED]" in safe_output
+    assert "[DEPLOYMENT_TOKEN_REDACTED]" in safe_output
