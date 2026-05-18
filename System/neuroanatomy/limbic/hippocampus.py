@@ -16,6 +16,7 @@ console = Console()
 DB_PATH = ROOT_DIR / "System" / "config" / "hippocampus.db"
 
 QUEUE_FILE_PATH = ROOT_DIR / "System" / "execution_queue.json"
+
 # =====================================================================
 # 1. EPHEMERAL WORKING MEMORY (SQLite FTS5)
 # =====================================================================

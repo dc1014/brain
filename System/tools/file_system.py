@@ -5,8 +5,10 @@ from datetime import datetime
 from System.core.paths import ROOT_DIR
 from .sandbox import is_safe_path, ALLOWED_DIRECTORIES
 from System.core.schemas import ExecutionResult
+from System.neuroanatomy.peripheral.motor import motor_neuron
 
 
+@motor_neuron(energy_cost=15)
 def write_safe_file(filepath: str, content: str) -> ExecutionResult:
     """Writes files safely, blocking writes outside the sandbox."""
     try:
@@ -99,6 +101,7 @@ def list_safe_directory(directory_path: str) -> ExecutionResult:
         return ExecutionResult(success=False, output=reason, block_reason=reason)
 
 
+@motor_neuron(energy_cost=20)
 def rename_safe_file(old_filepath: str, new_filepath: str) -> ExecutionResult:
     """Renames or moves a file within the safe zones."""
     try:
@@ -129,6 +132,7 @@ def rename_safe_file(old_filepath: str, new_filepath: str) -> ExecutionResult:
         return ExecutionResult(success=False, output=reason, block_reason=reason)
 
 
+@motor_neuron(energy_cost=10)
 def append_safe_file(filepath: str, content: str) -> ExecutionResult:
     """Appends content to a file safely, blocking writes outside the sandbox."""
     try:

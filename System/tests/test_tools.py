@@ -12,9 +12,11 @@ from System.tools import (
 )
 from System.tools.execution import manage_background_process
 from System.tools.diagnostic import get_system_vitals
+from unittest.mock import patch
 
 
-def test_write_safe_file_allowed(tmp_path: Path, mocker) -> None:  # type: ignore
+@patch("System.neuroanatomy.peripheral.motor.log_metabolism")
+def test_write_safe_file_allowed(mock_log, tmp_path: Path, mocker) -> None:  # type: ignore
 
     mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
@@ -30,7 +32,8 @@ def test_write_safe_file_allowed(tmp_path: Path, mocker) -> None:  # type: ignor
     assert (tmp_path / "Professional/README.md").exists()
 
 
-def test_security_blocks(tmp_path: Path, mocker) -> None:  # type: ignore
+@patch("System.neuroanatomy.peripheral.motor.log_metabolism")
+def test_security_blocks(mock_log, tmp_path: Path, mocker) -> None:  # type: ignore
     """Test that writing, reading, and listing outside boundaries are all blocked."""
 
     mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
@@ -98,7 +101,8 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
     # (Make sure to remove the accidentally pasted test_adr_safety_blocks from inside it!)
 
 
-def test_adr_safety_blocks(mocker) -> None:
+@patch("System.neuroanatomy.peripheral.motor.log_metabolism")
+def test_adr_safety_blocks(mock_log, mocker) -> None:
     """Ensure the AI cannot autonomously write, append, or rename ADR files."""
     from System.tools import append_safe_file, rename_safe_file, write_safe_file
 
