@@ -203,7 +203,8 @@ def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:  # type: ign
         )
 
     mocker.patch(
-        "System.runtime.run_agent_async", side_effect=mock_run_agent_side_effect
+        "System.neuroanatomy.cortical.prefrontal.run_agent_async",
+        side_effect=mock_run_agent_side_effect,
     )
 
     # Supply 'y' to authorize pipeline, 'n' to deny the retry.

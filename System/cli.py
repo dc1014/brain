@@ -6,7 +6,7 @@ from rich.console import Console
 import json
 import os
 import asyncio
-from System.runtime import execute_pipeline
+from System.neuroanatomy.cortical.prefrontal import execute_pipeline
 
 from System.core.paths import ROOT_DIR
 from System.core.boot import bootstrap

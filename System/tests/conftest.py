@@ -1,6 +1,7 @@
 import os
 import builtins
 import pytest
+import socket
 
 
 @pytest.fixture(autouse=True)
@@ -91,3 +92,33 @@ def protect_host_os(monkeypatch):
     execute 'git checkout' or 'rm -rf' on the host machine.
     """
     monkeypatch.setattr("os.system", lambda cmd: None)
+
+
+@pytest.fixture(autouse=True)
+def disable_network_calls(monkeypatch):
+    """Blocks all tests from making live network calls. Fails instantly if they try."""
+
+    def stunted_getaddrinfo(*args, **kwargs):
+        raise RuntimeError(
+            "🚨 A test tried to hit the live internet! You are missing an LLM mock."
+        )
+
+    monkeypatch.setattr(socket, "getaddrinfo", stunted_getaddrinfo)
+
+
+@pytest.fixture(autouse=True)
+def enforce_strict_offline_testing(monkeypatch):
+    """
+    🛡️ ZERO-DEBT ACCELERATION SHIELD
+    Forces all unit tests to execute strictly in-memory.
+    If a test attempts to hit the live internet due to a missing LLM patch,
+    it fails instantly in 1ms rather than hanging for minutes.
+    """
+
+    def block_network_egress(*args, **kwargs):
+        raise RuntimeError(
+            "🚨 CRITICAL COGNITIVE LEAK: A test tried to access the live internet! "
+            "You are missing an LLM mock or patch for this execution frame."
+        )
+
+    monkeypatch.setattr(socket, "getaddrinfo", block_network_egress)

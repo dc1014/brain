@@ -7,7 +7,7 @@ import time
 
 from rich.console import Console
 from System.core.paths import ROOT_DIR
-from System.runtime import execute_pipeline
+from System.neuroanatomy.cortical.prefrontal import execute_pipeline
 
 console = Console()
 

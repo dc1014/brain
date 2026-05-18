@@ -125,7 +125,7 @@ def apply_humoral_modulation(base_model: str) -> tuple[str, float, int]:
     # 3. Cortisol Resource Conservation (Model Fallback)
     final_model = base_model
     if vector["cortisol"] > 0.7:
-        from System.runtime import AGENT_CONFIG
+        from System.core.dna import AGENT_CONFIG
 
         # Force fallback to the cheap/fast model to survive resource exhaustion
         fast_model = AGENT_CONFIG.get("models", {}).get("fast", base_model)

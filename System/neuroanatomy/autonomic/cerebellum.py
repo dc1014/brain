@@ -10,7 +10,7 @@ from litellm import completion  # type: ignore
 from System.tools import execute_command
 from System.core.paths import ROOT_DIR
 from System.core.locks import BiologicalLock
-from System.runtime import AGENT_CONFIG
+from System.core.dna import AGENT_CONFIG
 
 console = Console()
 ENGRAM_DIR = ROOT_DIR / "System" / "tools" / "engrams"
