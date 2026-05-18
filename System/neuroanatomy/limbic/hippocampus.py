@@ -2,6 +2,8 @@ import json
 import asyncio
 import sqlite3
 import time
+import os
+
 from datetime import datetime
 from rich.console import Console
 from System.core.paths import ROOT_DIR
@@ -10,9 +12,10 @@ from System.neuroanatomy.systemic.immune_system import vault
 
 console = Console()
 
+
 DB_PATH = ROOT_DIR / "System" / "config" / "hippocampus.db"
 
-
+QUEUE_FILE_PATH = ROOT_DIR / "System" / "execution_queue.json"
 # =====================================================================
 # 1. EPHEMERAL WORKING MEMORY (SQLite FTS5)
 # =====================================================================
@@ -245,3 +248,35 @@ def consolidate_short_term_memory() -> None:
         asyncio.run(_encode_short_term_memory())
     except Exception as e:
         console.print(f"[dim red]Hippocampus async error: {e}[/dim red]")
+
+
+def persist_pipeline_state(
+    description: str, route_type: str, domain: str, remaining_steps: list[dict]
+) -> None:
+    """
+    Hippocampus: Saves the current state of the execution pipeline to disk.
+    If the system crashes, it can resume from this exact point.
+    """
+    QUEUE_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(QUEUE_FILE_PATH, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "original_task": description,
+                "route_type": route_type,
+                "domain": domain,
+                "remaining_steps": remaining_steps,
+            },
+            f,
+            indent=2,
+        )
+
+
+def clear_pipeline_state() -> None:
+    """
+    Lymphatic System: Clears the execution queue upon graceful termination.
+    """
+    if QUEUE_FILE_PATH.exists():
+        try:
+            os.remove(QUEUE_FILE_PATH)
+        except OSError:
+            pass

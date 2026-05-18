@@ -18,6 +18,10 @@ from System.neuroanatomy.autonomic.interoception import (
 from System.neuroanatomy.autonomic.vestibular import commit_transaction, restore_balance
 from System.neuroanatomy.systemic.immune_system import vault
 from System.neuroanatomy.limbic.episodic import recall_recent_episodes, encode_episode
+from System.neuroanatomy.limbic.hippocampus import (
+    persist_pipeline_state,
+    clear_pipeline_state,
+)
 
 console = Console()
 
@@ -266,20 +270,9 @@ async def execute_pipeline(
     pipeline_aborted = False
 
     pfc_memory = WorkingMemory(description)
-    queue_file_path = ROOT_DIR / "System" / "execution_queue.json"
 
     while len(pipeline) > 0:
-        with open(queue_file_path, "w", encoding="utf-8") as f:
-            json.dump(
-                {
-                    "original_task": description,
-                    "route_type": route_type,
-                    "domain": domain,
-                    "remaining_steps": pipeline,
-                },
-                f,
-                indent=2,
-            )
+        persist_pipeline_state(description, route_type, domain, pipeline)
 
         step = pipeline.pop(0)
         current_payload = pfc_memory.get_current_context()
@@ -454,8 +447,5 @@ async def execute_pipeline(
         with open(state_path, "w", encoding="utf-8") as f:
             f.write("STATUS: COMPLETE\n")
 
-    if queue_file_path.exists():
-        try:
-            os.remove(queue_file_path)
-        except OSError:
-            pass
+    # ⚡ ZERO-DEBT: Delegated entirely to the Hippocampus
+    clear_pipeline_state()

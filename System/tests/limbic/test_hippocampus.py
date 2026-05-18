@@ -3,6 +3,8 @@ from System.neuroanatomy.limbic.hippocampus import (
     recall_memory,
     rebuild_index,
     _encode_short_term_memory,
+    persist_pipeline_state,
+    clear_pipeline_state,
 )
 from unittest.mock import patch, MagicMock
 import asyncio
@@ -80,3 +82,32 @@ def test_hippocampus_encodes_memory_all_domains(
     assert (tmp_path / "Studio" / "studio-memory.md").exists()
     assert (tmp_path / "Personal" / "personal-memory.md").exists()
     assert (tmp_path / "Meta" / "global-memory.md").exists()
+
+
+def test_hippocampus_pipeline_persistence(monkeypatch, tmp_path):
+    """Proves the Hippocampus correctly saves and clears pipeline state for crash recovery."""
+    import json
+
+    # 1. Isolate the queue file to the test's temp directory
+    mock_queue_file = tmp_path / "execution_queue.json"
+    monkeypatch.setattr(
+        "System.neuroanatomy.limbic.hippocampus.QUEUE_FILE_PATH", mock_queue_file
+    )
+
+    # 2. Persist a fake pipeline state
+    fake_pipeline = [{"agent": "frontend_engineer"}, {"agent": "qa_auditor"}]
+    persist_pipeline_state("Build a button", "FORGE", "STUDIO", fake_pipeline)
+
+    # 3. Assert the file was written with the correct state
+    assert mock_queue_file.exists(), "Hippocampus failed to write the state file!"
+
+    with open(mock_queue_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    assert data["original_task"] == "Build a button"
+    assert data["route_type"] == "FORGE"
+    assert len(data["remaining_steps"]) == 2
+
+    # 4. Assert the Lymphatic flush correctly clears the state
+    clear_pipeline_state()
+    assert not mock_queue_file.exists(), "Hippocampus failed to clear the state file!"
