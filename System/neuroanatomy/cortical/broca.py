@@ -126,3 +126,29 @@ def synthesize_speech(text: str, output_path: str) -> str:
         return output_path
     except Exception as e:
         return f"BROCA ERROR: TTS failed - {e}"
+
+
+def validate_qa_audit(step_result_text: str) -> tuple[bool, str]:
+    """
+    Validates a QA Auditor's response payload.
+    Returns (is_passed, critique_message).
+    """
+
+    class QAAuditContract(BaseModel):
+        audit_result: str
+        reasoning: str
+
+    try:
+        contract = enforce_data_contract(step_result_text, QAAuditContract)
+        if contract.audit_result.strip().upper() == "PASS":
+            return True, "PASS"
+        else:
+            return (
+                False,
+                f"CRITICAL - AUDIT FAILED. Read the critique, fix the instructions, and redeploy:\n\n{contract.reasoning}",
+            )
+    except AphasiaError:
+        return (
+            False,
+            "BROCA FORMATTING ERROR: You must strictly output valid JSON with 'audit_result': 'PASS' or 'FAIL'.",
+        )

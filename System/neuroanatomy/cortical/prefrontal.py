@@ -6,7 +6,6 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-# ⚡ ZERO-DEBT: Added missing LLM and Neurological imports
 from litellm import acompletion, completion  # type: ignore
 from System.core.paths import ROOT_DIR
 from System.core.dna import AGENT_CONFIG
@@ -24,56 +23,44 @@ console = Console()
 
 
 class WorkingMemory:
-    """
-    PFC Working Memory (Semantic Compressor).
-    Maintains active pipeline state and autonomously compresses raw outputs
-    into established facts to prevent quadratic token bleed.
-    """
+    """PFC Working Memory (Semantic Compressor)."""
 
     def __init__(self, core_objective: str) -> None:
         self.core_objective = core_objective
         self.established_facts: list[str] = []
         self.recent_activity: list[str] = []
-        # Rough token estimation (chars / 4). Threshold: ~3000 tokens
         self.compression_threshold_chars = 12000
 
     def add_event(self, agent_name: str, raw_output: str, actions: list[str]) -> None:
-        """Adds a pipeline event to the working buffer."""
         event_log = f"[{agent_name} Output]:\n{raw_output}\nActions: {actions}"
         self.recent_activity.append(event_log)
 
     def get_current_context(self) -> str:
-        """Returns the fully contextualized scratchpad for the next agent."""
         context = f"CORE OBJECTIVE: {self.core_objective}\n\n"
         if self.established_facts:
             context += "ESTABLISHED FACTS (Compressed Memory):\n"
             for fact in self.established_facts:
                 context += f"- {fact}\n"
             context += "\n"
-
         if self.recent_activity:
             context += "RECENT PIPELINE ACTIVITY:\n"
             context += "\n\n".join(self.recent_activity)
-
         return context
 
     async def compress_if_bloated(self) -> None:
-        """Autonomously distills recent activity if token limits are exceeded."""
         current_text = "\n".join(self.recent_activity)
         if len(current_text) < self.compression_threshold_chars:
             return
 
         console.print(
-            "[dim magenta]🧠 PFC Buffer Full: Compressing working memory to save tokens...[/dim magenta]"
+            "[dim magenta]🧠 PFC Buffer Full: Compressing working memory...[/dim magenta]"
         )
-
         prompt = (
             "You are the Prefrontal Cortex. Synthesize the following pipeline activity into a highly "
             "concise, bulleted list of 'Established Facts' and 'Current State'. "
             "Discard all conversational filler and preserve ONLY technical facts, code paths, and outcomes.\n\n"
             f"ACTIVITY LOG:\n{current_text}"
         )
-
         try:
             model = AGENT_CONFIG.get("models", {}).get(
                 "fast", "gemini/gemini-2.5-flash"
@@ -85,7 +72,6 @@ class WorkingMemory:
                 api_key=vault.get_api_key_for_model(model),
             )
             compressed_summary = response.choices[0].message.content.strip()
-
             self.established_facts.append(compressed_summary)
             self.recent_activity.clear()
             console.print(
@@ -96,11 +82,7 @@ class WorkingMemory:
 
 
 class PrefrontalCortex:
-    """
-    The Seat of Consciousness (Executive Function).
-    Holds Working Memory, consults Episodic Memory, decomposes complex goals,
-    and supervises Swarm execution to prevent endless retry loops.
-    """
+    """The Seat of Consciousness (Executive Function)."""
 
     def __init__(self) -> None:
         self.working_memory: list[str] = []
@@ -117,14 +99,12 @@ class PrefrontalCortex:
         return "\n".join(f"- {mem}" for mem in self.working_memory)
 
     def decompose_goal(self, objective: str, past_experiences: str = "") -> list[str]:
-        # ⚡ ZERO-DEBT: Biological bypass only when explicitly requested by legacy execution tests
         if os.environ.get("BRAIN_OS_BYPASS_PFC") == "1":
             return [objective]
 
         console.print(
             "[dim cyan]🧠 PFC: Consulting past experiences and decomposing objective...[/dim cyan]"
         )
-
         prompt = (
             "You are the Prefrontal Cortex of Brain OS. Your job is executive function and goal decomposition.\n"
             "Break the following objective down into a strict JSON list of 1 to 3 independent, actionable string commands.\n"
@@ -133,7 +113,6 @@ class PrefrontalCortex:
             f"PAST EXPERIENCES:\n{past_experiences}\n\n"
             f"OBJECTIVE: {objective}"
         )
-
         try:
             model_name = AGENT_CONFIG.get("models", {}).get(
                 "fast", "gemini/gemini-2.5-flash"
@@ -146,11 +125,12 @@ class PrefrontalCortex:
             )
             raw_text = response.choices[0].message.content.strip()
 
-            # Safe parsing block to avoid UI triggers
-            if "```json" in raw_text:
-                raw_text = raw_text.replace("```json", "")
-            if "```" in raw_text:
-                raw_text = raw_text.replace("```", "")
+            # Canvas defeat string formatting
+            fence = chr(96) * 3
+            if f"{fence}json" in raw_text:
+                raw_text = raw_text.replace(f"{fence}json", "")
+            if fence in raw_text:
+                raw_text = raw_text.replace(fence, "")
 
             tasks = json.loads(raw_text.strip())
             if isinstance(tasks, list) and all(isinstance(t, str) for t in tasks):
@@ -167,30 +147,19 @@ class PrefrontalCortex:
     ) -> str:
         from System.core.orchestrator import dispatch_task
 
-        # 1. Recall past life experiences
         past_experiences = recall_recent_episodes()
-
-        # 2. Decompose with historical context
         tasks = self.decompose_goal(objective, past_experiences)
         console.print(
             f"[bold cyan]🧠 PFC: Objective split into {len(tasks)} executive pulses.[/bold cyan]"
         )
 
         final_outcome = "Success"
-
         for i, pulse_desc in enumerate(tasks):
             console.print(
                 f"\n[bold yellow]🧠 PFC Executive Pulse {i + 1}/{len(tasks)}[/bold yellow]"
             )
-
             context = self.get_working_memory_context()
-            augmented_prompt = (
-                f"GOAL: {objective}\n"
-                f"DOMAIN/ROUTE PREFERENCE: {domain} / {route}\n"
-                f"WORKING MEMORY (Previous context):\n{context}\n\n"
-                f"CURRENT TASK: {pulse_desc}"
-            )
-
+            augmented_prompt = f"GOAL: {objective}\nDOMAIN/ROUTE PREFERENCE: {domain} / {route}\nWORKING MEMORY:\n{context}\n\nCURRENT TASK: {pulse_desc}"
             try:
                 await dispatch_task(augmented_prompt)
                 self._remember(f"Pulse {i + 1} Executed: {pulse_desc}")
@@ -201,23 +170,83 @@ class PrefrontalCortex:
                 final_outcome = f"Failed on Step {i + 1}: {str(e)}"
                 break
 
-        # 3. Form a permanent episodic memory of what just happened
         encode_episode(objective, tasks, final_outcome)
-
         return f"Consolidated {len(tasks)} pulses. Final state: {final_outcome}"
 
 
-# 🧠 The Executive Pipeline Loop (Moved from runtime.py)
+async def execute_swarm_cohort(
+    swarm_steps: list[dict],
+    current_payload: str,
+    route_type: str,
+    domain: str,
+    is_exhausted: bool,
+    available_tools: dict,
+    pfc_memory: WorkingMemory,
+) -> tuple[int, list[str]]:
+    total_tokens = 0
+    agents_invoked = []
+    console.print(
+        f"\n[bold magenta]🧠 Prefrontal Cortex: Spawning swarm of {len(swarm_steps)} agents in parallel...[/bold magenta]"
+    )
+
+    async def _task(sub_step):
+        a_cfg = AGENT_CONFIG["agents"][sub_step["agent"]]
+        model_str = get_resolved_model(a_cfg["model"], is_exhausted)
+        active_tools = [
+            t
+            for group in sub_step.get("tools", [])
+            for t in available_tools.get(group, [])
+        ]
+        full_sys_prompt = a_cfg["system_prompt"] + get_system_context(
+            sub_step.get("context", []), domain, prompt=current_payload
+        )
+        res = await run_agent_async(
+            role_name=a_cfg["name"],
+            model_string=model_str,
+            system_prompt=full_sys_prompt,
+            user_prompt=current_payload,
+            tools=active_tools if active_tools else None,
+            route=route_type,
+            domain=domain,
+        )
+        return a_cfg["name"], res
+
+    swarm_results = await asyncio.gather(*[_task(s) for s in swarm_steps])
+    for agent_name, step_result in swarm_results:
+        step_tokens = step_result.usage.get("total_tokens", 0)
+        total_tokens += step_tokens
+        await asyncio.to_thread(log_metabolism, step_tokens)
+        agents_invoked.append(agent_name)
+        display_text = step_result.text + (
+            "\n\n**Actions Taken:**\n"
+            + "\n".join([f"- {a}" for a in step_result.actions])
+            if step_result.actions
+            else ""
+        )
+        console.print(
+            Panel(
+                Markdown(display_text),
+                title=f"[bold magenta]🐝 {agent_name} (Swarm Node)[/bold magenta]",
+                border_style="magenta",
+            )
+        )
+        pfc_memory.add_event(
+            "Swarm Cohort",
+            f"--- {agent_name} Output ---\n{step_result.text}\nActions: {step_result.actions}",
+            [],
+        )
+
+    return total_tokens, agents_invoked
+
+
 async def execute_pipeline(
     description: str, route_type: str, domain: str, resume_pipeline: list | None = None
 ) -> None:
     commit_transaction()
-
     tools_path = ROOT_DIR / "System" / "config" / "tools.yaml"
     with open(tools_path, "r", encoding="utf-8") as f:
         available_tools = yaml.safe_load(f)
 
-    # ⚡ ZERO-DEBT: Use the injected resume state, or fetch a fresh one from DNA
     pipeline = (
         resume_pipeline
         if resume_pipeline is not None
@@ -236,12 +265,10 @@ async def execute_pipeline(
     agents_invoked: list[str] = []
     pipeline_aborted = False
 
-    # 🧠 Initialize the Semantic Compressor Buffer
     pfc_memory = WorkingMemory(description)
     queue_file_path = ROOT_DIR / "System" / "execution_queue.json"
 
     while len(pipeline) > 0:
-        # 💾 SHIFT-LEFT: Persist the active queue to disk to survive hard OS crashes
         with open(queue_file_path, "w", encoding="utf-8") as f:
             json.dump(
                 {
@@ -257,64 +284,19 @@ async def execute_pipeline(
         step = pipeline.pop(0)
         current_payload = pfc_memory.get_current_context()
 
-        # --- 🧠 PREFRONTAL CORTEX: Parallel Swarm Execution ---
+        # 1. Swarm Execution
         if "swarm" in step:
-            swarm_steps = step["swarm"]
-            console.print(
-                f"\n[bold magenta]🧠 Prefrontal Cortex: Spawning swarm of {len(swarm_steps)} agents in parallel...[/bold magenta]"
+            swarm_tokens, swarm_agents = await execute_swarm_cohort(
+                step["swarm"],
+                current_payload,
+                route_type,
+                domain,
+                is_exhausted,
+                available_tools,
+                pfc_memory,
             )
-
-            async def _execute_swarm_batch():
-                async def _task(sub_step):
-                    a_cfg = AGENT_CONFIG["agents"][sub_step["agent"]]
-                    model_str = get_resolved_model(a_cfg["model"], is_exhausted)
-
-                    active_tools = []
-                    for t_group in sub_step.get("tools", []):
-                        active_tools.extend(available_tools.get(t_group, []))
-
-                    full_sys_prompt = a_cfg["system_prompt"] + get_system_context(
-                        sub_step.get("context", []), domain, prompt=current_payload
-                    )
-
-                    res = await run_agent_async(
-                        role_name=a_cfg["name"],
-                        model_string=model_str,
-                        system_prompt=full_sys_prompt,
-                        user_prompt=current_payload,
-                        tools=active_tools if active_tools else None,
-                        route=route_type,
-                        domain=domain,
-                    )
-                    return a_cfg["name"], res
-
-                return await asyncio.gather(*[_task(s) for s in swarm_steps])
-
-            swarm_results = await _execute_swarm_batch()
-
-            for agent_name, step_result in swarm_results:
-                step_tokens = step_result.usage.get("total_tokens", 0)
-                total_pipeline_tokens += step_tokens
-                await asyncio.to_thread(log_metabolism, step_tokens)
-                agents_invoked.append(agent_name)
-
-                display_text = step_result.text
-                if step_result.actions:
-                    display_text += "\n\n**Actions Taken:**\n" + "\n".join(
-                        [f"- {a}" for a in step_result.actions]
-                    )
-
-                console.print(
-                    Panel(
-                        Markdown(display_text),
-                        title=f"[bold magenta]🐝 {agent_name} (Swarm Node)[/bold magenta]",
-                        border_style="magenta",
-                    )
-                )
-
-                out_summary = f"--- {agent_name} Output ---\n{step_result.text}\nActions: {step_result.actions}"
-                pfc_memory.add_event("Swarm Cohort", out_summary, [])
-
+            total_pipeline_tokens += swarm_tokens
+            agents_invoked.extend(swarm_agents)
             await pfc_memory.compress_if_bloated()
             commit_transaction()
             console.print(
@@ -322,14 +304,12 @@ async def execute_pipeline(
             )
             continue
 
-        # --- 🚂 STANDARD LINEAR EXECUTION ---
+        # 2. Linear Execution
         agent_cfg = AGENT_CONFIG["agents"][step["agent"]]
         model_str = get_resolved_model(agent_cfg["model"], is_exhausted)
-
-        active_tools = []
-        for t_group in step.get("tools", []):
-            active_tools.extend(available_tools.get(t_group, []))
-
+        active_tools = [
+            t for group in step.get("tools", []) for t in available_tools.get(group, [])
+        ]
         full_system_prompt = agent_cfg["system_prompt"] + get_system_context(
             step.get("context", []), domain, prompt=current_payload
         )
@@ -351,12 +331,12 @@ async def execute_pipeline(
         total_pipeline_tokens += step_tokens
         await asyncio.to_thread(log_metabolism, step_tokens)
 
-        display_text = step_result.text
-        if step_result.actions:
-            display_text += "\n\n**Actions Taken:**\n" + "\n".join(
-                [f"- {a}" for a in step_result.actions]
-            )
-
+        display_text = step_result.text + (
+            "\n\n**Actions Taken:**\n"
+            + "\n".join([f"- {a}" for a in step_result.actions])
+            if step_result.actions
+            else ""
+        )
         console.print(
             Panel(
                 Markdown(display_text),
@@ -382,36 +362,22 @@ async def execute_pipeline(
         pfc_memory.add_event(agent_cfg["name"], step_result.text, step_result.actions)
         await pfc_memory.compress_if_bloated()
 
-        # --- 🗣️ BROCA'S AREA (Data Contract Validation & RETRY LOOP) ---
+        # 3. Broca's Area (Data Contract Validation & RETRY LOOP)
         if step["agent"] == "qa_auditor":
-            try:
-                clean_text = step_result.text.strip()
-                if clean_text.startswith("```json"):
-                    clean_text = clean_text[7:-3].strip()
-                elif clean_text.startswith("```"):
-                    clean_text = clean_text[3:-3].strip()
+            from System.neuroanatomy.cortical.broca import validate_qa_audit
 
-                data = json.loads(clean_text)
-                audit_result = str(data.get("audit_result", "FAIL")).strip().upper()
-                audit_reasoning = str(data.get("reasoning", "No reasoning provided."))
-                is_valid = True
-            except json.JSONDecodeError:
-                is_valid = False
-                audit_result = "FAIL"
-                audit_reasoning = "JSON Parsing Failed. Hallucinated schema."
+            is_valid, critique_msg = validate_qa_audit(step_result.text)
 
-            if not is_valid or audit_result == "FAIL":
+            if not is_valid:
                 if eval_retries < MAX_RETRIES:
-                    if not is_valid:
+                    if "BROCA FORMATTING ERROR" in critique_msg:
                         console.print(
                             "\n[bold yellow]🗣️ Broca's Area intercepted malformed JSON. Forcing retry.[/bold yellow]"
                         )
-                        critique_msg = "BROCA FORMATTING ERROR: You must strictly output valid JSON with 'audit_result': 'PASS' or 'FAIL'."
                     else:
                         console.print(
                             "\n[bold red]❌ Audit Failed! The Product Manager needs to fix the code.[/bold red]\n"
                         )
-                        critique_msg = f"CRITICAL - AUDIT FAILED. Read the critique, fix the instructions, and redeploy:\n\n{audit_reasoning}"
 
                     if os.environ.get("BRAIN_OS_HEADLESS") == "1":
                         retry_auth = "y"
@@ -432,6 +398,7 @@ async def execute_pipeline(
                         pipeline_aborted = True
                         break
 
+                    # ⚡ The Pipeline Retry Injection
                     pipeline.insert(
                         0,
                         {
@@ -462,11 +429,7 @@ async def execute_pipeline(
     agent_summary = ", ".join(
         [f"{agent} (x{agents_invoked.count(agent)})" for agent in set(agents_invoked)]
     )
-    diagnostics = (
-        f"[bold cyan]Agents Invoked:[/bold cyan] {agent_summary}\n"
-        f"[bold cyan]Eval Loops (Retries):[/bold cyan] {eval_retries}\n"
-        f"[bold cyan]Total Tokens Burned:[/bold cyan] {total_pipeline_tokens:,}"
-    )
+    diagnostics = f"[bold cyan]Agents Invoked:[/bold cyan] {agent_summary}\n[bold cyan]Eval Loops (Retries):[/bold cyan] {eval_retries}\n[bold cyan]Total Tokens Burned:[/bold cyan] {total_pipeline_tokens:,}"
     console.print(
         Panel(
             diagnostics,
@@ -491,7 +454,6 @@ async def execute_pipeline(
         with open(state_path, "w", encoding="utf-8") as f:
             f.write("STATUS: COMPLETE\n")
 
-    # 🧹 LYMPHATIC SYSTEM: Clear the execution queue upon graceful termination
     if queue_file_path.exists():
         try:
             os.remove(queue_file_path)

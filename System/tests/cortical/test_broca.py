@@ -1,3 +1,4 @@
+from System.neuroanatomy.cortical.broca import validate_qa_audit
 from pydantic import BaseModel, Field
 from System.neuroanatomy.cortical.broca import enforce_data_contract
 
@@ -58,3 +59,37 @@ def test_broca_json_contract_with_markdown_bleeding():
     assert isinstance(result, SwarmAgentContract)
     assert result.name == "Architect"
     assert result.confidence == 0.95
+
+
+def test_broca_qa_audit_pass():
+    # Hiding the triple backticks from the UI parser using string math
+    fence = "`" * 3
+    response = (
+        fence
+        + "json\n"
+        + '{"audit_result": "PASS", "reasoning": "Looks perfect."}\n'
+        + fence
+    )
+
+    is_valid, msg = validate_qa_audit(response)
+    assert is_valid is True
+    assert msg == "PASS"
+
+
+def test_broca_qa_audit_fail():
+    response = '{"audit_result": "FAIL", "reasoning": "Missing unit tests."}'
+    is_valid, msg = validate_qa_audit(response)
+
+    assert is_valid is False
+    assert (
+        "CRITICAL - AUDIT FAILED. Read the critique, fix the instructions, and redeploy:\n\nMissing unit tests."
+        in msg
+    )
+
+
+def test_broca_qa_audit_hallucination():
+    response = "I think the code is good! I give it a PASS."
+    is_valid, msg = validate_qa_audit(response)
+
+    assert is_valid is False
+    assert "BROCA FORMATTING ERROR" in msg
