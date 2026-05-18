@@ -5,6 +5,8 @@ import ast
 import tempfile
 from pathlib import Path
 from rich.console import Console
+from System.core.paths import normalize_path
+
 
 console = Console()
 
@@ -213,7 +215,7 @@ except Exception as e:
 """
     # Write the membrane to a temporary execution file
     temp_dir = Path(tempfile.gettempdir())
-    membrane_path = temp_dir / "apoptosis_membrane.py"
+    membrane_path = normalize_path(temp_dir / "apoptosis_membrane.py")
     membrane_path.write_text(membrane_code.strip(), encoding="utf-8")
 
     return str(membrane_path)

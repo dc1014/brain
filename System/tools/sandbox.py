@@ -1,29 +1,29 @@
 from pathlib import Path
-from System.core.paths import ROOT_DIR
+from System.core.paths import ROOT_DIR, normalize_path
 
 # --- SHIFT LEFT SECURITY: OS DIRECTORY BOUNDARIES ---
 
-# The AI can see everything, but can ONLY write to these specific folders
+# ⚡ ZERO-DEBT: Myelinate the strict OS boundaries at load time
 ALLOWED_DIRECTORIES: set[Path] = {
-    ROOT_DIR / "Personal",
-    ROOT_DIR / "Professional",
-    ROOT_DIR / "Studio",
-    ROOT_DIR / "Meta",
-    ROOT_DIR / "Media",  # The universal binary blob store
+    normalize_path(ROOT_DIR / "Personal"),
+    normalize_path(ROOT_DIR / "Professional"),
+    normalize_path(ROOT_DIR / "Studio"),
+    normalize_path(ROOT_DIR / "Meta"),
+    normalize_path(ROOT_DIR / "Media"),  # The universal binary blob store
 }
 
-# The AI can read these directories to understand itself, but CANNOT modify them
 READ_ONLY_DIRECTORIES: set[Path] = {
-    ROOT_DIR / "System",
+    normalize_path(ROOT_DIR / "System"),
 }
 
 
-def is_safe_path(target_path: Path, require_write: bool = False) -> bool:
+def is_safe_path(target_path: Path | str, require_write: bool = False) -> bool:
     """
     SHIFT LEFT: Validates if the target path strictly resides within allowed or read-only directories.
     This must be called BEFORE any file system operation is attempted.
     """
-    resolved_target = target_path.resolve()
+    # ⚡ ZERO-DEBT: Force all incoming paths through the Myelin Sheath
+    resolved_target = normalize_path(target_path)
 
     # 1. Check Write-Allowed Zones
     for allowed_dir in ALLOWED_DIRECTORIES:

@@ -7,12 +7,14 @@ from .sandbox import is_safe_path, ALLOWED_DIRECTORIES
 from System.core.schemas import ExecutionResult
 from System.neuroanatomy.peripheral.motor import motor_neuron
 
+from System.core.paths import normalize_path
+
 
 @motor_neuron(energy_cost=15)
 def write_safe_file(filepath: str, content: str) -> ExecutionResult:
     """Writes files safely, blocking writes outside the sandbox."""
     try:
-        target_path: Path = (ROOT_DIR / filepath).resolve()
+        target_path: Path = normalize_path(ROOT_DIR / filepath)
         if not is_safe_path(target_path, require_write=True):
             reason = f"SECURITY BLOCK: Access denied to write at {target_path}."
             return ExecutionResult(success=False, output=reason, block_reason=reason)
@@ -261,7 +263,7 @@ def write_multiple_files(files: list[dict]) -> str:
         filepath = f_obj.get("filepath", "")
         content = f_obj.get("content", "")
 
-        target_path = (ROOT_DIR / filepath).resolve()
+        target_path = normalize_path(ROOT_DIR / filepath)
 
         # Adhere to the Blood-Brain Barrier
         if not is_safe_path(target_path):
