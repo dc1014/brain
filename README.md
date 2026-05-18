@@ -94,6 +94,10 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 17. Event-Driven Reflexes (Somatosensory Cortex)
 * **Sense of Touch:** The Somatosensory Cortex processes physical sensations.
 * **Zero-Debt Event Bus:** By running `brain watch`, the `somatosensory.py` organ polls your workspace for file saves. When you save a file, it fires a nerve impulse to the Cortex. Instead of waking up the heavy, expensive LLM, the Cortex triggers instant, free local reflexes (like running the `ruff` syntax linter or 0-cost AST updates). Because the Cortex is decoupled from the Receptors, it is natively structured to accept remote API Webhooks in the future.
+
+### 18. Atomic Rollbacks (The Vestibular System)
+* **Sense of Balance:** The Vestibular system detects a loss of equilibrium and triggers a physical reflex to catch you before you fall.
+* **Atomic Transactions:** When the Product Manager uses `write_safe_file` or `append_safe_file`, the `vestibular.py` organ takes a microsecond `.bak` snapshot of the file before it is modified. If the pipeline completes successfully, the snapshots are cleared. If the pipeline aborts (due to a circuit breaker, API error, or security halt), the Vestibular system detects the "fall" and instantly restores all modified files to their original state, guaranteeing Zero-Debt atomic execution.
 ---
 
 ## 🏗️ Architecture & Routing
