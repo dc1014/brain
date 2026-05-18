@@ -112,6 +112,10 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 21. Archive & Garbage Collection (The Lymphatic System)
 * **Waste Clearance:** The biological brain flushes cerebrospinal fluid to sweep up metabolic waste, depositing it in lymph nodes.
 * **Zero-Debt Archiving:** To preserve the "Glass Brain" and ensure user data is never destroyed without consent, the `lymphatic.py` organ never hard-deletes old records. Instead, it periodically sweeps old Vestibular `.bak` snapshots and truncates the `agent_interactions.jsonl` file, compressing the waste into a standard `.tar.gz` archive stored in `Meta/Lymph_Nodes/`. You can trigger this via `brain flush`, and permanently destroy the archives via `brain purge`.
+
+### 22. Multi-Agent Swarms (The Prefrontal Cortex)
+* **Executive Orchestration:** The Prefrontal Cortex orchestrates multiple regions of the brain simultaneously.
+* **Parallel Agent Execution:** Complex pipelines (like `SWARM`) utilize native Python `concurrent.futures.ThreadPoolExecutor` to branch the execution pipeline. The system can spawn specialized sub-agents (e.g., a Frontend Engineer and a Backend Engineer) to work on different parts of the codebase at the exact same time, radically reducing wall-clock generation time before merging their context back into a linear QA validation step.
 ---
 
 ## 🏗️ Architecture & Routing

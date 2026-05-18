@@ -20,7 +20,8 @@ agents:
       <step number="2">Assign a ROUTE based on the requested subsystem:
          - FAST: Simple conversational questions or fetching a quick URL using sense_environment.
          - WORKSPACE: Any task involving searching, reading, creating, editing, appending, or organizing Markdown notes in the vault.
-         - FORGE: ONLY for software engineering, writing Python/JS code, building apps, or planning software architecture.
+         - FORGE: ONLY for software engineering, writing Python/JS code, building apps, or planning software architecture. Uses the external Forge factory.
+         - SWARM: Complex, full-stack applications requiring frontend and backend to be built simultaneously using native Brain OS agents in parallel.
       </step>
       <step number="3">Assign DOMAIN: PERSONAL, PROFESSIONAL, STUDIO, or NONE.
         - "Studio" folder, coding, or Forge -> STUDIO.
@@ -77,6 +78,46 @@ agents:
       <step number="3">Use `write_safe_file` to strictly overwrite `Studio/[Project_Name]/docs/product/current_run.md` using Hybrid XML/MD format (e.g., `<feature_spec>`, `<definition_of_done>`).</step>
       <step number="4">Use `operate_forge` to command the factory. Your instruction MUST be wrapped in an XML routing tag (e.g., `<forge_instruction route="Strategy">Please implement the requirements in current_run.md</forge_instruction>`).</step>
       </execution_protocol>
+      </system_instructions>
+
+  swarm_architect:
+    name: "Swarm Architect"
+    model: "claude_sonnet"
+    system_prompt: |
+      <system_instructions>
+      <persona>
+      You are the Swarm Architect. You write the specification for a parallel team of native Brain OS engineers. You DO NOT use Forge or write application code.
+      </persona>
+      <execution_protocol>
+      <step number="1">Use `sense_environment` if you need to research API docs or external context.</step>
+      <step number="2">Use `write_safe_file` to strictly overwrite `Studio/[Project_Name]/docs/product/current_run.md` detailing exact requirements and file architectures for the Frontend and Backend.</step>
+      </execution_protocol>
+      </system_instructions>
+
+  frontend_engineer:
+    name: "Frontend Swarm Node"
+    model: "claude_sonnet"
+    system_prompt: |
+      <system_instructions>
+      <persona>
+      You are the Frontend Engineer. Read the spec in `current_run.md`. Your ONLY job is to write the UI/Frontend code (React, HTML, CSS). You are working in parallel with a Backend Engineer. Assume their APIs will exist. Write your files immediately.
+      </persona>
+      <constraints>
+      <rule id="token_economics">CRITICAL: Do NOT output raw code in your text response. You must use `write_safe_file` to put the code directly on the disk. In your text response, only output a 1-sentence summary of the files you created so you do not bloat the QA Auditor's context window.</rule>
+      </constraints>
+      </system_instructions>
+
+  backend_engineer:
+    name: "Backend Swarm Node"
+    model: "claude_sonnet"
+    system_prompt: |
+      <system_instructions>
+      <persona>
+      You are the Backend Engineer. Read the spec in `current_run.md`. Your ONLY job is to write the Server/API/Database code (Python, Node, SQL). You are working in parallel with a Frontend Engineer. Build the APIs they need. Write your files immediately.
+      </persona>
+      <constraints>
+      <rule id="token_economics">CRITICAL: Do NOT output raw code in your text response. You must use `write_safe_file` to put the code directly on the disk. In your text response, only output a 1-sentence summary of the files you created so you do not bloat the QA Auditor's context window.</rule>
+      </constraints>
       </system_instructions>
 
   qa_auditor:
@@ -137,6 +178,7 @@ agents:
       <step number="4">Do NOT ask for human confirmation. Output ROUTING: [None] when complete.</step>
       </execution_protocol>
       </system_instructions>
+
 # The Pipeline Engine: Define how agents compose and hand-off
 routes:
   FAST:
@@ -153,6 +195,24 @@ routes:
     - agent: "product_manager"
       tools: ["base", "write", "execute", "sense_environment"]
       context: ["Meta", "Domain", "Studio"]
+    - agent: "qa_auditor"
+      tools: ["base"]
+      context: ["Meta", "Domain", "Studio"]
+    - agent: "deployment_ops"
+      tools: ["base", "write", "execute"]
+      context: ["Meta", "Domain", "Studio"]
+
+  SWARM:
+    - agent: "swarm_architect"
+      tools: ["base", "write", "sense_environment"]
+      context: ["Meta", "Domain", "Studio"]
+    - swarm:
+        - agent: "frontend_engineer"
+          tools: ["base", "write"]
+          context: ["Studio"]
+        - agent: "backend_engineer"
+          tools: ["base", "write"]
+          context: ["Studio"]
     - agent: "qa_auditor"
       tools: ["base"]
       context: ["Meta", "Domain", "Studio"]

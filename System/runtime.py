@@ -97,13 +97,41 @@ def analyze_task(prompt: str) -> tuple[bool, str, str, str, dict]:
         return False, f"Dispatcher API Error: {str(e)}", "NONE", "NONE", zero_usage
 
 
+def get_resolved_model(desired_model_key: str, is_exhausted: bool) -> str:
+    """Helper to resolve the fallback LLM models cleanly."""
+    import os
+
+    if is_exhausted:
+        from System.organs.endocrine import is_cortisol_active
+
+        if not is_cortisol_active():
+            desired_model_key = "gpt_mini"
+
+    env_key_map = {
+        "gpt_mini": "OPENAI_API_KEY",
+        "claude_haiku": "ANTHROPIC_API_KEY",
+        "gemini_flash": "GEMINI_API_KEY",
+        "claude_sonnet": "ANTHROPIC_API_KEY",
+    }
+
+    if os.getenv(env_key_map.get(desired_model_key, "")):
+        return AGENT_CONFIG["models"][desired_model_key]
+
+    if os.getenv("OPENAI_API_KEY"):
+        return AGENT_CONFIG["models"]["gpt_mini"]
+    elif os.getenv("ANTHROPIC_API_KEY"):
+        return AGENT_CONFIG["models"]["claude_haiku"]
+    elif os.getenv("GEMINI_API_KEY"):
+        return AGENT_CONFIG["models"]["gemini_flash"]
+    return AGENT_CONFIG["models"][desired_model_key]
+
+
 def execute_pipeline(description: str, route_type: str, domain: str) -> None:
     from System.organs.vestibular import commit_transaction, restore_balance
+    import concurrent.futures
 
-    # Ensure no leftover state from a previous hard-crash
     commit_transaction()
 
-    # Load Tools
     tools_path = Path(__file__).parent / "config" / "tools.yaml"
     with open(tools_path, "r", encoding="utf-8") as f:
         available_tools = yaml.safe_load(f)
@@ -116,8 +144,7 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
     is_exhausted, tokens_burned = check_energy_levels()
     if is_exhausted:
         console.print(
-            f"\n[bold yellow]⚠️ Interoception Alert: System Exhausted ({tokens_burned:,} tokens burned today). "
-            f"Downgrading cognitive load to conserve energy.[/bold yellow]"
+            f"\\n[bold yellow]⚠️ Interoception Alert: System Exhausted ({tokens_burned:,} tokens burned). Downgrading cognitive load.[/bold yellow]"
         )
 
     total_pipeline_tokens = 0
@@ -126,42 +153,80 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
 
     while len(pipeline) > 0:
         step = pipeline.pop(0)
-        agent_cfg = AGENT_CONFIG["agents"][step["agent"]]
 
-        # ZERO-CONFIG MODEL FALLBACK & METABOLISM DOWNGRADE
-        desired_model_key = agent_cfg["model"]
+        # --- 🧠 PREFRONTAL CORTEX: Parallel Swarm Execution ---
+        if "swarm" in step:
+            swarm_steps = step["swarm"]
+            console.print(
+                f"\\n[bold magenta]🧠 Prefrontal Cortex: Spawning swarm of {len(swarm_steps)} agents in parallel...[/bold magenta]"
+            )
 
-        # Biological Fatigue: Down-shift to cheap heuristic models if exhausted
-        if is_exhausted:
-            from System.organs.endocrine import is_cortisol_active
+            swarm_outputs = []
 
-            if is_cortisol_active():
-                console.print(
-                    "[dim red]↳ Cortisol Override: Ignoring metabolic exhaustion. Burning emergency token reserves.[/dim red]"
+            def execute_swarm_agent(sub_step: dict):
+                a_cfg = AGENT_CONFIG["agents"][sub_step["agent"]]
+                model_str = get_resolved_model(a_cfg["model"], is_exhausted)
+
+                active_tools = []
+                for t_group in sub_step.get("tools", []):
+                    active_tools.extend(available_tools.get(t_group, []))
+
+                full_sys_prompt = a_cfg["system_prompt"] + get_system_context(
+                    sub_step.get("context", []), domain, prompt=current_payload
                 )
-            else:
-                desired_model_key = "gpt_mini"
 
-        env_key_map = {
-            "gpt_mini": "OPENAI_API_KEY",
-            "claude_haiku": "ANTHROPIC_API_KEY",
-            "gemini_flash": "GEMINI_API_KEY",
-            "claude_sonnet": "ANTHROPIC_API_KEY",
-        }
+                res = run_agent(
+                    role_name=a_cfg["name"],
+                    model_string=model_str,
+                    system_prompt=full_sys_prompt,
+                    user_prompt=current_payload,
+                    tools=active_tools if active_tools else None,
+                    route=route_type,
+                    domain=domain,
+                )
+                return a_cfg["name"], res
 
-        if os.getenv(env_key_map.get(desired_model_key, "")):
-            model_str = AGENT_CONFIG["models"][desired_model_key]
-        else:
-            if os.getenv("OPENAI_API_KEY"):
-                model_str = AGENT_CONFIG["models"]["gpt_mini"]
-            elif os.getenv("ANTHROPIC_API_KEY"):
-                model_str = AGENT_CONFIG["models"]["claude_haiku"]
-            elif os.getenv("GEMINI_API_KEY"):
-                model_str = AGENT_CONFIG["models"]["gemini_flash"]
-            else:
-                model_str = AGENT_CONFIG["models"][desired_model_key]
+            # Execute sub-agents concurrently using native threads
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=len(swarm_steps)
+            ) as executor:
+                futures = [executor.submit(execute_swarm_agent, s) for s in swarm_steps]
+                for future in concurrent.futures.as_completed(futures):
+                    agent_name, step_result = future.result()
 
-        # Build Tools and Context dynamically
+                    step_tokens = step_result.usage.get("total_tokens", 0)
+                    total_pipeline_tokens += step_tokens
+                    log_metabolism(step_tokens)
+                    agents_invoked.append(agent_name)
+
+                    display_text = step_result.text
+                    if step_result.actions:
+                        display_text += "\\n\\n**Actions Taken:**\\n" + "\\n".join(
+                            [f"- {a}" for a in step_result.actions]
+                        )
+
+                    console.print(
+                        Panel(
+                            Markdown(display_text),
+                            title=f"[bold magenta]🐝 {agent_name} (Swarm Node)[/bold magenta]",
+                            border_style="magenta",
+                        )
+                    )
+                    swarm_outputs.append(
+                        f"--- {agent_name} Output ---\\n{step_result.text}\\nActions: {step_result.actions}"
+                    )
+
+            # Synthesize swarm output for the next linear stage (e.g., QA Auditor)
+            current_payload = (
+                f"Original Task: {description}\\n\\nSwarm Operations Complete:\\n"
+                + "\\n\\n".join(swarm_outputs)
+            )
+            continue
+
+        # --- 🚂 STANDARD LINEAR EXECUTION ---
+        agent_cfg = AGENT_CONFIG["agents"][step["agent"]]
+        model_str = get_resolved_model(agent_cfg["model"], is_exhausted)
+
         active_tools = []
         for t_group in step.get("tools", []):
             active_tools.extend(available_tools.get(t_group, []))
@@ -170,7 +235,7 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
             step.get("context", []), domain, prompt=current_payload
         )
 
-        console.print(f"\n[bold cyan]⏳ {agent_cfg['name']} is working...[/bold cyan]")
+        console.print(f"\\n[bold cyan]⏳ {agent_cfg['name']} is working...[/bold cyan]")
         agents_invoked.append(agent_cfg["name"])
 
         step_result = run_agent(
@@ -185,11 +250,11 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
 
         step_tokens = step_result.usage.get("total_tokens", 0)
         total_pipeline_tokens += step_tokens
-        log_metabolism(step_tokens)  # <-- Interoception logging
+        log_metabolism(step_tokens)
 
         display_text = step_result.text
         if step_result.actions:
-            display_text += "\n\n**Actions Taken:**\n" + "\n".join(
+            display_text += "\\n\\n**Actions Taken:**\\n" + "\\n".join(
                 [f"- {a}" for a in step_result.actions]
             )
 
@@ -201,18 +266,11 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
             )
         )
 
-        # CIRCUIT BREAKERS
-        if "[SYSTEM HALT]" in step_result.text:
-            console.print(
-                "\n[bold red]🛑 PIPELINE ABORTED: Security clearance denied by user.[/bold red]"
-            )
-            pipeline_aborted = True
-            break
-
-        if "API/Execution Error:" in step_result.text:
-            console.print(
-                "\n[bold red]🛑 PIPELINE ABORTED: Fatal API or Execution Error.[/bold red]"
-            )
+        if (
+            "[SYSTEM HALT]" in step_result.text
+            or "API/Execution Error:" in step_result.text
+        ):
+            console.print("\\n[bold red]🛑 PIPELINE ABORTED.[/bold red]")
             pipeline_aborted = True
             break
 
@@ -220,13 +278,10 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
         if step["agent"] == "qa_auditor":
             from System.organs.broca import enforce_data_contract
 
-            # Extract the raw XML safely, auto-healing any syntax errors
             is_valid, audit_content = enforce_data_contract(
                 step_result.text, "audit_result"
             )
 
-            # If Broca caught a fatal XML formatting error, OR if the auditor explicitly failed the code
-            # (We keep your original '<audit_result grade="FAIL">' check as a fallback)
             if (
                 not is_valid
                 or "FAIL" in audit_content.upper()
@@ -235,72 +290,72 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
                 if eval_retries < MAX_RETRIES:
                     if not is_valid:
                         console.print(
-                            "\n[bold yellow]🗣️ Broca's Area intercepted malformed XML from QA Auditor. Forcing retry.[/bold yellow]"
+                            "\\n[bold yellow]🗣️ Broca's Area intercepted malformed XML. Forcing retry.[/bold yellow]"
                         )
-                        critique_msg = f"BROCA FORMATTING ERROR: {audit_content}\nYou must strictly output <audit_result>PASS</audit_result> or <audit_result>FAIL</audit_result>."
+                        critique_msg = f"BROCA FORMATTING ERROR: {audit_content}\\nYou must strictly output <audit_result>PASS</audit_result> or <audit_result>FAIL</audit_result>."
                     else:
                         console.print(
-                            "\n[bold red]❌ Audit Failed! The Product Manager needs to fix the specification/implementation.[/bold red]\n"
+                            "\\n[bold red]❌ Audit Failed! The Product Manager needs to fix the code.[/bold red]\\n"
                         )
-                        critique_msg = f"CRITICAL - AUDIT FAILED. Read the critique, fix the instructions, and redeploy:\n\n{step_result.text}"
+                        critique_msg = f"CRITICAL - AUDIT FAILED. Read the critique, fix the instructions, and redeploy:\\n\\n{step_result.text}"
 
-                # --- SHIFT-LEFT: Headless UI Override ---
-                if os.environ.get("BRAIN_OS_HEADLESS") == "1":
-                    console.print(
-                        "[dim]Headless mode active: Auto-authorizing retry...[/dim]"
+                    if os.environ.get("BRAIN_OS_HEADLESS") == "1":
+                        retry_auth = "y"
+                    else:
+                        try:
+                            retry_auth = (
+                                input("Authorize autonomous retry? [Y/n]: ")
+                                .strip()
+                                .lower()
+                            )
+                        except (EOFError, KeyboardInterrupt):
+                            retry_auth = "n"
+
+                    if retry_auth in ["n", "no"]:
+                        console.print(
+                            "\n[bold red]🛑 Task Aborted: User declined autonomous retry.[/bold red]\n"
+                        )
+                        pipeline_aborted = True
+                        break
+
+                    # Re-insert the failing step, but we fall back to the linear PM to fix the Swarm's mess
+                    pipeline.insert(
+                        0,
+                        {
+                            "agent": "qa_auditor",
+                            "tools": ["base"],
+                            "context": ["Meta", "Domain", "Studio"],
+                        },
                     )
-                    retry_auth = "y"
-                else:
-                    try:
-                        retry_auth = (
-                            input("Authorize autonomous retry? [Y/n]: ").strip().lower()
-                        )
-                    except (EOFError, KeyboardInterrupt):
-                        retry_auth = "n"
+                    pipeline.insert(
+                        0,
+                        {
+                            "agent": "product_manager",
+                            "tools": ["base", "write", "execute", "sense_environment"],
+                            "context": ["Meta", "Domain", "Studio"],
+                        },
+                    )
 
-                if retry_auth in ["n", "no"]:
+                    current_payload = (
+                        f"Original Task: {description}\\n\\n{critique_msg}"
+                    )
+                    eval_retries += 1
+                    continue
+                else:
                     console.print(
-                        "\n[bold red]🛑 Task Aborted: User declined autonomous retry.[/bold red]\n"
+                        "\\n[bold red]🛑 CIRCUIT BREAKER: Max eval retries reached. Halting pipeline.[/bold red]\\n"
                     )
                     pipeline_aborted = True
                     break
 
-                pipeline.insert(
-                    0,
-                    {
-                        "agent": "qa_auditor",
-                        "tools": ["base"],
-                        "context": ["Meta", "Domain", "Studio"],
-                    },
-                )
-                pipeline.insert(
-                    0,
-                    {
-                        "agent": "product_manager",
-                        "tools": ["base", "write", "execute", "sense_environment"],
-                        "context": ["Meta", "Domain", "Studio"],
-                    },
-                )
+        current_payload = f"Original Task: {description}\\n\\nPrevious Output:\\n{step_result.text}\\n\\nActions Taken:\\n{step_result.actions}"
 
-                current_payload = f"Original Task: {description}\n\n{critique_msg}"
-                eval_retries += 1
-                continue
-            else:
-                console.print(
-                    "\n[bold red]🛑 CIRCUIT BREAKER: Max eval retries reached. Halting pipeline.[/bold red]\n"
-                )
-                pipeline_aborted = True
-                break
-
-        current_payload = f"Original Task: {description}\n\nPrevious Agent ({agent_cfg['name']}) Output:\n{step_result.text}\n\nActions Taken:\n{step_result.actions}"
-
-    # DIAGNOSTICS & LOGGING
     agent_summary = ", ".join(
         [f"{agent} (x{agents_invoked.count(agent)})" for agent in set(agents_invoked)]
     )
     diagnostics = (
-        f"[bold cyan]Agents Invoked:[/bold cyan] {agent_summary}\n"
-        f"[bold cyan]Eval Loops (Retries):[/bold cyan] {eval_retries}\n"
+        f"[bold cyan]Agents Invoked:[/bold cyan] {agent_summary}\\n"
+        f"[bold cyan]Eval Loops (Retries):[/bold cyan] {eval_retries}\\n"
         f"[bold cyan]Total Tokens Burned:[/bold cyan] {total_pipeline_tokens:,}"
     )
     console.print(
@@ -311,25 +366,20 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
         )
     )
 
-    root_dir = Path(__file__).parent.parent
-    log_dir = root_dir / "logs"
+    log_dir = Path(__file__).parent.parent / "logs"
     state_path = log_dir / "pipeline_state.md"
 
     if pipeline_aborted:
-        # --- ⚖️ VESTIBULAR REFLEX: Catch the fall ---
         restore_balance()
         console.print(
-            "\n[bold red]🛑 Task Aborted. Environment safely rolled back.[/bold red]\n"
+            "\\n[bold red]🛑 Task Aborted. Environment safely rolled back.[/bold red]\\n"
         )
-        log_dir.mkdir(parents=True, exist_ok=True)
         with open(state_path, "w", encoding="utf-8") as f:
-            f.write(
-                "STATUS: ABORTED\nREASON: Pipeline hit a critical circuit breaker.\n"
-            )
+            f.write("STATUS: ABORTED\\n")
     else:
-        # --- ⚖️ VESTIBULAR REFLEX: Step completed successfully ---
         commit_transaction()
-        console.print("\n[bold green]✅ Task Complete. Files committed.[/bold green]\n")
-        log_dir.mkdir(parents=True, exist_ok=True)
+        console.print(
+            "\\n[bold green]✅ Task Complete. Files committed.[/bold green]\\n"
+        )
         with open(state_path, "w", encoding="utf-8") as f:
-            f.write("STATUS: COMPLETE\nREASON: Terminal state reached.\n")
+            f.write("STATUS: COMPLETE\\n")
