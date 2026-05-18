@@ -100,6 +100,10 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 18. Atomic Rollbacks (The Vestibular System)
 * **Sense of Balance:** The Vestibular system detects a loss of equilibrium and triggers a physical reflex to catch you before you fall.
 * **Atomic Transactions:** When the Product Manager uses `write_safe_file` or `append_safe_file`, the `vestibular.py` organ takes a microsecond `.bak` snapshot of the file before it is modified. If the pipeline completes successfully, the snapshots are cleared. If the pipeline aborts (due to a circuit breaker, API error, or security halt), the Vestibular system detects the "fall" and instantly restores all modified files to their original state, guaranteeing Zero-Debt atomic execution.
+
+### 19. Secret Scanning (The Immune System)
+* **Pathogen Neutralization:** The biological immune system patrols the bloodstream, neutralizing foreign pathogens before they can infect cells.
+* **Shift-Left Secret Scanning:** Before Brain OS is allowed to write or append any file to the filesystem, the `immune_system.py` organ acts as a leukocyte barrier. It scans the outbound text stream using strict Zero-Debt regex patterns for high-entropy secrets (AWS Keys, OpenAI tokens, RSA Private Keys). If Forge hallucinates or attempts to hardcode a live secret into your application, the Immune System instantly intercepts and blocks the disk write, enforcing strict environment-variable `.env` hygiene.
 ---
 
 ## 🏗️ Architecture & Routing

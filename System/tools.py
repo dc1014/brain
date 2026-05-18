@@ -7,6 +7,7 @@ import shutil
 import time
 from System.ast_parser import extract_signatures
 from System.organs.vestibular import create_snapshot
+from System.organs.immune_system import scan_for_pathogens
 
 # Define the absolute root of the Brain OS
 ROOT_DIR: Path = Path(__file__).parent.parent.resolve()
@@ -44,6 +45,11 @@ def write_safe_file(filepath: str, content: str) -> str:
         # SHIFT-LEFT SAFETY: Block any modification to Architectural Decision Records
         if "adr" in target_path.parts:
             return f"SECURITY BLOCK: Cannot modify ADRs. Human approval required for {filepath}."
+
+        # --- 🦠 IMMUNE SYSTEM REFLEX (Secret Scanning) ---
+        is_clean, immune_reason = scan_for_pathogens(content)
+        if not is_clean:
+            return immune_reason
 
         # --- ⚖️ VESTIBULAR REFLEX (Take Snapshot) ---
         create_snapshot(filepath)
@@ -155,6 +161,11 @@ def append_safe_file(filepath: str, content: str) -> str:
         # SHIFT-LEFT SAFETY: Block any modification to Architectural Decision Records
         if "adr" in target_path.parts:
             return f"SECURITY BLOCK: Cannot modify ADRs. Human approval required for {filepath}."
+
+        # --- 🦠 IMMUNE SYSTEM REFLEX (Secret Scanning) ---
+        is_clean, immune_reason = scan_for_pathogens(content)
+        if not is_clean:
+            return immune_reason
 
         # --- ⚖️ VESTIBULAR REFLEX (Take Snapshot) ---
         create_snapshot(filepath)
