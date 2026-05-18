@@ -1,113 +1,78 @@
-import os
-import time
 import asyncio
 import threading
-from typing import Any, Dict, Optional
-from rich.console import Console
-
-# ⚡ ZERO-DEBT: Move to module level to expose it to testing frameworks and monkeypatch hooks
-from System.core.paths import ROOT_DIR
-
-console = Console()
+from pathlib import Path
+from typing import Any, Dict
+from contextlib import asynccontextmanager, contextmanager
+from filelock import FileLock
 
 
 class BiologicalLock:
     """
-    Hardened Hybrid Biological Lock (Dual Protocol).
-    Provides BOTH async (`async with`) and sync (`with`) context managers.
-    Combines memory fencing with thread-isolated filesystem locks.
+    Biological File Lock (IPC + Async) - The Synaptic Cleft.
+    Combines robust cross-platform file locking (IPC) with native asyncio/threading locks.
+    Prevents both cross-process AND cross-task race conditions on the same memory queues.
     """
 
-    _local_async_locks: Dict[str, asyncio.Lock] = {}
-    _local_sync_locks: Dict[str, threading.Lock] = {}
+    # Class-level dictionaries to share local locks across instances for the same file
+    _async_locks: Dict[str, asyncio.Lock] = {}
+    _sync_locks: Dict[str, threading.Lock] = {}
 
-    def __init__(
-        self, lock_file_path: Optional[str] = None, timeout: float = 10.0
-    ) -> None:
-        """
-        Hardened Dual-Protocol Lock Constructor.
-        If no lock_file_path is explicitly declared (legacy/medulla fallback),
-        defaults securely to a centralized master lock boundary.
-        """
-        if lock_file_path is None:
-            # 🛡️ SHIFT-LEFT FAILSAFE: Self-resolves legacy unparameterized lock invocations
-            target_path = str(ROOT_DIR / "Meta" / "brain_master_autonomic")
-        else:
-            target_path = lock_file_path
+    def __init__(self, filepath: str | Path, timeout: float = 15.0):
+        # ⚡ ZERO-DEBT (Phase 3 Prep): Resolve absolute paths to prevent Windows casing bypasses
+        self.filepath = Path(filepath).resolve()
+        self.lock_path = self.filepath.with_name(f".{self.filepath.name}.lock")
+        self.file_lock = FileLock(str(self.lock_path), timeout=timeout)
+        self.lock_key = str(self.lock_path)
 
-        self.lock_file: str = f"{target_path}.lock"
-        self.timeout: float = timeout
+    @property
+    def _local_async(self) -> asyncio.Lock:
+        if self.lock_key not in BiologicalLock._async_locks:
+            BiologicalLock._async_locks[self.lock_key] = asyncio.Lock()
+        return BiologicalLock._async_locks[self.lock_key]
 
-        # ⚡ ZERO-DEBT: Guarantee the target directory exists so os.open doesn't throw a silent FileNotFoundError
-        os.makedirs(os.path.dirname(self.lock_file), exist_ok=True)
+    @property
+    def _local_sync(self) -> threading.Lock:
+        if self.lock_key not in BiologicalLock._sync_locks:
+            BiologicalLock._sync_locks[self.lock_key] = threading.Lock()
+        return BiologicalLock._sync_locks[self.lock_key]
 
-        # Async memory lock (for asyncio loop safety)
-        if self.lock_file not in self._local_async_locks:
-            self._local_async_locks[self.lock_file] = asyncio.Lock()
-        self.local_async_lock: asyncio.Lock = self._local_async_locks[self.lock_file]
-
-        # Sync memory lock (for native thread safety)
-        if self.lock_file not in self._local_sync_locks:
-            self._local_sync_locks[self.lock_file] = threading.Lock()
-        self.local_sync_lock: threading.Lock = self._local_sync_locks[self.lock_file]
-
-    def _try_acquire_file_lock(self) -> bool:
-        """Synchronous file IO for cross-process locking using Atomic OS operations."""
-        try:
-            # ⚡ ZERO-DEBT: os.O_CREAT | os.O_EXCL ensures atomic creation.
-            # This completely eliminates TOCTOU (Time-Of-Check-To-Time-Of-Use) race conditions.
-            fd = os.open(self.lock_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                f.write(str(os.getpid()))
-            return True
-        except (FileExistsError, OSError):
-            return False
-
-    def _release_file_lock(self) -> None:
-        """Synchronous file removal."""
-        if os.path.exists(self.lock_file):
-            try:
-                os.remove(self.lock_file)
-            except OSError:
-                pass
-
-    # --- ASYNC CONTEXT MANAGER (The Myelinated Fast-Path) ---
-    async def __aenter__(self) -> "BiologicalLock":
-        await self.local_async_lock.acquire()
-        start_time = time.time()
-        while True:
-            success = await asyncio.to_thread(self._try_acquire_file_lock)
-            if success:
-                return self
-
-            if time.time() - start_time > self.timeout:
-                self.local_async_lock.release()
-                raise TimeoutError(
-                    f"Synaptic Lock Timeout: Could not secure {self.lock_file}"
-                )
-
-            await asyncio.sleep(0.05)
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        await asyncio.to_thread(self._release_file_lock)
-        self.local_async_lock.release()
-
-    # --- SYNC CONTEXT MANAGER (Legacy / Somatic Compatibility) ---
+    # --- LEGACY SUPPORT: `with BiologicalLock():` ---
     def __enter__(self) -> "BiologicalLock":
-        self.local_sync_lock.acquire()
-        start_time = time.time()
-        while True:
-            if self._try_acquire_file_lock():
-                return self
-
-            if time.time() - start_time > self.timeout:
-                self.local_sync_lock.release()
-                raise TimeoutError(
-                    f"Synaptic Lock Timeout: Could not secure {self.lock_file}"
-                )
-
-            time.sleep(0.05)
+        self._local_sync.acquire()
+        self.file_lock.acquire()
+        return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self._release_file_lock()
-        self.local_sync_lock.release()
+        self.file_lock.release()
+        self._local_sync.release()
+
+    # --- LEGACY SUPPORT: `async with BiologicalLock():` ---
+    async def __aenter__(self) -> "BiologicalLock":
+        await self._local_async.acquire()
+        await asyncio.to_thread(self.file_lock.acquire)
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self.file_lock.release()
+        self._local_async.release()
+
+    # --- NEW SUPPORT (Hippocampus/Tests) ---
+    @asynccontextmanager
+    async def acquire(self):
+        """Asynchronously acquires the local lock, then the IPC lock."""
+        async with self._local_async:
+            await asyncio.to_thread(self.file_lock.acquire)
+            try:
+                yield self
+            finally:
+                self.file_lock.release()
+
+    @contextmanager
+    def acquire_sync(self):
+        """Synchronously acquires the local lock, then the IPC lock."""
+        with self._local_sync:
+            self.file_lock.acquire()
+            try:
+                yield self
+            finally:
+                self.file_lock.release()

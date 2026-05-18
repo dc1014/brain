@@ -9,6 +9,8 @@ from rich.console import Console
 from System.core.paths import ROOT_DIR
 from System.llm import acompletion
 from System.neuroanatomy.systemic.immune_system import vault
+from System.core.locks import BiologicalLock
+
 
 console = Console()
 
@@ -16,6 +18,7 @@ console = Console()
 DB_PATH = ROOT_DIR / "System" / "config" / "hippocampus.db"
 
 QUEUE_FILE_PATH = ROOT_DIR / "System" / "execution_queue.json"
+QUEUE_LOCK = BiologicalLock(QUEUE_FILE_PATH)
 
 # =====================================================================
 # 1. EPHEMERAL WORKING MEMORY (SQLite FTS5)
@@ -251,33 +254,38 @@ def consolidate_short_term_memory() -> None:
         console.print(f"[dim red]Hippocampus async error: {e}[/dim red]")
 
 
+QUEUE_FILE_PATH = ROOT_DIR / "System" / "execution_queue.json"
+# ⚡ ZERO-DEBT: Initialize the receptor lock
+QUEUE_LOCK = BiologicalLock(QUEUE_FILE_PATH)
+
+
 def persist_pipeline_state(
     description: str, route_type: str, domain: str, remaining_steps: list[dict]
 ) -> None:
-    """
-    Hippocampus: Saves the current state of the execution pipeline to disk.
-    If the system crashes, it can resume from this exact point.
-    """
+    """Hippocampus: Saves the current state of the execution pipeline to disk."""
     QUEUE_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(QUEUE_FILE_PATH, "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "original_task": description,
-                "route_type": route_type,
-                "domain": domain,
-                "remaining_steps": remaining_steps,
-            },
-            f,
-            indent=2,
-        )
+
+    # ⚡ ZERO-DEBT: Thread-safe IPC Locking
+    with QUEUE_LOCK.acquire_sync():
+        with open(QUEUE_FILE_PATH, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "original_task": description,
+                    "route_type": route_type,
+                    "domain": domain,
+                    "remaining_steps": remaining_steps,
+                },
+                f,
+                indent=2,
+            )
 
 
 def clear_pipeline_state() -> None:
-    """
-    Lymphatic System: Clears the execution queue upon graceful termination.
-    """
-    if QUEUE_FILE_PATH.exists():
-        try:
-            os.remove(QUEUE_FILE_PATH)
-        except OSError:
-            pass
+    """Lymphatic System: Clears the execution queue upon graceful termination."""
+    # ⚡ ZERO-DEBT: Thread-safe IPC Locking
+    with QUEUE_LOCK.acquire_sync():
+        if QUEUE_FILE_PATH.exists():
+            try:
+                os.remove(QUEUE_FILE_PATH)
+            except OSError:
+                pass

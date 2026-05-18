@@ -25,6 +25,7 @@ dependencies = [
     "opencv-python-headless>=4.9.0.80",
     "aiohttp>=3.13.4",
     "aiosqlite>=0.22.1",
+    "filelock>=3.29.0",
 ]
 
 [dependency-groups]
