@@ -27,6 +27,10 @@ Trigger Brain OS's external receptors directly from the CLI.
 * `uv run Sense/cli.py screenshot "https://google.com" "google.png"` - *Takes a headless screenshot.*
 * `uv run Sense/cli.py perceive "google.png" "Describe the layout."` - *Uses the Occipital Lobe to read an image.*
 
+### 🔍 Discovery
+- `task "Search Studio for 'fastapi' and summarize the endpoints."`
+- `task "Run a semantic_search in Personal for notes related to 'canine training strategies'."`
+
 ### 🌊 Garbage Collection (Lymphatic System)
 Manage your hard drive space and old AI logs.
 * `uv run System/cli.py flush` - *Sweeps old logs and .bak snapshots into compressed `.tar.gz` Lymph Nodes.*

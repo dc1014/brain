@@ -1,12 +1,25 @@
+# 🛠️ Brain OS: Tool Schemas
 base:
   - type: "function"
     function:
       name: "read_safe_file"
-      # ...
+      description: "Reads the complete contents of a file securely."
+      parameters:
+        type: "object"
+        properties:
+          filepath: { type: "string" }
+        required: ["filepath"]
+
   - type: "function"
     function:
       name: "list_safe_directory"
-      # ...
+      description: "Lists all files in a directory."
+      parameters:
+        type: "object"
+        properties:
+          directory_path: { type: "string" }
+        required: ["directory_path"]
+
   - type: "function"
     function:
       name: "search_safe_directory"
@@ -17,6 +30,18 @@ base:
           query: { type: "string" }
           directory_path: { type: "string" }
         required: ["query", "directory_path"]
+
+  - type: "function"
+    function:
+      name: "semantic_search"
+      description: "WERNICKE'S AREA: Use this to find conceptual answers. It retrieves broad results and uses an LLM to filter out noise, returning exact semantic answers. Saves context tokens."
+      parameters:
+        type: "object"
+        properties:
+          directory: { type: "string" }
+          query: { type: "string" }
+        required: ["directory", "query"]
+
   - type: "function"
     function:
       name: "analyze_safe_syntax"
@@ -38,6 +63,7 @@ write:
           filepath: { type: "string" }
           content: { type: "string" }
         required: ["filepath", "content"]
+
   - type: "function"
     function:
       name: "rename_safe_file"
@@ -48,6 +74,7 @@ write:
           old_filepath: { type: "string" }
           new_filepath: { type: "string" }
         required: ["old_filepath", "new_filepath"]
+
   - type: "function"
     function:
       name: "append_safe_file"
@@ -72,6 +99,7 @@ execute:
             type: "string"
             description: "Optional Git URL, defaults to Forge"
         required: ["project_name"]
+
   - type: "function"
     function:
       name: "execute_command"
@@ -82,6 +110,7 @@ execute:
           command: { type: "string" }
           directory_path: { type: "string" }
         required: ["command", "directory_path"]
+
   - type: "function"
     function:
       name: "operate_forge"
@@ -96,6 +125,7 @@ execute:
             type: "string"
             description: "The natural language instruction or pipeline command (e.g., '[START: Engineering] Build the React site')."
         required: ["project_name", "instruction"]
+
   - type: "function"
     function:
       name: "copy_safe_file"
@@ -106,56 +136,57 @@ execute:
           source_filepath: { type: "string" }
           dest_filepath: { type: "string" }
         required: ["source_filepath", "dest_filepath"]
-  - type: function
+
+  - type: "function"
     function:
-      name: sense_environment
+      name: "sense_environment"
       description: "Fetches and reads an external webpage, converting it to token-optimized Hybrid XML/MD. Use this to research competitors, read API docs, or fetch external context."
       parameters:
-        type: object
+        type: "object"
         properties:
           url:
-            type: string
+            type: "string"
             description: "The HTTP or HTTPS URL to read."
         required: ["url"]
 
-  - type: function
+  - type: "function"
     function:
-      name: create_engram_tool
+      name: "create_engram_tool"
       description: "Saves a sequence of bash/shell commands into procedural muscle memory. Use this when you successfully complete a complex, multi-step task that will likely be repeated in the future."
       parameters:
-        type: object
+        type: "object"
         properties:
           name:
-            type: string
+            type: "string"
             description: "A short, snake_case name for the engram (e.g., bootstrap_react_app)."
           description:
-            type: string
+            type: "string"
             description: "A human-readable description of what this script does."
           commands:
-            type: string
+            type: "string"
             description: "The raw bash/shell commands to save. Use standard cross-platform conventions where possible."
         required: ["name", "description", "commands"]
 
-  - type: function
+  - type: "function"
     function:
-      name: list_engrams_tool
+      name: "list_engrams_tool"
       description: "Lists all available muscle memory scripts (engrams) the system knows how to do instantly. ALWAYS check this before writing manual shell commands for complex tasks."
       parameters:
-        type: object
+        type: "object"
         properties: {}
 
-  - type: function
+  - type: "function"
     function:
-      name: execute_engram_tool
+      name: "execute_engram_tool"
       description: "Instantly executes a learned engram (bash script). Use this instead of manually executing shell commands if an engram already exists."
       parameters:
-        type: object
+        type: "object"
         properties:
           name:
-            type: string
+            type: "string"
             description: "The name of the engram to execute (e.g., bootstrap_react_app)."
           args:
-            type: string
+            type: "string"
             description: "Optional arguments to pass to the script."
         required: ["name"]
 
@@ -171,8 +202,31 @@ execute:
             description: "The exact keyword or phrase to search for."
         required: ["query"]
 
+  - type: "function"
+    function:
+      name: "manage_background_process"
+      description: "PROPRIOCEPTION: Starts, stops, or lists long-running background processes (like npm run dev). ALWAYS stop an existing server before starting a new one."
+      parameters:
+        type: "object"
+        properties:
+          action:
+            type: "string"
+            description: "'start', 'stop', or 'list'"
+          name:
+            type: "string"
+            description: "A unique identifier for the process"
+          command:
+            type: "string"
+            description: "The terminal command to execute (required for 'start')"
+          cwd:
+            type: "string"
+            description: "The directory to run the command inside"
+        required: ["action"]
+
 vision:
-    - name: "analyze_image"
+  - type: "function"
+    function:
+      name: "analyze_image"
       description: "OCCIPITAL LOBE: Analyzes a local image file using a Multimodal LLM to extract visual meaning. Great for UI/UX testing or looking at diagrams."
       parameters:
         type: "object"
@@ -185,7 +239,9 @@ vision:
             description: "What you want to know about the image (e.g., 'What is the background color of the header?')"
         required: ["image_path", "query"]
 
-    - name: "generate_image"
+  - type: "function"
+    function:
+      name: "generate_image"
       description: "OCCIPITAL LOBE: Generates a high-quality AI image from a text prompt and saves it directly to the disk. Use this for logos, backgrounds, or mockups."
       parameters:
         type: "object"
@@ -198,7 +254,9 @@ vision:
             description: "The path inside Studio/ to save the image (e.g., 'My-App/public/logo.png')"
         required: ["prompt", "output_filename"]
 
-    - name: "capture_screenshot"
+  - type: "function"
+    function:
+      name: "capture_screenshot"
       description: "SENSE (VISION): Takes a full-page screenshot of a URL or localhost server. Automatically saves the image to the OS memory buffer and returns the file path. Pass that path into analyze_image."
       parameters:
         type: "object"

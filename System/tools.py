@@ -648,3 +648,21 @@ def capture_screenshot(url: str) -> str:
     # Call the receptor
     take_screenshot(url, str(output_path))
     return f"Screenshot successfully captured and saved to {output_path.as_posix()}"
+
+
+def semantic_search(directory: str, query: str) -> str:
+    """
+    A deep semantic search. Uses keyword search to grab a broad batch of notes,
+    and then uses Wernicke's Area (an LLM) to comprehend and extract the exact answer.
+    """
+    from System.tools import search_safe_directory
+    from System.organs.wernicke import filter_semantic_relevance
+
+    # 1. Fast Path (Hippocampus): Get keyword matches
+    # Removed the invalid 'limit' arg and explicitly named the parameters
+    raw_results = search_safe_directory(query=query, directory_path=directory)
+
+    # 2. Comprehension Path (Wernicke): Filter out the noise
+    semantic_result = filter_semantic_relevance(query, raw_results)
+
+    return semantic_result

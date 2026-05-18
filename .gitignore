@@ -98,3 +98,6 @@ Meta/Lymph_Nodes/*.tar.gz
 
 # 👁️ VISUAL CORTEX BUFFER
 Meta/Visual_Cortex/*.png
+
+# 🧠 WERNICKE SEMANTIC GRAPH
+Meta/Wernicke/embeddings.json

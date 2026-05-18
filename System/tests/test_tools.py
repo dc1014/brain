@@ -375,3 +375,21 @@ def test_sense_environment_tool(monkeypatch):
     error_result = sense_environment("http://localhost")
     assert "<sensory_error" in error_result
     assert "SSRF Block" in error_result
+
+
+def test_tools_yaml_schema_validity():
+    import yaml  # type: ignore
+    from pathlib import Path
+
+    yaml_path = Path(__file__).parent.parent / "config" / "tools.yaml"
+    with open(yaml_path, "r", encoding="utf-8") as f:
+        tools = yaml.safe_load(f)
+
+    # Ensure every tool has valid OpenAI schema fields
+    for group_name, tool_list in tools.items():
+        for tool in tool_list:
+            assert "type" in tool
+            assert "function" in tool
+            assert "name" in tool["function"]
+            assert "parameters" in tool["function"]
+            assert "properties" in tool["function"]["parameters"]
