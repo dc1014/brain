@@ -1,5 +1,17 @@
 import re
 
+# --- SHIFT-LEFT SECURITY: Background Threat Signatures ---
+FORBIDDEN_BACKGROUND_COMMANDS = [
+    r"\bcurl\b",
+    r"\bwget\b",
+    r"\bnc\b",
+    r"\bnetcat\b",
+    r"\bmkfifo\b",
+    r"\bbash\s+-i\b",
+    r"\bpowershell\s+-e\b",
+    r"\brm\s+-rf\b",
+]
+
 
 def scan_prompt(prompt: str) -> tuple[bool, str]:
     """
@@ -56,3 +68,17 @@ def scan_prompt(prompt: str) -> tuple[bool, str]:
             return False, f"AMYGDALA RULE: Destructive action blocked ('{clean_word}')."
 
     return True, "Safe"
+
+
+def scan_command(command: str) -> tuple[bool, str]:
+    """
+    The Amygdala: Scans terminal commands for malicious background execution patterns.
+    Returns (is_safe, threat_reason).
+    """
+    for pattern in FORBIDDEN_BACKGROUND_COMMANDS:
+        if re.search(pattern, command, re.IGNORECASE):
+            return (
+                False,
+                f"SECURITY BLOCK (Amygdala): The command '{command}' violates background execution policies. Do not use curl, wget, nc, or rm.",
+            )
+    return True, ""

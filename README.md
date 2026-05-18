@@ -116,6 +116,10 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 22. Multi-Agent Swarms (The Prefrontal Cortex)
 * **Executive Orchestration:** The Prefrontal Cortex orchestrates multiple regions of the brain simultaneously.
 * **Parallel Agent Execution:** Complex pipelines (like `SWARM`) utilize native Python `concurrent.futures.ThreadPoolExecutor` to branch the execution pipeline. The system can spawn specialized sub-agents (e.g., a Frontend Engineer and a Backend Engineer) to work on different parts of the codebase at the exact same time, radically reducing wall-clock generation time before merging their context back into a linear QA validation step.
+
+### 23. Spatial Awareness (Proprioception)
+* **Body Tracking:** Proprioception is the biological sense of body position and movement.
+* **Background Process Management:** Standard AI agents hang indefinitely when executing synchronous blocking commands (like starting a React dev server). The `proprioception.py` organ allows Brain OS to spawn detached, asynchronous process groups, recording their Process IDs (PIDs) in `motor_state.json`. Agents use the `manage_background_process` tool to "flex" (start) and "relax" (kill) local servers with full spatial awareness, laying the groundwork for self-hosted visual testing.
 ---
 
 ## 🏗️ Architecture & Routing

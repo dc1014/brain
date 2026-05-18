@@ -583,3 +583,31 @@ def search_hippocampus(query: str) -> str:
     from System.organs.hippocampus import recall_memory
 
     return recall_memory(query)
+
+
+def manage_background_process(
+    action: str, name: str = "", command: str = "", cwd: str = ""
+) -> str:
+    """
+    Proprioception Motor Control: Start, stop, or list background processes (like local dev servers).
+
+    Parameters:
+    - action: Must be 'start', 'stop', or 'list'.
+    - name: A unique identifier for the process (e.g., 'frontend_server'). Required for start/stop.
+    - command: The terminal command to run (e.g., 'npm run dev'). Required for 'start'.
+    - cwd: The directory to run the command in (optional).
+    """
+    from System.organs.proprioception import start_process, stop_process, list_processes
+
+    if action == "list":
+        return list_processes()
+    elif action == "start":
+        if not name or not command:
+            return "Error: Both 'name' and 'command' are required to start a process."
+        return start_process(name, command, cwd if cwd else None)
+    elif action == "stop":
+        if not name:
+            return "Error: 'name' is required to stop a process."
+        return stop_process(name)
+    else:
+        return "Error: Invalid action. Must be 'start', 'stop', or 'list'."

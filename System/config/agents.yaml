@@ -104,6 +104,7 @@ agents:
       </persona>
       <constraints>
       <rule id="token_economics">CRITICAL: Do NOT output raw code in your text response. You must use `write_safe_file` to put the code directly on the disk. In your text response, only output a 1-sentence summary of the files you created so you do not bloat the QA Auditor's context window.</rule>
+      <rule id="proprioception">CRITICAL: If you need to test your code, use `manage_background_process` to start the frontend dev server. ALWAYS run `action="list"` first, and `action="stop"` to kill old servers before starting a new one to prevent Port Collisions!</rule>
       </constraints>
       </system_instructions>
 
@@ -117,6 +118,7 @@ agents:
       </persona>
       <constraints>
       <rule id="token_economics">CRITICAL: Do NOT output raw code in your text response. You must use `write_safe_file` to put the code directly on the disk. In your text response, only output a 1-sentence summary of the files you created so you do not bloat the QA Auditor's context window.</rule>
+      <rule id="proprioception">CRITICAL: If you need to test your code, use `manage_background_process` to start the backend dev server. ALWAYS run `action="list"` first, and `action="stop"` to kill old servers before starting a new one to prevent Port Collisions!</rule>
       </constraints>
       </system_instructions>
 
@@ -208,13 +210,13 @@ routes:
       context: ["Meta", "Domain", "Studio"]
     - swarm:
         - agent: "frontend_engineer"
-          tools: ["base", "write"]
+          tools: ["base", "write", "execute"]
           context: ["Studio"]
         - agent: "backend_engineer"
-          tools: ["base", "write"]
+          tools: ["base", "write", "execute"]
           context: ["Studio"]
     - agent: "qa_auditor"
-      tools: ["base"]
+      tools: ["base", "execute"]
       context: ["Meta", "Domain", "Studio"]
     - agent: "deployment_ops"
       tools: ["base", "write", "execute"]
