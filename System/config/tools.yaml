@@ -158,3 +158,15 @@ execute:
             type: string
             description: "Optional arguments to pass to the script."
         required: ["name"]
+
+  - type: "function"
+    function:
+      name: "search_hippocampus"
+      description: "Instantly searches the codebase's long-term memory for a concept, variable, or function name. Returns tightly cropped text snippets. Highly token-efficient."
+      parameters:
+        type: "object"
+        properties:
+          query:
+            type: "string"
+            description: "The exact keyword or phrase to search for."
+        required: ["query"]

@@ -27,6 +27,8 @@ Brain OS is not a traditional state machine or a reactive AI wrapper. It is mode
 
 ### 1. Neuroanatomy & Memory (Data Persistence)
 * **The Hippocampus (Short-Term Memory):** Uses `agent_interactions.jsonl` as a volatile, append-only chronological ledger of daily interactions.
+  * **Long-Term Memory:** The Hippocampus converts short-term context into instantly retrievable long-term memory across all domains (Personal, Professional, Studio, Meta).
+  * **Hybrid Storage (Unix + SQLite):** To maintain the "Glass Brain" Unix philosophy, all memories and code reside in flat `.md` and `.py` files. However, to preserve Token Economics, Brain OS maintains a completely throwaway, ephemeral SQLite FTS5 index (`hippocampus.db`). When the LLM uses the `search_hippocampus` tool, the C-optimized FTS5 engine returns tightly cropped text snippets instead of reading 5,000-line files. The database holds zero authoritative state and can be rebuilt at any time via `brain reindex`.
 * **The Neocortex (Long-Term Memory):** Uses an Obsidian Vault (`.md` files) as a highly structured, associative network of permanent facts linked by `[[wikilinks]]`.
 * **Amnesia (The Forgetting Curve):** Actively rotates and archives the Hippocampus logs daily to prevent context-window bloat. Forgetting noise is required to retain signal.
 

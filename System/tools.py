@@ -565,3 +565,10 @@ def execute_engram_tool(name: str, args: str = "") -> str:
     from System.organs.cerebellum import execute_engram
 
     return execute_engram(name, args)
+
+
+def search_hippocampus(query: str) -> str:
+    """Searches the AI's long-term ephemeral index for code snippets."""
+    from System.organs.hippocampus import recall_memory
+
+    return recall_memory(query)

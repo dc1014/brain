@@ -6,13 +6,7 @@ console = Console()
 ROOT_DIR = Path(__file__).parent.parent.parent
 
 
-# --- 1. THE CORTEX (Event Router & Reflexes) ---
 def process_sensory_event(source: str, event_type: str, payload: dict) -> None:
-    """
-    The Somatosensory Cortex.
-    Routes incoming sensory data (local files, or future webhooks) to biological reflexes.
-    """
-    # Reflex A: Local File Modifications
     if source == "local_fs" and event_type == "file_modified":
         filepath = payload.get("filepath", "")
         file_obj = Path(filepath)
@@ -35,7 +29,7 @@ def process_sensory_event(source: str, event_type: str, payload: dict) -> None:
                         f"[dim]🦟 Reflex: {file_obj.name} saved cleanly.[/dim]"
                     )
             except ValueError:
-                pass  # Outside safe zone
+                pass
 
         # Micro-Reflex 2: AST Structural Mapping (Proprioception)
         valid_ast_exts = (".py", ".ts", ".tsx", ".js", ".jsx")
@@ -45,11 +39,9 @@ def process_sensory_event(source: str, event_type: str, payload: dict) -> None:
 
                 stubs = extract_signatures(filepath)
 
-                # Write to the Meta/AST directory so the PM can read it later instantly
                 ast_dir = ROOT_DIR / "Meta" / "AST"
                 ast_dir.mkdir(parents=True, exist_ok=True)
 
-                # Create a safe, flat filename (e.g., Studio_main.py.md)
                 safe_name = f"{file_obj.parent.name}_{file_obj.name}.md"
                 ast_file = ast_dir / safe_name
 
@@ -63,53 +55,79 @@ def process_sensory_event(source: str, event_type: str, payload: dict) -> None:
             except Exception as e:
                 console.print(f"[dim red]AST Reflex failed: {e}[/dim red]")
 
-    # Future Extension: Webhooks
+        # Micro-Reflex 3: Hippocampus Real-Time Encoding
+        try:
+            from System.organs.hippocampus import encode_memory
+
+            content = file_obj.read_text(encoding="utf-8")
+            encode_memory(str(file_obj.relative_to(ROOT_DIR)), content)
+            console.print(
+                f"[dim]🧠 Reflex: Hippocampus encoded memory for {file_obj.name}[/dim]"
+            )
+        except Exception:
+            pass
+
     elif source == "webhook":
         console.print(
             f"[dim]🌐 Somatosensory Cortex received remote webhook ({event_type}). Routing to DMN...[/dim]"
         )
 
 
-# --- 2. SENSORY RECEPTORS (The Skin / Event Emitters) ---
-def start_local_watcher(target_dir_name: str, poll_interval: int = 2) -> None:
-    """
-    A Zero-Debt, standard-library file watcher.
-    Acts as the skin, polling for local physical changes.
-    """
-    watch_dir = ROOT_DIR / target_dir_name
-    if not watch_dir.exists():
+def start_local_watcher(
+    target_dirs: list[str] | None = None, poll_interval: int = 2
+) -> None:
+    """Watches multiple domains simultaneously for file changes."""
+    if not target_dirs:
+        target_dirs = ["Studio", "Meta", "Personal", "Professional"]
+
+    watch_paths = []
+    for t in target_dirs:
+        p = ROOT_DIR / t
+        if p.exists():
+            watch_paths.append(p)
+
+    if not watch_paths:
         console.print(
-            f"[bold red]Cannot feel '{target_dir_name}'. Directory not found.[/bold red]"
+            "[bold red]Cannot feel any domains. Directories not found.[/bold red]"
         )
         return
 
     console.print(
-        f"[bold magenta]🖐️  Somatosensory Cortex online. Feeling for changes in {watch_dir.name}/...[/bold magenta]"
+        f"[bold magenta]🖐️  Somatosensory Cortex online. Feeling for changes across {len(watch_paths)} domains...[/bold magenta]"
     )
     console.print("[dim](Press Ctrl+C to disconnect sensory input)[/dim]\n")
 
     file_states: dict[Path, float] = {}
-    valid_exts = {".py", ".ts", ".md"}
-    ignore_dirs = {".git", "node_modules", ".venv", "__pycache__", "dist", "build"}
+    valid_exts = {".py", ".ts", ".tsx", ".md", ".json", ".txt"}
+    ignore_dirs = {
+        ".git",
+        "node_modules",
+        ".venv",
+        "__pycache__",
+        "dist",
+        "build",
+        "logs",
+    }
 
     try:
         while True:
-            for filepath in watch_dir.rglob("*"):
-                if filepath.is_file() and filepath.suffix in valid_exts:
-                    if any(ignored in filepath.parts for ignored in ignore_dirs):
-                        continue
+            for watch_dir in watch_paths:
+                for filepath in watch_dir.rglob("*"):
+                    if filepath.is_file() and filepath.suffix in valid_exts:
+                        if any(ignored in filepath.parts for ignored in ignore_dirs):
+                            continue
 
-                    mtime = filepath.stat().st_mtime
-                    if filepath in file_states:
-                        if mtime > file_states[filepath]:
-                            # File changed! Fire the nerve impulse to the Cortex.
-                            process_sensory_event(
-                                "local_fs", "file_modified", {"filepath": str(filepath)}
-                            )
+                        mtime = filepath.stat().st_mtime
+                        if filepath in file_states:
+                            if mtime > file_states[filepath]:
+                                process_sensory_event(
+                                    "local_fs",
+                                    "file_modified",
+                                    {"filepath": str(filepath)},
+                                )
+                                file_states[filepath] = mtime
+                        else:
                             file_states[filepath] = mtime
-                    else:
-                        # Initial state load
-                        file_states[filepath] = mtime
 
             time.sleep(poll_interval)
 

@@ -694,13 +694,24 @@ def observe(
 @app.command()
 def watch(
     target: str = typer.Option(
-        "Studio", "--target", "-t", help="The directory to physically feel for changes."
+        None,
+        "--target",
+        "-t",
+        help="Specific directory to feel for changes. Defaults to all core domains.",
     ),
 ) -> None:
-    """Somatosensory Cortex: Runs a background watcher to trigger local reflexes on file saves."""
+    """Somatosensory Cortex: Runs a background watcher to trigger local reflexes."""
     from System.organs.somatosensory import start_local_watcher
 
-    start_local_watcher(target)
+    # If a specific target is provided, wrap it in a list. Otherwise, pass None to use all defaults.
+    target_list = [target] if target else None
+    start_local_watcher(target_dirs=target_list)
+
+
+@app.command()
+def reindex() -> None:
+    """Maintenance: Wipes and rebuilds the Ephemeral Glass Brain (SQLite index) from flat files."""
+    reindex()
 
 
 if __name__ == "__main__":
