@@ -207,7 +207,7 @@ routes:
   SWARM:
     - agent: "swarm_architect"
       tools: ["base", "write", "sense_environment"]
-      context: ["Meta", "Domain", "Studio"]
+      context: ["Meta", "Domain", "Studio", "Professional"]
     - swarm:
         - agent: "frontend_engineer"
           tools: ["base", "write", "execute"]
@@ -216,18 +216,18 @@ routes:
           tools: ["base", "write", "execute"]
           context: ["Studio"]
     - agent: "qa_auditor"
-      tools: ["base", "execute"]
-      context: ["Meta", "Domain", "Studio"]
+      tools: ["base", "execute", "capture_screenshot"]
+      context: ["Meta", "Domain", "Studio", "Professional"]
     - agent: "deployment_ops"
       tools: ["base", "write", "execute"]
-      context: ["Meta", "Domain", "Studio"]
+      context: ["Meta", "Domain", "Studio", "Professional"]
 
   SUBCONSCIOUS_FORAGE:
     - agent: "forager"
       tools: ["base", "write", "sense_environment"]
-      context: ["Meta", "Personal"]
+      context: ["Meta", "Personal", "Professional"]
 
   SUBCONSCIOUS_DAYDREAM:
     - agent: "daydreamer"
       tools: ["base", "write"]
-      context: ["Meta", "Studio", "Personal"]
+      context: ["Meta", "Studio", "Personal", "Professional"]

@@ -95,3 +95,6 @@ System/config/hippocampus.db
 
 # 🌊 LYMPHATIC WASTE
 Meta/Lymph_Nodes/*.tar.gz
+
+# 👁️ VISUAL CORTEX BUFFER
+Meta/Visual_Cortex/*.png

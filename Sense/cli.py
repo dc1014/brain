@@ -71,5 +71,25 @@ def sleep() -> None:
     enter_sleep_cycle()
 
 
+@app.command()
+def screenshot(url: str, output: str = "screenshot.png") -> None:
+    """Sense: Takes a headless screenshot of a webpage or localhost server."""
+    from Sense.receptors.vision import take_screenshot
+
+    result = take_screenshot(url, output)
+    console.print(result)
+
+
+@app.command()
+def perceive(
+    image_path: str, query: str = "Describe this image in extreme detail."
+) -> None:
+    """Sense: Uses the Occipital Lobe to read an image file and extract semantic meaning."""
+    from System.organs.occipital import perceive_image
+
+    result = perceive_image(image_path, query)
+    console.print(result)
+
+
 if __name__ == "__main__":
     app()

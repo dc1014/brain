@@ -22,6 +22,11 @@ Manually rebuild the ephemeral SQLite search index from your flat-file markdown 
 Force the system into a Deep Sleep cycle (Triggers the Lymphatic flush, and then REM sleep/DMN Daydreaming).
 * `uv run System/cli.py sleep`
 
+### 👁️ Sensory Perception (Sense)
+Trigger Brain OS's external receptors directly from the CLI.
+* `uv run Sense/cli.py screenshot "https://google.com" "google.png"` - *Takes a headless screenshot.*
+* `uv run Sense/cli.py perceive "google.png" "Describe the layout."` - *Uses the Occipital Lobe to read an image.*
+
 ### 🌊 Garbage Collection (Lymphatic System)
 Manage your hard drive space and old AI logs.
 * `uv run System/cli.py flush` - *Sweeps old logs and .bak snapshots into compressed `.tar.gz` Lymph Nodes.*

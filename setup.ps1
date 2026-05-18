@@ -25,4 +25,6 @@ uv sync
 # Force vault initialization to ensure Obsidian paths exist
 uv run python System/cli.py init
 
+uv run playwright install chromium
+
 Write-Host "`n🚀 Brain OS is ready! Run: uv run python System/cli.py 'Your prompt here'" -ForegroundColor Green

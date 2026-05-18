@@ -120,6 +120,10 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 23. Spatial Awareness (Proprioception)
 * **Body Tracking:** Proprioception is the biological sense of body position and movement.
 * **Background Process Management:** Standard AI agents hang indefinitely when executing synchronous blocking commands (like starting a React dev server). The `proprioception.py` organ allows Brain OS to spawn detached, asynchronous process groups, recording their Process IDs (PIDs) in `motor_state.json`. Agents use the `manage_background_process` tool to "flex" (start) and "relax" (kill) local servers with full spatial awareness, laying the groundwork for self-hosted visual testing.
+
+### 24. Visual Cortex (The Occipital Lobe)
+* **Visual Perception & Generation:** The Occipital lobe processes raw optical data into semantic meaning.
+* **Multimodal QA:** Brain OS is not blind. Using the `Sense` capability and the `occipital.py` organ, agents can use Headless Chromium to take screenshots of the local web servers they spawn (via Proprioception). The OS then encodes these screenshots into base64 and feeds them to a baseline multimodal model (GPT-4o-mini) to visually verify CSS layouts, UI designs, and color contrast. It can also generate visual assets autonomously using DALL-E 3.
 ---
 
 ## 🏗️ Architecture & Routing

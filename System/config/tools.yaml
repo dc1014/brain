@@ -170,3 +170,40 @@ execute:
             type: "string"
             description: "The exact keyword or phrase to search for."
         required: ["query"]
+
+vision:
+    - name: "analyze_image"
+      description: "OCCIPITAL LOBE: Analyzes a local image file using a Multimodal LLM to extract visual meaning. Great for UI/UX testing or looking at diagrams."
+      parameters:
+        type: "object"
+        properties:
+          image_path:
+            type: "string"
+            description: "The file path to the image (e.g., 'Studio/screenshot.png')"
+          query:
+            type: "string"
+            description: "What you want to know about the image (e.g., 'What is the background color of the header?')"
+        required: ["image_path", "query"]
+
+    - name: "generate_image"
+      description: "OCCIPITAL LOBE: Generates a high-quality AI image from a text prompt and saves it directly to the disk. Use this for logos, backgrounds, or mockups."
+      parameters:
+        type: "object"
+        properties:
+          prompt:
+            type: "string"
+            description: "A highly detailed visual description of the image to generate."
+          output_filename:
+            type: "string"
+            description: "The path inside Studio/ to save the image (e.g., 'My-App/public/logo.png')"
+        required: ["prompt", "output_filename"]
+
+    - name: "capture_screenshot"
+      description: "SENSE (VISION): Takes a full-page screenshot of a URL or localhost server. Automatically saves the image to the OS memory buffer and returns the file path. Pass that path into analyze_image."
+      parameters:
+        type: "object"
+        properties:
+          url:
+            type: "string"
+            description: "The URL to capture (e.g., 'http://localhost:3000')"
+        required: ["url"]

@@ -611,3 +611,40 @@ def manage_background_process(
         return stop_process(name)
     else:
         return "Error: Invalid action. Must be 'start', 'stop', or 'list'."
+
+
+def analyze_image(image_path: str, query: str) -> str:
+    """
+    Use this to look at and analyze an image file on the disk (e.g., a screenshot or diagram).
+    Pass a specific query like 'Does this UI match the spec?' or 'What is in this image?'.
+    """
+    from System.organs.occipital import perceive_image
+
+    return perceive_image(image_path, query)
+
+
+def generate_image(prompt: str, output_filename: str) -> str:
+    """
+    Generates a visual asset (PNG/JPG) using an AI image generator based on your text prompt.
+    The image will be saved to the Studio/ directory.
+    output_filename should be a relative path like 'My-App/public/logo.png'.
+    """
+    from System.organs.occipital import generate_visual_asset
+
+    return generate_visual_asset(prompt, output_filename)
+
+
+def capture_screenshot(url: str) -> str:
+    """Takes a headless screenshot and explicitly quarantines it in the Meta/Visual_Cortex buffer."""
+    from Sense.receptors.vision import take_screenshot
+    from pathlib import Path
+
+    # Force the screenshot into a quarantined OS buffer
+    visual_cortex_dir = Path(__file__).parent.parent / "Meta" / "Visual_Cortex"
+    visual_cortex_dir.mkdir(parents=True, exist_ok=True)
+
+    output_path = visual_cortex_dir / "latest_screenshot.png"
+
+    # Call the receptor
+    take_screenshot(url, str(output_path))
+    return f"Screenshot successfully captured and saved to {output_path.as_posix()}"

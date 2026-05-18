@@ -69,6 +69,22 @@ def flush_waste(max_log_lines: int = 2000, max_bak_age_hours: int = 24) -> None:
             except Exception as e:
                 console.print(f"[dim red]Lymphatic error archiving logs: {e}[/dim red]")
 
+        # --- 3. Clear Visual Cortex Buffer ---
+        visual_dir = ROOT_DIR / "Meta" / "Visual_Cortex"
+        cleared_images = 0
+        if visual_dir.exists():
+            for f in visual_dir.glob("*.png"):
+                if f.is_file():
+                    try:
+                        f.unlink()  # Permanently delete ephemeral test screenshots
+                        cleared_images += 1
+                    except Exception:
+                        pass
+        if cleared_images > 0:
+            console.print(
+                f"[dim blue]🌊 Flushed {cleared_images} ephemeral screenshots from Visual Cortex.[/dim blue]"
+            )
+
     # --- Cleanup empty tarballs if nothing was added ---
     if cleared_baks == 0 and trimmed_lines == 0:
         tar_path.unlink()

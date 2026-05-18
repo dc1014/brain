@@ -16,6 +16,7 @@ dependencies = [
     "tree-sitter-javascript>=0.25.0",
     "pytest-cov>=7.1.0",
     "sense",
+    "playwright>=1.59.0",
 ]
 
 [dependency-groups]
@@ -40,7 +41,8 @@ exclude = [
 ignore_missing_imports = true
 namespace_packages = true
 explicit_package_bases = true
-mypy_path = "Sense"
+mypy_path = "."
+
 
 [tool.pytest.ini_options]
 addopts = "-v -m \"not eval\" --strict-markers --cov=System --cov-report=term-missing --cov-fail-under=80"
