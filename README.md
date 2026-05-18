@@ -104,6 +104,10 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 19. Secret Scanning (The Immune System)
 * **Pathogen Neutralization:** The biological immune system patrols the bloodstream, neutralizing foreign pathogens before they can infect cells.
 * **Shift-Left Secret Scanning:** Before Brain OS is allowed to write or append any file to the filesystem, the `immune_system.py` organ acts as a leukocyte barrier. It scans the outbound text stream using strict Zero-Debt regex patterns for high-entropy secrets (AWS Keys, OpenAI tokens, RSA Private Keys). If Forge hallucinates or attempts to hardcode a live secret into your application, the Immune System instantly intercepts and blocks the disk write, enforcing strict environment-variable `.env` hygiene.
+
+### 20. Data Contract Enforcement (Broca's Area)
+* **Speech Articulation:** Broca's Area is responsible for human speech production.
+* **XML Auto-Healing:** Enforcing Principle 5 (Hybrid XML/MD), the `broca.py` organ parses all agent outputs before execution. If an agent forgets a closing XML tag due to token limits, or improperly nests Markdown code blocks inside XML execution tags, Broca's Area instantly auto-heals the syntax. This guarantees flawless agent-to-agent communication without crashing the pipeline.
 ---
 
 ## 🏗️ Architecture & Routing

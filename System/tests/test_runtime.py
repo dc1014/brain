@@ -81,12 +81,15 @@ def test_analyze_task_api_error(mocker) -> None:  # type: ignore
 def test_auditor_headless_retry_bypass(mocker):
     """Test that the headless flag auto-approves an Auditor retry without pausing."""
     from System.llm import AgentResponse
+    from System.runtime import execute_pipeline
 
-    # 1. Mock Dispatcher
+    # 1. Mock internal state to prevent side effects
     mocker.patch(
         "System.runtime.analyze_task",
         return_value=(True, "Approved", "FORGE", "STUDIO", {"total_tokens": 10}),
     )
+    mocker.patch("System.organs.vestibular.commit_transaction")
+    mocker.patch("System.organs.vestibular.restore_balance")
 
     # 2. Mock Agent to FAIL on the first try, but PASS on the retry
     call_count = {"qa_auditor": 0}
@@ -96,29 +99,24 @@ def test_auditor_headless_retry_bypass(mocker):
         if "Auditor" in role_name:
             call_count["qa_auditor"] += 1
             if call_count["qa_auditor"] == 1:
-                return AgentResponse(
-                    text='<audit_result grade="FAIL">Try again.</audit_result>',
-                    usage={},
-                )
-            return AgentResponse(
-                text='<audit_result grade="PASS">Good.</audit_result>', usage={}
-            )
+                # FIRST TRY: Explicitly trigger the retry using Broca's strict format
+                return AgentResponse(text="<audit_result>FAIL</audit_result>", usage={})
+            # RETRY: Explicitly pass using Broca's strict format
+            return AgentResponse(text="<audit_result>PASS</audit_result>", usage={})
         return AgentResponse(text="Here is code.", usage={})
 
     mocker.patch("System.runtime.run_agent", side_effect=mock_run_agent_side_effect)
 
-    # 3. Set Headless Flag
+    # 3. Set Headless Flag (Shift-Left Input Bypass)
     mocker.patch.dict(os.environ, {"BRAIN_OS_HEADLESS": "1"})
 
-    # 4. Crash if it asks for input
+    # 4. Aggressive crash if it accidentally asks for human input
     mocker.patch(
-        "builtins.input", side_effect=Exception("HITL prompt was not bypassed!")
+        "builtins.input", side_effect=Exception("Test failed: HITL prompt triggered!")
     )
 
     # 5. Execute
-    from System.runtime import execute_pipeline
-
     execute_pipeline("Test retry", "FORGE", "STUDIO")
 
-    # Assert it called the auditor twice (initial + retry) without crashing on input()
+    # Assert it called the auditor twice (initial + retry) safely
     assert call_count["qa_auditor"] == 2

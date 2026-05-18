@@ -216,15 +216,33 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
             pipeline_aborted = True
             break
 
-        # RETRY LOOP
-        if (
-            step["agent"] == "qa_auditor"
-            and '<audit_result grade="FAIL">' in step_result.text
-        ):
-            if eval_retries < MAX_RETRIES:
-                console.print(
-                    "\n[bold red]❌ Audit Failed! The Product Manager needs to fix the specification/implementation.[/bold red]\n"
-                )
+        # --- 🗣️ BROCA'S AREA (Data Contract Validation & RETRY LOOP) ---
+        if step["agent"] == "qa_auditor":
+            from System.organs.broca import enforce_data_contract
+
+            # Extract the raw XML safely, auto-healing any syntax errors
+            is_valid, audit_content = enforce_data_contract(
+                step_result.text, "audit_result"
+            )
+
+            # If Broca caught a fatal XML formatting error, OR if the auditor explicitly failed the code
+            # (We keep your original '<audit_result grade="FAIL">' check as a fallback)
+            if (
+                not is_valid
+                or "FAIL" in audit_content.upper()
+                or '<audit_result grade="FAIL">' in step_result.text
+            ):
+                if eval_retries < MAX_RETRIES:
+                    if not is_valid:
+                        console.print(
+                            "\n[bold yellow]🗣️ Broca's Area intercepted malformed XML from QA Auditor. Forcing retry.[/bold yellow]"
+                        )
+                        critique_msg = f"BROCA FORMATTING ERROR: {audit_content}\nYou must strictly output <audit_result>PASS</audit_result> or <audit_result>FAIL</audit_result>."
+                    else:
+                        console.print(
+                            "\n[bold red]❌ Audit Failed! The Product Manager needs to fix the specification/implementation.[/bold red]\n"
+                        )
+                        critique_msg = f"CRITICAL - AUDIT FAILED. Read the critique, fix the instructions, and redeploy:\n\n{step_result.text}"
 
                 # --- SHIFT-LEFT: Headless UI Override ---
                 if os.environ.get("BRAIN_OS_HEADLESS") == "1":
@@ -264,7 +282,7 @@ def execute_pipeline(description: str, route_type: str, domain: str) -> None:
                     },
                 )
 
-                current_payload = f"Original Task: {description}\n\nCRITICAL - AUDIT FAILED. Read the critique, fix the instructions, and redeploy:\n\n{step_result.text}"
+                current_payload = f"Original Task: {description}\n\n{critique_msg}"
                 eval_retries += 1
                 continue
             else:
