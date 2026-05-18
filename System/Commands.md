@@ -1,27 +1,38 @@
-# ⚡ Brain OS: Quick Execution
+# ⚡ Brain OS: Command Line Interface
 
-To run these, highlight the prompt and hit `Cmd + Shift + B`.
+Brain OS is entirely modular and can be controlled via the CLI.
+Run these commands from the root directory using `uv run`.
 
-### 🏗️ Forge Operations
-- `task "Use bootstrap_project to create a new project called 'My-App'"`
-- `task "Run operate_forge on 'My-App' with instruction: '[START: Engineering] Fix the linting errors.'"`
+### 🧠 Core Cognition
+Execute a task through the Dispatcher and Agent Swarm.
+* `uv run System/cli.py task "Your instruction here"`
+* **Example:** `uv run System/cli.py task "Use bootstrap_project to create a new app called 'My-App'"`
+* **Example:** `uv run System/cli.py task "Search Studio for 'fastapi' and summarize the endpoints."`
 
-### 🌙 Maintenance
-- `sleep`
-- `logs --limit 5`
+### 🖐️ Sensory Input (Somatosensory Cortex)
+Start the background watcher to feel for file saves across all domains and trigger autonomous reflexes (Syntax checking, AST mapping, Hippocampus memory encoding).
+* `uv run System/cli.py watch`
+* *Optional:* `uv run System/cli.py watch --target Studio`
 
-### 🔍 Discovery
-- `task "Search Studio for 'fastapi' and summarize the endpoints."`
+### 📚 Memory Management (Hippocampus)
+Manually rebuild the ephemeral SQLite search index from your flat-file markdown notes and code.
+* `uv run System/cli.py reindex`
 
+### 🌙 Autonomic States (Pineal Gland)
+Force the system into a Deep Sleep cycle (Triggers the Lymphatic flush, and then REM sleep/DMN Daydreaming).
+* `uv run System/cli.py sleep`
 
-### Other Stuff
+### 🌊 Garbage Collection (Lymphatic System)
+Manage your hard drive space and old AI logs.
+* `uv run System/cli.py flush` - *Sweeps old logs and .bak snapshots into compressed `.tar.gz` Lymph Nodes.*
+* `uv run System/cli.py purge` - *Destructively and permanently deletes all archived Lymph Nodes.*
 
-uv run System/cli.py logs --limit 2
+### 📊 Diagnostics (Interoception)
+View the most recent AI interactions, reasoning, and token usage.
+* `uv run System/cli.py logs`
+* *Optional:* `uv run System/cli.py logs --limit 5`
 
-uv run pytest System/tests
-
-uv run pre-commit run --all-files
-
-uv run System/cli.py task
-
-uv run System/cli.py sleep --synaptic
+### 🛠️ Developer Checks
+Run these to ensure Zero-Debt compliance before committing code.
+* `uv run pytest System/tests` - *Run the biomimetic test suite.*
+* `uv run pre-commit run --all-files` - *Run Shift-Left linting and typing checks.*

@@ -47,5 +47,29 @@ def scrape(
         sys.exit(1)
 
 
+@app.command()
+def flush() -> None:
+    """Lymphatic System: Sweeps metabolic waste (old logs, baks) into compressed tarball archives."""
+    from System.organs.lymphatic import flush_waste
+
+    flush_waste()
+
+
+@app.command()
+def purge() -> None:
+    """Lymphatic System: Destructively and permanently deletes all tarball archives."""
+    from System.organs.lymphatic import purge_waste
+
+    purge_waste()
+
+
+@app.command()
+def sleep() -> None:
+    """Pineal Gland: Manually force the OS into a Deep Sleep cycle (Flush + REM)."""
+    from System.organs.pineal import enter_sleep_cycle
+
+    enter_sleep_cycle()
+
+
 if __name__ == "__main__":
     app()

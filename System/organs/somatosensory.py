@@ -110,7 +110,19 @@ def start_local_watcher(
     }
 
     try:
+        last_sleep_check = time.time()
+
         while True:
+            # --- CIRCADIAN RHYTHM (Check for sleep every 1 hour) ---
+            current_time = time.time()
+            if current_time - last_sleep_check > 3600:  # 3600 seconds = 1 hour
+                from System.organs.pineal import is_host_asleep, enter_sleep_cycle
+
+                if is_host_asleep():
+                    enter_sleep_cycle()
+                last_sleep_check = current_time
+
+            # --- SENSORY REFLEXES ---
             for watch_dir in watch_paths:
                 for filepath in watch_dir.rglob("*"):
                     if filepath.is_file() and filepath.suffix in valid_exts:

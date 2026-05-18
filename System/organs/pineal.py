@@ -42,3 +42,34 @@ def is_host_asleep(idle_hours_threshold: float = 4.0) -> bool:
         console.print(f"[dim red]Pineal Gland error: {e}[/dim red]")
 
     return False
+
+
+def enter_sleep_cycle() -> None:
+    """
+    The Circadian Rhythm trigger.
+    When the Pineal gland detects sleep, it first flushes the brain (Lymphatic),
+    and then triggers REM sleep (DMN Daydreams).
+    """
+    console.print(
+        "\n[bold magenta]🌙 Brain OS is entering Deep Sleep...[/bold magenta]"
+    )
+
+    # 1. Glymphatic Flush (Clean the brain)
+    try:
+        from System.organs.lymphatic import flush_waste
+
+        flush_waste()
+    except Exception as e:
+        console.print(f"[dim red]Lymphatic flush failed during sleep: {e}[/dim red]")
+
+    # 2. Default Mode Network (REM Sleep / Daydreaming)
+    try:
+        from System.organs.dmn import trigger_daydreams  # type: ignore
+
+        trigger_daydreams()
+    except (ImportError, AttributeError):
+        console.print("[dim]DMN not fully online yet. Skipping REM sleep.[/dim]")
+
+    console.print(
+        "[bold magenta]☀️ Sleep Cycle Complete. System optimized and waiting for host.[/bold magenta]\n"
+    )

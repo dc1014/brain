@@ -108,6 +108,10 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 20. Data Contract Enforcement (Broca's Area)
 * **Speech Articulation:** Broca's Area is responsible for human speech production.
 * **XML Auto-Healing:** Enforcing Principle 5 (Hybrid XML/MD), the `broca.py` organ parses all agent outputs before execution. If an agent forgets a closing XML tag due to token limits, or improperly nests Markdown code blocks inside XML execution tags, Broca's Area instantly auto-heals the syntax. This guarantees flawless agent-to-agent communication without crashing the pipeline.
+
+### 21. Archive & Garbage Collection (The Lymphatic System)
+* **Waste Clearance:** The biological brain flushes cerebrospinal fluid to sweep up metabolic waste, depositing it in lymph nodes.
+* **Zero-Debt Archiving:** To preserve the "Glass Brain" and ensure user data is never destroyed without consent, the `lymphatic.py` organ never hard-deletes old records. Instead, it periodically sweeps old Vestibular `.bak` snapshots and truncates the `agent_interactions.jsonl` file, compressing the waste into a standard `.tar.gz` archive stored in `Meta/Lymph_Nodes/`. You can trigger this via `brain flush`, and permanently destroy the archives via `brain purge`.
 ---
 
 ## 🏗️ Architecture & Routing
