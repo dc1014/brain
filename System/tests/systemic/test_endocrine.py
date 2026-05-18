@@ -48,7 +48,7 @@ def test_endocrine_model_downgrade_under_stress(monkeypatch, tmp_path, mocker):
 
     # 1. Mock the DNA configuration
     mocker.patch(
-        "System.core.dna.AGENT_CONFIG",
+        "System.neuroanatomy.cortical.prefrontal.get_dna_config",
         {
             "models": {
                 "premium_model": "openai/gpt-4o",
@@ -81,8 +81,8 @@ def test_endocrine_maintains_model_when_healthy(monkeypatch, tmp_path, mocker):
     )
 
     mocker.patch(
-        "System.core.dna.AGENT_CONFIG",
-        {
+        "System.neuroanatomy.systemic.endocrine.get_dna_config",
+        return_value={
             "models": {
                 "premium_model": "openai/gpt-4o",
                 "gpt_mini": "openai/gpt-4o-mini",

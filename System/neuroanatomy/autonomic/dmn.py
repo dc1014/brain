@@ -8,7 +8,7 @@ from litellm import completion  # type: ignore
 
 from System.core.paths import ROOT_DIR
 from System.core.locks import BiologicalLock
-from System.core.dna import AGENT_CONFIG
+from System.core.dna import get_dna_config
 
 console = Console()
 
@@ -156,8 +156,8 @@ def trigger_daydreams() -> str:
     )
 
     try:
-        model_name = AGENT_CONFIG.get("models", {}).get(
-            "fast", "gemini/gemini-2.5-flash"
+        model_name = (
+            get_dna_config().get("models", {}).get("fast", "gemini/gemini-2.5-flash")
         )
 
         response = completion(

@@ -71,14 +71,14 @@ def get_system_context(
     role_name: str | list[str], system_prompt: str = "", prompt: str = "", **kwargs
 ) -> str:
     """Generates the absolute biological reality for the active Swarm agent(s)."""
-    from System.core.dna import AGENT_CONFIG
+    from System.core.dna import get_dna_config
 
     roles = role_name if isinstance(role_name, list) else [role_name]
 
     base_prompt = system_prompt + "\n" if system_prompt else ""
 
     for r in roles:
-        agent_data = AGENT_CONFIG.get("agents", {}).get(r.lower(), {})
+        agent_data = get_dna_config().get("agents", {}).get(r.lower(), {})
         base_prompt += (
             agent_data.get("system_prompt", f"You are the {r} node of Brain OS.") + "\n"
         )
@@ -125,10 +125,10 @@ def apply_humoral_modulation(base_model: str) -> tuple[str, float, int]:
     # 3. Cortisol Resource Conservation (Model Fallback)
     final_model = base_model
     if vector["cortisol"] > 0.7:
-        from System.core.dna import AGENT_CONFIG
+        from System.core.dna import get_dna_config
 
         # Force fallback to the cheap/fast model to survive resource exhaustion
-        fast_model = AGENT_CONFIG.get("models", {}).get("fast", base_model)
+        fast_model = get_dna_config().get("models", {}).get("fast", base_model)
         if fast_model != base_model:
             final_model = fast_model
             console.print(

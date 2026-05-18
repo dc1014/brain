@@ -8,7 +8,7 @@ from rich.panel import Panel
 
 from litellm import acompletion, completion  # type: ignore
 from System.core.paths import ROOT_DIR
-from System.core.dna import AGENT_CONFIG
+from System.core.dna import get_dna_config
 from System.neuroanatomy.systemic.endocrine import get_resolved_model
 from System.llm import run_agent_async, get_system_context
 from System.neuroanatomy.autonomic.interoception import (
@@ -66,8 +66,10 @@ class WorkingMemory:
             f"ACTIVITY LOG:\n{current_text}"
         )
         try:
-            model = AGENT_CONFIG.get("models", {}).get(
-                "fast", "gemini/gemini-2.5-flash"
+            model = (
+                get_dna_config()
+                .get("models", {})
+                .get("fast", "gemini/gemini-2.5-flash")
             )
             response = await acompletion(
                 model=model,
@@ -118,8 +120,10 @@ class PrefrontalCortex:
             f"OBJECTIVE: {objective}"
         )
         try:
-            model_name = AGENT_CONFIG.get("models", {}).get(
-                "fast", "gemini/gemini-2.5-flash"
+            model_name = (
+                get_dna_config()
+                .get("models", {})
+                .get("fast", "gemini/gemini-2.5-flash")
             )
             response = completion(
                 model=model_name,
@@ -194,7 +198,7 @@ async def execute_swarm_cohort(
     )
 
     async def _task(sub_step):
-        a_cfg = AGENT_CONFIG["agents"][sub_step["agent"]]
+        a_cfg = get_dna_config()["agents"][sub_step["agent"]]
         model_str = get_resolved_model(a_cfg["model"], is_exhausted)
         active_tools = [
             t
@@ -254,7 +258,7 @@ async def execute_pipeline(
     pipeline = (
         resume_pipeline
         if resume_pipeline is not None
-        else list(AGENT_CONFIG.get("routes", {}).get(route_type, []))
+        else list(get_dna_config().get("routes", {}).get(route_type, []))
     )
     eval_retries = 0
     MAX_RETRIES = 1
@@ -298,7 +302,7 @@ async def execute_pipeline(
             continue
 
         # 2. Linear Execution
-        agent_cfg = AGENT_CONFIG["agents"][step["agent"]]
+        agent_cfg = get_dna_config()["agents"][step["agent"]]
         model_str = get_resolved_model(agent_cfg["model"], is_exhausted)
         active_tools = [
             t for group in step.get("tools", []) for t in available_tools.get(group, [])

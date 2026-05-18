@@ -5,6 +5,7 @@ from rich.console import Console
 
 from System.core.paths import ROOT_DIR
 from System.core.locks import BiologicalLock
+from System.core.dna import get_dna_config
 
 console = Console()
 ENDOCRINE_FILE = ROOT_DIR / "Meta" / "humoral_state.json"
@@ -104,7 +105,6 @@ def get_resolved_model(desired_model_key: str, is_exhausted: bool) -> str:
     HUMORAL ROUTING: Resolves the fallback LLM models securely using the Vault.
     Downgrades to efficiency models if Cortisol (exhaustion) is active.
     """
-    from System.core.dna import AGENT_CONFIG
     from System.neuroanatomy.systemic.immune_system import vault
 
     if is_exhausted:
@@ -116,7 +116,7 @@ def get_resolved_model(desired_model_key: str, is_exhausted: bool) -> str:
             desired_model_key = "gpt_mini"
 
     # Safely extract from the DNA global configuration
-    desired_model_str = AGENT_CONFIG.get("models", {}).get(desired_model_key, "")
+    desired_model_str = get_dna_config().get("models", {}).get(desired_model_key, "")
 
     # 🛡️ IMMUNE SYSTEM: Check the Secure Vault, not os.environ!
     if vault.get_api_key_for_model(desired_model_str):
@@ -124,14 +124,18 @@ def get_resolved_model(desired_model_key: str, is_exhausted: bool) -> str:
 
     # Automatic provider fallback matrix
     if vault.get_api_key_for_model("openai/gpt"):
-        return AGENT_CONFIG.get("models", {}).get("gpt_mini", "openai/gpt-4o-mini")
+        return get_dna_config().get("models", {}).get("gpt_mini", "openai/gpt-4o-mini")
     elif vault.get_api_key_for_model("anthropic/claude"):
-        return AGENT_CONFIG.get("models", {}).get(
-            "claude_haiku", "anthropic/claude-haiku-4-5"
+        return (
+            get_dna_config()
+            .get("models", {})
+            .get("claude_haiku", "anthropic/claude-haiku-4-5")
         )
     elif vault.get_api_key_for_model("gemini/"):
-        return AGENT_CONFIG.get("models", {}).get(
-            "gemini_flash", "gemini/gemini-2.5-flash"
+        return (
+            get_dna_config()
+            .get("models", {})
+            .get("gemini_flash", "gemini/gemini-2.5-flash")
         )
 
     return desired_model_str

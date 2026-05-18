@@ -98,7 +98,7 @@ async def route_sensory_input(prompt: str) -> tuple[bool, str, str, str, dict]:
     from rich.console import Console
     from System.neuroanatomy.systemic.enteric import get_gut_reaction, save_gut_reaction
     from System.neuroanatomy.limbic.amygdala import scan_prompt
-    from System.core.dna import AGENT_CONFIG
+    from System.core.dna import get_dna_config
     from System.llm import acompletion, get_system_context
     from System.neuroanatomy.systemic.immune_system import vault
     from System.neuroanatomy.pathways.corpus_callosum import route_hemisphere
@@ -119,13 +119,13 @@ async def route_sensory_input(prompt: str) -> tuple[bool, str, str, str, dict]:
         return False, threat_reason, "NONE", "NONE", zero_usage
 
     # --- 🧠 PREFRONTAL DISPATCHER (LLM Routing) ---
-    dispatcher_cfg = AGENT_CONFIG["agents"]["dispatcher"]
+    dispatcher_cfg = get_dna_config()["agents"]["dispatcher"]
     system_prompt = dispatcher_cfg["system_prompt"] + get_system_context(
         ["Meta"], prompt=prompt
     )
 
     try:
-        base_model = AGENT_CONFIG["models"][dispatcher_cfg["model"]]
+        base_model = get_dna_config()["models"][dispatcher_cfg["model"]]
         actual_model = route_hemisphere("DISPATCHER", base_model)
 
         response = await acompletion(

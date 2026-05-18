@@ -54,8 +54,8 @@ def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:  # type: ign
 
     # ⚡ ZERO-DEBT: Inject the missing DNA config!
     mocker.patch(
-        "System.neuroanatomy.cortical.prefrontal.AGENT_CONFIG",
-        {
+        "System.neuroanatomy.cortical.prefrontal.get_dna_config",
+        return_value={
             "routes": {"FORGE": [{"agent": "qa_auditor"}]},
             "agents": {
                 "product_manager": {

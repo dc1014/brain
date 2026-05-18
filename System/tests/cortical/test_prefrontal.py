@@ -67,8 +67,8 @@ async def test_auditor_headless_retry_bypass(mocker):
 
     # ⚡ ZERO-DEBT: Inject the missing DNA config so the test doesn't run an empty pipeline
     mocker.patch(
-        "System.neuroanatomy.cortical.prefrontal.AGENT_CONFIG",
-        {
+        "System.neuroanatomy.cortical.prefrontal.get_dna_config",
+        return_value={
             "routes": {
                 "FORGE": [{"agent": "product_manager"}, {"agent": "qa_auditor"}]
             },
@@ -130,8 +130,8 @@ async def test_synaptic_consolidation_commits_mid_pipeline(
     mock_energy, mock_run_agent, mock_commit, mocker
 ):
     mocker.patch(
-        "System.neuroanatomy.cortical.prefrontal.AGENT_CONFIG",
-        {
+        "System.neuroanatomy.cortical.prefrontal.get_dna_config",
+        return_value={
             "routes": {
                 "TEST_ROUTE": [{"agent": "frontend_engineer"}, {"agent": "qa_auditor"}]
             },
