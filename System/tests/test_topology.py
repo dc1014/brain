@@ -15,7 +15,7 @@ def test_map_system_topology_generation(monkeypatch, tmp_path):
     fake_module.write_text("import module_b\n", encoding="utf-8")
 
     # 2. Trigger the topology reflex
-    result = map_system_topology()
+    result = map_system_topology("mermaid")  # ⚡ THE FIX: Pass the required parameter!
 
     # 3. Verify Output Location
     topology_file = tmp_path / "Meta" / "system_topology.md"

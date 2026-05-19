@@ -63,3 +63,36 @@ def test_vestibular_file_snapshot(tmp_path, monkeypatch):
 
     # Verify file is restored perfectly
     assert target_file.read_text(encoding="utf-8") == "original content"
+
+
+def test_vestibular_protects_core_files(tmp_path, monkeypatch):
+    """Proves the Vestibular system does not roll back core OS files like brain.bat."""
+    monkeypatch.setattr("System.neuroanatomy.autonomic.vestibular.ROOT_DIR", tmp_path)
+    state_file = tmp_path / "Meta" / "vestibular_state.json"
+    backup_dir = tmp_path / "Meta" / "vestibular_backups"
+    monkeypatch.setattr(
+        "System.neuroanatomy.autonomic.vestibular.VESTIBULAR_STATE_FILE", state_file
+    )
+    monkeypatch.setattr(
+        "System.neuroanatomy.autonomic.vestibular.BACKUP_DIR", backup_dir
+    )
+
+    vestibular = VestibularSystem()
+
+    # 1. Take the initial snapshot
+    vestibular.commit_transaction()
+
+    # 2. Simulate the user creating `brain.bat` AND a rogue agent creating a garbage file mid-task
+    brain_bat = tmp_path / "brain.bat"
+    brain_bat.write_text("echo hello", encoding="utf-8")
+
+    rogue_file = tmp_path / "rogue.txt"
+    rogue_file.touch()
+
+    # 3. Trigger the rollback
+    monkeypatch.setattr("os.system", lambda x: None)
+    vestibular.restore_balance()
+
+    # 4. Prove `brain.bat` survived the purge, but `rogue.txt` was executed!
+    assert brain_bat.exists()
+    assert not rogue_file.exists()

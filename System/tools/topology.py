@@ -7,10 +7,14 @@ from System.core.paths import ROOT_DIR
 console = Console()
 
 
-def map_system_topology() -> str:
+# ⚡ THE FIX: Remove the default value so the parameter is STRICTLY REQUIRED!
+def map_system_topology(format_type: str) -> str:
     """
     Generates a UI-agnostic Mermaid diagram of the OS's FULL active topology.
     It dynamically maps the physical file dependencies using the Parietal Lobe.
+
+    Args:
+        format_type (str): You MUST pass the string "mermaid" here.
     """
     try:
         from System.neuroanatomy.cortical.parietal import generate_spatial_map

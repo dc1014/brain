@@ -35,7 +35,7 @@ class VestibularSystem:
             ".gitignore",
             "pytest.ini",
             "pyproject.toml",
-            "uv.lock",
+            "uv.lock"
         }
 
     def _get_workspace_snapshot(self) -> tuple[Dict[str, float], Set[str]]:
@@ -116,7 +116,7 @@ class VestibularSystem:
             )
 
             # 1. Standard File Reversion (Using git for tracked file mutations)
-            # os.system(f"cd {ROOT_DIR} && git checkout -- .")
+            os.system(f"cd {ROOT_DIR} && git checkout -- .")
 
             # 2. Restore targeted untracked file backups
             if BACKUP_DIR.exists():

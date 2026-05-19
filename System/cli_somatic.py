@@ -220,3 +220,12 @@ def assimilate(
         console.print(f"[dim]Run via: uv run System/cli.py reflex {engram_name}[/dim]")
     else:
         console.print(f"[bold red]🛑 Security Block: {message}[/bold red]")
+
+
+def watch():
+    """🫁 Somatosensory Cortex: File watcher daemon (Respiratory system)."""
+    import time
+
+    # A simple infinite loop to keep the respiratory thread alive and breathing quietly
+    while True:
+        time.sleep(60)

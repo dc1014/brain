@@ -26,7 +26,10 @@
     {
       "id": "1teq9wd8ih",
       "platform_specific_commands": {
-        "default": "echo y | .\\.venv\\Scripts\\python.exe System\\cli.py task \"{{_task}}\" --obsidian"
+        "default": "echo \"🧠 Brain OS: Pulse routed! Check Meta/Pending_Actions.md shortly.\"; nohup bash ./brain.sh task \"{{_task}}\" --obsidian >/dev/null 2>&1 &",
+        "darwin": "echo \"🧠 Brain OS: Pulse routed! Check Meta/Pending_Actions.md shortly.\"; nohup bash ./brain.sh task \"{{_task}}\" --obsidian >/dev/null 2>&1 &",
+        "linux": "echo \"🧠 Brain OS: Pulse routed! Check Meta/Pending_Actions.md shortly.\"; nohup bash ./brain.sh task \"{{_task}}\" --obsidian >/dev/null 2>&1 &",
+        "win32": "echo 🧠 Brain OS: Pulse routed! Check Meta/Pending_Actions.md shortly.&& powershell -NoProfile -ExecutionPolicy Bypass -Command \"$cwd = (Get-Item .).FullName; Start-Process -FilePath '.\\brain.bat' -ArgumentList 'task', '\\\"{{_task}}\\\"', '--obsidian' -WorkingDirectory $cwd -RedirectStandardOutput 'Meta\\obsidian_daemon.log' -RedirectStandardError 'Meta\\obsidian_daemon.error.log' -WindowStyle Hidden\""
       },
       "shells": {},
       "alias": "",
@@ -68,7 +71,10 @@
     {
       "id": "wl642dsk4a",
       "platform_specific_commands": {
-        "default": ".\\.venv\\Scripts\\python.exe System\\cli.py execute-pending"
+        "default": "./brain.sh approve",
+        "linux": "./brain.sh approve",
+        "darwin": "./brain.sh approve",
+        "win32": "powershell -NoProfile -ExecutionPolicy Bypass -Command \".\\brain.bat approve\""
       },
       "shells": {},
       "alias": "",

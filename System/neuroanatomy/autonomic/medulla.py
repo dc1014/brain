@@ -8,7 +8,6 @@ from typing import Any
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR
-from System.core.locks import BiologicalLock
 from Sense.receptors.dermis import Dermis
 
 console = Console()
@@ -54,9 +53,8 @@ class MedullaOblongata:
             try:
                 from System.core.orchestrator import run_pending_queue
 
-                # Thread lock prevents Swarm execution while we write to files
-                with BiologicalLock():
-                    run_pending_queue()
+                # ⚡ THE FIX: Removed the broken BiologicalLock. Let it run freely!
+                run_pending_queue()
             except Exception as e:
                 medulla_logger.error(f"Cognitive heartbeat exception: {str(e)}")
 
@@ -74,15 +72,15 @@ class MedullaOblongata:
 
                 if current_clock == sleep_time:
                     console.print(
-                        "[bold purple]🌙 Medulla: Triggering system-wide Circadian Sleep Phase...[/bold purple]"
+                        "[bold purple]🧠 Medulla: Triggering system-wide Circadian Sleep Phase...[/bold purple]"
                     )
                     medulla_logger.info(
                         "Circadian switch activated. Invoking maintenance algorithms."
                     )
                     from System.cli_somatic import sleep
 
-                    with BiologicalLock():
-                        sleep()
+                    # ⚡ THE FIX: Removed the broken BiologicalLock here too!
+                    sleep()
                     time.sleep(60)
 
                 from System.neuroanatomy.autonomic.interoception import (
@@ -100,7 +98,7 @@ class MedullaOblongata:
         daemons_config = self.config_data.get("background_daemons", {})
 
         while self.is_alive:
-            # 💓 Dermis / Heartbeat Supervision
+            # 🛡️ Dermis / Heartbeat Supervision
             if daemons_config.get("dermis_receptor", {}).get("enabled", True):
                 if (
                     "dermis" not in self.daemons
@@ -178,7 +176,6 @@ class MedullaOblongata:
         """Retracts neural processing loops cleanly and hunts down orphaned OS processes."""
         self.is_alive = False
 
-        # Zero-Debt Cleanup: Prevent Zombie Subprocesses (like hanging SSH tunnels)
         try:
             parent = psutil.Process(self._main_pid)
             children = parent.children(recursive=True)

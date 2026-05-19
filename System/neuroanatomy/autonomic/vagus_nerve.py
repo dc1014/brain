@@ -19,7 +19,7 @@ def trigger_halt() -> None:
         "[dim yellow]- Execution queue flushed. No new agents will spawn.[/dim yellow]"
     )
 
-    # 2. Plant the Apoptosis Flag (Tells active prefrontal loops to commit suicide safely)
+    # 2. Plant the Apoptosis Flag (Tells active prefrontal loops to terminate safely)
     abort_flag = normalize_path(ROOT_DIR / "System" / ".vagus_abort_signal")
     abort_flag.write_text("HALT", encoding="utf-8")
     console.print(

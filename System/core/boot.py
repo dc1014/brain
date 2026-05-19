@@ -1,3 +1,4 @@
+import os
 from rich.console import Console
 from System.core.paths import ROOT_DIR
 from System.neuroanatomy.systemic.immune_system import vault
@@ -29,10 +30,7 @@ def bootstrap() -> bool:
     # 1. Ensure structural integrity
     _setup_directories()
 
-    # 2. SHIFT-LEFT: Secure the environment explicitly during boot, NOT at module import!
-    vault.secure_environment()
-
-    # 3. Validate DNA (.env file)
+    # 2. Validate DNA (.env file)
     env_path = ROOT_DIR / ".env"
     env_example_path = ROOT_DIR / ".env.example"
 
@@ -47,5 +45,28 @@ def bootstrap() -> bool:
                 "[bold red]CRITICAL ERROR: No .env or .env.example file found![/bold red]"
             )
             return False
+
+    # 3. ⚡ PHASE 1 FIX: The Central Omni-Loader
+    # Hydrate the environment here so BOTH conscious and subconscious systems get keys!
+    if not env_path.exists():
+        env_path = ROOT_DIR / ".env.txt"  # Windows extension failsafe
+
+    if env_path.exists():
+        raw_bytes = env_path.read_bytes()
+        text = raw_bytes.decode("utf-8", errors="ignore")
+        if "\x00" in text:  # Detect Windows UTF-16 Ghost Files
+            text = raw_bytes.decode("utf-16", errors="ignore")
+
+        for line in text.splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, val = line.split("=", 1)
+                clean_key = key.replace("\ufeff", "").strip()
+                clean_val = val.replace("\ufeff", "").strip().strip('"').strip("'")
+                os.environ[clean_key] = clean_val
+
+    # 4. SHIFT-LEFT: Secure the environment explicitly during boot!
+    # Now that os.environ has the pure keys, the Vault can safely swallow them!
+    vault.secure_environment()
 
     return True

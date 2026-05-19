@@ -16,9 +16,9 @@ routes:
     - agent: "qa_auditor"
       tools: ["base"]
       context: ["Meta", "Domain", "Studio"]
-    - agent: "deployment_ops"
-      tools: ["base", "write", "execute"]
-      context: ["Meta", "Domain", "Studio"]
+    # - agent: "deployment_ops"
+    #   tools: ["base", "write", "execute"]
+    #   context: ["Meta", "Domain", "Studio"]
 
   SWARM:
     - agent: "swarm_architect"

@@ -127,7 +127,11 @@ def test_interrupted_queue_interception(monkeypatch, tmp_path, mocker):
     queue_file.write_text(json.dumps(mock_queue), encoding="utf-8")
     monkeypatch.setenv("BRAIN_OS_HEADLESS", "1")
 
-    mocker.patch("System.cli.execute_pipeline", new_callable=mocker.AsyncMock)
+    # ⚡ ZERO-DEBT: Target the function at its anatomical source since it's locally imported
+    mocker.patch(
+        "System.neuroanatomy.cortical.prefrontal.execute_pipeline",
+        new_callable=mocker.AsyncMock,
+    )
     monkeypatch.setattr("System.cli.bootstrap", lambda: True)
 
     from System.cli import main

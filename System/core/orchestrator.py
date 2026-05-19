@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from rich.console import Console
 from rich.panel import Panel
 from System.neuroanatomy.limbic.thalamus import route_sensory_input
@@ -10,11 +11,6 @@ console = Console()
 
 
 async def dispatch_task(description: str, obsidian: bool = False) -> None:
-    """
-    Basal Ganglia / Routing:
-    Receives a decomposed sub-task (pulse) from the Prefrontal Cortex.
-    Validates it, determines the route, and triggers the Swarm.
-    """
     with console.status(
         "[bold yellow]🛡️ Routing pulse through Basal Ganglia...[/bold yellow]",
         spinner="dots",
@@ -25,22 +21,22 @@ async def dispatch_task(description: str, obsidian: bool = False) -> None:
         console.print(
             Panel(f"[bold red]Pulse Rejected:[/bold red] {reason}", border_style="red")
         )
-        # ⚡ Throw an exception so the PFC knows to halt the pipeline and prevent cascading hallucinations!
         raise ValueError(f"Pulse rejected by pre-flight validation: {reason}")
 
-    # Execute the validated Swarm route
     await execute_pipeline(description, route_type, domain)
 
 
 def run_pending_queue() -> None:
     """
     Cognitive Queue Processor:
-    Reads pending tasks from Obsidian and feeds them to the Prefrontal Cortex for executive decomposition.
+    Reads pending tasks, checks for dopamine release flags, and executes them.
     """
     queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
-    pending_file = ROOT_DIR / "Personal" / "pending-tasks.md"
+    pending_file = ROOT_DIR / "Meta" / "Pending_Actions.md"
+    approved_flag = ROOT_DIR / "Meta" / ".approved"
 
-    if not queue_file.exists():
+    # ⚡ THE FIX: If there is no explicit .approved flag, go back to sleep.
+    if not queue_file.exists() or not approved_flag.exists():
         return
 
     tasks_to_run = []
@@ -51,11 +47,21 @@ def run_pending_queue() -> None:
             except json.JSONDecodeError:
                 continue
 
+    # ⚡ Consume the flag and wipe the queue immediately so it can't double-fire
+    if approved_flag.exists():
+        try:
+            os.remove(approved_flag)
+        except OSError:
+            pass
+
+    with open(queue_file, "w", encoding="utf-8") as f:
+        f.write("")
+
     if not tasks_to_run:
         return
 
     console.print(
-        f"[bold green]🚀 Found {len(tasks_to_run)} pending tasks. Waking Prefrontal Cortex...[/bold green]"
+        f"\n[bold green]🚀 Found {len(tasks_to_run)} approved tasks. Waking Prefrontal Cortex...[/bold green]"
     )
 
     # Import PFC locally to avoid circular dependencies during boot
@@ -64,23 +70,25 @@ def run_pending_queue() -> None:
     pfc = PrefrontalCortex()
 
     for idx, task_obj in enumerate(tasks_to_run, 1):
-        console.print(
-            f"\n[bold blue]--- Processing Queue Item {idx}/{len(tasks_to_run)} ---[/bold blue]"
-        )
         task_desc = task_obj.get("prompt")
-        if not task_desc:
-            continue
+        task_route = task_obj.get("route", "WORKSPACE")
+        task_domain = task_obj.get("domain", "GENERAL")
 
-        try:
-            # ⚡ SHIFT-LEFT: Hand the massive queued task to the PFC to supervise!
-            asyncio.run(pfc.execute_goal(task_desc))
-        except Exception as e:
-            console.print(f"[bold red]Queue Task Failed:[/bold red] {str(e)}")
+        if task_desc:
+            console.print(
+                f"[bold blue]--- Processing Approved Queue Item {idx}/{len(tasks_to_run)} ---[/bold blue]"
+            )
+            try:
+                # Execute the task!
+                asyncio.run(
+                    pfc.execute_goal(task_desc, domain=task_domain, route=task_route)
+                )
+            except Exception as e:
+                console.print(f"[bold red]Queue Task Failed:[/bold red] {str(e)}")
 
-    # Wipe the queue after processing
-    with open(queue_file, "w", encoding="utf-8") as f:
-        f.write("")
-
+    # Wipe the Obsidian UI clean
     if pending_file.exists():
         with open(pending_file, "w", encoding="utf-8") as f:
-            f.write("# ⚠️ Pending Execution Queue\n\n*Queue is currently empty.*")
+            f.write(
+                "# 🛑 Pending Swarm Actions\n*No pending actions. The OS is resting.*\n\n"
+            )

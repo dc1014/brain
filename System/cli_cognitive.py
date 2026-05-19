@@ -31,23 +31,45 @@ def task(
     """🧠 Engages the Prefrontal Cortex to execute a cognitive task."""
 
     if obsidian:
-        # Route to queue instead of executing
+        from System.neuroanatomy.limbic.thalamus import route_sensory_input
+
+        console.print(
+            "[dim cyan]🧠 Thalamus is analyzing the pending task...[/dim cyan]"
+        )
+        try:
+            # ⚡ THE FIX: Use _ to explicitly discard the unused first tuple element
+            _, reason, calc_route, calc_domain, _ = asyncio.run(
+                route_sensory_input(description)
+            )
+        except Exception as e:
+            # ⚡ THE FIX: Removed is_valid entirely from the fallback assignment
+            reason, calc_route, calc_domain = (
+                f"Analysis bypassed: {e}",
+                route,
+                domain,
+            )
+
         queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
-        pending_file = ROOT_DIR / "Personal" / "pending-tasks.md"
+        pending_file = ROOT_DIR / "Meta" / "Pending_Actions.md"
 
         queue_file.parent.mkdir(parents=True, exist_ok=True)
         pending_file.parent.mkdir(parents=True, exist_ok=True)
 
         with open(queue_file, "a", encoding="utf-8") as f:
             f.write(
-                json.dumps({"prompt": description, "route": route, "domain": domain})
+                json.dumps(
+                    {"prompt": description, "route": calc_route, "domain": calc_domain}
+                )
                 + "\n"
             )
 
         with open(pending_file, "a", encoding="utf-8") as f:
             timestamp = time.strftime("%Y-%m-%d %H:%M")
             f.write(
-                f"### ⏳ Pending Task ({timestamp})\n**Prompt:** {description}\n---\n"
+                f"### ⏳ Pending Task ({timestamp})\n"
+                f"**Prompt:** {description}\n"
+                f"**Thalamus Route:** `{calc_route}` | **Domain:** `{calc_domain}`\n"
+                f"> **Threat Analysis & Reasoning:** {reason}\n---\n"
             )
 
         console.print(
@@ -71,7 +93,6 @@ def daydream():
 def evolve():
     """🧬 Analyzes System/logs and codebase evolution routines."""
     console.print("[magenta]🧬 Triggering Evolutionary Algorithms...[/magenta]")
-
     agents_file = ROOT_DIR / "System" / "config" / "agents.yaml"
     mutations_file = ROOT_DIR / "Meta" / "Mutations.md"
 
@@ -118,7 +139,6 @@ def compile():
     """⚙️ Compiles the most recent successful memory into a Zero-Token Engram."""
     from System.neuroanatomy.limbic.episodic import MEMORY_FILE
     from System.neuroanatomy.autonomic.cerebellum import CerebellarCompiler
-    import json
 
     if not MEMORY_FILE.exists():
         console.print("[bold red]No episodic memory found to compile.[/bold red]")

@@ -202,6 +202,9 @@ async def run_agent_async(
                 tools=tools,
                 temperature=mod_temp,
                 max_tokens=mod_tokens,
+                api_key=vault.get_api_key_for_model(
+                    mod_model
+                ),  # 🛡️ THE FIX: Unlock the Vault!
             )
 
             if not getattr(response, "choices", None) or len(response.choices) == 0:

@@ -196,7 +196,7 @@ def map_system_topology_tool() -> ExecutionResult:
     """Standardized tool wrapper for the topology engine."""
     from System.tools.topology import map_system_topology
 
-    output = map_system_topology()
+    output = map_system_topology(format_type="graphviz")
     success = "Success" in output
     return ExecutionResult(
         success=success, output=output, block_reason="" if success else output

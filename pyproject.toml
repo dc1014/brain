@@ -1,7 +1,7 @@
 [project]
 name = "brain"
 version = "0.1.0"
-description = "Add your description here"
+description = "Brain is the first biomimetic control plane for AI tooling - interoperable, safe, token efficient, self-healing, and self-improving."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
