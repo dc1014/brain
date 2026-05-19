@@ -25,7 +25,7 @@ def _is_windows_junction(path: Path) -> bool:
             import ctypes
 
             # FILE_ATTRIBUTE_REPARSE_POINT = 0x400
-            attrs = ctypes.windll.kernel32.GetFileAttributesW(str(path))
+            attrs = ctypes.windll.kernel32.GetFileAttributesW(str(path))  # type: ignore[attr-defined]
             return attrs != -1 and bool(attrs & 0x400)
         except Exception:
             pass

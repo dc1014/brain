@@ -92,6 +92,29 @@ class EndocrineSystem:
         state = self._read_state()
         return {k: float(v) for k, v in state.items() if k != "last_updated"}
 
+    def calculate_token_limit(self, model: str) -> int:
+        """
+        💸 COST & METABOLISM SHIELD:
+        Calculates maximum token limits dynamically based on model pricing tiers
+        and active chemical stress levels to preserve aggregator wallet balances.
+        """
+        model_lower = model.lower()
+        state = self._read_state()
+
+        # 1. Base allocations mapped via tier pricing signatures
+        if any(exp in model_lower for exp in ["opus", "gpt-4", "sonnet", "pro"]):
+            base_budget = 2000  # Hard restriction on expensive tiers
+        else:
+            base_budget = 4000  # Expanded budget for cost-efficient tiers
+
+        # 2. Humoral Contraction Matrix (Adrenaline/Cortisol stress compression)
+        stress = max(state.get("adrenaline", 0.0), state.get("cortisol", 0.0))
+        if stress > 0.5:
+            # Squeeze token execution space down up to 60% during emergency windows
+            base_budget = int(base_budget * (1.0 - (stress * 0.6)))
+
+        return max(500, base_budget)
+
 
 def is_cortisol_active() -> bool:
     """Utility check for severe systemic exhaustion."""
@@ -108,21 +131,17 @@ def get_resolved_model(desired_model_key: str, is_exhausted: bool) -> str:
     from System.neuroanatomy.systemic.immune_system import vault
 
     if is_exhausted:
-        # ⚡ BIOMIMICRY: Actually trigger the hormonal spike natively!
         system = EndocrineSystem()
         system.secrete("cortisol", 0.5)
 
         if is_cortisol_active():
             desired_model_key = "gpt_mini"
 
-    # Safely extract from the DNA global configuration
     desired_model_str = get_dna_config().get("models", {}).get(desired_model_key, "")
 
-    # 🛡️ IMMUNE SYSTEM: Check the Secure Vault, not os.environ!
     if vault.get_api_key_for_model(desired_model_str):
         return desired_model_str
 
-    # Automatic provider fallback matrix
     if vault.get_api_key_for_model("openai/gpt"):
         return get_dna_config().get("models", {}).get("gpt_mini", "openai/gpt-4o-mini")
     elif vault.get_api_key_for_model("anthropic/claude"):

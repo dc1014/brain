@@ -157,15 +157,18 @@ def trigger_daydreams() -> str:
     )
 
     try:
-        model_name = (
+        base_model = (
             get_dna_config().get("models", {}).get("fast", "gemini/gemini-2.5-flash")
         )
 
+        # 🧠 THALAMIC ROUTING: Dynamically mutate the sleep cycle model
+        routed_model, api_key = vault.resolve_routing(base_model)
+
         response = completion(
-            model=model_name,
+            model=routed_model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.8,
-            api_key=vault.get_api_key_for_model(model_name),
+            api_key=api_key,  # ⚡ Supply the safely resolved key
         )
         epiphany = response.choices[0].message.content
 

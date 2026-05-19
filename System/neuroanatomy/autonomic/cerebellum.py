@@ -11,6 +11,7 @@ from System.tools import execute_command
 from System.core.paths import ROOT_DIR
 from System.core.locks import BiologicalLock
 from System.core.dna import get_dna_config
+from System.neuroanatomy.systemic.immune_system import vault
 
 console = Console()
 ENGRAM_DIR = ROOT_DIR / "System" / "tools" / "engrams"
@@ -53,15 +54,20 @@ class CerebellarCompiler:
         )
 
         try:
-            model_name = (
+            base_model_name = (
                 get_dna_config()
                 .get("models", {})
                 .get("fast", "gemini/gemini-2.5-flash")
             )
+
+            # 🧠 THALAMIC ROUTING: Mutate string and fetch secure key
+            routed_model, api_key = vault.resolve_routing(base_model_name)
+
             response = completion(
-                model=model_name,
+                model=routed_model,  # ⚡ Use mutated model
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.1,
+                api_key=api_key,  # ⚡ Supply safely resolved key
             )
             raw_text = response.choices[0].message.content.strip()
 

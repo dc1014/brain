@@ -46,10 +46,10 @@ def test_endocrine_model_downgrade_under_stress(monkeypatch, tmp_path, mocker):
         tmp_path / "humoral.json",
     )
 
-    # 1. Mock the DNA configuration
+    # ⚡ THE FIX: Patch the true local import target to ensure deterministic resolution
     mocker.patch(
-        "System.neuroanatomy.cortical.prefrontal.get_dna_config",
-        {
+        "System.neuroanatomy.systemic.endocrine.get_dna_config",
+        return_value={
             "models": {
                 "premium_model": "openai/gpt-4o",
                 "gpt_mini": "openai/gpt-4o-mini",
@@ -57,19 +57,16 @@ def test_endocrine_model_downgrade_under_stress(monkeypatch, tmp_path, mocker):
         },
     )
 
-    # 2. Mock the Immune Vault
+    # Mock the Immune Vault
     mocker.patch(
         "System.neuroanatomy.systemic.immune_system.vault.get_api_key_for_model",
         return_value="sk-fake",
     )
 
-    # 3. Request a premium model while the system is EXHAUSTED
-    # This should automatically trigger secrete("cortisol") and force a downgrade
     system = EndocrineSystem()
-    system.secrete("cortisol", 1.0)  # Pre-load the stress
+    system.secrete("cortisol", 1.0)  # Pre-load the stress exhaustion
     resolved = get_resolved_model("premium_model", is_exhausted=True)
 
-    # 4. Strict Validation
     assert resolved == "openai/gpt-4o-mini"
 
 
@@ -94,6 +91,38 @@ def test_endocrine_maintains_model_when_healthy(monkeypatch, tmp_path, mocker):
         return_value="sk-fake",
     )
 
-    # Baseline health
     resolved = get_resolved_model("premium_model", is_exhausted=False)
     assert resolved == "openai/gpt-4o"
+
+
+def test_calculate_token_limit_tiers(tmp_path, monkeypatch):
+    """Proves that token ceilings adapt dynamically to premium vs efficiency model tiers."""
+    monkeypatch.setattr(
+        "System.neuroanatomy.systemic.endocrine.ENDOCRINE_FILE",
+        tmp_path / "humoral.json",
+    )
+
+    system = EndocrineSystem()
+
+    # Premium Tier check
+    premium_limit = system.calculate_token_limit("anthropic/claude-3-5-sonnet")
+    assert premium_limit == 2000
+
+    # Efficiency Tier check
+    cheap_limit = system.calculate_token_limit("gemini/gemini-2.5-flash")
+    assert cheap_limit == 4000
+
+
+def test_calculate_token_limit_stress_contraction(tmp_path, monkeypatch):
+    """Proves that elevated cortisol levels squeeze available token execution limits to save funds."""
+    monkeypatch.setattr(
+        "System.neuroanatomy.systemic.endocrine.ENDOCRINE_FILE",
+        tmp_path / "humoral.json",
+    )
+
+    system = EndocrineSystem()
+    system.secrete("cortisol", 0.8)  # Inject high stress vector
+
+    stressed_limit = system.calculate_token_limit("gemini/gemini-2.5-flash")
+    # Base 4000 reduced by (1.0 - (0.8 * 0.6)) -> 4000 * 0.52 = 2080
+    assert stressed_limit == 2080

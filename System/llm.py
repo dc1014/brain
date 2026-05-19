@@ -114,15 +114,7 @@ def apply_humoral_modulation(base_model: str) -> tuple[str, float, int]:
     temp = 0.5 + (vector["dopamine"] * 0.4) - (vector["cortisol"] * 0.4)
     final_temp = max(0.0, min(1.0, temp))
 
-    # 2. Adrenaline Token Constriction
-    # If Adrenaline is high (crisis), max output drops to force concise, rapid code
-    max_tokens = 4000
-    if vector["adrenaline"] > 0.5:
-        max_tokens = int(
-            max_tokens * (1.0 - (vector["adrenaline"] * 0.6))
-        )  # Drops to ~1600
-
-    # 3. Cortisol Resource Conservation (Model Fallback)
+    # 2. Cortisol Resource Conservation (Model Fallback)
     final_model = base_model
     if vector["cortisol"] > 0.7:
         from System.core.dna import get_dna_config
@@ -134,6 +126,10 @@ def apply_humoral_modulation(base_model: str) -> tuple[str, float, int]:
             console.print(
                 "[dim magenta]🩸 Cortisol Overload: Routing to efficiency matrix.[/dim magenta]"
             )
+
+    # 3. Hardened Dynamic Token Throttling Tiers (Cost & Stress Protection)
+    # ⚡ THE FIX: Bridge directly to EndocrineSystem to calculate tier-based token caps
+    max_tokens = endocrine.calculate_token_limit(final_model)
 
     return final_model, final_temp, max_tokens
 
@@ -179,10 +175,8 @@ async def run_agent_async(
                 pruned_messages = messages
 
             # 🛡️ IMMUNE SYSTEM: Check the Vault
-            _has_anthropic = bool(
-                vault.get_api_key_for_model("anthropic/claude-3-haiku")
-            )
-            _has_openai = bool(vault.get_api_key_for_model("openai/gpt-4o-mini"))
+            _has_anthropic = bool(vault.get_secret("ANTHROPIC_API_KEY"))
+            _has_openai = bool(vault.get_secret("OPENAI_API_KEY"))
 
             if (
                 "anthropic" in model_string.lower()
@@ -195,16 +189,17 @@ async def run_agent_async(
                     )
                 model_string = "openai/gpt-4o"
 
+            # 🧠 THALAMIC ROUTING: Mutate model strings and resolve auto-discovered keys
+            routed_model, api_key = vault.resolve_routing(mod_model)
+
             # ⚡ NATIVE ASYNC API CALL
             response = await acompletion(
-                model=mod_model,
-                messages=pruned_messages,  # ⚡ ZERO-DEBT: Prevents context window explosion
+                model=routed_model,  # ⚡ Use the mutated model string
+                messages=pruned_messages,
                 tools=tools,
                 temperature=mod_temp,
                 max_tokens=mod_tokens,
-                api_key=vault.get_api_key_for_model(
-                    mod_model
-                ),  # 🛡️ THE FIX: Unlock the Vault!
+                api_key=api_key,  # ⚡ Use the resolved cross-modal key
             )
 
             if not getattr(response, "choices", None) or len(response.choices) == 0:

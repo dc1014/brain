@@ -4,3 +4,5 @@ models:
   gpt_mini: "openai/gpt-4o-mini"
   claude_sonnet: "anthropic/claude-sonnet-4-5"
   local_slm: "ollama/llama3" # Fallback SLM for local left-brain processing
+  # ⚡ GLOBAL FALLBACK: Point this to your target model option if deploying exactly ONE key
+  default: "openai/gpt-4o-mini"

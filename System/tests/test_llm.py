@@ -1,4 +1,5 @@
 import asyncio
+import pytest
 from unittest.mock import MagicMock
 from System.llm import run_agent_async
 
@@ -140,3 +141,86 @@ def test_run_agent_async_execution(mocker):
     # 3. Verify the async agent processed the data contract correctly
     assert result.text == "I am a parallel Swarm agent."
     assert result.usage["prompt_tokens"] == 0
+
+
+# --- appending to System/tests/test_llm.py ---
+
+
+@pytest.mark.asyncio
+async def test_run_agent_async_thalamic_cross_modal_routing(mocker):
+    """
+    Zero-Debt Test: Proves the Thalamic Cross-Modal Routing dynamically
+    mutates model strings and injects aggregator/fallback keys before acompletion.
+    """
+    from System.llm import run_agent_async
+
+    # 1. Mock the Immune System Vault to simulate an OpenRouter fallback
+    mock_resolve = mocker.patch(
+        "System.llm.vault.resolve_routing",
+        return_value=("openrouter/anthropic/claude-3-haiku", "or-12345"),
+    )
+    mocker.patch("System.llm.vault.get_secret", return_value=None)
+    mocker.patch("System.llm.vault.mask_secrets", side_effect=lambda x: x)
+
+    # 2. Mock LiteLLM acompletion
+    mock_acompletion = mocker.patch("System.llm.acompletion")
+    mock_message = mocker.MagicMock()
+    mock_message.content = "Thalamic routing successful."
+    mock_message.tool_calls = []
+
+    mock_response = mocker.MagicMock()
+    mock_response.choices = [mocker.MagicMock(message=mock_message)]
+    mock_response.usage = mocker.MagicMock(prompt_tokens=10, completion_tokens=10)
+    mock_acompletion.return_value = mock_response
+
+    # Prevent Motor Cortex side effects
+    mocker.patch(
+        "System.neuroanatomy.pathways.corpus_callosum.route_hemisphere",
+        side_effect=lambda r, m: m,
+    )
+
+    # 3. Execute
+    res = await run_agent_async(
+        role_name="test_agent",
+        model_string="anthropic/claude-3-haiku",  # The original user request
+        system_prompt="sys",
+        user_prompt="usr",
+    )
+
+    # 4. Strict Validation
+    assert "Thalamic routing successful" in res.text
+    mock_resolve.assert_called_with("anthropic/claude-3-haiku")
+
+    called_kwargs = mock_acompletion.call_args.kwargs
+    assert called_kwargs["model"] == "openrouter/anthropic/claude-3-haiku"
+    assert called_kwargs["api_key"] == "or-12345"
+
+
+# --- appending to System/tests/test_llm.py ---
+
+
+def test_apply_humoral_modulation_token_limit_routing(mocker):
+    """
+    Zero-Debt Test: Proves apply_humoral_modulation abandons legacy hardcoded limits
+    and defers entirely to the EndocrineSystem for model-tier token budgets.
+    """
+    from System.llm import apply_humoral_modulation
+
+    # Mock the get_humoral_vector to keep the biological state healthy
+    mocker.patch(
+        "System.llm.EndocrineSystem.get_humoral_vector",
+        return_value={"dopamine": 0.5, "cortisol": 0.0, "adrenaline": 0.0},
+    )
+
+    # Mock calculate_token_limit to verify it intercepts the pipeline cleanly
+    mock_calc = mocker.patch(
+        "System.llm.EndocrineSystem.calculate_token_limit", return_value=1337
+    )
+
+    final_model, final_temp, max_tokens = apply_humoral_modulation(
+        "anthropic/claude-3-opus"
+    )
+
+    # Strict Validation
+    assert max_tokens == 1337
+    mock_calc.assert_called_once_with("anthropic/claude-3-opus")

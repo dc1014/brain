@@ -216,6 +216,7 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 * **The Exocortex:** The exocortex is the part of the brain that is responsible for communication and sharing with other brains, including engrams, tools, and knowledge.
 * **OS Implementation:** The OS implements the exocortex in `System/neuroanatomy/cortical/exocortex.py`.
 * **The ExoReceptor (Sensory Socket):** To facilitate Exocortex operations, Brain OS runs a lightweight, native `asyncio` socket receptor. External agent frameworks transmit packets to this receptor, which pushes the signal up the `Spine`. The Spine enforces an 8KB Blood-Brain Barrier limit to prevent Denial of Service or Context Window explosions before the `Thalamus` routes the verified signal to the Exocortex.
+
 ---
 
 ## 🏗️ Architecture & Routing
@@ -233,6 +234,11 @@ Unlike heavy frameworks with hardcoded agent logic, Brain is driven by a single,
 ### 3. Hierarchical Context Engineering
 The OS dynamically stacks memory. It always injects `Meta/global-memory.md` (your core identity), but uses intent-mapping to selectively inject `Personal/`, `Professional/`, or `Studio/` memory based on the active task, saving massive amounts of tokens.
 
+### 4. Pluripotent Global Fallback Gating
+If a specified agent engine requests a high-tier processing channel for which no localized environmental credential key file trace can be found, the `SecretVault` automatically implements an advanced lookup mitigation matrix before failing:
+1. **Aggregator Translation:** Routes automatically through an active `OPENROUTER_API_KEY` configuration mapping framework block.
+2. **Global Target Interception:** Automatically defaults the instruction loop back to the explicit user-defined `default` model key provided inside `models.yaml` if it can be successfully validated by an existing host API token.
+3. **Single-Key Fallback:** Maps the request context directly onto the sole provider key deployed on the system workspace environment, preserving zero-configuration execution agility.
 ---
 
 ## 👁️ The Sensory Nervous System (`Sense`)
