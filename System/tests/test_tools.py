@@ -500,7 +500,6 @@ def test_deploy_project(tmp_path: Path, mocker) -> None:  # type: ignore
     result_no_token = deploy_project(str(studio_dir))
     assert isinstance(result_no_token, ExecutionResult)
     assert not result_no_token.success
-    # ⚡ THE FIX: Remove "is" to perfectly match the secure engine's output token
     assert "DEPLOYMENT_TOKEN missing" in result_no_token.output
 
     # 2. Test Human Rejection
@@ -508,7 +507,6 @@ def test_deploy_project(tmp_path: Path, mocker) -> None:  # type: ignore
         "System.neuroanatomy.systemic.immune_system.vault.get_secret",
         return_value="fake_deployment_token",
     )
-    # ⚡ THE FIX: Include the Tier 1 Sandbox flag so the engine allows the lifecycle to reach the HITL prompt
     mocker.patch.dict(
         "os.environ",
         {"BRAIN_OS_HEADLESS": "0", "BRAIN_EXECUTION_TIER": "1"},
@@ -523,9 +521,9 @@ def test_deploy_project(tmp_path: Path, mocker) -> None:  # type: ignore
     # 3. Test Successful Simulated Deployment
     mocker.patch("builtins.input", return_value="y")
 
-    # ⚡ THE FIX: Patch the Tier 1 sandbox router to simulate containment completion
+    # ⚡ THE FIX: Patch the correct module package orchestrator to prevent container execution falls
     mocker.patch(
-        "System.tools.execution._run_tier_1_microsandbox",
+        "System.tools.microsandbox.run_tier_1_sandbox_async",
         return_value=ExecutionResult(
             success=True,
             output="<deployment_success>\nSimulated deploy for WebProject\n</deployment_success>",

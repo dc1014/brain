@@ -280,10 +280,20 @@ Before an agent can execute a single line of code or touch a file, it must pass 
 | **7. The Thymus Watchdog** | T-Cell Maturation | Brain OS runs via a Parent-Child process architecture. The unkillable Thymus parent monitors the Medulla child via an in-memory IPC pipe. If the agent exhibits high-velocity destructive behavior (e.g., >5 mutations in 10s), the Thymus triggers a SIGKILL. |
 | **8. The OOM & Fork Bomb Shields** | Apoptosis | Prevents host-resource exhaustion attacks. Child processes are capped at 50 PIDs (`RLIMIT_NPROC`), and process output is buffered by chunks (max 8MB). If an agent infinite-loops, the entire process tree is violently pruned. |
 
-### Tier 1: Hardware-Level Isolation (Opt-In)
-For executing highly untrusted 3rd-party code, Brain OS supports snapping into hardware-level MicroVMs and App Containers.
+### Tier 1 Sandbox Architecture (`microsandbox`)
 
-By setting `BRAIN_EXECUTION_TIER=1` and installing the `microsandbox` runtime engine, the Tier 0 router dynamically wraps all executions inside an isolated container with no internet access and strict memory limits. **Fail-Closed Guarantee:** If Tier 1 is requested but the engine is missing, Brain OS violently aborts the execution rather than silently falling back to the host machine.
+The `microsandbox` package provides a pluggable, container-driven Tier 1 execution framework designed to isolate high-risk project builds (e.g., `npm run build`) and deployment flows.
+
+#### Strategic Sandbox Controls
+1. **Zero Host-Directory Leakage (Phase 2):** Runtimes are given an empty container root file system scratchpad. The active workspace directory is compressed into an ephemeral tarball and streamed into the container, preventing unauthorized file modifications on the host.
+2. **Volatile Memory secret Inoculation (Phase 3):** Secrets (like `DEPLOYMENT_TOKEN`) are injected into the container using dedicated `.env` configuration files marked with strict `0o600` access controls and loaded straight to memory.
+3. **Outbound Supply-Chain Firewall (Phase 4):** A custom asynchronous CONNECT proxy intercepts all traffic leaving the container. Traffic matching approved destination endpoints (e.g., `api.vercel.com`, `registry.npmjs.org`) is securely routed; all other egress attempts are blocked to prevent token exfiltration.
+4. **Hard Kernel Security Options:** Container execution boundaries are hardened via `--cap-drop=ALL` (dropping all linux capabilities), `--security-opt=no-new-privileges:true` (preventing privilege escalation), and strict limits on thread structures (`--pids-limit=100`) and memory (`--memory=1g`).
+
+### Running Sandbox Isolation Tests
+To run the specialized validation suites with precise module-level code coverage targets, execute:
+```bash
+uv run pytest System/tests/tools/test_microsandbox.py --cov=System.tools.microsandbox
 ---
 
 ## 🚀 Quick Start Guide

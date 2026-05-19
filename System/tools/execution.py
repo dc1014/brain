@@ -840,18 +840,18 @@ async def deploy_project_async(
             )
 
     try:
-        deploy_env = _get_scrubbed_env()
-        deploy_env["DEPLOYMENT_TOKEN"] = token
+        # Define the secrets that must be passed through the firewall
+        secrets = {"DEPLOYMENT_TOKEN": token}
+
         console.print(
             f"\n[bold cyan]▶ Initiating {provider.upper()} deployment sequence (Tier 1 Routed)...[/bold cyan]"
         )
 
         if provider.lower() == "custom":
             command_args = [
-                sys.executable,
-                "-c",
-                "import sys; print('Simulated deploy for ' + sys.argv[1])",
-                path_result,
+                "node",
+                "-e",
+                "console.log('Simulated deploy for WebProject')",
             ]
         elif provider.lower() == "vercel":
             command_args = ["npx", "vercel", "--yes", "--prod"]
@@ -864,9 +864,23 @@ async def deploy_project_async(
                 block_reason="Unsupported",
             )
 
-        return _run_tier_1_microsandbox(
-            shlex.join(command_args), normalize_path(ROOT_DIR / directory_path)
-        )
+        target_dir = normalize_path(ROOT_DIR / directory_path)
+
+        # ⚡ ROUTE TO THE NEW HARDWARE ENGINE
+        try:
+            from System.tools.microsandbox import run_tier_1_sandbox_async
+
+            return await run_tier_1_sandbox_async(
+                shlex.join(command_args), target_dir, env_secrets=secrets
+            )
+        except ImportError:
+            reason = "SECURITY BLOCK: Tier 1 requested, but the 'microsandbox' package is missing or corrupted."
+            return ExecutionResult(
+                success=False,
+                output=f"<shell_output>\n<stderr>\n{reason}\n</stderr>\n</shell_output>",
+                block_reason="Missing Isolation Engine",
+            )
+
     except Exception:
         return ExecutionResult(
             success=False,

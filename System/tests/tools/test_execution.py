@@ -372,6 +372,7 @@ def test_option_b_tier_0_deployment_blocked(mocker, tmp_path, bypass_immune_syst
 
 def test_option_b_tier_1_deployment_routed(mocker, tmp_path, bypass_immune_system):
     from System.tools.execution import deploy_project
+    from System.core.schemas import ExecutionResult
 
     mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
     mocker.patch.dict(
@@ -381,11 +382,19 @@ def test_option_b_tier_1_deployment_routed(mocker, tmp_path, bypass_immune_syste
         "System.neuroanatomy.systemic.immune_system.vault.get_secret",
         return_value="fake_token",
     )
-    mock_spec = mocker.MagicMock()
-    mocker.patch("importlib.util.find_spec", return_value=mock_spec)
+
+    # ⚡ THE FIX: Patch the true Tier 1 orchestrator package path
+    mocker.patch(
+        "System.tools.microsandbox.run_tier_1_sandbox_async",
+        return_value=ExecutionResult(
+            success=True,
+            output="<deployment_success>\nSimulated deploy for Studio\n</deployment_success>",
+        ),
+    )
+
     result = deploy_project("Studio", provider="custom")
-    assert result.success is False
-    assert "Sandbox engine initialized but execution routing is WIP" in result.output
+    assert result.success is True
+    assert "Simulated deploy" in result.output
 
 
 def test_tier_1_fail_closed_missing_dependency(mocker, tmp_path, bypass_immune_system):
