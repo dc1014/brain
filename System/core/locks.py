@@ -13,12 +13,12 @@ class BiologicalLock:
     Prevents both cross-process AND cross-task race conditions on the same memory queues.
     """
 
-    # Class-level dictionaries to share local locks across instances for the same file
+    # Class-level dictionaries and a Master Lock to protect them!
     _async_locks: Dict[str, asyncio.Lock] = {}
     _sync_locks: Dict[str, threading.Lock] = {}
+    _master_dict_lock = threading.Lock()  # ⚡ THE FIX
 
     def __init__(self, filepath: str | Path, timeout: float = 15.0):
-        # ⚡ ZERO-DEBT (Phase 3 Prep): Resolve absolute paths to prevent Windows casing bypasses
         self.filepath = Path(filepath).resolve()
         self.lock_path = self.filepath.with_name(f".{self.filepath.name}.lock")
         self.file_lock = FileLock(str(self.lock_path), timeout=timeout)
@@ -26,15 +26,17 @@ class BiologicalLock:
 
     @property
     def _local_async(self) -> asyncio.Lock:
-        if self.lock_key not in BiologicalLock._async_locks:
-            BiologicalLock._async_locks[self.lock_key] = asyncio.Lock()
-        return BiologicalLock._async_locks[self.lock_key]
+        with BiologicalLock._master_dict_lock:  # ⚡ Guarded!
+            if self.lock_key not in BiologicalLock._async_locks:
+                BiologicalLock._async_locks[self.lock_key] = asyncio.Lock()
+            return BiologicalLock._async_locks[self.lock_key]
 
     @property
     def _local_sync(self) -> threading.Lock:
-        if self.lock_key not in BiologicalLock._sync_locks:
-            BiologicalLock._sync_locks[self.lock_key] = threading.Lock()
-        return BiologicalLock._sync_locks[self.lock_key]
+        with BiologicalLock._master_dict_lock:  # ⚡ Guarded!
+            if self.lock_key not in BiologicalLock._sync_locks:
+                BiologicalLock._sync_locks[self.lock_key] = threading.Lock()
+            return BiologicalLock._sync_locks[self.lock_key]
 
     # --- LEGACY SUPPORT: `with BiologicalLock():` ---
     def __enter__(self) -> "BiologicalLock":

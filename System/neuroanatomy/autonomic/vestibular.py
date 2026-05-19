@@ -7,6 +7,10 @@ from rich.console import Console
 from System.core.paths import ROOT_DIR
 from System.core.locks import BiologicalLock
 
+import subprocess
+
+subprocess.run(["git", "checkout", "--", "."], cwd=ROOT_DIR, capture_output=True)
+
 console = Console()
 VESTIBULAR_STATE_FILE = ROOT_DIR / "Meta" / "vestibular_state.json"
 BACKUP_DIR = ROOT_DIR / "Meta" / "vestibular_backups"

@@ -1,13 +1,16 @@
+# ==============================================================================
 # 🚨 SECRETS & API KEYS (CRITICAL)
+# ==============================================================================
 *.keys.json
 gcp-oauth.keys.json
 .env
 .env.local
 .github-token
-logs/
 .claude.json
 
-# 📦 NODE & DEPENDENCIES
+# ==============================================================================
+# 📦 NODE & DEPENDENCIES / DEVELOPMENT CACHES
+# ==============================================================================
 node_modules/
 dist/
 build/
@@ -22,96 +25,73 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# 🧠 OBSIDIAN LOCAL WORKSPACE STATE
-# (We keep settings, but ignore what tabs you have open)
+# 🤖 AI CACHE
+.claude/
+.windsurf/
+
+# ==============================================================================
+# 🧠 OBSIDIAN WORKSPACE STATE & PRIVACY GUARDS
+# ==============================================================================
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
+.obsidian/workspace-*
+.obsidian/graph.json
+.obsidian/core-plugins-migration.json
 .obsidian/plugins/obsidian-local-rest-api/
+.obsidian/plugins/*/data.json
 
-# 💻 OS JUNK
+# EXCEPTION: Track Shell Commands config so the UI works out-of-the-box!
+!.obsidian/plugins/obsidian-shellcommands/data.json
+
+# ==============================================================================
+# 💻 OS JUNK & MEDIA BUFFERS
+# ==============================================================================
 .DS_Store
 Thumbs.db
 *.png
 *.jpg
 *.jpeg
 
-# 🤖 AI CACHE
-.claude/
-.windsurf/
-
-# 🧠 SYNAPTIC MEMORY WEIGHTS (DO NOT TRACK)
-Meta/Synapses/
-*.safetensors
-*.bin
-
-# --- Obsidian Workspace & Privacy ---
-# Ignore workspace layouts (these leak your open personal files)
-.obsidian/workspace.json
-.obsidian/workspace-mobile.json
-.obsidian/workspace-*
-
-# Ignore graph settings (these can leak your tagging structures)
-.obsidian/graph.json
-
-# Ignore plugin data (these often contain personal API keys and local paths)
-.obsidian/plugins/*/data.json
-
-# Ignore cache and trash
-.obsidian/core-plugins-migration.json
-.trash/
-.coverage
-
-# --- Obsidian Workspace & Privacy ---
-# Ignore workspace layouts
-.obsidian/workspace.json
-.obsidian/workspace-mobile.json
-.obsidian/workspace-*
-.obsidian/graph.json
-
-# Ignore all plugin data (protects API keys)
-.obsidian/plugins/*/data.json
-
-# EXCEPTION: Track Shell Commands config so the UI works out-of-the-box!
-!.obsidian/plugins/obsidian-shellcommands/data.json
-
-# OS State & Queues
-System/Pending_Actions.md
-
-# --- Sleep Cycle Archives ---
+# ==============================================================================
+# 🌊 LYMPHATIC SYSTEM / RUNTIME LOGS & CYCLE ARCHIVES
+# ==============================================================================
+logs/
 logs/archive/
 logs/backups/
+.coverage
 
-# Brain OS Biological Data
-System/config/gut_memory.json
-logs/
+# ==============================================================================
+# 🧠 USER SPACE & COGNITIVE WORKSPACES (LOCAL SANDBOXES)
+# ==============================================================================
 Personal/
 Professional/
 Studio/
-Meta/
 Media/
-System/Pending_Actions.md
-Meta/AST/
 .trash/
 
-# 🧠 EPHEMERAL INDEX
-System/config/hippocampus.db
-
-# 🌊 LYMPHATIC WASTE
-Meta/Lymph_Nodes/*.tar.gz
-
-# 👁️ VISUAL CORTEX BUFFER
-Meta/Visual_Cortex/*.png
-
-# 🧠 WERNICKE SEMANTIC GRAPH
-Meta/Wernicke/embeddings.json
-
-# 🧠 BASAL GANGLIA
-Meta/Basal_Ganglia/habits.json
-Meta/Basal_Ganglia/habit_logs.md
-
-
-# OS State & Queues
+# ==============================================================================
+# 🛑 SWARM STATE, MEMORY ENGRAMS, & PIPELINE QUEUES
+# ==============================================================================
 System/Pending_Actions.md
 System/execution_queue.json
 System/queue.jsonl
 System/tools/engrams
+
+# ==============================================================================
+# 🧬 BRAIN OS INTERNAL BIOLOGICAL DATA (META / SYSTEM CONFIG)
+# ==============================================================================
+System/config/gut_memory.json
+System/config/hippocampus.db
+
+Meta/
+Meta/AST/
+Meta/Synapses/
+Meta/Lymph_Nodes/*.tar.gz
+Meta/Visual_Cortex/*.png
+Meta/Wernicke/embeddings.json
+Meta/Basal_Ganglia/habits.json
+Meta/Basal_Ganglia/habit_logs.md
+
+# Syntensors / Binary parameters
+*.safetensors
+*.bin

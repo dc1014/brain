@@ -1,8 +1,8 @@
 from System.core.paths import ROOT_DIR
-import os
 import yaml  # type: ignore
 from litellm import completion  # type: ignore
 from rich.console import Console
+from System.neuroanatomy.systemic.immune_system import vault
 
 console = Console()
 
@@ -28,7 +28,11 @@ def filter_attention(prompt: str, raw_memory: str) -> str:
 
         # Use the cheapest possible model for the subconscious filter
         model = config.get("models", {}).get("gpt_mini", "gpt-4o-mini")
-        if os.getenv("ANTHROPIC_API_KEY") and not os.getenv("OPENAI_API_KEY"):
+
+        # ⚡ THE FIX: Use the secure vault to check for keys!
+        if vault.get_api_key_for_model(
+            "anthropic/claude-3-haiku"
+        ) and not vault.get_api_key_for_model("openai/gpt-4o-mini"):
             model = config.get("models", {}).get(
                 "claude_haiku", "claude-3-haiku-20240307"
             )
