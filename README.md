@@ -128,6 +128,12 @@ Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pace
 ### 25. Semantic Comprehension (Wernicke's Area)
 * **Meaning Extraction:** Wernicke's Area processes raw vocabulary into semantic comprehension.
 * **Vector-less Semantic Search:** To maintain the "Glass Brain" Unix philosophy, Brain OS strictly forbids opaque binary Vector Databases. Instead, `wernicke.py` acts as an "LLM-as-a-Judge" reranker. When the agent triggers `semantic_search`, the Hippocampus fetches the top 15 broad keyword matches via SQLite BM25, and Wernicke filters the noise, returning only the perfectly matched semantic answers.
+
+### 26. Subconscious Habits (The Basal Ganglia)
+* **Procedural Learning:** The Basal Ganglia is responsible for routine behaviors and habit formation.
+* **Host-Agnostic Cron (Unix Philosophy):** To remain completely portable, Brain OS does not rely on Linux `cron` or Windows Task Scheduler. The Basal Ganglia uses a plain-text `habits.json` file to track intervals, ticked passively by the Pineal Gland.
+* **Shift-Left Security:** Before a habit can be formed, the raw command is routed through the Amygdala to ensure no malicious background tasks are permanently scheduled.
+* **Token Economics:** Habits run purely in the background (using Proprioception) without waking up the expensive LLM Swarm, allowing Brain OS to perform maintenance, backups, and data foraging for free.
 ---
 
 ## 🏗️ Architecture & Routing

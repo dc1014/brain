@@ -223,6 +223,18 @@ execute:
             description: "The directory to run the command inside"
         required: ["action"]
 
+  - type: "function"
+    function:
+      name: "form_habit"
+      description: "BASAL GANGLIA: Creates a recurring background task (cron). Use this to schedule daily briefings, cleanups, or monitoring scripts."
+      parameters:
+        type: "object"
+        properties:
+          name: { type: "string", description: "Snake_case name of the habit" }
+          command: { type: "string", description: "The terminal command to run" }
+          interval_minutes: { type: "integer", description: "How often to run (e.g., 1440 for daily)" }
+        required: ["name", "command", "interval_minutes"]
+
 vision:
   - type: "function"
     function:

@@ -12,6 +12,8 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from litellm import completion  # type: ignore
+from System.organs.basal_ganglia import tick_habits
+
 
 # --- SHIFT-LEFT: CROSS-PLATFORM ENCODING FIX ---
 if sys.stdout.encoding.lower() != "utf-8":
@@ -39,26 +41,23 @@ except Exception as e:
 def task(
     description: str = typer.Argument(..., help="The task you want the AI to perform."),
     obsidian: bool = typer.Option(
-        False,
-        "--obsidian",
-        help="Route task to the Pending Queue instead of terminal execution.",
+        False, "--obsidian", help="Route task to Pending Queue."
     ),
     urgent: bool = typer.Option(
-        False,
-        "--urgent",
-        help="Release Cortisol: Bypass safety gates and burn emergency tokens.",
+        False, "--urgent", help="Release Cortisol: Bypass safety gates."
     ),
     explore: bool = typer.Option(
-        False,
-        "--explore",
-        help="Release Dopamine: Increase creativity and neural temperature.",
+        False, "--explore", help="Release Dopamine: Increase creativity."
     ),
 ) -> None:
     from System.organs.endocrine import release_cortisol, release_dopamine
 
-    if urgent is True:
+    # 1. Subconscious Pulse: Check background habits before conscious thought
+    tick_habits()
+
+    if urgent:
         release_cortisol()
-    if explore is True:
+    if explore:
         release_dopamine()
 
     console.print(
@@ -66,7 +65,6 @@ def task(
     )
 
     with console.status(
-        # ... the rest of the function remains exactly the same ...
         "[bold yellow]🛡️ Dispatcher is analyzing the task...[/bold yellow]",
         spinner="dots",
     ):
@@ -104,15 +102,12 @@ def task(
             f"- [ ] **Status:** PENDING EXECUTION\n"
             f"---\n"
         )
-
-        # Append mode ('a') stacks the tasks safely
         with open(pending_file, "a", encoding="utf-8") as f:
             f.write(ticket)
-
         console.print(
             "[bold green]✅ Task safely queued in System/Pending_Actions.md[/bold green]"
         )
-        return  # Exit safely before executing!
+        return
 
     # --- STANDARD TERMINAL EXECUTION ---
     pipeline = list(AGENT_CONFIG["routes"].get(route_type, []))
@@ -711,7 +706,11 @@ def watch(
 @app.command()
 def reindex() -> None:
     """Maintenance: Wipes and rebuilds the Ephemeral Glass Brain (SQLite index) from flat files."""
-    reindex()
+    from System.organs.hippocampus import rebuild_index
+
+    console.print("[bold blue]🧠 Rebuilding Hippocampus Index...[/bold blue]")
+    rebuild_index()
+    console.print("[bold green]✅ Index completely rebuilt![/bold green]")
 
 
 if __name__ == "__main__":

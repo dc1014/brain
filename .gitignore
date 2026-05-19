@@ -101,3 +101,7 @@ Meta/Visual_Cortex/*.png
 
 # 🧠 WERNICKE SEMANTIC GRAPH
 Meta/Wernicke/embeddings.json
+
+# 🧠 BASAL GANGLIA
+Meta/Basal_Ganglia/habits.json
+Meta/Basal_Ganglia/habit_logs.md
