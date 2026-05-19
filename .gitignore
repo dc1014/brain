@@ -72,6 +72,7 @@ Media/
 # ==============================================================================
 # 🛑 SWARM STATE, MEMORY ENGRAMS, & PIPELINE QUEUES
 # ==============================================================================
+System/.vagus_abort_signal
 System/Pending_Actions.md
 System/execution_queue.json
 System/queue.jsonl
@@ -91,6 +92,12 @@ Meta/Visual_Cortex/*.png
 Meta/Wernicke/embeddings.json
 Meta/Basal_Ganglia/habits.json
 Meta/Basal_Ganglia/habit_logs.md
+Meta/queue.jsonl
+Meta/Pending_Actions.md
+Meta/queue.lock
+Meta/hitl_queue*
+Meta/.approved
+Meta/.release_*
 
 # Syntensors / Binary parameters
 *.safetensors

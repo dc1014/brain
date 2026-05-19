@@ -37,6 +37,7 @@ class MedullaOblongata:
         self.daemons: dict[str, threading.Thread] = {}
         self.config_data = self._load_blueprint()
         self._main_pid = os.getpid()
+        self.ipc_client: Any = None
 
     def _load_blueprint(self) -> dict[str, Any]:
         if not self.config_path.exists():
@@ -51,14 +52,29 @@ class MedullaOblongata:
         """Autonomously processes the pending cognitive task queue (Obsidian notes)."""
         while self.is_alive:
             try:
+                queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
+                approved_flag = ROOT_DIR / "Meta" / ".approved"
+                action_expected = queue_file.exists() and approved_flag.exists()
+
                 from System.core.orchestrator import run_pending_queue
 
-                # ⚡ THE FIX: Removed the broken BiologicalLock. Let it run freely!
                 run_pending_queue()
+
+                # ⚡ Send diagnostic ping to Thymus Supervisor
+                if action_expected and self.ipc_client:
+                    try:
+                        self.ipc_client.send(
+                            {
+                                "type": "queue_processed",
+                                "impact": "destructive",
+                                "timestamp": time.time(),
+                            }
+                        )
+                    except Exception:
+                        pass
             except Exception as e:
                 medulla_logger.error(f"Cognitive heartbeat exception: {str(e)}")
 
-            # Poll the queue every 15 seconds
             time.sleep(15)
 
     def _monitor_homeostasis(self):
@@ -196,3 +212,24 @@ class MedullaOblongata:
         )
         console.print(f"[bold yellow]💤 {stop_msg}[/bold yellow]")
         medulla_logger.info(stop_msg)
+
+
+def child_boot(ipc_address: str):
+    """Bootloader for the Thymus to spawn the Medulla as a secure subprocess."""
+    from multiprocessing.connection import Client
+    import time
+
+    client = None
+    try:
+        client = Client(ipc_address)
+    except Exception:
+        pass
+
+    medulla = MedullaOblongata()
+    medulla.ipc_client = client
+    medulla.wake()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        medulla.stop()

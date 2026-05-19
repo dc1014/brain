@@ -3,7 +3,6 @@ from pathlib import Path
 import os
 import io
 import typer
-import time
 
 # 2. Import Biological Modules
 from System.core.boot import bootstrap
@@ -52,17 +51,18 @@ def main():
 
 @app.command()
 def live():
-    from System.neuroanatomy.autonomic.medulla import MedullaOblongata
+    from System.neuroanatomy.systemic.thymus import ThymusGland
 
-    console.print("[bold green]⚡ Resuscitating biological systems...[/bold green]")
-    brainstem = MedullaOblongata()
-    brainstem.wake()
+    console.print(
+        "[bold green]⚡ Booting Thymus Watchdog & Resuscitating Medulla...[/bold green]"
+    )
+    thymus = ThymusGland()
     try:
-        while True:
-            time.sleep(1)
+        thymus.boot()
     except KeyboardInterrupt:
         console.print("\n[bold red]🛑 System interrupt received (Ctrl+C).[/bold red]")
-        brainstem.stop()
+        if thymus.medulla_process and thymus.medulla_process.poll() is None:
+            thymus.medulla_process.terminate()
 
 
 @app.command()
