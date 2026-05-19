@@ -1,6 +1,7 @@
 import os
 import shutil
 import json
+import sys
 from typing import Set, Dict
 from pathlib import Path
 from rich.console import Console
@@ -112,12 +113,17 @@ class VestibularSystem:
                 "[dim yellow]⚖️ Vestibular System: Restoring file modifications...[/dim yellow]"
             )
 
-            # ⚡ THE FIX: Safe subprocess checkout is encapsulated securely inside runtime operations
-            import subprocess
+            # ⚡ THE MUZZLE: Do NOT commit Git-murder on the user's repo while testing!
+            if "pytest" not in sys.modules:
+                import subprocess
 
-            subprocess.run(
-                ["git", "checkout", "--", "."], cwd=ROOT_DIR, capture_output=True
-            )
+                subprocess.run(
+                    ["git", "checkout", "--", "."], cwd=ROOT_DIR, capture_output=True
+                )
+            else:
+                console.print(
+                    "[dim yellow]⚖️ (Pytest Active - Safely bypassed destructive git checkout)[/dim yellow]"
+                )
 
             # 2. Restore targeted untracked file backups
             if BACKUP_DIR.exists():
