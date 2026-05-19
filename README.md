@@ -264,21 +264,26 @@ If the OS shuts down, the moment it boots back up, it will automatically catch u
 
 ## 🛡️ Security Architecture (The Immune System)
 
-Brain OS treats large language models as untrusted, potentially adversarial entities. To achieve absolute safety without sacrificing portability, Brain OS relies on a **Biomimetic Security Architecture** that wraps the agent in 7 layers of native, OS-level defense.
+Brain OS treats large language models as untrusted, potentially adversarial entities. To achieve absolute safety without sacrificing portability, Brain OS relies on a **Biomimetic Security Architecture** that wraps the agent in strict, OS-level defense layers.
 
 Before an agent can execute a single line of code or touch a file, it must pass through the entire immune cascade:
 
+### Tier 0: Native Execution Defenses (Default)
 | Defense Layer | Biological Equivalent | Mechanism of Action |
 |---------------|-----------------------|---------------------|
 | **1. The Sandbox (Symlink Armor)** | Cell Membrane | Strict `os.path.realpath` evaluations and active Windows NTFS Junction sniffing (`FILE_ATTRIBUTE_REPARSE_POINT`) mathematically prevent symbolic link directory traversal. Agents can only write to explicit `Studio/` bounds. |
 | **2. AST Toxin Detector** | Blood-Brain Barrier | Python execution tools use `ast.parse` to statically analyze code payloads *before* they are evaluated. It instantly blocks `os.system`, `subprocess`, `eval()`, `exec()`, and `pty` reverse-shell attempts. |
-| **3. The Vault** | Secretion Glands | Core system API keys (OpenAI, Anthropic) are loaded directly into application memory and *purged* from `os.environ`. The agent physically cannot extract its own API keys by reading the environment. |
-| **4. Metabolic Tracking** | ATP / Mitochondria | Every agent action is decorated with an `@motor_neuron` energy cost. Tokens and loop executions are strictly budgeted. If the agent burns too much energy, it enters a forced `Sleep` state. |
-| **5. The Vagus Nerve** | Parasympathetic | A global thread-safe halt state (`.vagus_abort_signal`). If dropped, all active execution queues are instantly flushed, preventing runaway loops. |
-| **6. The Vestibular System** | Homeostasis | Transactional rollbacks. Before the agent executes a destructive file write, the Vestibular system takes an immutable snapshot. If the operation fails or is aborted, it automatically executes a Git-level reset and violently prunes any orphaned directory trees. |
-| **7. The Thymus Watchdog** | T-Cell Maturation | **The Crown Jewel.** Brain OS runs via a Parent-Child process architecture. The unkillable Thymus parent monitors the Medulla child via an in-memory IPC pipe. If the agent exhibits high-velocity destructive behavior (e.g., >5 file mutations in 10 seconds), the Thymus triggers a SIGKILL and forces a Vestibular Rollback. |
+| **3. Strict Binary Allowlist** | Immune Specificity | Prevents Sandbox Escape via foreign runtimes. Agents are strictly forbidden from executing `node`, `gcc`, or arbitrary binaries natively. They may only use `python`, `npm`, and basic shell utilities. |
+| **4. Zero-Trust Env Scrubber** | Secretion Glands | Core system API keys are loaded directly into memory and *purged* from `os.environ`. When the agent spawns a child process, the host environment is aggressively scrubbed to prevent AWS/Stripe key extraction. |
+| **5. Metabolic Tracking** | ATP / Mitochondria | Every agent action is decorated with an `@motor_neuron` energy cost. Tokens and loop executions are strictly budgeted. If the agent burns too much energy, it enters a forced `Sleep` state. |
+| **6. The Vestibular System** | Homeostasis | Transactional rollbacks. Before the agent executes a destructive file write, the Vestibular system takes an immutable snapshot. If the operation fails, it executes a Git-level reset and violently prunes orphaned directories. |
+| **7. The Thymus Watchdog** | T-Cell Maturation | Brain OS runs via a Parent-Child process architecture. The unkillable Thymus parent monitors the Medulla child via an in-memory IPC pipe. If the agent exhibits high-velocity destructive behavior (e.g., >5 mutations in 10s), the Thymus triggers a SIGKILL. |
+| **8. The OOM & Fork Bomb Shields** | Apoptosis | Prevents host-resource exhaustion attacks. Child processes are capped at 50 PIDs (`RLIMIT_NPROC`), and process output is buffered by chunks (max 8MB). If an agent infinite-loops, the entire process tree is violently pruned. |
 
-> **Note on Containerization (Tier 1 Execution):** > Brain OS defaults to **Tier 0 Native Execution** to maintain perfect cross-platform compatibility and zero dependencies (the Unix philosophy). In upcoming releases, users will be able to snap in hardware-level containerization (Docker/MicroVMs) via a simple feature flag for executing untrusted 3rd-party code.
+### Tier 1: Hardware-Level Isolation (Opt-In)
+For executing highly untrusted 3rd-party code, Brain OS supports snapping into hardware-level MicroVMs and App Containers.
+
+By setting `BRAIN_EXECUTION_TIER=1` and installing the `microsandbox` runtime engine, the Tier 0 router dynamically wraps all executions inside an isolated container with no internet access and strict memory limits. **Fail-Closed Guarantee:** If Tier 1 is requested but the engine is missing, Brain OS violently aborts the execution rather than silently falling back to the host machine.
 ---
 
 ## 🚀 Quick Start Guide
