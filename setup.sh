@@ -22,6 +22,18 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     fi
 fi
 
+# 1.8. Check for Docker (Tier 1 Sandbox Requirement)
+echo "🐳 Checking for Docker (Required for Tier 1 Sandbox)..."
+if ! command -v docker &> /dev/null; then
+    echo "⚠️  WARNING: Docker is not installed. Tier 1 Hardware Isolation (microsandbox) will fail."
+    echo "   Please install Docker Engine: https://docs.docker.com/engine/install/"
+else
+    echo "✅ Docker is installed."
+    if ! docker info &> /dev/null; then
+        echo "⚠️  WARNING: Docker daemon is not running. Please start Docker before using Tier 1 isolation."
+    fi
+fi
+
 # 2. Setup Environment Variables
 if [ ! -f .env ]; then
     echo "📄 Creating .env file from template..."
@@ -44,6 +56,3 @@ uv sync
 uv run python System/cli.py init
 
 uv run playwright install chromium
-
-echo ""
-echo "🚀 Brain OS is ready! Run: uv run python System/cli.py 'Your prompt here'"

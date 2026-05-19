@@ -9,6 +9,19 @@ if (!(Get-Command uv -ErrorAction SilentlyContinue)) {
     Write-Host "✅ uv is already installed." -ForegroundColor Green
 }
 
+# 1.8. Check for Docker (Tier 1 Sandbox Requirement)
+Write-Host "🐳 Checking for Docker (Required for Tier 1 Sandbox)..." -ForegroundColor Cyan
+if (!(Get-Command docker -ErrorAction SilentlyContinue)) {
+    Write-Host "⚠️  WARNING: Docker is not installed. Tier 1 Hardware Isolation (microsandbox) will fail." -ForegroundColor Yellow
+    Write-Host "   Please install Docker Desktop: https://docs.docker.com/desktop/install/windows-install/" -ForegroundColor Yellow
+} else {
+    Write-Host "✅ Docker is installed." -ForegroundColor Green
+    $dockerInfo = docker info 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "⚠️  WARNING: Docker daemon is not running. Please start Docker Desktop before using Tier 1 isolation." -ForegroundColor Yellow
+    }
+}
+
 # 2. Setup Environment Variables
 if (!(Test-Path .env)) {
     Write-Host "📄 Creating .env file from template..." -ForegroundColor Yellow
@@ -31,5 +44,3 @@ uv sync
 uv run python System/cli.py init
 
 uv run playwright install chromium
-
-Write-Host "`n🚀 Brain OS is ready! Run: uv run python System/cli.py 'Your prompt here'" -ForegroundColor Green

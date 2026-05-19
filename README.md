@@ -279,20 +279,24 @@ Before an agent can execute a single line of code or touch a file, it must pass 
 | **6. The Vestibular System** | Homeostasis | Transactional rollbacks. Before the agent executes a destructive file write, the Vestibular system takes an immutable snapshot. If the operation fails, it executes a Git-level reset and violently prunes orphaned directories. |
 | **7. The Thymus Watchdog** | T-Cell Maturation | Brain OS runs via a Parent-Child process architecture. The unkillable Thymus parent monitors the Medulla child via an in-memory IPC pipe. If the agent exhibits high-velocity destructive behavior (e.g., >5 mutations in 10s), the Thymus triggers a SIGKILL. |
 | **8. The OOM & Fork Bomb Shields** | Apoptosis | Prevents host-resource exhaustion attacks. Child processes are capped at 50 PIDs (`RLIMIT_NPROC`), and process output is buffered by chunks (max 8MB). If an agent infinite-loops, the entire process tree is violently pruned. |
+📝 1. The Fixed Architecture Docs (System/tools/README.md)
+Copy everything below this line and append it to your System/tools/README.md file. I have indented the bash block with 4 spaces instead of backticks so it won't break the markdown renderer:
 
-### Tier 1 Sandbox Architecture (`microsandbox`)
+### 🛡️ Tier 1 Sandbox Architecture (microsandbox)
+The microsandbox package provides a pluggable, container-driven Tier 1 execution framework designed to isolate high-risk project builds (e.g., npm run build) and deployment flows. It is strictly enforced via the BRAIN_EXECUTION_TIER=1 environment variable.
 
-The `microsandbox` package provides a pluggable, container-driven Tier 1 execution framework designed to isolate high-risk project builds (e.g., `npm run build`) and deployment flows.
+Strategic Sandbox Controls
+Zero Host-Directory Leakage: Runtimes are given an empty container root file system scratchpad. The active workspace directory is compressed into an ephemeral tarball and streamed into the container, preventing unauthorized file modifications on the host.
 
-#### Strategic Sandbox Controls
-1. **Zero Host-Directory Leakage (Phase 2):** Runtimes are given an empty container root file system scratchpad. The active workspace directory is compressed into an ephemeral tarball and streamed into the container, preventing unauthorized file modifications on the host.
-2. **Volatile Memory secret Inoculation (Phase 3):** Secrets (like `DEPLOYMENT_TOKEN`) are injected into the container using dedicated `.env` configuration files marked with strict `0o600` access controls and loaded straight to memory.
-3. **Outbound Supply-Chain Firewall (Phase 4):** A custom asynchronous CONNECT proxy intercepts all traffic leaving the container. Traffic matching approved destination endpoints (e.g., `api.vercel.com`, `registry.npmjs.org`) is securely routed; all other egress attempts are blocked to prevent token exfiltration.
-4. **Hard Kernel Security Options:** Container execution boundaries are hardened via `--cap-drop=ALL` (dropping all linux capabilities), `--security-opt=no-new-privileges:true` (preventing privilege escalation), and strict limits on thread structures (`--pids-limit=100`) and memory (`--memory=1g`).
+Volatile Memory Secret Inoculation: Secrets (like DEPLOYMENT_TOKEN) are injected into the container using dedicated .env configuration files marked with strict 0o600 access controls.
 
-### Running Sandbox Isolation Tests
-To run the specialized validation suites with precise module-level code coverage targets, execute:
-```bash
+Outbound Supply-Chain Firewall: A custom asynchronous CONNECT proxy (egress.py) intercepts all traffic leaving the container. Traffic matching approved destination endpoints (e.g., api.vercel.com, registry.npmjs.org) is securely routed; all other egress attempts are forcefully dropped to prevent token exfiltration.
+
+Hard Kernel Security Options: Container execution boundaries are hardened via --cap-drop=ALL (dropping all linux capabilities), --security-opt=no-new-privileges:true (preventing privilege escalation), and strict limits on thread structures (--pids-limit=100) and memory (--memory=1g).
+
+Testing the Sandbox
+Because the sandbox interacts heavily with system sockets and the Docker daemon, the test suite relies on targeted asyncio mocks to prevent CI/CD pipeline hangs. Run the following command to test the isolated package:
+
 uv run pytest System/tests/tools/test_microsandbox.py --cov=System.tools.microsandbox
 ---
 
