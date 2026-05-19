@@ -9,6 +9,7 @@ from litellm import completion  # type: ignore
 from System.core.paths import ROOT_DIR
 from System.core.locks import BiologicalLock
 from System.core.dna import get_dna_config
+from System.neuroanatomy.systemic.immune_system import vault
 
 console = Console()
 
@@ -164,6 +165,7 @@ def trigger_daydreams() -> str:
             model=model_name,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.8,
+            api_key=vault.get_api_key_for_model(model_name),
         )
         epiphany = response.choices[0].message.content
 

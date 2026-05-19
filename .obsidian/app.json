@@ -11,5 +11,6 @@
     "package-lock.json",
     "uv.lock",
     ".git/"
-  ]
+  ],
+  "promptDelete": false
 }
