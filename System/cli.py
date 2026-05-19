@@ -108,6 +108,17 @@ def approve():
     )
 
 
+@app.command()
+def setup() -> None:
+    """Initializes Brain OS using the interactive, high-fidelity Synaptic Genesis onboarding wizard."""
+    import asyncio
+
+    # ⚡ THE ROUTING FIX: Import the wizard exclusively when called, keeping the boot loop lightning fast
+    from System.core.onboarding import setup_wizard
+
+    asyncio.run(setup_wizard())
+
+
 # Cognitive (CNS)
 app.command(name="task")(task)
 app.command(name="daydream")(daydream)

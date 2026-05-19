@@ -1,72 +1,40 @@
 import os
-from rich.console import Console
+import sys
 from System.core.paths import ROOT_DIR
-from System.neuroanatomy.systemic.immune_system import vault
-
-console = Console()
-
-
-def _setup_directories():
-    """Creates the biological directory structure if it doesn't exist."""
-    directories = [
-        ROOT_DIR / "Personal",
-        ROOT_DIR / "Professional",
-        ROOT_DIR / "Studio",
-        ROOT_DIR / "Media",
-        ROOT_DIR / "System" / "logs",
-        ROOT_DIR / "Meta" / "Wernicke",
-        ROOT_DIR / "Meta" / "Basal_Ganglia",
-        ROOT_DIR / "Meta" / "Visual_Cortex",
-    ]
-    for d in directories:
-        d.mkdir(parents=True, exist_ok=True)
 
 
 def bootstrap() -> bool:
-    """
-    The Polymerase Boot Sequence.
-    Validates the OS environment, secures variables, and hydrates the Vault.
-    """
-    # 1. Ensure structural integrity
-    _setup_directories()
+    """⚡ THE GATEKEEPER: Hyper-fast loading hook executed on every single CLI interaction loop."""
+    try:
+        env_file = ROOT_DIR / ".env"
+        if env_file.exists():
+            for line in env_file.read_text(encoding="utf-8").splitlines():
+                if "=" in line and not line.startswith("#"):
+                    k, v = line.split("=", 1)
+                    os.environ[k.strip()] = v.strip()
 
-    # 2. Validate DNA (.env file)
-    env_path = ROOT_DIR / ".env"
-    env_example_path = ROOT_DIR / ".env.example"
+        # Synchronize and inoculate parameters inside the secure singleton memory Vault
+        from System.neuroanatomy.systemic.immune_system import vault
 
-    if not env_path.exists():
-        if env_example_path.exists():
-            console.print(
-                "[yellow]Notice: .env not found. Synthesizing from .env.example...[/yellow]"
-            )
-            env_path.write_text(env_example_path.read_text(encoding="utf-8"))
-        else:
-            console.print(
-                "[bold red]CRITICAL ERROR: No .env or .env.example file found![/bold red]"
-            )
-            return False
+        vault.secure_environment()
 
-    # 3. ⚡ PHASE 1 FIX: The Central Omni-Loader
-    # Hydrate the environment here so BOTH conscious and subconscious systems get keys!
-    if not env_path.exists():
-        env_path = ROOT_DIR / ".env.txt"  # Windows extension failsafe
+        # ⚡ SHIFT-LEFT PERFORMANCE: Reduce 7 filesystem stat calls to 1 by checking a primary anchor
+        target_dirs = [
+            "Studio",
+            "Personal",
+            "Professional",
+            "Meta",
+            "Sense",
+            "System/tools/engrams",
+            "System/logs",
+        ]
+        if not (ROOT_DIR / "Meta").exists():
+            for d in target_dirs:
+                (ROOT_DIR / d).mkdir(parents=True, exist_ok=True)
 
-    if env_path.exists():
-        raw_bytes = env_path.read_bytes()
-        text = raw_bytes.decode("utf-8", errors="ignore")
-        if "\x00" in text:  # Detect Windows UTF-16 Ghost Files
-            text = raw_bytes.decode("utf-16", errors="ignore")
-
-        for line in text.splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, val = line.split("=", 1)
-                clean_key = key.replace("\ufeff", "").strip()
-                clean_val = val.replace("\ufeff", "").strip().strip('"').strip("'")
-                os.environ[clean_key] = clean_val
-
-    # 4. SHIFT-LEFT: Secure the environment explicitly during boot!
-    # Now that os.environ has the pure keys, the Vault can safely swallow them!
-    vault.secure_environment()
-
-    return True
+        return True
+    except Exception as e:
+        print(
+            f"Catastrophic Operating System Bootstrap Rejection: {e}", file=sys.stderr
+        )
+        return False

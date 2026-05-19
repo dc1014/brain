@@ -21,7 +21,7 @@ class ContainerSandboxDriver(BaseSandboxDriver):
     Ensures zero host-directory mounts and volatile secret injection.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.sandbox_id = f"brain-sandbox-{uuid.uuid4().hex[:8]}"
         self.tarball_path: Optional[Path] = None
         self.env_file_path: Optional[Path] = None
@@ -40,19 +40,23 @@ class ContainerSandboxDriver(BaseSandboxDriver):
                     / f"{self.sandbox_id}.tar.gz"
                 )
 
-            def _make_tar():
-                with tarfile.open(self.tarball_path, "w:gz") as tar:
-                    tar.add(workspace_path, arcname=".")
+            def _make_tar() -> None:
+                if self.tarball_path:
+                    with tarfile.open(self.tarball_path, "w:gz") as tar:
+                        tar.add(workspace_path, arcname=".")
 
             await asyncio.to_thread(_make_tar)
 
             # PHASE 3: VOLATILE TOKEN INOCULATION
-            self.env_file_path = self.tarball_path.with_suffix(".env")
-            with open(self.env_file_path, "w") as f:
-                for k, v in env_secrets.items():
-                    f.write(f"{k}={v}\n")
-            if sys.platform != "win32":
-                os.chmod(self.env_file_path, 0o600)
+            self.env_file_path = (
+                self.tarball_path.with_suffix(".env") if self.tarball_path else None
+            )
+            if self.env_file_path:
+                with open(self.env_file_path, "w") as f:
+                    for k, v in env_secrets.items():
+                        f.write(f"{k}={v}\n")
+                if sys.platform != "win32":
+                    os.chmod(self.env_file_path, 0o600)
 
             # HARDENED KERNEL CONSTRAINTS
             cmd = [
