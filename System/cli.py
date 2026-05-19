@@ -187,6 +187,22 @@ def live():
         brainstem.stop()
 
 
+@app.command()
+def halt():
+    """🚨 Vagus Nerve: Emergency stop. Aborts the current task and safely flushes the queue."""
+    from System.neuroanatomy.autonomic.vagus_nerve import trigger_halt
+
+    trigger_halt()
+
+
+@app.command()
+def recover():
+    """🚨 Vagus Nerve: Emergency rollback. Restores the file system to the last safe snapshot."""
+    from System.neuroanatomy.autonomic.vagus_nerve import trigger_recover
+
+    trigger_recover()
+
+
 # Cognitive (CNS)
 app.command(name="task")(task)
 app.command(name="daydream")(daydream)

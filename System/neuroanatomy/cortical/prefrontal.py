@@ -22,6 +22,7 @@ from System.neuroanatomy.limbic.hippocampus import (
     persist_pipeline_state,
     clear_pipeline_state,
 )
+from System.core.paths import normalize_path
 
 console = Console()
 
@@ -278,7 +279,21 @@ async def execute_pipeline(
     while len(pipeline) > 0:
         persist_pipeline_state(description, route_type, domain, pipeline)
 
+        # ⚡ ZERO-DEBT: Vagus Nerve (Parasympathetic) Receptor Check
+        abort_flag = normalize_path(ROOT_DIR / "System" / ".vagus_abort_signal")
+        if abort_flag.exists():
+            console.print(
+                "\n[bold red]🛑 Vagus Nerve Signal detected. Halting pipeline safely.[/bold red]"
+            )
+            pipeline_aborted = True
+            try:
+                os.remove(abort_flag)
+            except OSError:
+                pass
+            break
+
         step = pipeline.pop(0)
+        # ... (rest of loop continues)
         current_payload = pfc_memory.get_current_context()
 
         # 1. Swarm Execution
