@@ -357,11 +357,14 @@ async def execute_pipeline(
             )
         )
 
-        if (
-            "[SYSTEM HALT]" in step_result.text
-            or "API/Execution Error:" in step_result.text
-        ):
-            console.print("\n[bold red]🛑 PIPELINE ABORTED.[/bold red]")
+        # ⚡ THE FIX: Strict error checking prevents prose-based false-positives
+        is_system_halt = step_result.text.strip().startswith("[SYSTEM HALT]")
+        is_api_error = step_result.text.strip().startswith("API/Execution Error:")
+
+        if is_system_halt or is_api_error:
+            console.print(
+                "\n[bold red]🛑 PIPELINE ABORTED via explicit exception response.[/bold red]"
+            )
             pipeline_aborted = True
             break
 

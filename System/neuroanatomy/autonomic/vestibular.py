@@ -7,10 +7,6 @@ from rich.console import Console
 from System.core.paths import ROOT_DIR
 from System.core.locks import BiologicalLock
 
-import subprocess
-
-subprocess.run(["git", "checkout", "--", "."], cwd=ROOT_DIR, capture_output=True)
-
 console = Console()
 VESTIBULAR_STATE_FILE = ROOT_DIR / "Meta" / "vestibular_state.json"
 BACKUP_DIR = ROOT_DIR / "Meta" / "vestibular_backups"
@@ -60,7 +56,6 @@ class VestibularSystem:
             dirs_state.add(str(root_path))
 
             for file in files:
-                # ⚡ T-CELL CHECK: Do not track or delete core OS files!
                 if file in self.protected_files:
                     continue
 
@@ -81,7 +76,6 @@ class VestibularSystem:
             with open(VESTIBULAR_STATE_FILE, "w", encoding="utf-8") as f:
                 json.dump(state, f)
 
-        # Clear old backups on a fresh transaction
         if BACKUP_DIR.exists():
             shutil.rmtree(BACKUP_DIR, ignore_errors=True)
 
@@ -91,7 +85,6 @@ class VestibularSystem:
             target = (ROOT_DIR / filepath).resolve()
             if target.exists() and target.is_file():
                 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-                # Use a safe delimiter to map the relative path in a flat directory
                 safe_name = str(target.relative_to(ROOT_DIR)).replace(os.sep, "___")
                 shutil.copy2(target, BACKUP_DIR / safe_name)
         except Exception:
@@ -119,8 +112,12 @@ class VestibularSystem:
                 "[dim yellow]⚖️ Vestibular System: Restoring file modifications...[/dim yellow]"
             )
 
-            # 1. Standard File Reversion (Using git for tracked file mutations)
-            # os.system(f"cd {ROOT_DIR} && git checkout -- .")
+            # ⚡ THE FIX: Safe subprocess checkout is encapsulated securely inside runtime operations
+            import subprocess
+
+            subprocess.run(
+                ["git", "checkout", "--", "."], cwd=ROOT_DIR, capture_output=True
+            )
 
             # 2. Restore targeted untracked file backups
             if BACKUP_DIR.exists():
@@ -134,10 +131,9 @@ class VestibularSystem:
                         pass
                 shutil.rmtree(BACKUP_DIR, ignore_errors=True)
 
-            # 3. Deep File & Directory Pruning (The true Immune System)
+            # 3. Deep File & Directory Pruning
             current_files, current_dirs = self._get_workspace_snapshot()
 
-            # Prune orphaned files
             orphaned_files = set(current_files.keys()) - set(baseline_files.keys())
             pruned_file_count = 0
             for file_path_str in orphaned_files:
@@ -147,7 +143,6 @@ class VestibularSystem:
                 except OSError:
                     pass
 
-            # Prune orphaned dirs
             orphaned_dirs = current_dirs - baseline_dirs
             orphaned_dirs_sorted = sorted(list(orphaned_dirs), key=len, reverse=True)
 
