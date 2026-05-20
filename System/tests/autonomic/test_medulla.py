@@ -1,5 +1,10 @@
 # --- System/tests/autonomic/test_medulla.py ---
-from System.neuroanatomy.autonomic.medulla import MedullaOblongata
+import pytest
+import time
+from System.neuroanatomy.autonomic.medulla import (
+    MedullaOblongata,
+    OrchestrationMismatchException,
+)
 
 
 def test_medulla_blueprint_parsing(tmp_path, monkeypatch):
@@ -44,7 +49,9 @@ def test_medulla_cognitive_heartbeat_execution(mocker):
 
     brainstem = MedullaOblongata()
     brainstem.is_alive = True
-    brainstem.cognitive_state = "ORCHESTRATION_ACTIVE"
+
+    # ⚡ THE COS FIX: Map to an valid active resource tier to trigger queue parsing
+    brainstem.cognitive_state = "ORCHESTRATION_MINIMAL"
 
     def break_loop():
         brainstem.is_alive = False
@@ -66,41 +73,35 @@ def test_medulla_respiratory_thread_supervision(mocker):
         }
     }
 
-    # Patch the abstraction directly at its module origin namespace
     mock_dermis = mocker.patch("Sense.receptors.dermis.DermisAbstraction")
-
-    # Configure the mock to return a safe instance proxy structure
     mock_instance = mocker.MagicMock()
     mock_dermis.return_value = mock_instance
 
-    # Stub out somatic file watcher dependencies to isolate the thread tracking logic
-    mocker.patch("System.cli_somatic.watch")
+    mock_somatic = mocker.MagicMock()
+    mock_somatic.watch = lambda: None
+    mocker.patch("System.neuroanatomy.autonomic.medulla.subprocess")
+    mocker.patch.dict("sys.modules", {"System.cli_somatic": mock_somatic})
 
-    # ⚡ THE RECOVERY LOOP FIX: Mock threading.Thread to return a proxy that claims to be alive.
-    # This prevents the second loop cycle from re-triggering resuscitation.
     mock_live_thread = mocker.MagicMock()
     mock_live_thread.is_alive.return_value = True
-    mocker.patch(
-        "System.neuroanatomy.autonomic.medulla.threading.Thread",
-        return_value=mock_live_thread,
-    )
 
-    # Simulate an empty daemons tracking ledger (forcing immediate resuscitation)
+    mock_thread_class = mocker.patch(
+        "System.neuroanatomy.autonomic.medulla.threading.Thread"
+    )
+    mock_thread_class.return_value = mock_live_thread
+
     brainstem.daemons = {}
 
-    # Break the infinite loop block on the second evaluation frame cycle safely
+    def kill_loop_on_sleep(*args, **kwargs):
+        brainstem.is_alive = False
+
     mocker.patch(
         "System.neuroanatomy.autonomic.medulla.time.sleep",
-        side_effect=[None, Exception("Loop Break")],
+        side_effect=kill_loop_on_sleep,
     )
 
-    try:
-        brainstem._supervise_threads()
-    except Exception as e:
-        if str(e) != "Loop Break":
-            raise e
+    brainstem._supervise_threads()
 
-    # Assert that the abstraction was invoked exactly once during the first loop cycle
     mock_dermis.assert_called_once_with(port=8080)
     assert "dermis" in brainstem.daemons
 
@@ -114,14 +115,16 @@ def test_medulla_fractional_state_progression(mocker):
     assert brainstem.cognitive_state == "SLEEP"
 
     brainstem.wake()
-    assert brainstem.cognitive_state == "ORCHESTRATION_ACTIVE"
+    assert brainstem.cognitive_state == "ORCHESTRATION_MINIMAL"
 
 
 def test_medulla_pre_sleep_sequence_handshake(mocker):
     """Proves the synchronization barrier executes graceful handshakes with active daemons."""
+    mocker.patch("System.neuroanatomy.autonomic.medulla.time.sleep")
+
     brainstem = MedullaOblongata()
     brainstem.is_alive = True
-    brainstem.cognitive_state = "ORCHESTRATION_ACTIVE"
+    brainstem.cognitive_state = "ORCHESTRATION_STANDARD"
 
     mock_dermis_instance = mocker.MagicMock()
     brainstem.active_instances["dermis"] = mock_dermis_instance
@@ -134,3 +137,31 @@ def test_medulla_pre_sleep_sequence_handshake(mocker):
 
     assert brainstem.cognitive_state == "IDLE_READY"
     mock_dermis_instance.shutdown.assert_called_once()
+
+
+def test_cos_arbiter_specificity_scoring():
+    """Verify that specific tool commands calculate dynamic scores and map to correct tiers."""
+    brainstem = MedullaOblongata()
+
+    minimal_score = brainstem.calculate_specificity_score("ls -la")
+    assert (
+        brainstem.allocate_orchestration_tier(minimal_score) == "ORCHESTRATION_MINIMAL"
+    )
+
+    critical_score = brainstem.calculate_specificity_score(
+        "execute_pipeline with playwright chromium hooks"
+    )
+    assert (
+        brainstem.allocate_orchestration_tier(critical_score)
+        == "ORCHESTRATION_CRITICAL"
+    )
+
+
+def test_cos_arbiter_state_churn_exception_trap():
+    """Verify that shifting out of a high-specificity state too quickly triggers an OrchestrationMismatchException."""
+    brainstem = MedullaOblongata()
+    brainstem.cognitive_state = "ORCHESTRATION_CRITICAL"
+    brainstem._last_tier_elevation_time = time.time()
+
+    with pytest.raises(OrchestrationMismatchException):
+        brainstem.modulate_runtime_state("ORCHESTRATION_MINIMAL")
