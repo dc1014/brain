@@ -1,15 +1,16 @@
+# --- System/neuroanatomy/limbic/episodic.py ---
 import json
 import time
+from typing import List
 from rich.console import Console
 from System.core.paths import ROOT_DIR
 from System.core.locks import BiologicalLock
-from System.neuroanatomy.limbic.nucleus_accumbens import process_dopaminergic_reward
 
 console = Console()
 MEMORY_FILE = ROOT_DIR / "Meta" / "autobiography.jsonl"
 
 
-def encode_episode(objective: str, tasks: list[str], outcome: str) -> None:
+def encode_episode(objective: str, tasks: List[str], outcome: str) -> None:
     """Hippocampal Encoding: Saves a permanent memory of an enacted executive sequence."""
     MEMORY_FILE.parent.mkdir(parents=True, exist_ok=True)
 
@@ -20,11 +21,14 @@ def encode_episode(objective: str, tasks: list[str], outcome: str) -> None:
         "outcome": outcome,
     }
 
+    # Protect the flat-file JSONL appending sequence across concurrent agent threads
     with BiologicalLock(str(MEMORY_FILE)):
         with open(MEMORY_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(episode) + "\n")
 
-    # ⚡ SHIFT-LEFT: Immediately pass the outcome to the Nucleus Accumbens for behavioral adjustment
+    # ⚡ SHIFT-LEFT DECOUPLING: Move import inline to smash the top-level cyclic initialization loop
+    from System.neuroanatomy.limbic.nucleus_accumbens import process_dopaminergic_reward
+
     process_dopaminergic_reward(objective, outcome)
 
 

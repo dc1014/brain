@@ -1,8 +1,9 @@
 # --- System/tools/epistemic.py ---
 import os
 import re
+import datetime
 import xml.etree.ElementTree as ET
-from typing import List, Dict
+from typing import List, Dict, Any
 from System.core.paths import ROOT_DIR
 from .sandbox import is_safe_path
 from System.core.schemas import ExecutionResult
@@ -61,6 +62,43 @@ def extract_trajectory(
 
     output_str = json_dump_fallback(trajectory)
     return ExecutionResult(success=True, output=output_str)
+
+
+def verify_trajectory_freshness(
+    trajectory: List[Dict[str, str]], current_date_str: str
+) -> Dict[str, Any]:
+    """Inspects chronological entries to catch out-of-date parameters before execution loops.
+
+    Args:
+        trajectory: Chronological list of parsed fact dictionary configurations.
+        current_date_str: Target reference date validation marker (e.g., '2026-05-19').
+
+    Returns:
+        A dictionary specifying if epistemic drift or factual decay was detected.
+    """
+    if not trajectory:
+        return {"status": "EMPTY", "drift_detected": False}
+
+    latest_fact = trajectory[-1]
+    valid_until = latest_fact.get("valid_until", "PRESENT")
+
+    if valid_until != "PRESENT":
+        try:
+            expiry_date = datetime.datetime.strptime(valid_until, "%Y-%m-%d")
+            current_date = datetime.datetime.strptime(current_date_str, "%Y-%m-%d")
+
+            if current_date > expiry_date:
+                # Signal an active epistemic drift condition back up to the executive core
+                return {
+                    "status": "STALE",
+                    "drift_detected": True,
+                    "expired_metric": latest_fact.get("value"),
+                }
+        except ValueError:
+            # Fall back to safe warning if string mapping is unparseable
+            return {"status": "MALFORMED_BOUNDS", "drift_detected": True}
+
+    return {"status": "FRESH", "drift_detected": False}
 
 
 def json_dump_fallback(data: List[Dict[str, str]]) -> str:

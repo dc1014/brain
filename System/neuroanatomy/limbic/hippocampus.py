@@ -13,6 +13,7 @@ from System.core.paths import ROOT_DIR
 from System.llm import acompletion
 from System.neuroanatomy.systemic.immune_system import vault
 from System.core.locks import BiologicalLock
+from System.neuroanatomy.autonomic.acc import AnteriorCingulateCortex
 
 console = Console()
 
@@ -53,7 +54,7 @@ def encode_memory(filepath: str, content: str) -> None:
 
 
 def rebuild_index() -> None:
-    """Completely wipes and rebuilds the SQLite index and Relational Graph Backplane from flat-files."""
+    """Completely wipes and rebuilds the SQLite index and supervised Relational Graph Backplane from flat-files."""
     console.print("[dim]🧠 Hippocampus: Rebuilding ephemeral search index...[/dim]")
     if DB_PATH.exists():
         try:
@@ -101,12 +102,15 @@ def rebuild_index() -> None:
     conn.commit()
     conn.close()
 
-    # ⚡ AUTOMATED GRAPH BACKPLANE CONSOLIDATION: Keeps graph relationships mirrored out-of-the-box
+    # ⚡ ACC CLOSED-LOOP GATING PASS: Supervised build protects relational memory from loop pollution
     try:
-        gb = GraphBackplane(str(ROOT_DIR))
-        gb.rebuild_graph_state()
+        gb = SupervisedGraphBackplane(str(ROOT_DIR))
+        # Evaluates a baseline interaction state sequence before committing structural file shifts
+        gb.supervised_rebuild([])
     except Exception as e:
-        console.print(f"[dim red]🧠 Hippocampus Graph build bypass: {e}[/dim red]")
+        console.print(
+            f"[dim red]🧠 Hippocampus Graph build bypassed or constrained: {e}[/dim red]"
+        )
 
     console.print(
         "[bold green]✨ Hippocampus index successfully rebuilt from flat files![/bold green]"
@@ -151,7 +155,7 @@ def recall_memory(query: str, limit: int = 5) -> str:
 
 
 # =====================================================================
-# 2. RELATIONAL EPISTEMIC STORAGE (The Graph Backplane Engine)
+# 2. RELATIONAL EPISTEMIC STORAGE (The Supervised Graph Backplane Engine)
 # =====================================================================
 
 
@@ -203,6 +207,28 @@ class GraphBackplane:
         os.makedirs(os.path.dirname(self.graph_file), exist_ok=True)
         with open(self.graph_file, "w", encoding="utf-8") as f:
             json.dump(graph_map, f, indent=2)
+
+
+class SupervisedGraphBackplane(GraphBackplane):
+    """Advanced Gated Graph backplane that monitors cognitive tension before committing links."""
+
+    def __init__(self, vault_path: str) -> None:
+        super().__init__(vault_path)
+        self.acc = AnteriorCingulateCortex()
+
+    def supervised_rebuild(self, interaction_history: List[Dict[str, Any]]) -> None:
+        """Gates knowledge graph serialization based on live system tension parameters."""
+        tension_report = self.acc.inspect_context_buffer(interaction_history)
+
+        if tension_report.get("action") == "FORCE_STRATEGY_SHIFT":
+            console.print(
+                "[bold red]⚠️ ACC BLOCK: High cognitive loops detected. Aborting graph write to prevent link pollution.[/bold red]"
+            )
+            raise RuntimeError(
+                "Graph write suspended by Anterior Cingulate Cortex due to high tension score thresholds."
+            )
+
+        self.rebuild_graph_state()
 
 
 # =====================================================================
