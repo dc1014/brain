@@ -1,11 +1,12 @@
 import hmac
 import hashlib
-from typing import cast
+
 from Sense.receptors.dermis import (
     verify_signature,
     _extract_field,
-    WebhookHandler,
-    RECENT_SIGNATURES,
+    enforce_allostatic_load,
+    RECENT_SIGNATURES_SET,
+    RECENT_SIGNATURES_QUEUE,
     IP_REQUEST_HISTORY,
     MAX_REQUESTS_PER_WINDOW,
 )
@@ -35,27 +36,27 @@ def test_dermis_extract_field():
 def test_dermis_allostatic_load_rate_limiting():
     """Proves the Dermis numbs itself to a specific IP if MAX_REQUESTS_PER_WINDOW is exceeded."""
     IP_REQUEST_HISTORY.clear()
-
-    class MockHandler:
-        client_address = ("192.168.1.100", 8080)
-
-    # ⚡ ZERO-DEBT: Safely cast the duck-typed mock to satisfy strict MyPy compilation
-    handler = cast(WebhookHandler, MockHandler())
+    client_ip = "192.168.1.100"
 
     # Fire the exact maximum number of allowed requests
     for _ in range(MAX_REQUESTS_PER_WINDOW):
-        assert WebhookHandler.enforce_allostatic_load(handler) is True
+        assert enforce_allostatic_load(client_ip) is True
 
     # The very next request from the same IP must be blocked
-    assert WebhookHandler.enforce_allostatic_load(handler) is False
+    assert enforce_allostatic_load(client_ip) is False
 
 
 def test_dermis_replay_protection():
-    """Proves the Dermis drops duplicate impulses if the signature matches a recent cache."""
-    RECENT_SIGNATURES.clear()
+    """Proves unique signatures are sliding-cached and duplicate attacks are intercepted."""
+    RECENT_SIGNATURES_SET.clear()
+    RECENT_SIGNATURES_QUEUE.clear()
 
-    # Simulate caching a valid signature from a previous request
-    fake_sig = "sha256=12345abcdef"
-    RECENT_SIGNATURES.add(fake_sig)
+    signature_1 = "signature-frame-alpha"
+    signature_2 = "signature-frame-beta"
 
-    assert fake_sig in RECENT_SIGNATURES
+    # Seed initial tracking state elements
+    RECENT_SIGNATURES_SET.add(signature_1)
+    RECENT_SIGNATURES_QUEUE.append(signature_1)
+
+    assert signature_1 in RECENT_SIGNATURES_SET
+    assert signature_2 not in RECENT_SIGNATURES_SET

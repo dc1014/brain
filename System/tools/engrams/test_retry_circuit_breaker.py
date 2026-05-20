@@ -1,282 +1,273 @@
 import time
-import threading  # For thread safety in CircuitBreaker
 
 EXOCORTEX_MANIFEST = {
     "name": "test_retry_circuit_breaker",
-    "description": "Simulates and tests a retry circuit breaker pattern with states: CLOSED, OPEN, HALF_OPEN.",
+    "description": "Simulates and tests a basic retry circuit breaker pattern, demonstrating its states (CLOSED, OPEN, HALF-OPEN) and transitions.",
     "version": "1.0.0",
     "author": "Brain_OS",
     "tags": ["circuit_breaker", "retry", "resilience", "testing"],
 }
 
-# --- Circuit Breaker States ---
-CLOSED = "CLOSED"
-OPEN = "OPEN"
-HALF_OPEN = "HALF_OPEN"
 
-
-# --- Custom Exceptions ---
-class CircuitBreakerException(Exception):
-    """Base exception for Circuit Breaker."""
-
-    pass
-
-
-class CircuitBreakerOpenException(CircuitBreakerException):
-    """Exception raised when the circuit is open and blocks a call."""
-
-    pass
-
-
-# --- Circuit Breaker Class ---
 class CircuitBreaker:
-    def __init__(
-        self, failure_threshold=3, reset_timeout=5, retry_attempts=2, retry_delay=0.1
-    ):
+    """
+    A simple Circuit Breaker implementation to protect against repeated failures.
+    States: CLOSED, OPEN, HALF_OPEN.
+    """
+
+    CLOSED = "CLOSED"
+    OPEN = "OPEN"
+    HALF_OPEN = "HALF_OPEN"
+
+    def __init__(self, failure_threshold: int, reset_timeout: int):
         """
-        Initializes the CircuitBreaker.
+        Initializes the Circuit Breaker.
 
         Args:
-            failure_threshold (int): Number of consecutive failures to open the circuit.
-            reset_timeout (int): Time (in seconds) the circuit stays open before going half-open.
-            retry_attempts (int): Max retries for a single call when the circuit is closed.
-            retry_delay (float): Delay (in seconds) between retries.
+            failure_threshold (int): Number of consecutive failures before tripping to OPEN state.
+            reset_timeout (int): Time in seconds to wait before transitioning from OPEN to HALF_OPEN.
         """
+        if not isinstance(failure_threshold, int) or failure_threshold <= 0:
+            raise ValueError("failure_threshold must be a positive integer.")
+        if not isinstance(reset_timeout, int) or reset_timeout <= 0:
+            raise ValueError("reset_timeout must be a positive integer.")
+
         self.failure_threshold = failure_threshold
         self.reset_timeout = reset_timeout
-        self.retry_attempts = retry_attempts
-        self.retry_delay = retry_delay
-
-        self.current_state = CLOSED
+        self.state = self.CLOSED
         self.failure_count = 0
         self.last_failure_time = None
-        self.lock = threading.Lock()  # Ensures thread safety for state changes
 
-    def _open_circuit(self):
-        """Transitions the circuit to the OPEN state."""
-        self.current_state = OPEN
+    def _trip(self):
+        """Transitions the circuit breaker to the OPEN state."""
+        self.state = self.OPEN
         self.last_failure_time = time.time()
-        print(
-            f"Circuit Breaker: Circuit opened at {self.last_failure_time:.2f}. Too many failures."
-        )
+        print(f"  [CircuitBreaker] TRIPPED! State: {self.state}")
 
-    def _close_circuit(self):
-        """Transitions the circuit to the CLOSED state."""
-        self.current_state = CLOSED
+    def _reset(self):
+        """Transitions the circuit breaker to the CLOSED state."""
+        self.state = self.CLOSED
         self.failure_count = 0
         self.last_failure_time = None
-        print("Circuit Breaker: Circuit closed. Service is healthy again.")
+        print(f"  [CircuitBreaker] RESET. State: {self.state}")
 
-    def _half_open_circuit(self):
-        """Transitions the circuit to the HALF_OPEN state."""
-        self.current_state = HALF_OPEN
-        print("Circuit Breaker: Circuit half-open. Allowing one test call.")
+    def _half_open(self):
+        """Transitions the circuit breaker to the HALF_OPEN state."""
+        self.state = self.HALF_OPEN
+        print(f"  [CircuitBreaker] HALF-OPEN. State: {self.state}")
 
-    def call(self, func, *args, **kwargs):
+    def call(self, operation_func, *args, **kwargs):
         """
-        Executes the given function through the circuit breaker.
+        Attempts to execute an operation through the circuit breaker.
 
         Args:
-            func (callable): The function to execute.
-            *args: Positional arguments for func.
-            **kwargs: Keyword arguments for func.
+            operation_func (callable): The function to execute.
+            *args, **kwargs: Arguments to pass to operation_func.
 
         Returns:
-            Any: The result of the executed function.
-
-        Raises:
-            CircuitBreakerOpenException: If the circuit is open and blocks the call,
-                                         or if a half-open test call fails and re-opens the circuit.
-            CircuitBreakerException: If all retries fail when the circuit is closed.
-            Exception: Any other exception raised by the wrapped function.
+            tuple: (bool, any) - True if operation succeeded, False otherwise,
+                   and the result or error message.
         """
-        with self.lock:
-            if self.current_state == OPEN:
-                if time.time() - self.last_failure_time > self.reset_timeout:
-                    self._half_open_circuit()
-                else:
-                    print(
-                        f"Circuit Breaker: Circuit is OPEN. Blocking call to {func.__name__}."
-                    )
-                    raise CircuitBreakerOpenException("Circuit is open")
+        if self.state == self.OPEN:
+            if time.time() - self.last_failure_time > self.reset_timeout:
+                self._half_open()
+            else:
+                time_remaining = self.reset_timeout - (
+                    time.time() - self.last_failure_time
+                )
+                print(
+                    f"  [CircuitBreaker] is OPEN. Operation BLOCKED. (Time remaining: {time_remaining:.1f}s)"
+                )
+                return False, "Circuit Breaker is OPEN"
 
-            # Determine max attempts based on current state
-            # HALF_OPEN state only allows one attempt (the test call)
-            # CLOSED state allows initial attempt + retry_attempts
-            max_attempts = (
-                1 if self.current_state == HALF_OPEN else (self.retry_attempts + 1)
+        try:
+            result = operation_func(*args, **kwargs)
+            if self.state == self.HALF_OPEN:
+                self._reset()  # Successful call in HALF_OPEN resets the breaker
+            elif self.state == self.CLOSED:
+                self.failure_count = 0  # Reset failure count on success
+            print(f"  [CircuitBreaker] Operation SUCCESS. State: {self.state}")
+            return True, result
+        except Exception as e:
+            if self.state == self.HALF_OPEN:
+                self._trip()  # Failure in HALF_OPEN trips it again
+            elif self.state == self.CLOSED:
+                self.failure_count += 1
+                print(
+                    f"  [CircuitBreaker] Operation FAILED. Failure count: {self.failure_count}/{self.failure_threshold}"
+                )
+                if self.failure_count >= self.failure_threshold:
+                    self._trip()
+            return False, str(e)
+
+
+class FlakyOperation:
+    """
+    A simulated operation that fails a specified number of times before succeeding,
+    and can be configured to force success for testing purposes.
+    """
+
+    def __init__(self, fail_count_before_success: int):
+        """
+        Initializes the flaky operation.
+
+        Args:
+            fail_count_before_success (int): Number of initial consecutive failures
+                                             before the operation starts succeeding.
+        """
+        if (
+            not isinstance(fail_count_before_success, int)
+            or fail_count_before_success < 0
+        ):
+            raise ValueError(
+                "fail_count_before_success must be a non-negative integer."
             )
+        self._initial_fail_count = fail_count_before_success
+        self._current_attempts = 0
+        self._force_success = False
 
-            for attempt in range(max_attempts):
-                try:
-                    result = func(*args, **kwargs)
-                    # If successful
-                    if self.current_state == HALF_OPEN:
-                        self._close_circuit()  # Test call succeeded, close circuit
-                    elif self.current_state == CLOSED:
-                        self.failure_count = 0  # Reset failure count on success
-                    return result
-                except Exception as e:
-                    print(
-                        f"Circuit Breaker: Call to {func.__name__} failed (attempt {attempt + 1}/{max_attempts}): {e}"
-                    )
+    def execute(self):
+        """
+        Executes the simulated operation.
+        Raises ValueError if it's configured to fail, returns a success message otherwise.
+        """
+        self._current_attempts += 1
+        print(
+            f"  [FlakyOperation] Attempting operation (total attempt {self._current_attempts})..."
+        )
 
-                    if self.current_state == HALF_OPEN:
-                        # Half-open test call failed, re-open the circuit
-                        self._open_circuit()
-                        raise CircuitBreakerOpenException(
-                            "Circuit re-opened after half-open test failure"
-                        ) from e
+        if self._force_success:
+            self._force_success = False  # Reset for next call
+            return "Operation forced to succeed!"
 
-                    # Only increment failure count and check threshold if in CLOSED state
-                    if self.current_state == CLOSED:
-                        self.failure_count += 1
-                        if self.failure_count >= self.failure_threshold:
-                            self._open_circuit()
-                            raise CircuitBreakerOpenException(
-                                "Circuit opened due to consecutive failures"
-                            ) from e
+        if self._current_attempts <= self._initial_fail_count:
+            raise ValueError(f"Simulated failure on attempt {self._current_attempts}")
+        else:
+            return f"Operation successful after {self._initial_fail_count} initial failures!"
 
-                    # If more retries are allowed in CLOSED state, wait and try again
-                    if attempt < max_attempts - 1:
-                        time.sleep(self.retry_delay)
-                    else:
-                        # All attempts failed (either retries exhausted in CLOSED, or single half-open attempt failed)
-                        raise CircuitBreakerException(
-                            f"All attempts failed for {func.__name__}"
-                        ) from e
+    def reset_for_test(self, force_success_next_call: bool = False):
+        """
+        Resets the operation's internal state for testing.
+
+        Args:
+            force_success_next_call (bool): If True, the very next call to execute()
+                                            will succeed regardless of fail_count.
+        """
+        self._current_attempts = 0
+        self._force_success = force_success_next_call
+        if force_success_next_call:
+            print("  [FlakyOperation] Configured to succeed on next call.")
+        else:
+            print("  [FlakyOperation] Reset to initial failure pattern.")
 
 
-# --- Simulated Unreliable Service ---
-_service_call_counter = (
-    0  # This counter tracks actual attempts to the underlying service
-)
-
-
-def _unreliable_service_call(call_id, force_fail=False):
-    """
-    A simulated service call that can be forced to fail.
-    It also increments a global counter for every actual attempt.
-
-    Args:
-        call_id (str): An identifier for the current call.
-        force_fail (bool): If True, the call will fail.
-
-    Returns:
-        str: A success message.
-
-    Raises:
-        ValueError: If the simulated call fails.
-    """
-    global _service_call_counter
-    _service_call_counter += 1
-    print(f"  Service Call {call_id}: Attempting call #{_service_call_counter}...")
-    if force_fail:
-        print(f"  Service Call {call_id}: Call #{_service_call_counter} FORCED FAILED.")
-        raise ValueError(f"Simulated service failure for call #{_service_call_counter}")
-    print(f"  Service Call {call_id}: Call #{_service_call_counter} SUCCEEDED.")
-    return f"Success from call {call_id} (service call #{_service_call_counter})"
-
-
-# --- Main Execution Function ---
 def execute_reflex():
     """
-    Demonstrates the functionality of the Circuit Breaker pattern.
+    Main function to execute the circuit breaker test.
     """
     print("--- Starting Circuit Breaker Test ---")
 
-    # Initialize circuit breaker with specific parameters for demonstration
-    # Failure threshold: 3 consecutive failures to open the circuit
-    # Reset timeout: 5 seconds before the circuit transitions from OPEN to HALF_OPEN
-    # Retry attempts: 2 retries (meaning a total of 3 attempts for a single logical call)
-    # Retry delay: 0.1 seconds between retries
-    cb = CircuitBreaker(
-        failure_threshold=3, reset_timeout=5, retry_attempts=2, retry_delay=0.1
-    )
+    # Configuration for the circuit breaker and flaky operation
+    FAILURE_THRESHOLD = 3
+    RESET_TIMEOUT = 5  # seconds
 
-    print("\n--- Phase 1: Demonstrate failures, retries, and circuit opening ---")
-    # We need 3 consecutive logical calls to fail to open the circuit (failure_threshold=3).
-    # With 2 retries, each logical cb.call makes 3 attempts if the underlying service keeps failing.
-    # So, if we force _unreliable_service_call to fail for 3 consecutive cb.calls:
-    # cb.call 1: fails 3 times -> failure_count = 1
-    # cb.call 2: fails 3 times -> failure_count = 2
-    # cb.call 3: fails 3 times -> failure_count = 3 -> CIRCUIT OPENS
-    # Subsequent calls will be blocked immediately.
-    for i in range(1, 5):  # Iterate enough times to open the circuit and then block
-        print(f"\nMain Loop Iteration {i}: Current Circuit state: {cb.current_state}")
-        try:
-            # Force failure for the first 3 logical calls to open the circuit
-            should_fail = i <= 3
-            result = cb.call(
-                _unreliable_service_call, f"main_loop_{i}", force_fail=should_fail
-            )
-            print(f"Main Loop Iteration {i}: Result: {result}")
-        except CircuitBreakerOpenException as e:
-            print(f"Main Loop Iteration {i}: Caught CircuitBreakerOpenException: {e}")
-        except CircuitBreakerException as e:
+    circuit_breaker = CircuitBreaker(FAILURE_THRESHOLD, RESET_TIMEOUT)
+    flaky_op = FlakyOperation(fail_count_before_success=FAILURE_THRESHOLD)
+
+    print(
+        f"\nPhase 1: Triggering failures to trip the circuit breaker (threshold={FAILURE_THRESHOLD})..."
+    )
+    for i in range(
+        FAILURE_THRESHOLD + 1
+    ):  # Try one more time than needed to show it trips
+        print(f"\n--- Call {i + 1} (State: {circuit_breaker.state}) ---")
+        success, result = circuit_breaker.call(flaky_op.execute)
+        if not success:
+            print(f"  Call failed: {result}")
+        else:
+            print(f"  Call succeeded: {result}")
+        time.sleep(0.5)  # Simulate some delay between calls
+
+    print(
+        "\nPhase 2: Circuit breaker should be OPEN. Subsequent calls should be blocked."
+    )
+    for i in range(2):
+        print(f"\n--- Call {i + 1} (State: {circuit_breaker.state}) ---")
+        success, result = circuit_breaker.call(flaky_op.execute)
+        if not success:
+            print(f"  Call failed: {result}")
+        else:
+            print(f"  Call succeeded: {result}")
+        time.sleep(0.5)
+
+    print(
+        f"\nPhase 3: Waiting for reset timeout ({RESET_TIMEOUT}s) to allow HALF-OPEN state..."
+    )
+    time.sleep(RESET_TIMEOUT + 1)  # Wait a bit longer than the timeout
+
+    print("\nPhase 4: Circuit breaker should be HALF-OPEN. Making a test call.")
+    flaky_op.reset_for_test(
+        force_success_next_call=True
+    )  # Configure flaky op to succeed
+    print(f"\n--- Call 1 (State: {circuit_breaker.state}) ---")
+    success, result = circuit_breaker.call(flaky_op.execute)
+    if not success:
+        print(f"  Call failed: {result}")
+    else:
+        print(f"  Call succeeded: {result}")
+    time.sleep(0.5)
+
+    if circuit_breaker.state == CircuitBreaker.CLOSED:
+        print(
+            "\nPhase 5: Circuit breaker is now CLOSED. Operations should succeed normally (or fail and start counting again)."
+        )
+        flaky_op.reset_for_test(
+            force_success_next_call=False
+        )  # Reset flaky op to its initial failure pattern
+        for i in range(3):
+            print(f"\n--- Call {i + 1} (State: {circuit_breaker.state}) ---")
+            success, result = circuit_breaker.call(flaky_op.execute)
+            if not success:
+                print(f"  Call failed: {result}")
+            else:
+                print(f"  Call succeeded: {result}")
+            time.sleep(0.5)
+    else:
+        print(
+            f"\nPhase 5: Circuit breaker did not close. Current state: {circuit_breaker.state}"
+        )
+        print(
+            "This means the test call in HALF-OPEN failed, tripping the breaker again."
+        )
+        # Demonstrate that it's OPEN again and will block
+        print(f"\n--- Call 2 (State: {circuit_breaker.state}) ---")
+        success, result = circuit_breaker.call(flaky_op.execute)
+        if not success:
+            print(f"  Call failed: {result}")
+        else:
+            print(f"  Call succeeded: {result}")
+        time.sleep(0.5)
+        print(f"\nWaiting again for reset timeout ({RESET_TIMEOUT}s)...")
+        time.sleep(RESET_TIMEOUT + 1)
+        print(f"\n--- Call 3 (State: {circuit_breaker.state}) ---")
+        flaky_op.reset_for_test(
+            force_success_next_call=True
+        )  # Ensure it succeeds this time
+        success, result = circuit_breaker.call(flaky_op.execute)
+        if not success:
+            print(f"  Call failed: {result}")
+        else:
+            print(f"  Call succeeded: {result}")
+        time.sleep(0.5)
+        if circuit_breaker.state == CircuitBreaker.CLOSED:
+            print("\nCircuit breaker is now CLOSED after second attempt in HALF-OPEN.")
+        else:
             print(
-                f"Main Loop Iteration {i}: Caught CircuitBreakerException (all retries failed): {e}"
+                f"\nCircuit breaker remains {circuit_breaker.state}. Test completed with persistent failure."
             )
-        except Exception as e:
-            print(f"Main Loop Iteration {i}: Caught unexpected exception: {e}")
-        time.sleep(0.2)  # Small delay between main loop iterations for readability
 
-    print(
-        "\n--- Phase 2: Wait for reset timeout and demonstrate HALF_OPEN state (success) ---"
-    )
-    print(
-        f"Circuit is currently {cb.current_state}. Waiting for {cb.reset_timeout} seconds for it to go HALF_OPEN..."
-    )
-    time.sleep(cb.reset_timeout + 1)  # Wait a bit longer than reset_timeout
+    print("\n--- Circuit Breaker Test Finished ---")
 
-    print(
-        f"\nMain Loop Iteration (after wait): Current Circuit state: {cb.current_state}"
-    )
-    try:
-        # This call should trigger HALF_OPEN, and we'll make it succeed to close the circuit
-        result = cb.call(
-            _unreliable_service_call, "half_open_test_success", force_fail=False
-        )
-        print(f"Main Loop Iteration (after wait): Result: {result}")
-    except CircuitBreakerOpenException as e:
-        print(
-            f"Main Loop Iteration (after wait): Caught CircuitBreakerOpenException: {e}"
-        )
-    except CircuitBreakerException as e:
-        print(
-            f"Main Loop Iteration (after wait): Caught CircuitBreakerException (all attempts failed): {e}"
-        )
-    except Exception as e:
-        print(f"Main Loop Iteration (after wait): Caught unexpected exception: {e}")
 
-    print(f"\nFinal Circuit state after successful half-open test: {cb.current_state}")
-
-    print("\n--- Phase 3: Demonstrate HALF_OPEN state (failure) and re-opening ---")
-    # Manually force the circuit to OPEN and set last_failure_time to trigger HALF_OPEN on next call
-    cb._open_circuit()
-    cb.last_failure_time = (
-        time.time() - cb.reset_timeout - 1
-    )  # Force half-open on next call
-    print(
-        f"Manually forced circuit to OPEN, then simulated waiting for reset. Current Circuit state: {cb.current_state}"
-    )
-
-    try:
-        # This call should trigger HALF_OPEN, and we'll make it fail to re-open the circuit
-        result = cb.call(
-            _unreliable_service_call, "half_open_test_failure", force_fail=True
-        )
-        print(f"Main Loop Iteration (half-open fail): Result: {result}")
-    except CircuitBreakerOpenException as e:
-        print(
-            f"Main Loop Iteration (half-open fail): Caught CircuitBreakerOpenException: {e}"
-        )
-    except CircuitBreakerException as e:
-        print(
-            f"Main Loop Iteration (half-open fail): Caught CircuitBreakerException (all attempts failed): {e}"
-        )
-    except Exception as e:
-        print(f"Main Loop Iteration (half-open fail): Caught unexpected exception: {e}")
-
-    print(f"\nFinal Circuit state after failed half-open test: {cb.current_state}")
-    print("--- Circuit Breaker Test Finished ---")
+if __name__ == "__main__":
+    execute_reflex()

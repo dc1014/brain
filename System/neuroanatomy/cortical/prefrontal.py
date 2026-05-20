@@ -1,12 +1,13 @@
 import asyncio
 import json
 import os
+import re
 import yaml  # type: ignore
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from litellm import acompletion, completion  # type: ignore
+from litellm import acompletion  # type: ignore
 from System.core.paths import ROOT_DIR
 from System.core.dna import get_dna_config
 from System.neuroanatomy.systemic.endocrine import get_resolved_model
@@ -24,88 +25,34 @@ from System.neuroanatomy.limbic.hippocampus import (
 )
 from System.core.paths import normalize_path
 
+# Clean, isolated working memory model module import
+from System.neuroanatomy.cortical.working_memory import WorkingMemory
+
 console = Console()
-
-
-class WorkingMemory:
-    """PFC Working Memory (Semantic Compressor)."""
-
-    def __init__(self, core_objective: str) -> None:
-        self.core_objective = core_objective
-        self.established_facts: list[str] = []
-        self.recent_activity: list[str] = []
-        self.compression_threshold_chars = 12000
-
-    def add_event(self, agent_name: str, raw_output: str, actions: list[str]) -> None:
-        event_log = f"[{agent_name} Output]:\n{raw_output}\nActions: {actions}"
-        self.recent_activity.append(event_log)
-
-    def get_current_context(self) -> str:
-        context = f"CORE OBJECTIVE: {self.core_objective}\n\n"
-        if self.established_facts:
-            context += "ESTABLISHED FACTS (Compressed Memory):\n"
-            for fact in self.established_facts:
-                context += f"- {fact}\n"
-            context += "\n"
-        if self.recent_activity:
-            context += "RECENT PIPELINE ACTIVITY:\n"
-            context += "\n\n".join(self.recent_activity)
-        return context
-
-    async def compress_if_bloated(self) -> None:
-        current_text = "\n".join(self.recent_activity)
-        if len(current_text) < self.compression_threshold_chars:
-            return
-
-        console.print(
-            "[dim magenta]🧠 PFC Buffer Full: Compressing working memory...[/dim magenta]"
-        )
-        prompt = (
-            "You are the Prefrontal Cortex. Synthesize the following pipeline activity into a highly "
-            "concise, bulleted list of 'Established Facts' and 'Current State'. "
-            "Discard all conversational filler and preserve ONLY technical facts, code paths, and outcomes.\n\n"
-            f"ACTIVITY LOG:\n{current_text}"
-        )
-        try:
-            model = (
-                get_dna_config()
-                .get("models", {})
-                .get("fast", "gemini/gemini-2.5-flash")
-            )
-            response = await acompletion(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.0,
-                api_key=vault.get_api_key_for_model(model),
-            )
-            compressed_summary = response.choices[0].message.content.strip()
-            self.established_facts.append(compressed_summary)
-            self.recent_activity.clear()
-            console.print(
-                "[dim green]✅ Working memory successfully compressed.[/dim green]"
-            )
-        except Exception as e:
-            console.print(f"[dim red]PFC Compression Failed: {e}[/dim red]")
 
 
 class PrefrontalCortex:
     """The Seat of Consciousness (Executive Function)."""
 
     def __init__(self) -> None:
-        self.working_memory: list[str] = []
+        # ⚡ SEMANTIC FIX: Renamed from working_memory to pulse_history to resolve name collisions
+        self.pulse_history: list[str] = []
         self.max_memory: int = 5
 
     def _remember(self, memory: str) -> None:
-        self.working_memory.append(memory)
-        if len(self.working_memory) > self.max_memory:
-            self.working_memory.pop(0)
+        self.pulse_history.append(memory)
+        if len(self.pulse_history) > self.max_memory:
+            self.pulse_history.pop(0)
 
     def get_working_memory_context(self) -> str:
-        if not self.working_memory:
+        if not self.pulse_history:
             return "No previous steps executed."
-        return "\n".join(f"- {mem}" for mem in self.working_memory)
+        return "\n".join(f"- {mem}" for mem in self.pulse_history)
 
-    def decompose_goal(self, objective: str, past_experiences: str = "") -> list[str]:
+    # ⚡ ASYNC FIX: Promoted to async def to eliminate blocking network thread I/O states
+    async def decompose_goal(
+        self, objective: str, past_experiences: str = ""
+    ) -> list[str]:
         if os.environ.get("BRAIN_OS_BYPASS_PFC") == "1":
             return [objective]
 
@@ -116,7 +63,7 @@ class PrefrontalCortex:
             "You are the Prefrontal Cortex of Brain OS. Your job is executive function and goal decomposition.\n"
             "Break the following objective down into a strict JSON list of 1 to 3 independent, actionable string commands.\n"
             "Review your PAST EXPERIENCES to avoid repeating historical mistakes or failed approaches.\n"
-            "Do NOT use markdown fences. Return ONLY a valid JSON array of strings.\n\n"
+            "Return a valid JSON array of strings wrapped inside a strict <tasks_json>...</tasks_json> tag wrapper.\n\n"
             f"PAST EXPERIENCES:\n{past_experiences}\n\n"
             f"OBJECTIVE: {objective}"
         )
@@ -126,7 +73,8 @@ class PrefrontalCortex:
                 .get("models", {})
                 .get("fast", "gemini/gemini-2.5-flash")
             )
-            response = completion(
+            # ⚡ OPTIMIZATION: Non-blocking call protects multi-agent loops from hanging
+            response = await acompletion(
                 model=model_name,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.2,
@@ -134,14 +82,34 @@ class PrefrontalCortex:
             )
             raw_text = response.choices[0].message.content.strip()
 
-            # Canvas defeat string formatting
-            fence = chr(96) * 3
-            if f"{fence}json" in raw_text:
-                raw_text = raw_text.replace(f"{fence}json", "")
-            if fence in raw_text:
-                raw_text = raw_text.replace(fence, "")
+            # ⚡ METABOLIC FIX: Track and account for tokens burned during decomposition
+            step_tokens = (
+                response.usage.get("total_tokens", 0)
+                if hasattr(response, "usage")
+                else 0
+            )
+            if step_tokens > 0:
+                await asyncio.to_thread(log_metabolism, step_tokens)
 
-            tasks = json.loads(raw_text.strip())
+            # Robust XML extraction layer
+            xml_match = re.search(
+                r"<tasks_json>(.*?)</tasks_json>", raw_text, re.DOTALL
+            )
+            clean_str = xml_match.group(1).strip() if xml_match else raw_text
+
+            fence = chr(96) * 3
+            if f"{fence}json" in clean_str:
+                clean_str = clean_str.replace(f"{fence}json", "")
+            if fence in clean_str:
+                clean_str = clean_str.replace(fence, "")
+
+            clean_str = clean_str.strip()
+            if not clean_str.startswith("["):
+                array_match = re.search(r"\[\s*\".*?\"\s*\]", clean_str, re.DOTALL)
+                if array_match:
+                    clean_str = array_match.group(0)
+
+            tasks = json.loads(clean_str)
             if isinstance(tasks, list) and all(isinstance(t, str) for t in tasks):
                 return tasks
             return [objective]
@@ -157,7 +125,8 @@ class PrefrontalCortex:
         from System.core.orchestrator import dispatch_task
 
         past_experiences = recall_recent_episodes()
-        tasks = self.decompose_goal(objective, past_experiences)
+        # ⚡ Updated to await the newly asynchronous decomposition method
+        tasks = await self.decompose_goal(objective, past_experiences)
         console.print(
             f"[bold cyan]🧠 PFC: Objective split into {len(tasks)} executive pulses.[/bold cyan]"
         )
@@ -173,9 +142,10 @@ class PrefrontalCortex:
                 await dispatch_task(augmented_prompt)
                 self._remember(f"Pulse {i + 1} Executed: {pulse_desc}")
             except Exception as e:
-                console.print(
+                mocker_msg = (
                     f"[bold red]❌ Swarm Failure on Step {i + 1}: {str(e)}[/bold red]"
                 )
+                console.print(mocker_msg)
                 final_outcome = f"Failed on Step {i + 1}: {str(e)}"
                 break
 
@@ -191,7 +161,7 @@ async def execute_swarm_cohort(
     is_exhausted: bool,
     available_tools: dict,
     pfc_memory: WorkingMemory,
-    origin: str = "HUMAN",  # ⚡ THE FIX: Accept origin
+    origin: str = "HUMAN",
 ) -> tuple[int, list[str]]:
     total_tokens = 0
     agents_invoked = []
@@ -218,7 +188,7 @@ async def execute_swarm_cohort(
             tools=active_tools if active_tools else None,
             route=route_type,
             domain=domain,
-            origin=origin,  # ⚡ Pass the baton to Swarm Agents
+            origin=origin,
         )
         return a_cfg["name"], res
 
@@ -255,7 +225,7 @@ async def execute_pipeline(
     route_type: str,
     domain: str,
     resume_pipeline: list | None = None,
-    origin: str = "HUMAN",  # ⚡ THE FIX: Accept origin from the Orchestrator
+    origin: str = "HUMAN",
 ) -> None:
     commit_transaction()
     tools_path = ROOT_DIR / "System" / "config" / "tools.yaml"
@@ -299,7 +269,6 @@ async def execute_pipeline(
             break
 
         step = pipeline.pop(0)
-        # ... (rest of loop continues)
         current_payload = pfc_memory.get_current_context()
 
         # 1. Swarm Execution
@@ -312,7 +281,7 @@ async def execute_pipeline(
                 is_exhausted,
                 available_tools,
                 pfc_memory,
-                origin,  # ⚡ THE FIX: Pass baton to Swarm Coordinator
+                origin,
             )
             total_pipeline_tokens += swarm_tokens
             agents_invoked.extend(swarm_agents)
@@ -344,7 +313,7 @@ async def execute_pipeline(
             tools=active_tools if active_tools else None,
             route=route_type,
             domain=domain,
-            origin=origin,  # ⚡ THE FIX: Pass baton to Linear Agents
+            origin=origin,
         )
 
         step_tokens = step_result.usage.get("total_tokens", 0)
@@ -365,7 +334,7 @@ async def execute_pipeline(
             )
         )
 
-        # ⚡ THE FIX: Strict error checking prevents prose-based false-positives
+        # ⚡ Strict error checking prevents prose-based false-positives
         is_system_halt = step_result.text.strip().startswith("[SYSTEM HALT]")
         is_api_error = step_result.text.strip().startswith("API/Execution Error:")
 
@@ -477,5 +446,4 @@ async def execute_pipeline(
         with open(state_path, "w", encoding="utf-8") as f:
             f.write("STATUS: COMPLETE\n")
 
-    # ⚡ ZERO-DEBT: Delegated entirely to the Hippocampus
     clear_pipeline_state()

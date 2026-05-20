@@ -16,6 +16,7 @@ if not exist ".venv" (
     )
 
     echo ⚡ Syncing OS dependencies and configuring workspace...
+
     uv sync
     if !errorlevel! neq 0 exit /b !errorlevel!
 
@@ -25,19 +26,13 @@ if not exist ".venv" (
     echo ✅ Workspace hydrated successfully!
     echo.
 
-    if "%~1"="" (
-        set "ARGS=setup"
-    ) else (
-        set "ARGS=%*"
+    if "%~1"=="" (
+        ".venv\Scripts\python.exe" -u -m System.cli setup
+        goto :eof
     )
-) else (
-    set "ARGS=%*"
 )
 
-if "%ARGS%"="" (
-    ".venv\Scripts\python.exe" -u -m System.cli
-) else (
-    ".venv\Scripts\python.exe" -u -m System.cli %ARGS%
-)
+:: ⚡ THE PASSTHROUGH FIX: Forward raw parameters directly using %* :: This eliminates batch comparison strings and safely supports all shell environments.
+".venv\Scripts\python.exe" -u -m System.cli %*
 
 endlocal
