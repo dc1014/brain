@@ -1,10 +1,13 @@
+# --- System/neuroanatomy/autonomic/medulla.py ---
 import time
-import yaml  # type: ignore
+import yaml  # type: ignore[import-untyped]
 import threading
 import logging
 import psutil
 import os
-from typing import Any
+import uuid
+import json
+from typing import Any, List, Dict
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR
@@ -24,6 +27,61 @@ if not medulla_logger.handlers:
     medulla_logger.addHandler(file_handler)
 
 
+class DurableTaskLog:
+    """Flat-file Write-Ahead Log (WAL) engine ensuring process state consistency across crashes."""
+
+    def __init__(self, log_dir: str) -> None:
+        self.wal_path: str = os.path.join(os.path.abspath(log_dir), "task_queue.jsonl")
+        os.makedirs(os.path.abspath(log_dir), exist_ok=True)
+
+    def register_intent(self, command_string: str) -> str:
+        """Logs an intent marker before running volatile scripts to guarantee recovery capability."""
+        task_id = str(uuid.uuid4())
+        record = {"id": task_id, "cmd": command_string, "status": "PENDING"}
+        try:
+            with open(self.wal_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record) + "\n")
+        except Exception:
+            pass
+        return task_id
+
+    def mark_completed(self, task_id: str, final_status: str = "DONE") -> None:
+        """Appends a completion marker to cleanly sign off log state transactions."""
+        record = {"id": task_id, "status": final_status}
+        try:
+            with open(self.wal_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record) + "\n")
+        except Exception:
+            pass
+
+    def recover_interrupted_tasks(self) -> List[Dict[str, Any]]:
+        """Scans state indicators on boot, flagging tasks that crashed mid-execution loop."""
+        if not os.path.exists(self.wal_path):
+            return []
+
+        states: Dict[str, Dict[str, Any]] = {}
+        try:
+            with open(self.wal_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    clean_line = line.strip()
+                    if not clean_line:
+                        continue
+                    evt: Dict[str, Any] = json.loads(clean_line)
+                    t_id = evt.get("id")
+                    if not t_id:
+                        continue
+
+                    if evt.get("status") == "PENDING":
+                        states[t_id] = evt
+                    else:
+                        # Balanced completion signature encountered: remove from pending recovery map
+                        states.pop(t_id, None)
+        except Exception:
+            pass
+
+        return list(states.values())
+
+
 class MedullaOblongata:
     """
     The Medulla Oblongata Brainstem Master Daemon.
@@ -38,6 +96,9 @@ class MedullaOblongata:
         self.config_data = self._load_blueprint()
         self._main_pid = os.getpid()
         self.ipc_client: Any = None
+
+        # BIND DURABLE TASK LOG NATIVELY: Point directly to our sanitized logs path
+        self.task_log = DurableTaskLog(str(LOG_PATH))
 
     def _load_blueprint(self) -> dict[str, Any]:
         if not self.config_path.exists():
@@ -95,7 +156,6 @@ class MedullaOblongata:
                     )
                     from System.cli_somatic import sleep
 
-                    # ⚡ THE FIX: Removed the broken BiologicalLock here too!
                     sleep()
                     time.sleep(60)
 

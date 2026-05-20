@@ -1,7 +1,9 @@
+# --- System/neuroanatomy/cortical/wernicke.py ---
 import os
 import math
 import json
 from pathlib import Path
+from typing import List, Dict, Any, Set
 from rich.console import Console
 from litellm import completion  # type: ignore
 from System.neuroanatomy.systemic.immune_system import vault
@@ -149,3 +151,59 @@ def transcribe_speech(filepath: str) -> str:
         return str(response.text)
     except Exception as e:
         return f"TRANSCRIPTION ERROR: {str(e)}"
+
+
+def rank_graph_boosted_results(
+    sqlite_fts_results: List[Dict[str, Any]], graph_state_path: str
+) -> List[Dict[str, Any]]:
+    """Calculates graph network structural density modifiers to adjust flat search weights.
+
+    Args:
+        sqlite_fts_results: A list of dictionaries containing 'filepath' and search ranks from SQLite FTS5.
+        graph_state_path: Absolute file system path pointing to the 'graph_state.json' map ledger.
+
+    Returns:
+        Top 5 highly integrated nodes ranked by their connectivity density and search weight.
+    """
+    if not os.path.exists(graph_state_path):
+        return sqlite_fts_results
+
+    try:
+        with open(graph_state_path, "r", encoding="utf-8") as f:
+            graph: Dict[str, List[Dict[str, str]]] = json.load(f)
+    except Exception:
+        return sqlite_fts_results
+
+    boosted_results: List[Dict[str, Any]] = []
+
+    # EXPLICIT KEY ALIGNMENT: Dynamically parse 'filepath' variables matching hippocampus maps
+    retrieved_slugs: Set[str] = set()
+    for res in sqlite_fts_results:
+        path_str = res.get("filepath", res.get("slug", ""))
+        if path_str:
+            clean_slug = path_str.replace(".md", "").replace("\\", "/")
+            retrieved_slugs.add(clean_slug)
+
+    for item in sqlite_fts_results:
+        path_key = item.get("filepath", item.get("slug", ""))
+        slug = path_key.replace(".md", "").replace("\\", "/")
+
+        # Pull original rank score from matching metrics (default to 0.0 if missing)
+        score: float = float(item.get("score", item.get("bm25_score", 0.0)))
+
+        # Calculate active intersection weight maps across active memory clusters
+        if slug in graph:
+            connections = {
+                edge["target"].replace(".md", "").replace("\\", "/")
+                for edge in graph[slug]
+            }
+            shared_context_hits = connections.intersection(retrieved_slugs)
+
+            # Apply linear boosting factors based on structural connectivity density
+            score += len(shared_context_hits) * 1.5
+
+        boosted_results.append({**item, "boosted_score": score})
+
+    # Sort results sequentially descending by their final boosted score metrics
+    boosted_results.sort(key=lambda x: x["boosted_score"], reverse=True)
+    return boosted_results[:5]
