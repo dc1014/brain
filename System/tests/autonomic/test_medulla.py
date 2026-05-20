@@ -1,3 +1,4 @@
+# --- System/tests/autonomic/test_medulla.py ---
 from System.neuroanatomy.autonomic.medulla import MedullaOblongata
 
 
@@ -43,6 +44,7 @@ def test_medulla_cognitive_heartbeat_execution(mocker):
 
     brainstem = MedullaOblongata()
     brainstem.is_alive = True
+    brainstem.cognitive_state = "ORCHESTRATION_ACTIVE"
 
     def break_loop():
         brainstem.is_alive = False
@@ -74,19 +76,16 @@ def test_medulla_respiratory_thread_supervision(mocker):
     # Stub out somatic file watcher dependencies to isolate the thread tracking logic
     mocker.patch("System.cli_somatic.watch")
 
-    # Configure a mock thread object that reports its runtime health as alive
+    # ⚡ THE RECOVERY LOOP FIX: Mock threading.Thread to return a proxy that claims to be alive.
+    # This prevents the second loop cycle from re-triggering resuscitation.
     mock_live_thread = mocker.MagicMock()
-    mock_live_thread.is_alive.return_value = (
-        True  # Tells the second loop frame the daemon is alive!
-    )
-
-    # ⚡ THE LINTER FIX: Remove the unused variable 'mock_thread_class =' assignment
+    mock_live_thread.is_alive.return_value = True
     mocker.patch(
         "System.neuroanatomy.autonomic.medulla.threading.Thread",
         return_value=mock_live_thread,
     )
 
-    # Simulate an empty daemons tracking ledger (forcing initial resuscitation)
+    # Simulate an empty daemons tracking ledger (forcing immediate resuscitation)
     brainstem.daemons = {}
 
     # Break the infinite loop block on the second evaluation frame cycle safely
@@ -101,6 +100,37 @@ def test_medulla_respiratory_thread_supervision(mocker):
         if str(e) != "Loop Break":
             raise e
 
-    # Assert that the abstraction was invoked and assigned to the structural tracking state on the first loop
+    # Assert that the abstraction was invoked exactly once during the first loop cycle
     mock_dermis.assert_called_once_with(port=8080)
     assert "dermis" in brainstem.daemons
+
+
+def test_medulla_fractional_state_progression(mocker):
+    """Proves the Medulla initializes to low-cost IDLE_READY before full orchestration."""
+    mocker.patch("System.neuroanatomy.autonomic.medulla.threading.Thread")
+    mocker.patch("System.neuroanatomy.autonomic.medulla.DurableTaskLog")
+
+    brainstem = MedullaOblongata()
+    assert brainstem.cognitive_state == "SLEEP"
+
+    brainstem.wake()
+    assert brainstem.cognitive_state == "ORCHESTRATION_ACTIVE"
+
+
+def test_medulla_pre_sleep_sequence_handshake(mocker):
+    """Proves the synchronization barrier executes graceful handshakes with active daemons."""
+    brainstem = MedullaOblongata()
+    brainstem.is_alive = True
+    brainstem.cognitive_state = "ORCHESTRATION_ACTIVE"
+
+    mock_dermis_instance = mocker.MagicMock()
+    brainstem.active_instances["dermis"] = mock_dermis_instance
+
+    mock_thread = mocker.MagicMock()
+    mock_thread.is_alive.return_value = False
+    brainstem.daemons["dermis"] = mock_thread
+
+    brainstem.pre_sleep_sequence()
+
+    assert brainstem.cognitive_state == "IDLE_READY"
+    mock_dermis_instance.shutdown.assert_called_once()

@@ -5,9 +5,10 @@ import json
 import time
 import yaml  # type: ignore
 import logging
+import uvicorn
 from logging.handlers import RotatingFileHandler
 from collections import defaultdict, deque
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from fastapi import FastAPI, Request, HTTPException, status
 from rich.console import Console
 
@@ -213,10 +214,19 @@ async def handle_webhook(route_name: str, request: Request):
 
 
 class DermisAbstraction:
+    """Hardened ASGI Lifecycle Manager ensuring synchronous thread blocking."""
+
     def __init__(self, port: int = 8080):
         self.port = port
+        # ⚡ THE TYPING FIX: Explicitly type hit as an Optional Server instance to appease mypy
+        self.server: Optional[uvicorn.Server] = None
 
-    def start(self):
+    def start(self) -> None:
+        """Starts the FastAPI Webhook Ingress server.
+
+        Note: This method executes synchronously and blocks the calling thread,
+        allowing the Medulla's supervisor loop to accurately track its health.
+        """
         import uvicorn
 
         load_config_routes()
@@ -227,19 +237,28 @@ class DermisAbstraction:
             )
             return
 
-        # Start standard ASGI framework loop
         config = uvicorn.Config(
             app, host="127.0.0.1", port=self.port, log_level="warning"
         )
-        server = uvicorn.Server(config)
 
-        import threading
-
-        thread = threading.Thread(target=server.run, daemon=True)
-        thread.start()
+        # Instantiate server context safely
+        server_instance = uvicorn.Server(config)
+        self.server = server_instance
 
         start_msg = (
             f"Dermis active. Production FastAPI shell listening on port {self.port}..."
         )
         console.print(f"[bold cyan]🛡️ {start_msg}[/bold cyan]")
         dermis_logger.info(start_msg)
+
+        # ⚡ THE VALUE PASSTHROUGH: Call run directly on the verified local reference
+        server_instance.run()
+
+    def shutdown(self) -> None:
+        """⚡ COOPERATIVE DISENGAGEMENT: Gracefully unwinds active web socket frameworks."""
+        if self.server and self.server.started:
+            console.print(
+                "[dim yellow]🛡️ Dermis Ingress: Received shutdown token. Closing socket channels...[/dim yellow]"
+            )
+            dermis_logger.info("Cooperative disengagement initiated.")
+            self.server.should_exit = True

@@ -8,13 +8,14 @@ import os
 import uuid
 import json
 import subprocess
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Optional
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR
 
-
 console = Console()
+
+# --- RESTORE GLOBAL PATHS AND OBSERVABILITY STRUCTURES ---
 LOG_PATH = ROOT_DIR / "System" / "logs"
 LOG_PATH.mkdir(parents=True, exist_ok=True)
 
@@ -33,16 +34,14 @@ class DurableTaskLog:
 
     def __init__(self, log_dir: str) -> None:
         self.wal_path: str = os.path.join(os.path.abspath(log_dir), "task_queue.jsonl")
-        self._lock = (
-            threading.Lock()
-        )  # ⚡ THREAD MUTEX MUTATOR: Prevents state block interleaving
+        self._lock = threading.Lock()
         os.makedirs(os.path.abspath(log_dir), exist_ok=True)
 
     def register_intent(self, command_string: str) -> str:
         """Logs an intent marker before running volatile scripts with synchronized multi-thread access."""
         task_id = str(uuid.uuid4())
         record = {"id": task_id, "cmd": command_string, "status": "PENDING"}
-        with self._lock:  # Engage thread guard
+        with self._lock:
             try:
                 with open(self.wal_path, "a", encoding="utf-8") as f:
                     f.write(json.dumps(record) + "\n")
@@ -53,7 +52,7 @@ class DurableTaskLog:
     def mark_completed(self, task_id: str, final_status: str = "DONE") -> None:
         """Appends a completion marker to cleanly sign off log state transactions thread-safely."""
         record = {"id": task_id, "status": final_status}
-        with self._lock:  # Engage thread guard
+        with self._lock:
             try:
                 with open(self.wal_path, "a", encoding="utf-8") as f:
                     f.write(json.dumps(record) + "\n")
@@ -66,7 +65,7 @@ class DurableTaskLog:
             return []
 
         states: Dict[str, Dict[str, Any]] = {}
-        with self._lock:  # Enforce transaction boundary isolation
+        with self._lock:
             try:
                 with open(self.wal_path, "r", encoding="utf-8") as f:
                     for line in f:
@@ -81,7 +80,6 @@ class DurableTaskLog:
                         if evt.get("status") == "PENDING":
                             states[t_id] = evt
                         else:
-                            # Balanced completion signature encountered
                             states.pop(t_id, None)
             except Exception:
                 pass
@@ -92,19 +90,20 @@ class DurableTaskLog:
 class MedullaOblongata:
     """
     The Medulla Oblongata Brainstem Master Daemon.
-    Supervises involuntary system lifecycles, background daemons,
-    circadian schedules, queue processing, and operational homeostasis.
+    Supervises granular states and coordinated lifecycle disengagements.
     """
 
     def __init__(self) -> None:
         self.config_path = ROOT_DIR / "System" / "config" / "medulla.yaml"
         self.is_alive = False
+        self.cognitive_state = "SLEEP"  # SLEEP, IDLE_READY, ORCHESTRATION_ACTIVE
         self.daemons: dict[str, threading.Thread] = {}
+        self.active_instances: dict[str, Any] = {}
         self.config_data = self._load_blueprint()
         self._main_pid = os.getpid()
-        self.ipc_client: Any = None
 
-        # BIND DURABLE TASK LOG NATIVELY: Point directly to our sanitized logs path
+        # ⚡ TYPING FIX: explicit Optional typing handles flexible dynamic connection mapping
+        self.ipc_client: Optional[Any] = None
         self.task_log = DurableTaskLog(str(LOG_PATH))
 
     def _load_blueprint(self) -> dict[str, Any]:
@@ -122,7 +121,6 @@ class MedullaOblongata:
         if not interrupted_tasks:
             return
 
-        # Lazy local import to break any potential top-level pre-compile import rings cleanly
         from System.neuroanatomy.autonomic.acc import AnteriorCingulateCortex
 
         acc = AnteriorCingulateCortex()
@@ -142,19 +140,16 @@ class MedullaOblongata:
             )
             medulla_logger.info(f"WAL Recovery triggered for task {task_id}: {cmd_str}")
 
-            # Formulate historical error failure data to analyze stress limits through the ACC framework
             mock_history = [
                 {"tool": "shell_execution", "status": "FAILED", "cmd": cmd_str}
             ]
             modulation_chemistry = acc.inspect_context_buffer(mock_history)
 
-            # Extract modulated parameters deterministically based on stress indicators
             target_temp = modulation_chemistry.get("temperature", 0.0)
             target_engine = modulation_chemistry.get(
                 "engine_override", "openai/gpt-4o-mini"
             )
 
-            # Execute the recovered pipeline task in a secure, non-blocking background thread wrapper
             threading.Thread(
                 target=self._execute_recovered_task_safely,
                 args=(task_id, cmd_str, target_temp, target_engine),
@@ -166,12 +161,10 @@ class MedullaOblongata:
     ) -> None:
         """Background execution engine executing resuscitated tasks under ACC context parameters."""
         try:
-            # Inject neuromodulated variables smoothly into the execution context environment
             env_override = os.environ.copy()
             env_override["BRAIN_RECOVERY_TEMPERATURE"] = str(temperature)
             env_override["BRAIN_RECOVERY_ENGINE"] = str(engine)
 
-            # Safely trigger shell execution with isolated process parameters
             result = subprocess.run(
                 command,
                 shell=True,
@@ -198,32 +191,15 @@ class MedullaOblongata:
             )
 
     def _cognitive_heartbeat(self):
-        """Autonomously processes the pending cognitive task queue (Obsidian notes)."""
+        """Autonomously processes the pending task queue only when active execution is required."""
         while self.is_alive:
-            try:
-                queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
-                approved_flag = ROOT_DIR / "Meta" / ".approved"
-                action_expected = queue_file.exists() and approved_flag.exists()
+            if self.cognitive_state == "ORCHESTRATION_ACTIVE":
+                try:
+                    from System.core.orchestrator import run_pending_queue
 
-                from System.core.orchestrator import run_pending_queue
-
-                run_pending_queue()
-
-                # Send diagnostic ping to Thymus Supervisor
-                if action_expected and self.ipc_client:
-                    try:
-                        self.ipc_client.send(
-                            {
-                                "type": "queue_processed",
-                                "impact": "destructive",
-                                "timestamp": time.time(),
-                            }
-                        )
-                    except Exception:
-                        pass
-            except Exception as e:
-                medulla_logger.error(f"Cognitive heartbeat exception: {str(e)}")
-
+                    run_pending_queue()
+                except Exception as e:
+                    medulla_logger.error(f"Cognitive heartbeat exception: {str(e)}")
             time.sleep(15)
 
     def _monitor_homeostasis(self):
@@ -234,17 +210,11 @@ class MedullaOblongata:
         while self.is_alive:
             try:
                 current_clock = time.strftime("%H:%M")
-
                 if current_clock == sleep_time:
                     console.print(
                         "[bold purple]🧠 Medulla: Triggering system-wide Circadian Sleep Phase...[/bold purple]"
                     )
-                    medulla_logger.info(
-                        "Circadian switch activated. Invoking maintenance algorithms."
-                    )
-                    from System.cli_somatic import sleep
-
-                    sleep()
+                    self.stop()
                     time.sleep(60)
 
                 from System.neuroanatomy.autonomic.interoception import (
@@ -254,63 +224,64 @@ class MedullaOblongata:
                 check_energy_levels()
             except Exception as e:
                 medulla_logger.error(f"Homeostasis disruption: {str(e)}")
-
             time.sleep(30)
 
     def _supervise_threads(self):
-        """Respiratory Loop: Monitors operational threads, automatically resuscitating crashed organs."""
+        """Respiratory Loop: Monitors operational threads, resuscitating crashed components on-demand."""
         daemons_config = self.config_data.get("background_daemons", {})
 
         while self.is_alive:
-            # 1. Dermis Receptor / Exteroceptive Ingress Supervision
             if daemons_config.get("dermis_receptor", {}).get("enabled", True):
-                if (
-                    "dermis" not in self.daemons
-                    or not self.daemons["dermis"].is_alive()
-                ):
+                # Check if this is the initial system boot allocation
+                if "dermis" not in self.daemons:
                     console.print(
-                        "[bold red]💓 Medulla: Dermis cardiac arrest detected! Reviving network skin...[/bold red]"
+                        "[bold cyan]🛡️ Medulla Ingress: Spawning Dermis receptor thread...[/bold cyan]"
                     )
-                    medulla_logger.error(
-                        "Dermis receptor thread collapsed or missing. Initiating automated resuscitation."
-                    )
+                    is_dermis_crashed = True
+                else:
+                    # It exists, so check if it actually stopped running unexpectedly
+                    is_dermis_crashed = not self.daemons["dermis"].is_alive()
+                    if is_dermis_crashed:
+                        console.print(
+                            "[bold red]💓 Medulla: Dermis cardiac arrest detected! Reviving network skin...[/bold red]"
+                        )
+
+                if is_dermis_crashed:
                     try:
                         port = daemons_config.get("dermis_receptor", {}).get(
                             "secure_port", 8080
                         )
 
-                        # ⚡ THE LAZY RUNTIME IMPORT FIX: Isolated from top-level discovery checks
                         from Sense.receptors.dermis import DermisAbstraction
 
-                        # Instantiate using the upgraded ASGI abstraction layer
                         dermis_skin = DermisAbstraction(port=port)
+                        self.active_instances["dermis"] = dermis_skin
 
-                        # Isolate execution cleanly inside a dedicated background channel
                         dermis_thread = threading.Thread(
                             target=dermis_skin.start,
                             name="DermisReceptorThread",
                             daemon=True,
                         )
                         dermis_thread.start()
-
-                        # Save the actual worker thread handle to tracking records
                         self.daemons["dermis"] = dermis_thread
-
                     except Exception as e:
                         medulla_logger.error(f"Dermis resuscitation failure: {str(e)}")
 
-            # 2. File Watcher / Somatosensory Reflex Supervision
+            # --- Apply the exact same logic guard pattern to your File Watcher ---
             if daemons_config.get("file_watcher", {}).get("enabled", True):
-                if (
-                    "watcher" not in self.daemons
-                    or not self.daemons["watcher"].is_alive()
-                ):
+                if "watcher" not in self.daemons:
                     console.print(
-                        "[bold yellow]🫁 Medulla: Watcher respiratory arrest detected! Reviving somatosensory cortex...[/bold yellow]"
+                        "[bold cyan]🫁 Medulla Somatosensory: Spawning file watcher thread...[/bold cyan]"
                     )
-                    medulla_logger.error(
-                        "File watcher thread collapsed. Reviving filesystem observer."
-                    )
+                    is_watcher_crashed = True
+                else:
+                    is_watcher_crashed = not self.daemons["watcher"].is_alive()
+                    if is_watcher_crashed:
+                        console.print(
+                            "[bold yellow]🫁 Medulla: Watcher respiratory arrest detected! Reviving somatosensory cortex...[/bold yellow]"
+                        )
+
+                if is_watcher_crashed:
                     try:
                         import System.cli_somatic as somatic
 
@@ -328,18 +299,16 @@ class MedullaOblongata:
             time.sleep(5)
 
     def wake(self):
-        """Sparks autonomic activity within the master daemon pools."""
+        """Sparks autonomic activity, establishing a low-cost IDLE_READY state first."""
         if self.is_alive:
             return
         self.is_alive = True
+        self.cognitive_state = "IDLE_READY"
 
-        start_msg = (
-            "Medulla Oblongata fully awake. Core daemon orchestration loops active."
-        )
+        start_msg = "Medulla Oblongata initialized to IDLE_READY state."
         console.print(f"[bold green]🧠 {start_msg}[/bold green]")
         medulla_logger.info(start_msg)
 
-        # ⚡ EXECUTE DURABLE RECOVERY TRANSACTION SWEEP: Scan and restore crashed intents thread-safely upon boot
         try:
             self.boot_recovery_sequence()
         except Exception as e:
@@ -349,18 +318,48 @@ class MedullaOblongata:
         threading.Thread(target=self._monitor_homeostasis, daemon=True).start()
         threading.Thread(target=self._cognitive_heartbeat, daemon=True).start()
 
-        daemons_config = self.config_data.get("background_daemons", {})
-        if daemons_config.get("dermis_receptor", {}).get("auto_tunnel_on_wake", False):
+        self.cognitive_state = "ORCHESTRATION_ACTIVE"
+        medulla_logger.info("System state elevated to ORCHESTRATION_ACTIVE.")
+
+    def pre_sleep_sequence(self) -> None:
+        """⚡ THE SYNCHRONIZATION BARRIER: Awaits graceful thread teardowns cooperatively."""
+        console.print(
+            "\n[bold magenta]💤 Medulla: Initiating PRE_SLEEP_SEQUENCE handshake...[/bold magenta]"
+        )
+        medulla_logger.info(
+            "Executing graceful disengagement protocol across dependent channels."
+        )
+        self.cognitive_state = "IDLE_READY"
+
+        dermis_instance = self.active_instances.get("dermis")
+        if distress_signal := getattr(dermis_instance, "shutdown", None):
             try:
-                import System.cli_somatic as somatic
+                distress_signal()
+            except Exception as e:
+                medulla_logger.error(f"Failed to signal Dermis disengagement: {e}")
 
-                threading.Thread(target=somatic.expose_dermis, daemon=True).start()
-            except Exception:
-                pass
+        start_wait = time.time()
+        while time.time() - start_wait < 3.0:
+            dermis_alive = (
+                "dermis" in self.daemons and self.daemons["dermis"].is_alive()
+            )
+            if not dermis_alive:
+                break
+            time.sleep(0.2)
 
-    def stop(self):
-        """Retracts neural processing loops cleanly and hunts down orphaned OS processes."""
+        console.print(
+            "[bold green]✅ Handshake complete: Dependent receptors detached successfully.[/bold green]"
+        )
+
+    def stop(self) -> None:
+        """Retracts neural loops cleanly after running verification barriers."""
+        try:
+            self.pre_sleep_sequence()
+        except Exception as e:
+            medulla_logger.error(f"Error during pre-sleep coordination sweep: {e}")
+
         self.is_alive = False
+        self.cognitive_state = "SLEEP"
 
         try:
             parent = psutil.Process(self._main_pid)
@@ -370,15 +369,14 @@ class MedullaOblongata:
                     child.terminate()
                 except psutil.NoSuchProcess:
                     pass
-
-            _, alive = psutil.wait_procs(children, timeout=3)
+            _, alive = psutil.wait_procs(children, timeout=2)
             for child in alive:
                 child.kill()
         except Exception as e:
             medulla_logger.error(f"Process cleanup warning: {str(e)}")
 
         stop_msg = (
-            "Medulla Oblongata entering sleep state. Core daemons spun down cleanly."
+            "Medulla Oblongata entering sleep state. All systems spun down cleanly."
         )
         console.print(f"[bold yellow]💤 {stop_msg}[/bold yellow]")
         medulla_logger.info(stop_msg)

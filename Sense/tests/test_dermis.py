@@ -60,3 +60,25 @@ def test_dermis_replay_protection():
 
     assert signature_1 in RECENT_SIGNATURES_SET
     assert signature_2 not in RECENT_SIGNATURES_SET
+
+
+# Append to Sense/tests/test_dermis.py
+
+
+def test_dermis_abstraction_cooperative_shutdown(mocker):
+    """Proves the shutdown hook modifies Uvicorn's exit flags to release socket ports cleanly."""
+    from Sense.receptors.dermis import DermisAbstraction
+
+    dermis = DermisAbstraction(port=8080)
+
+    # Mock the internal uvicorn server instance
+    mock_server = mocker.MagicMock()
+    mock_server.started = True
+    mock_server.should_exit = False
+    dermis.server = mock_server
+
+    # Fire cooperative disengagement
+    dermis.shutdown()
+
+    # Verify the exit flag was updated to force server.run() to yield control back cleanly
+    assert mock_server.should_exit is True
