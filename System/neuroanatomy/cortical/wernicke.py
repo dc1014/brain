@@ -3,9 +3,9 @@ import os
 import math
 import json
 from pathlib import Path
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Set, TypedDict, Optional
 from rich.console import Console
-from litellm import completion  # type: ignore
+from litellm import completion  # type: ignore[import-untyped]
 from System.neuroanatomy.systemic.immune_system import vault
 
 console = Console()
@@ -14,6 +14,14 @@ console = Console()
 EMBEDDINGS_FILE = (
     Path(__file__).parent.parent.parent / "Meta" / "Wernicke" / "embeddings.json"
 )
+
+
+class SearchResult(TypedDict):
+    """Strict data schema contract representing a single full-text search record match."""
+
+    filepath: str
+    score: float
+    boosted_score: Optional[float]
 
 
 def filter_semantic_relevance(query: str, raw_search_results: str) -> str:
@@ -130,7 +138,7 @@ def save_plain_text_embeddings(embeddings_dict: dict) -> None:
 
 def transcribe_speech(filepath: str) -> str:
     """Wernicke's Area: Converts human voice (speech) into semantic text."""
-    from litellm import transcription  # type: ignore
+    from litellm import transcription  # type: ignore[import-untyped]
     from rich.console import Console
 
     console = Console()
@@ -154,12 +162,12 @@ def transcribe_speech(filepath: str) -> str:
 
 
 def rank_graph_boosted_results(
-    sqlite_fts_results: List[Dict[str, Any]], graph_state_path: str
-) -> List[Dict[str, Any]]:
+    sqlite_fts_results: List[SearchResult], graph_state_path: str
+) -> List[SearchResult]:
     """Calculates graph network structural density modifiers to adjust flat search weights.
 
     Args:
-        sqlite_fts_results: A list of dictionaries containing 'filepath' and search ranks from SQLite FTS5.
+        sqlite_fts_results: A list of SearchResult schemas containing full-text search ranks.
         graph_state_path: Absolute file system path pointing to the 'graph_state.json' map ledger.
 
     Returns:
@@ -174,22 +182,22 @@ def rank_graph_boosted_results(
     except Exception:
         return sqlite_fts_results
 
-    boosted_results: List[Dict[str, Any]] = []
+    boosted_results: List[SearchResult] = []
 
     # EXPLICIT KEY ALIGNMENT: Dynamically parse 'filepath' variables matching hippocampus maps
     retrieved_slugs: Set[str] = set()
     for res in sqlite_fts_results:
-        path_str = res.get("filepath", res.get("slug", ""))
+        path_str = res.get("filepath", "")
         if path_str:
             clean_slug = path_str.replace(".md", "").replace("\\", "/")
             retrieved_slugs.add(clean_slug)
 
     for item in sqlite_fts_results:
-        path_key = item.get("filepath", item.get("slug", ""))
+        path_key = item.get("filepath", "")
         slug = path_key.replace(".md", "").replace("\\", "/")
 
         # Pull original rank score from matching metrics (default to 0.0 if missing)
-        score: float = float(item.get("score", item.get("bm25_score", 0.0)))
+        score: float = float(item.get("score", 0.0))
 
         # Calculate active intersection weight maps across active memory clusters
         if slug in graph:
@@ -202,8 +210,14 @@ def rank_graph_boosted_results(
             # Apply linear boosting factors based on structural connectivity density
             score += len(shared_context_hits) * 1.5
 
-        boosted_results.append({**item, "boosted_score": score})
+        boosted_results.append(
+            {"filepath": path_key, "score": item["score"], "boosted_score": score}
+        )
 
-    # Sort results sequentially descending by their final boosted score metrics
-    boosted_results.sort(key=lambda x: x["boosted_score"], reverse=True)
+    # Ensure a clean default fallback score is returned if boosted_score evaluates to None
+    def get_sort_score(item: SearchResult) -> float:
+        val = item.get("boosted_score")
+        return float(val) if val is not None else 0.0
+
+    boosted_results.sort(key=get_sort_score, reverse=True)
     return boosted_results[:5]

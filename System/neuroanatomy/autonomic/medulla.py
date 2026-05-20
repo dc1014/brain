@@ -1,4 +1,4 @@
-# --- System/neuroanatomy/autonomic/medulla.py ---
+# --- System/neuroanatomy/autonomic/medulla.py (Polished Emojis) ---
 import time
 import yaml  # type: ignore[import-untyped]
 import threading
@@ -28,31 +28,36 @@ if not medulla_logger.handlers:
 
 
 class DurableTaskLog:
-    """Flat-file Write-Ahead Log (WAL) engine ensuring process state consistency across crashes."""
+    """Flat-file Write-Ahead Log (WAL) engine ensuring process state consistency with strict mutex locking."""
 
     def __init__(self, log_dir: str) -> None:
         self.wal_path: str = os.path.join(os.path.abspath(log_dir), "task_queue.jsonl")
+        self._lock = (
+            threading.Lock()
+        )  # ⚡ THREAD MUTEX MUTATOR: Prevents state block interleaving
         os.makedirs(os.path.abspath(log_dir), exist_ok=True)
 
     def register_intent(self, command_string: str) -> str:
-        """Logs an intent marker before running volatile scripts to guarantee recovery capability."""
+        """Logs an intent marker before running volatile scripts with synchronized multi-thread access."""
         task_id = str(uuid.uuid4())
         record = {"id": task_id, "cmd": command_string, "status": "PENDING"}
-        try:
-            with open(self.wal_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(record) + "\n")
-        except Exception:
-            pass
+        with self._lock:  # Engage thread guard
+            try:
+                with open(self.wal_path, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(record) + "\n")
+            except Exception:
+                pass
         return task_id
 
     def mark_completed(self, task_id: str, final_status: str = "DONE") -> None:
-        """Appends a completion marker to cleanly sign off log state transactions."""
+        """Appends a completion marker to cleanly sign off log state transactions thread-safely."""
         record = {"id": task_id, "status": final_status}
-        try:
-            with open(self.wal_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(record) + "\n")
-        except Exception:
-            pass
+        with self._lock:  # Engage thread guard
+            try:
+                with open(self.wal_path, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(record) + "\n")
+            except Exception:
+                pass
 
     def recover_interrupted_tasks(self) -> List[Dict[str, Any]]:
         """Scans state indicators on boot, flagging tasks that crashed mid-execution loop."""
@@ -60,24 +65,25 @@ class DurableTaskLog:
             return []
 
         states: Dict[str, Dict[str, Any]] = {}
-        try:
-            with open(self.wal_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    clean_line = line.strip()
-                    if not clean_line:
-                        continue
-                    evt: Dict[str, Any] = json.loads(clean_line)
-                    t_id = evt.get("id")
-                    if not t_id:
-                        continue
+        with self._lock:  # Enforce transaction boundary isolation
+            try:
+                with open(self.wal_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        clean_line = line.strip()
+                        if not clean_line:
+                            continue
+                        evt: Dict[str, Any] = json.loads(clean_line)
+                        t_id = evt.get("id")
+                        if not t_id:
+                            continue
 
-                    if evt.get("status") == "PENDING":
-                        states[t_id] = evt
-                    else:
-                        # Balanced completion signature encountered: remove from pending recovery map
-                        states.pop(t_id, None)
-        except Exception:
-            pass
+                        if evt.get("status") == "PENDING":
+                            states[t_id] = evt
+                        else:
+                            # Balanced completion signature encountered
+                            states.pop(t_id, None)
+            except Exception:
+                pass
 
         return list(states.values())
 
@@ -121,7 +127,7 @@ class MedullaOblongata:
 
                 run_pending_queue()
 
-                # ⚡ Send diagnostic ping to Thymus Supervisor
+                # Send diagnostic ping to Thymus Supervisor
                 if action_expected and self.ipc_client:
                     try:
                         self.ipc_client.send(
@@ -174,7 +180,7 @@ class MedullaOblongata:
         daemons_config = self.config_data.get("background_daemons", {})
 
         while self.is_alive:
-            # 🛡️ Dermis / Heartbeat Supervision
+            # Dermis / Heartbeat Supervision
             if daemons_config.get("dermis_receptor", {}).get("enabled", True):
                 if (
                     "dermis" not in self.daemons
@@ -197,7 +203,7 @@ class MedullaOblongata:
                     except Exception as e:
                         medulla_logger.error(f"Dermis resuscitation failure: {str(e)}")
 
-            # 🫁 File Watcher / Respiratory Supervision
+            # File Watcher / Respiratory Supervision
             if daemons_config.get("file_watcher", {}).get("enabled", True):
                 if (
                     "watcher" not in self.daemons
