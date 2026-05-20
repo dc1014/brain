@@ -1,4 +1,5 @@
 from System.core.paths import ROOT_DIR
+import re
 import time
 import subprocess
 from datetime import datetime
@@ -94,6 +95,34 @@ def run_pacemaker():
 
         # Sleep for 5 minutes before checking the file system again
         time.sleep(300)
+
+
+def consolidate_historical_facts(
+    file_content: str, current_date: str, fact_type: str, new_value: str
+) -> str:
+    """Downtime cycle utility: Automatically limits active assertions by applying valid_until ranges.
+
+    Args:
+        file_content: Raw text content from the target node file.
+        current_date: Chronological validation marker (e.g., '2026-05-19').
+        fact_type: Attribute variable classification key.
+        new_value: Numeric or narrative metric to attach.
+    """
+    pattern = rf'(<fact\s+type="{fact_type}"\s+value="[^"]+"\s+date="([^"]+)"(?![^>]*valid_until)[^>]*>)'
+
+    # Locate fact metrics currently missing clear termination bounds
+    matches = re.findall(pattern, file_content)
+    updated_content = file_content
+
+    for full_tag, start_date in matches:
+        if start_date != current_date:
+            # Swap out un-terminated boundaries for a cleanly limited definition matrix
+            bounded_tag = full_tag.replace("/>", f' valid_until="{current_date}" />')
+            updated_content = updated_content.replace(full_tag, bounded_tag)
+
+    # Append the new fact record cleanly onto the base document landscape
+    new_tag = f'\n<fact type="{fact_type}" value="{new_value}" date="{current_date}" />'
+    return updated_content + new_tag
 
 
 if __name__ == "__main__":
