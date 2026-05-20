@@ -11,6 +11,7 @@ LOG_FILE = ROOT_DIR / "logs" / "agent_interactions.jsonl"
 def is_host_asleep(idle_hours_threshold: float = 4.0) -> bool:
     """
     The Pineal Gland monitors the interaction logs.
+    It reads backwards through the log to find the last time the "HUMAN" origin initiated a task.
     If the human hasn't sent a command in X hours, it releases Melatonin.
     """
     if not LOG_FILE.exists():
@@ -22,14 +23,24 @@ def is_host_asleep(idle_hours_threshold: float = 4.0) -> bool:
             if not lines:
                 return True
 
-            last_line = lines[-1]
-            data = json.loads(last_line)
-            last_time_str = data.get("timestamp")
+            # ⚡ THE FIX: Read backwards to find the last explicit human interaction
+            last_human_time_str = None
+            for line in reversed(lines):
+                if not line.strip():
+                    continue
+                try:
+                    data = json.loads(line)
+                    # Legacy logs without an origin are assumed to be HUMAN
+                    if data.get("origin", "HUMAN") == "HUMAN":
+                        last_human_time_str = data.get("timestamp")
+                        break
+                except json.JSONDecodeError:
+                    continue
 
-            if not last_time_str:
+            if not last_human_time_str:
                 return True
 
-            last_time = datetime.fromisoformat(last_time_str)
+            last_time = datetime.fromisoformat(last_human_time_str)
             time_since_last_action = datetime.now(timezone.utc) - last_time
 
             if time_since_last_action > timedelta(hours=idle_hours_threshold):
@@ -53,16 +64,15 @@ def enter_sleep_cycle() -> None:
         "\n[bold magenta]🌙 Brain OS is entering Deep Sleep...[/bold magenta]"
     )
 
-    # 0. Hippocampus Consolidation (Save memories to long-term storage)
+    # 0. Hippocampus Consolidation
     try:
-        # ⚡ SHIFT-LEFT: Local import to prevent circular dependencies
         from System.neuroanatomy.limbic.hippocampus import consolidate_short_term_memory
 
         consolidate_short_term_memory()
     except Exception as e:
         console.print(f"[dim red]Hippocampus consolidation failed: {e}[/dim red]")
 
-    # 1. Glymphatic Flush (Clean the brain)
+    # 1. Glymphatic Flush
     try:
         from System.neuroanatomy.systemic.lymphatic import flush_waste
 
@@ -70,9 +80,9 @@ def enter_sleep_cycle() -> None:
     except Exception as e:
         console.print(f"[dim red]Lymphatic flush failed during sleep: {e}[/dim red]")
 
-    # 2. Default Mode Network (REM Sleep / Daydreaming)
+    # 2. Default Mode Network (REM Sleep)
     try:
-        from System.neuroanatomy.autonomic.dmn import trigger_daydreams  # type: ignore
+        from System.neuroanatomy.autonomic.dmn import trigger_daydreams
 
         trigger_daydreams()
     except Exception as e:

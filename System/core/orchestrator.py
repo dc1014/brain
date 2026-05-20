@@ -38,7 +38,10 @@ async def dispatch_task(
     final_route = route_type if route_type != "WORKSPACE" else predefined_route
     final_domain = domain if domain != "GENERAL" else predefined_domain
 
-    await execute_pipeline(description, final_route, final_domain)
+    # ⚡ THE FIX: Identify background queue tasks as AUTONOMIC so they don't wake the sleep cycle
+    target_origin = "AUTONOMIC" if obsidian else "HUMAN"
+
+    await execute_pipeline(description, final_route, final_domain, origin=target_origin)
 
 
 def run_pending_queue() -> None:

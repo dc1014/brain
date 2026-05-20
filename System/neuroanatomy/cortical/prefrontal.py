@@ -191,6 +191,7 @@ async def execute_swarm_cohort(
     is_exhausted: bool,
     available_tools: dict,
     pfc_memory: WorkingMemory,
+    origin: str = "HUMAN",  # ⚡ THE FIX: Accept origin
 ) -> tuple[int, list[str]]:
     total_tokens = 0
     agents_invoked = []
@@ -217,6 +218,7 @@ async def execute_swarm_cohort(
             tools=active_tools if active_tools else None,
             route=route_type,
             domain=domain,
+            origin=origin,  # ⚡ Pass the baton to Swarm Agents
         )
         return a_cfg["name"], res
 
@@ -249,7 +251,11 @@ async def execute_swarm_cohort(
 
 
 async def execute_pipeline(
-    description: str, route_type: str, domain: str, resume_pipeline: list | None = None
+    description: str,
+    route_type: str,
+    domain: str,
+    resume_pipeline: list | None = None,
+    origin: str = "HUMAN",  # ⚡ THE FIX: Accept origin from the Orchestrator
 ) -> None:
     commit_transaction()
     tools_path = ROOT_DIR / "System" / "config" / "tools.yaml"
@@ -306,6 +312,7 @@ async def execute_pipeline(
                 is_exhausted,
                 available_tools,
                 pfc_memory,
+                origin,  # ⚡ THE FIX: Pass baton to Swarm Coordinator
             )
             total_pipeline_tokens += swarm_tokens
             agents_invoked.extend(swarm_agents)
@@ -337,6 +344,7 @@ async def execute_pipeline(
             tools=active_tools if active_tools else None,
             route=route_type,
             domain=domain,
+            origin=origin,  # ⚡ THE FIX: Pass baton to Linear Agents
         )
 
         step_tokens = step_result.usage.get("total_tokens", 0)

@@ -39,9 +39,11 @@ async def log_interaction(
     usage: dict[str, int],
     route: str = "UNKNOWN",
     domain: str = "NONE",
+    origin: str = "HUMAN",  # ⚡ THE FIX: Track the execution origin
 ) -> None:
     log_entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "origin": origin,  # ⚡ Inject it into the JSON payload
         "route": route,
         "domain": domain,
         "agent": role_name,
@@ -142,7 +144,8 @@ async def run_agent_async(
     route: str = "UNKNOWN",
     domain: str = "NONE",
     step: int = 1,
-    tools: list[dict[str, Any]] | None = None,  # ⚡ ZERO-DEBT: Restored tools parameter
+    tools: list[dict[str, Any]] | None = None,
+    origin: str = "HUMAN",  # ⚡ THE FIX: Accept the 'origin' baton from the PFC
 ) -> AgentResponse:
     """Invokes the active Swarm node natively asynchronously using litellm."""
 
@@ -157,7 +160,7 @@ async def run_agent_async(
     total_prompt = 0
     total_comp = 0
     final_text = ""
-    action_manifest: list[str] = []  # ⚡ ZERO-DEBT: Restored explicit type hint
+    action_manifest: list[str] = []
 
     try:
         from System.neuroanatomy.pathways.corpus_callosum import route_hemisphere
@@ -194,12 +197,12 @@ async def run_agent_async(
 
             # ⚡ NATIVE ASYNC API CALL
             response = await acompletion(
-                model=routed_model,  # ⚡ Use the mutated model string
+                model=routed_model,
                 messages=pruned_messages,
                 tools=tools,
                 temperature=mod_temp,
                 max_tokens=mod_tokens,
-                api_key=api_key,  # ⚡ Use the resolved cross-modal key
+                api_key=api_key,
             )
 
             if not getattr(response, "choices", None) or len(response.choices) == 0:
@@ -262,6 +265,7 @@ async def run_agent_async(
             usage_data,
             route,
             domain,
+            origin,  # ⚡ THE FIX: Pass the baton to the logger!
         )
         return AgentResponse(
             text=safe_final_text, actions=safe_action_manifest, usage=usage_data
@@ -284,5 +288,6 @@ async def run_agent_async(
             usage_data,
             route,
             domain,
+            origin,  # ⚡ THE FIX: Pass the baton to the logger!
         )
         return AgentResponse(text=error_msg, actions=action_manifest, usage=usage_data)
