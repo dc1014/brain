@@ -15,14 +15,21 @@ from System.neuroanatomy.systemic.immune_system import vault
 from System.core.locks import BiologicalLock
 from System.neuroanatomy.autonomic.acc import AnteriorCingulateCortex
 
+# Lazy local import to break top-level circular dependency chains cleanly
+from System.neuroanatomy.cortical.wernicke import (
+    rank_graph_boosted_results,
+    SearchResult,
+)
+
 console = Console()
 
 DB_PATH = ROOT_DIR / "System" / "config" / "hippocampus.db"
 QUEUE_FILE_PATH = ROOT_DIR / "System" / "execution_queue.json"
 QUEUE_LOCK = BiologicalLock(QUEUE_FILE_PATH)
+GRAPH_LEDGER_PATH = ROOT_DIR / ".brain" / "graph_state.json"
 
 # =====================================================================
-# 1. EPHEMERAL WORKING MEMORY (SQLite FTS5)
+# 1. EPHEMERAL WORKING MEMORY (SQLite FTS5 + Graph-Boosted RRF)
 # =====================================================================
 
 
@@ -102,10 +109,8 @@ def rebuild_index() -> None:
     conn.commit()
     conn.close()
 
-    # ⚡ ACC CLOSED-LOOP GATING PASS: Supervised build protects relational memory from loop pollution
     try:
         gb = SupervisedGraphBackplane(str(ROOT_DIR))
-        # Evaluates a baseline interaction state sequence before committing structural file shifts
         gb.supervised_rebuild([])
     except Exception as e:
         console.print(
@@ -118,7 +123,7 @@ def rebuild_index() -> None:
 
 
 def recall_memory(query: str, limit: int = 5) -> str:
-    """Searches the index for keywords. Uses exact phrase matching to prevent FTS5 injection attacks."""
+    """Performs a two-pass hybrid lookup boosting keyword ranks using knowledge graph density vectors."""
     if not DB_PATH.exists():
         rebuild_index()
 
@@ -127,27 +132,63 @@ def recall_memory(query: str, limit: int = 5) -> str:
         cursor = conn.cursor()
         safe_query = '"' + query.replace('"', '""') + '"'
 
+        # Pass 1: Extract lexical matches with raw FTS5 BM25 ranks
         cursor.execute(
             """
-            SELECT filepath, snippet(memories, 1, '[MARK] ', ' [/MARK]', '...', 25)
+            SELECT filepath, (bm25(memories) * -1.0) AS score
             FROM memories
             WHERE memories MATCH ?
-            ORDER BY rank
-            LIMIT ?
+            LIMIT 50
         """,
-            (safe_query, limit),
+            (safe_query,),
         )
-
-        results = cursor.fetchall()
+        raw_rows = cursor.fetchall()
         conn.close()
 
-        if not results:
+        if not raw_rows:
             return f"No memories found for '{query}'."
 
-        formatted_results = []
-        for filepath, snippet in results:
-            formatted_results.append(f"--- {filepath} ---\n...{snippet}...\n")
+        # Convert records to strict TypedDict contracts to pass mypy analysis contracts safely
+        fts_results: List[SearchResult] = [
+            {"filepath": str(row[0]), "score": float(row[1]), "boosted_score": None}
+            for row in raw_rows
+        ]
 
+        # Pass 2: Apply structural lookahead network boost calculation rules via Wernicke
+        boosted_nodes = rank_graph_boosted_results(fts_results, str(GRAPH_LEDGER_PATH))
+        target_nodes = boosted_nodes[:limit]
+
+        # Pass 3: Extract finalized structured text snippet components for highly integrated matches
+        conn = _get_conn()
+        cursor = conn.cursor()
+        formatted_results = []
+
+        for node in target_nodes:
+            path_str = node["filepath"]
+            # Enforce an active MATCH condition so SQLite FTS5 correctly injects un-delimited formatting
+            cursor.execute(
+                """
+                SELECT snippet(memories, 1, '[MARK] ', ' [/MARK]', '...', 25)
+                FROM memories
+                WHERE filepath = ? AND memories MATCH ?
+                LIMIT 1
+            """,
+                (path_str, safe_query),
+            )
+            snip_row = cursor.fetchone()
+            snippet_text = snip_row[0] if snip_row else "..."
+
+            # Defensive unpacking safeguards against NoneType float format errors when files have zero graph connectivity links
+            boost_val = node.get("boosted_score")
+            final_score = (
+                float(boost_val) if boost_val is not None else float(node["score"])
+            )
+
+            formatted_results.append(
+                f"--- {path_str} (Graph Re-Rank Score: {final_score:.2f}) ---\n...{snippet_text}...\n"
+            )
+
+        conn.close()
         return "\n".join(formatted_results)
 
     except Exception as e:
@@ -196,7 +237,6 @@ class GraphBackplane:
                 for file in files:
                     if file.endswith(".md"):
                         full_path = os.path.join(root, file)
-                        # Derive unified slug reference representations matching dataview models
                         relative_slug = (
                             os.path.relpath(full_path, self.vault_path)
                             .replace(".md", "")

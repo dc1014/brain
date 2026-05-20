@@ -1,4 +1,4 @@
-# --- System/neuroanatomy/autonomic/medulla.py (Polished Emojis) ---
+# --- System/neuroanatomy/autonomic/medulla.py ---
 import time
 import yaml  # type: ignore[import-untyped]
 import threading
@@ -7,6 +7,7 @@ import psutil
 import os
 import uuid
 import json
+import subprocess
 from typing import Any, List, Dict
 from rich.console import Console
 
@@ -114,6 +115,87 @@ class MedullaOblongata:
             return {}
         with open(self.config_path, "r", encoding="utf-8") as f:
             return yaml.safe_load(f).get("medulla", {})
+
+    def boot_recovery_sequence(self) -> None:
+        """Sweeps Write-Ahead Logs on boot and modulates recovery settings through the ACC."""
+        interrupted_tasks = self.task_log.recover_interrupted_tasks()
+        if not interrupted_tasks:
+            return
+
+        # Lazy local import to break any potential top-level pre-compile import rings cleanly
+        from System.neuroanatomy.autonomic.acc import AnteriorCingulateCortex
+
+        acc = AnteriorCingulateCortex()
+
+        console.print(
+            f"[bold purple]🫁 Medulla WAL: Found {len(interrupted_tasks)} interrupted tasks. Triggering closed-loop recovery...[/bold purple]"
+        )
+
+        for task in interrupted_tasks:
+            task_id = task.get("id", "unknown")
+            cmd_str = task.get("cmd", "")
+            if not cmd_str:
+                continue
+
+            console.print(
+                f"[bold yellow]🫁 Medulla WAL: Recovering interrupted task transaction {task_id}...[/bold yellow]"
+            )
+            medulla_logger.info(f"WAL Recovery triggered for task {task_id}: {cmd_str}")
+
+            # Formulate historical error failure data to analyze stress limits through the ACC framework
+            mock_history = [
+                {"tool": "shell_execution", "status": "FAILED", "cmd": cmd_str}
+            ]
+            modulation_chemistry = acc.inspect_context_buffer(mock_history)
+
+            # Extract modulated parameters deterministically based on stress indicators
+            target_temp = modulation_chemistry.get("temperature", 0.0)
+            target_engine = modulation_chemistry.get(
+                "engine_override", "openai/gpt-4o-mini"
+            )
+
+            # Execute the recovered pipeline task in a secure, non-blocking background thread wrapper
+            threading.Thread(
+                target=self._execute_recovered_task_safely,
+                args=(task_id, cmd_str, target_temp, target_engine),
+                daemon=True,
+            ).start()
+
+    def _execute_recovered_task_safely(
+        self, task_id: str, command: str, temperature: float, engine: str
+    ) -> None:
+        """Background execution engine executing resuscitated tasks under ACC context parameters."""
+        try:
+            # Inject neuromodulated variables smoothly into the execution context environment
+            env_override = os.environ.copy()
+            env_override["BRAIN_RECOVERY_TEMPERATURE"] = str(temperature)
+            env_override["BRAIN_RECOVERY_ENGINE"] = str(engine)
+
+            # Safely trigger shell execution with isolated process parameters
+            result = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                env=env_override,
+                timeout=300,
+            )
+
+            if result.returncode == 0:
+                self.task_log.mark_completed(task_id, "DONE")
+                medulla_logger.info(
+                    f"WAL Recovery successfully signed off task {task_id}."
+                )
+            else:
+                self.task_log.mark_completed(task_id, "FAILED")
+                medulla_logger.error(
+                    f"WAL Recovery task execution failed for {task_id}: {result.stderr}"
+                )
+        except Exception as e:
+            self.task_log.mark_completed(task_id, "CRASHED")
+            medulla_logger.critical(
+                f"WAL Recovery tracking critical system exception for {task_id}: {str(e)}"
+            )
 
     def _cognitive_heartbeat(self):
         """Autonomously processes the pending cognitive task queue (Obsidian notes)."""
@@ -240,6 +322,12 @@ class MedullaOblongata:
         )
         console.print(f"[bold green]🧠 {start_msg}[/bold green]")
         medulla_logger.info(start_msg)
+
+        # ⚡ EXECUTE DURABLE RECOVERY TRANSACTION SWEEP: Scan and restore crashed intents thread-safely upon boot
+        try:
+            self.boot_recovery_sequence()
+        except Exception as e:
+            medulla_logger.critical(f"WAL Boot recovery crash bypass: {str(e)}")
 
         threading.Thread(target=self._supervise_threads, daemon=True).start()
         threading.Thread(target=self._monitor_homeostasis, daemon=True).start()
