@@ -228,12 +228,15 @@ async def run_agent_async(
                 ]
                 message_dict["tool_calls"] = processed_tools
 
+            # System/llm.py (Inside run_agent_async, around line 200)
+
             messages.append(message_dict)
 
             # --- ⚡ DELEGATE TO MOTOR CORTEX ---
             if hasattr(message, "tool_calls") and message.tool_calls:
+                # ⚡ THE ROUTE RELAY: Pass the route down into the execution stack
                 tool_messages, new_actions, halt_text = await execute_tools(
-                    message.tool_calls, role_name, step_index=step
+                    message.tool_calls, role_name, step_index=step, route=route
                 )
 
                 messages.extend(tool_messages)

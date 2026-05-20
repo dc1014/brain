@@ -1,3 +1,4 @@
+import asyncio
 import subprocess
 import time
 import random
@@ -181,8 +182,16 @@ def trigger_daydreams() -> str:
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
                 f.write(f"\n## 🌌 Epiphany ({timestamp})\n{epiphany}\n\n---\n")
 
+        # ... inside trigger_daydreams()
         console.print(
             f"[dim purple]✨ DMN: Epiphany consolidated into {daydream_file.relative_to(ROOT_DIR)}[/dim purple]"
+        )
+
+        # ⚡ THE FIX: Automatically process structural Epiphanies under CODE_GENERATION to enforce isolation
+        from System.neuroanatomy.cortical.prefrontal import execute_pipeline
+
+        asyncio.run(
+            execute_pipeline(epiphany, "CODE_GENERATION", "STUDIO", origin="AUTONOMIC")
         )
         return "Daydream cycle completed successfully."
     except Exception as e:

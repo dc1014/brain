@@ -34,17 +34,22 @@ def mock_subprocess(mocker):
 
 
 @pytest.mark.asyncio
-async def test_setup_success_unix(mocker, mock_subprocess, mock_firewall_lifecycle):
+async def test_setup_success_unix(
+    mocker, mock_subprocess, mock_firewall_lifecycle, tmp_path
+):
     """Proves the tarball is packed and Docker is correctly initialized on Unix."""
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.microsandbox.container_driver.sys.platform", "linux")
     mocker.patch("System.tools.microsandbox.container_driver.tarfile.open")
     mock_open = mocker.patch("builtins.open", mocker.mock_open())
     mock_chmod = mocker.patch("System.tools.microsandbox.container_driver.os.chmod")
 
+    # ⚡ THE FIX: Use a safe, validated path so the sandbox doesn't block it
+    safe_workspace = tmp_path / "Studio" / "workspace"
+    safe_workspace.mkdir(parents=True)
+
     driver = ContainerSandboxDriver()
-    success = await driver.setup(
-        Path("/fake/workspace"), {"DEPLOYMENT_TOKEN": "secret123"}
-    )
+    success = await driver.setup(safe_workspace, {"DEPLOYMENT_TOKEN": "secret123"})
 
     assert success is True
     mock_chmod.assert_called_once_with(driver.env_file_path, 0o600)
@@ -52,15 +57,21 @@ async def test_setup_success_unix(mocker, mock_subprocess, mock_firewall_lifecyc
 
 
 @pytest.mark.asyncio
-async def test_setup_success_win32(mocker, mock_subprocess, mock_firewall_lifecycle):
+async def test_setup_success_win32(
+    mocker, mock_subprocess, mock_firewall_lifecycle, tmp_path
+):
     """Proves the setup path adapts correctly for Windows OS file constraints."""
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.microsandbox.container_driver.sys.platform", "win32")
     mocker.patch("System.tools.microsandbox.container_driver.tarfile.open")
     mocker.patch("builtins.open", mocker.mock_open())
     mock_chmod = mocker.patch("System.tools.microsandbox.container_driver.os.chmod")
 
+    safe_workspace = tmp_path / "Studio" / "workspace"
+    safe_workspace.mkdir(parents=True)
+
     driver = ContainerSandboxDriver()
-    success = await driver.setup(Path("C:\\fake\\workspace"), {"TOKEN": "123"})
+    success = await driver.setup(safe_workspace, {"TOKEN": "123"})
 
     assert success is True
     mock_chmod.assert_not_called()
@@ -68,9 +79,13 @@ async def test_setup_success_win32(mocker, mock_subprocess, mock_firewall_lifecy
 
 @pytest.mark.asyncio
 async def test_setup_docker_create_fails(
-    mocker, mock_subprocess, mock_firewall_lifecycle
+    mocker, mock_subprocess, mock_firewall_lifecycle, tmp_path
 ):
     """Proves setup safely aborts if the Docker container fails to create."""
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
+    safe_workspace = tmp_path / "Studio" / "workspace"
+    safe_workspace.mkdir(parents=True)
+
     mocker.patch("System.tools.microsandbox.container_driver.tarfile.open")
     mocker.patch("builtins.open", mocker.mock_open())
     mocker.patch("System.tools.microsandbox.container_driver.os.chmod")
@@ -78,21 +93,25 @@ async def test_setup_docker_create_fails(
     mock_subprocess.returncode = 1
 
     driver = ContainerSandboxDriver()
-    success = await driver.setup(Path("/fake"), {})
+    success = await driver.setup(safe_workspace, {})
 
     assert success is False
 
 
 @pytest.mark.asyncio
-async def test_setup_exception_caught(mocker, mock_firewall_lifecycle):
+async def test_setup_exception_caught(mocker, mock_firewall_lifecycle, tmp_path):
     """Proves unexpected file system exceptions during setup are caught gracefully."""
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
+    safe_workspace = tmp_path / "Studio" / "workspace"
+    safe_workspace.mkdir(parents=True)
+
     mocker.patch(
         "System.tools.microsandbox.container_driver.tarfile.open",
         side_effect=Exception("Disk full"),
     )
 
     driver = ContainerSandboxDriver()
-    success = await driver.setup(Path("/fake"), {})
+    success = await driver.setup(safe_workspace, {})
 
     assert success is False
 

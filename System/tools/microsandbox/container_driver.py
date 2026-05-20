@@ -1,13 +1,15 @@
 import os
 import sys
-import uuid
 import asyncio
-import tarfile
 import subprocess
+import uuid
+import tarfile  # ⚡ THE FIX: Moved to module level so pytest can mock it
 from pathlib import Path
 from typing import Dict, Optional
-
 from rich.console import Console
+
+# ⚡ THE FIX: Import the paths module dynamically to prevent mock attribute errors
+from System.core import paths
 from System.core.schemas import ExecutionResult
 from System.tools.microsandbox.driver import BaseSandboxDriver
 from System.tools.microsandbox.egress import EgressFirewall
@@ -29,10 +31,35 @@ class ContainerSandboxDriver(BaseSandboxDriver):
 
     async def setup(self, workspace_path: Path, env_secrets: Dict[str, str]) -> bool:
         try:
-            # PHASE 4: Armed outbound security mesh before container initialization
+            resolved_workspace = Path(workspace_path).resolve()
+
+            try:
+                # ⚡ THE FIX: Use paths.ROOT_DIR dynamically
+                rel_parts = resolved_workspace.relative_to(
+                    paths.ROOT_DIR.resolve()
+                ).parts
+            except ValueError:
+                console.print(
+                    f"[bold red]Sandbox Error: Path traversal block. Target outside root: {resolved_workspace}[/bold red]"
+                )
+                return False
+
+            safe_zones = {
+                "Studio",
+                "Personal",
+                "Professional",
+                "Media",
+                ".trash",
+                "Meta",
+            }
+            if not rel_parts or rel_parts[0] not in safe_zones:
+                console.print(
+                    f"[bold red]Sandbox Violation: Core system modification blocked. Path: {resolved_workspace}[/bold red]"
+                )
+                return False
+
             proxy_port = await self.firewall.start()
 
-            # PHASE 2: SECURE STAGING
             self.tarball_path = Path(f"/tmp/{self.sandbox_id}.tar.gz")
             if sys.platform == "win32":
                 self.tarball_path = (
@@ -42,10 +69,13 @@ class ContainerSandboxDriver(BaseSandboxDriver):
 
             def _make_tar() -> None:
                 if self.tarball_path:
+                    # ⚡ THE FIX: Removed the local 'import tarfile' from here
                     with tarfile.open(self.tarball_path, "w:gz") as tar:
-                        tar.add(workspace_path, arcname=".")
+                        tar.add(resolved_workspace, arcname=".")
 
             await asyncio.to_thread(_make_tar)
+
+            # ... (Keep the rest of the file exactly the same)
 
             # PHASE 3: VOLATILE TOKEN INOCULATION
             self.env_file_path = (
@@ -59,6 +89,9 @@ class ContainerSandboxDriver(BaseSandboxDriver):
                     os.chmod(self.env_file_path, 0o600)
 
             # HARDENED KERNEL CONSTRAINTS
+            # Note: Explicit POSIX format required for env-file path passing into docker CLI
+            env_posix_path = self.env_file_path.as_posix() if self.env_file_path else ""
+
             cmd = [
                 "docker",
                 "create",
@@ -67,7 +100,7 @@ class ContainerSandboxDriver(BaseSandboxDriver):
                 "--workdir",
                 "/workspace",
                 "--env-file",
-                str(self.env_file_path),
+                env_posix_path,
                 "--cap-drop",
                 "ALL",  # Amputate capabilities
                 "--security-opt",
@@ -98,7 +131,7 @@ class ContainerSandboxDriver(BaseSandboxDriver):
             copy_cmd = [
                 "docker",
                 "cp",
-                str(self.tarball_path),
+                self.tarball_path.as_posix(),
                 f"{self.sandbox_id}:/tmp/workspace.tar.gz",
             ]
             proc_cp = await asyncio.create_subprocess_exec(

@@ -1,6 +1,13 @@
 import os
 from pathlib import Path
+from typing import Dict
+from rich.console import Console
+
 from System.core.paths import ROOT_DIR, normalize_path
+from System.core.schemas import ExecutionResult
+from System.tools.microsandbox.container_driver import ContainerSandboxDriver
+
+console = Console()
 
 # --- SHIFT LEFT SECURITY: OS DIRECTORY BOUNDARIES ---
 
@@ -70,3 +77,56 @@ def is_safe_path(target_path: Path | str, require_write: bool = False) -> bool:
                 continue
 
     return False
+
+
+# =====================================================================
+# 🐳 THE CONTAINMENT MATRIX (SHELL EXECUTION ISOLATION)
+# =====================================================================
+
+REQUIRES_CONTAINMENT = {
+    # "FORGE", later
+    "SWARM",
+    # "HERMES", later
+    "STATIC_PAGE",
+    "CODE_GENERATION",
+}
+
+
+async def execute_in_sandbox(
+    command: str,
+    workspace_path: Path,
+    env_secrets: Dict[str, str],
+    route: str = "UNKNOWN",
+) -> ExecutionResult:
+    """
+    The Master Execution Router.
+    Evaluates the current cognitive pipeline's route and enforces physical security constraints.
+    """
+    if route in REQUIRES_CONTAINMENT:
+        console.print(
+            f"[bold cyan]🐳 Containment Matrix Triggered (Route: {route}): Enforcing Tier 1 Ephemeral Sandbox...[/bold cyan]"
+        )
+        driver = ContainerSandboxDriver()
+
+        is_ready = await driver.setup(workspace_path, env_secrets)
+        if not is_ready:
+            return ExecutionResult(
+                success=False,
+                output="",
+                block_reason="CRITICAL SECURITY TERMINATION: Docker engine is unreachable or offline.",
+            )
+
+        try:
+            result = await driver.execute(command)
+            return result
+        finally:
+            await driver.teardown()
+
+    else:
+        console.print(
+            f"[dim]⚡ Native Execution Authorized (Route: {route}). Bypassing Tier 1 Container.[/dim]"
+        )
+
+        from System.tools.execution import execute_native_isolated
+
+        return await execute_native_isolated(command, workspace_path, env_secrets)

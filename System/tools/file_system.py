@@ -81,7 +81,12 @@ def list_safe_directory(directory_path: str) -> ExecutionResult:
         target_path: Path = normalize_path(ROOT_DIR / directory_path)
 
         if target_path == normalize_path(ROOT_DIR):
-            items = [f"[DIR] {d.name}" for d in ALLOWED_DIRECTORIES if d.exists()]
+            # ⚡ THE FIX: ALLOWED_DIRECTORIES are strings. Wrap them in (ROOT_DIR / d) to use Path methods!
+            items = [
+                f"[DIR] {Path(ROOT_DIR / d).name}"
+                for d in ALLOWED_DIRECTORIES
+                if (ROOT_DIR / d).exists()
+            ]
             return ExecutionResult(
                 success=True,
                 output="OS Root. Safe zones available:\n" + "\n".join(items),

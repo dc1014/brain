@@ -111,7 +111,7 @@ def evolve():
     asyncio.run(
         execute_pipeline(
             "Analyze the codebase and suggest evolutionary structural improvements.",
-            "FORGE",
+            "CODE_GENERATION",  # ⚡ THE FIX: Converted from FORGE
             "STUDIO",
         )
     )

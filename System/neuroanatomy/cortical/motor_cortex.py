@@ -10,24 +10,16 @@ console = Console()
 
 
 class MotorCortex:
-    # Maps (loop_id, resolved_path_string) to an asyncio.Lock to prevent cross-loop seizures
     _locks: Dict[Tuple[int, str], asyncio.Lock] = {}
 
     @classmethod
     def get_lock(cls, file_path: Union[str, Path]) -> asyncio.Lock:
-        """
-        Lazy-loads an asyncio Lock bound strictly to the current active event loop.
-        Zero Debt: Prevents 'attached to a different loop' crashes across CLI commands.
-        """
         try:
             loop_id = id(asyncio.get_running_loop())
         except RuntimeError:
             loop_id = 0
 
-        # SHIFT-LEFT FIX: Use .absolute() instead of .resolve() to bypass Windows filesystem quirks.
-        # This guarantees deterministic lock matching for the exact same path string.
         resolved_path = str(Path(file_path).absolute())
-
         key = (loop_id, resolved_path)
         if key not in cls._locks:
             cls._locks[key] = asyncio.Lock()
@@ -35,7 +27,7 @@ class MotorCortex:
 
 
 async def execute_tools(
-    tool_calls: list[Any], role_name: str, step_index: int = 0
+    tool_calls: list[Any], role_name: str, step_index: int = 0, route: str = "UNKNOWN"
 ) -> tuple[list[dict[str, Any]], list[str], str]:
     """
     Executes a batch of tool calls securely, managing locks and formatting results.
@@ -70,6 +62,17 @@ async def execute_tools(
                     "copy_safe_file",
                 }
 
+                # ⚡ SHIFT-LEFT CONTEXT PROPAGATION:
+                # If the tool is a system shell execution tool, secretly inject the route
+                # so the sandbox knows if it is required to mandate Tier 1 containerization.
+                EXECUTION_TOOLS = {
+                    "execute_shell_command",
+                    "run_sandbox_command",
+                    "execute_python_code",
+                }
+                if func_name in EXECUTION_TOOLS:
+                    args["route"] = route
+
                 if func_name in WRITE_TOOLS:
                     target_path = (
                         args.get("filepath")
@@ -82,11 +85,9 @@ async def execute_tools(
                 else:
                     result = await asyncio.to_thread(tool_func, **args)
 
-                # ⚡ SHIFT-LEFT: Strongly-Typed Result Parsing
+                # ⚡ Strongly-Typed Result Parsing
                 if isinstance(result, ExecutionResult):
                     raw_output = result.output
-
-                    # Only halt the entire OS if it is explicitly a SECURITY BLOCK
                     is_security_block = (
                         not result.success
                         and result.block_reason
@@ -100,10 +101,8 @@ async def execute_tools(
                         )
                         is_halted = True
                     else:
-                        # Normal errors (like "Directory exists") are passed safely back to the LLM so it can learn!
                         action_manifest.append(f"[{func_name.upper()}] Executed.")
                 else:
-                    # Legacy string fallback for tools we haven't migrated yet
                     raw_output = str(result)
                     if (
                         raw_output.startswith("SECURITY BLOCK")
@@ -117,8 +116,18 @@ async def execute_tools(
                             f"[{func_name.upper()}] Executed successfully."
                         )
 
+        # --- Inside System/neuroanatomy/cortical/motor_cortex.py ---
+
         except Exception as e:
-            raw_output = f"ERROR executing {func_name}: {str(e)}"
+            error_str = str(e)
+            # ⚡ THE FIX: Properly flag the orchestrator and manifest when a security block is caught
+            if "Security Block" in error_str or "SECURITY BLOCK" in error_str:
+                raw_output = f"SECURITY BLOCK: {error_str}"
+                action_manifest.append("[HALTED] Security clearance denied.")
+                system_halt_text = f"\n\n[SYSTEM HALT] {raw_output}"
+                is_halted = True
+            else:
+                raw_output = f"ERROR executing {func_name}: {error_str}"
 
         console.print(f"[dim]🔍 Tool Executed: {func_name}[/dim]")
 
