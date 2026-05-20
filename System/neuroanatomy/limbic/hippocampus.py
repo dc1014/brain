@@ -1,22 +1,22 @@
+# --- System/neuroanatomy/limbic/hippocampus.py ---
+import re
 import json
 import asyncio
 import sqlite3
 import time
 import os
-
 from datetime import datetime
+from typing import Dict, Any, List
+
 from rich.console import Console
 from System.core.paths import ROOT_DIR
 from System.llm import acompletion
 from System.neuroanatomy.systemic.immune_system import vault
 from System.core.locks import BiologicalLock
 
-
 console = Console()
 
-
 DB_PATH = ROOT_DIR / "System" / "config" / "hippocampus.db"
-
 QUEUE_FILE_PATH = ROOT_DIR / "System" / "execution_queue.json"
 QUEUE_LOCK = BiologicalLock(QUEUE_FILE_PATH)
 
@@ -53,7 +53,7 @@ def encode_memory(filepath: str, content: str) -> None:
 
 
 def rebuild_index() -> None:
-    """Completely wipes and rebuilds the SQLite index from the flat-file Glass Brain."""
+    """Completely wipes and rebuilds the SQLite index and Relational Graph Backplane from flat-files."""
     console.print("[dim]🧠 Hippocampus: Rebuilding ephemeral search index...[/dim]")
     if DB_PATH.exists():
         try:
@@ -100,6 +100,14 @@ def rebuild_index() -> None:
 
     conn.commit()
     conn.close()
+
+    # ⚡ AUTOMATED GRAPH BACKPLANE CONSOLIDATION: Keeps graph relationships mirrored out-of-the-box
+    try:
+        gb = GraphBackplane(str(ROOT_DIR))
+        gb.rebuild_graph_state()
+    except Exception as e:
+        console.print(f"[dim red]🧠 Hippocampus Graph build bypass: {e}[/dim red]")
+
     console.print(
         "[bold green]✨ Hippocampus index successfully rebuilt from flat files![/bold green]"
     )
@@ -143,16 +151,69 @@ def recall_memory(query: str, limit: int = 5) -> str:
 
 
 # =====================================================================
-# 2. SYNAPTIC CONSOLIDATION (Long-Term Domain Memory)
+# 2. RELATIONAL EPISTEMIC STORAGE (The Graph Backplane Engine)
+# =====================================================================
+
+
+class GraphBackplane:
+    """Serverless typed network graph extraction system for linking memory nodes."""
+
+    def __init__(self, vault_path: str) -> None:
+        self.vault_path: str = vault_path
+        self.graph_file: str = os.path.join(vault_path, ".brain", "graph_state.json")
+        self.link_regex: re.Pattern = re.compile(
+            r"\[([a-zA-Z_0-9\-]+)::\[\[([^\]]+)\]\]\]"
+        )
+
+    def parse_markdown_node(self, file_path: str) -> List[Dict[str, str]]:
+        """Extracts typed relationship pairs using structured regex compilation passes."""
+        edges: List[Dict[str, str]] = []
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            matches = self.link_regex.findall(content)
+            for rel, target in matches:
+                edges.append({"rel": rel.strip(), "target": target.strip()})
+        except Exception:
+            pass
+        return edges
+
+    def rebuild_graph_state(self) -> None:
+        """Updates the serialized flat JSON map index securely across core workspace zones."""
+        graph_map: Dict[str, List[Dict[str, str]]] = {}
+        core_domains = ["Studio", "Meta", "Personal", "Professional"]
+
+        for target in core_domains:
+            target_path = os.path.join(self.vault_path, target)
+            if not os.path.exists(target_path):
+                continue
+
+            for root, _, files in os.walk(target_path):
+                for file in files:
+                    if file.endswith(".md"):
+                        full_path = os.path.join(root, file)
+                        # Derive unified slug reference representations matching dataview models
+                        relative_slug = (
+                            os.path.relpath(full_path, self.vault_path)
+                            .replace(".md", "")
+                            .replace("\\", "/")
+                        )
+                        graph_map[relative_slug] = self.parse_markdown_node(full_path)
+
+        os.makedirs(os.path.dirname(self.graph_file), exist_ok=True)
+        with open(self.graph_file, "w", encoding="utf-8") as f:
+            json.dump(graph_map, f, indent=2)
+
+
+# =====================================================================
+# 3. SYNAPTIC CONSOLIDATION (Long-Term Domain Memory)
 # =====================================================================
 
 
 async def _encode_short_term_memory() -> None:
     """Summarizes active JSONL ledgers into dense, long-term markdown memories by DOMAIN."""
     ledgers = list(ROOT_DIR.rglob("agent_interactions.jsonl"))
-
-    # 🧠 Spatial Routing: Group memories by their Domain context
-    domain_events: dict[str, list[str]] = {}
+    domain_events: Dict[str, List[str]] = {}
 
     for ledger in ledgers:
         if ledger.is_file():
@@ -254,18 +315,15 @@ def consolidate_short_term_memory() -> None:
         console.print(f"[dim red]Hippocampus async error: {e}[/dim red]")
 
 
-QUEUE_FILE_PATH = ROOT_DIR / "System" / "execution_queue.json"
-# ⚡ ZERO-DEBT: Initialize the receptor lock
-QUEUE_LOCK = BiologicalLock(QUEUE_FILE_PATH)
-
-
 def persist_pipeline_state(
-    description: str, route_type: str, domain: str, remaining_steps: list[dict]
+    description: str,
+    route_type: str,
+    domain: str,
+    remaining_steps: List[Dict[str, Any]],
 ) -> None:
     """Hippocampus: Saves the current state of the execution pipeline to disk."""
     QUEUE_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-    # ⚡ ZERO-DEBT: Thread-safe IPC Locking
     with QUEUE_LOCK.acquire_sync():
         with open(QUEUE_FILE_PATH, "w", encoding="utf-8") as f:
             json.dump(
@@ -282,7 +340,6 @@ def persist_pipeline_state(
 
 def clear_pipeline_state() -> None:
     """Lymphatic System: Clears the execution queue upon graceful termination."""
-    # ⚡ ZERO-DEBT: Thread-safe IPC Locking
     with QUEUE_LOCK.acquire_sync():
         if QUEUE_FILE_PATH.exists():
             try:

@@ -1,0 +1,16 @@
+conflict_monitoring:
+  max_consecutive_tool_failures: 3
+  epistemic_drift_threshold: 0.75
+  sunk_cost_line_limit: 3
+
+neuromodulation:
+  high_stress:
+    temperature: 0.0
+    engine_override: "claude-3-5-sonnet"
+  low_stress:
+    temperature: 0.7
+    engine_override: "local-slm"
+
+fallacy_patterns:
+  - '(?i)confirming without checking'
+  - '(?i)repeating identical execution'

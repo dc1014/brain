@@ -1,8 +1,56 @@
+# --- System/tools/cognitive.py ---
+import os
+import json
 import time
 from pathlib import Path
 from System.core.paths import ROOT_DIR
 from .sandbox import is_safe_path
 from System.core.schemas import ExecutionResult
+
+
+def traverse_graph(
+    directory_path: str, start_node: str, max_depth: int = 2
+) -> ExecutionResult:
+    """Tool entry point: Recursively traverses the knowledge backplane to pull multi-hop relational context.
+
+    Args:
+        directory_path: Base vault directory target (e.g., '.').
+        start_node: Slug identifier of the root element (e.g., 'Studio/Brain-Website').
+        max_depth: Maximum recursion depth for relationship hops.
+    """
+    target_vault = (ROOT_DIR / directory_path).resolve()
+    if not is_safe_path(target_vault):
+        reason = "SECURITY BLOCK: Cannot query network graphs outside sandbox scope."
+        return ExecutionResult(success=False, output=reason, block_reason=reason)
+
+    graph_json = os.path.join(str(target_vault), ".brain", "graph_state.json")
+    if not os.path.exists(graph_json):
+        return ExecutionResult(
+            success=True, output="Graph backplane state not yet indexed or empty."
+        )
+
+    try:
+        with open(graph_json, "r", encoding="utf-8") as f:
+            graph = json.load(f)
+    except Exception as e:
+        reason = f"ERROR: Failed to load network state map ledger: {str(e)}"
+        return ExecutionResult(success=False, output=reason, block_reason=reason)
+
+    results: list[str] = []
+    visited: set[str] = set()
+
+    def walk(current: str, depth: int) -> None:
+        if depth > max_depth or current in visited:
+            return
+        visited.add(current)
+        if current in graph:
+            for edge in graph[current]:
+                results.append(f"{current} -> [{edge['rel']}] -> {edge['target']}")
+                walk(edge["target"], depth + 1)
+
+    walk(start_node, 0)
+    output_str = "\n".join(results) if results else "No factual links found."
+    return ExecutionResult(success=True, output=output_str)
 
 
 def read_file_signatures(filepath: str) -> ExecutionResult:
@@ -206,15 +254,7 @@ def map_system_topology_tool() -> ExecutionResult:
 async def transmit_telepathy(
     target_node_id: str, action: str, target: str = "", protocol: str = "acp"
 ) -> str:
-    """
-    Commands an external AI framework or peer Brain OS node via the Exocortex.
-    Use this to delegate tasks to OpenClaw, Hermes, or read Public resources from peer brains.
-
-    Args:
-        target_node_id: The ID of the external node (e.g., 'openclaw_local', 'hermes_1').
-        action: The MCP action to trigger (e.g., 'EXECUTE_ENGRAM', 'READ_RESOURCE').
-        target: The specific engram name or resource file to target.
-    """
+    """Commands an external AI framework or peer Brain OS node via the Exocortex."""
     from System.neuroanatomy.cortical.exocortex import Exocortex
 
     exo = Exocortex()

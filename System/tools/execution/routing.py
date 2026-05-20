@@ -4,11 +4,126 @@ import sys
 import shlex
 import stat
 import asyncio
+from pathlib import Path
+from typing import List, Set
 from System.core.paths import ROOT_DIR, normalize_path
 from System.core.schemas import ExecutionResult
 
+# Pull Rich components for structural command UI assembly
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+
 from .validation import parse_and_validate_args
 from .OS.win32_jail import apply_windows_job_object
+
+
+def _render_command_cockpit(
+    command: str,
+    path_result: str,
+    effective_binaries: Set[str],
+    created_snapshots: List[str],
+    execution_tier: str,
+) -> Panel:
+    """Renders a comprehensive, high-fidelity terminal user dashboard split into a clean tactical grid layout."""
+
+    # 📡 MAIN CONTENT MATRIX: Establish a structured horizontal grid for tracking columns
+    layout_grid = Table.grid(padding=(0, 2))
+    layout_grid.add_column()  # Left Column: Telemetry
+    layout_grid.add_column()  # Right Column: Firewall Status
+
+    # Left Box Data: Vector parameters
+    vector_table = Table.grid(padding=(0, 1))
+    vector_table.add_column(style="bold cyan")
+    vector_table.add_column(style="white")
+
+    try:
+        display_path = Path(path_result).relative_to(ROOT_DIR.resolve())
+    except Exception:
+        display_path = Path(path_result)
+
+    vector_table.add_row(
+        "Intended Vector : ",
+        f"[bold green]{shlex.join(shlex.split(command))}[/bold green]",
+    )
+    vector_table.add_row("Target Location : ", f"[yellow]📂 {display_path}[/yellow]")
+    vector_table.add_row(
+        "Active Binary   : ",
+        f"[magenta]⚔️ {', '.join(effective_binaries).upper()}[/magenta]",
+    )
+
+    # Right Box Data: Firewall perimeters
+    firewall_table = Table.grid(padding=(0, 1))
+    firewall_table.add_column(style="bold blue")
+    firewall_table.add_column(style="dim white")
+
+    tier_desc = "Hardware Sandbox" if execution_tier == "1" else "Native Host Isolated"
+    firewall_table.add_row("✓ BBB Guard  :", " Path cleared safety checks.")
+    firewall_table.add_row("✓ Amygdala  :", " Heuristic screening passed.")
+    firewall_table.add_row("✓ Isolation :", f" Tier {execution_tier} ({tier_desc})")
+
+    # Embed sub-panels inside the layout column slots cleanly
+    layout_grid.add_row(
+        Panel(
+            vector_table,
+            title="[bold cyan]📡 TRANSACTION TELEMETRY[/bold cyan]",
+            border_style="cyan",
+        ),
+        Panel(
+            firewall_table,
+            title="[bold blue]🛡️ NEURAL FIREWALL PANEL[/bold blue]",
+            border_style="blue",
+        ),
+    )
+
+    # 🧬 BASE PANEL: Ephemeral Staging Area Status Block
+    staging_table = Table.grid(padding=(0, 1))
+    staging_table.add_column(style="bold magenta", width=18)
+    staging_table.add_column(style="white")
+
+    if created_snapshots:
+        snapshots_tracked = [
+            Path(p).name for p in created_snapshots if ".immutable_snapshot_" in p
+        ]
+        if snapshots_tracked:
+            staging_table.add_row(
+                "🧬 Atomic Staging :",
+                f"[green]Copy-On-Write engaged safely. Generated {len(snapshots_tracked)} snapshot file stubs to prevent TOCTOU race conditions.[/green]",
+            )
+
+    staging_table.add_row(
+        "🔒 Core Integrity  :",
+        "[bold red]Recursive Kernel Protection Mask Activated. Application files set to read-only (IMMUTABLE).[/bold red]",
+    )
+
+    # Master dashboard wrapper assembly grid
+    master_frame = Table.grid(padding=(0, 0))
+    master_frame.add_column()
+    master_frame.add_row(
+        Text(
+            "An autonomous agent is requesting transmission authorization to execute a host terminal process:\n",
+            style="italic white",
+        )
+    )
+    master_frame.add_row(layout_grid)
+    master_frame.add_row(
+        Panel(
+            staging_table,
+            title="[bold magenta]🧬 COPY-ON-WRITE MEMORY LIFECYCLE[/bold magenta]",
+            border_style="magenta",
+        )
+    )
+    master_frame.add_row(
+        Text(
+            "\nPress [bold green][Y][/bold green] to authorize synaptic transmission, or any other key to discard execution...",
+            style="blink yellow",
+        )
+    )
+
+    title_text = Text(
+        "🧠 BRAIN OS — SYNAPTIC COMMAND COCKPIT v2.0", style="bold magenta"
+    )
+    return Panel(master_frame, title=title_text, border_style="magenta", expand=True)
 
 
 async def execute_command_async(
@@ -37,6 +152,13 @@ async def execute_command_async(
     if parse_err:
         return parse_err
 
+    if parsed_args is None or effective_binaries is None:
+        return ExecutionResult(
+            success=False,
+            output="<shell_output>\n<stderr>\nInternal parsing error.\n</stderr>\n</shell_output>",
+            block_reason="Parse Error",
+        )
+
     execution_tier = os.environ.get("BRAIN_EXECUTION_TIER", "0")
     from System.tools.sandbox import REQUIRES_CONTAINMENT, execute_in_sandbox
 
@@ -62,29 +184,59 @@ async def execute_command_async(
     if stage_err:
         return stage_err
 
+    if args is None:
+        return ExecutionResult(
+            success=False,
+            output="<shell_output>\n<stderr>\nStaging failed.\n</stderr>\n</shell_output>",
+            block_reason="Staging Error",
+        )
+
+    # Target parent runtime tools namespace handle safely to maintain test-spy compatibility
+    exec_mod = sys.modules["System.tools.execution"]
+
     try:
         from System.neuroanatomy.autonomic.vestibular import create_snapshot
 
         create_snapshot(directory_path)
 
+        # ⚡ THE VISUAL UPGRADE INTERCEPT: Renders cockpit only during live, interactive terminal runs
         if os.environ.get("BRAIN_OS_HEADLESS") != "1":
+            panel = _render_command_cockpit(
+                command,
+                path_result,
+                effective_binaries,
+                created_snapshots,
+                execution_tier,
+            )
+            exec_mod.console.print("\n")
+            exec_mod.console.print(panel)
+
             try:
-                auth = await asyncio.to_thread(input, "Allow execution? [y/N]: ")
+                # Thread-safe baseline input mechanics to pass historical headless test expectations perfectly!
+                auth = await asyncio.to_thread(
+                    input, "↳ Synaptic Authorization Handle [y/N]: "
+                )
+                auth = auth.strip().lower()
             except (EOFError, KeyboardInterrupt):
                 auth = "n"
-            if auth.strip().lower() not in ["y", "yes"]:
+
+            if auth not in ["y", "yes"]:
+                exec_mod.console.print(
+                    "\n[bold red]❌ TRANSMISSION ABORTED: Security boundary held. Command safely discarded.[/bold red]\n"
+                )
                 return ExecutionResult(
                     success=False,
                     output="<shell_output>\n<stderr>\nSECURITY BLOCK: User explicitly denied command execution.\n</stderr>\n</shell_output>",
                     block_reason="Denied",
                 )
+            else:
+                exec_mod.console.print(
+                    "\n[bold green]⚡ TRANSMISSION AUTHORIZED: Firing synaptic process tree...[/bold green]\n"
+                )
 
-        # ⚡ THE ULTIMATE SPY ALIGNMENT: Explicitly pull from the global sys.modules cache
-        # to ensure that Pytest's tracking interceptor records the mask engagement state accurately!
+        # Activate kernel-level protection loops through our spied module space reference
         sys.modules["System.tools.execution"]._set_system_volume_mask(read_only=True)
-        print(f"\n▶ Executing natively on host: {shlex.join(args)}")
 
-        exec_mod = sys.modules["System.tools.execution"]
         process = await asyncio.create_subprocess_exec(
             *args,
             cwd=path_result,
@@ -130,7 +282,7 @@ async def execute_command_async(
                 if healed
                 else ExecutionResult(
                     success=False,
-                    output=f"<shell_output>\n<stderr>\n{full_output}\n\nMicroglia Antibody Failed:\n{heal_msg}\n</stderr>\n</shell_output>",
+                    output=f"<shell_output>\n<stderr>\n{full_output}\n\nMicroglia Antibody Failed:\\n{heal_msg}\n</stderr>\n</shell_output>",
                     block_reason=f"Failed with exit code {process.returncode}",
                 )
             )
