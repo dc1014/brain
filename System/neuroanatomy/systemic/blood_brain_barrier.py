@@ -177,16 +177,39 @@ def scan_python_ast_string(code: str) -> tuple[bool, str]:
 
 def wrap_with_apoptosis(target_script_path: str) -> str:
     """
-    CELLULAR APOPTOSIS 2.0: Generates a temporary membrane script.
+    CELLULAR APOPTOSIS 3.0: Generates a hardened temporary membrane script.
     Installs a strict Python Audit Hook to physically block OS-level execution,
-    file deletions, and unauthorized socket connections from inside the interpreter.
+    file deletions, unauthorized sockets, AND unauthorized write operations outside of safe zones.
     """
+    # ⚡ THE PLATFORM FIX: Enforce clean POSIX forward slashes across all operating systems
+    # This prevents Windows backslashes from being compiled as invalid \U unicode escape anomalies
+    root_str = Path(ROOT_DIR).as_posix()
+    safe_script_path = Path(target_script_path).as_posix()
+
     membrane_code = f"""
 import sys
 import runpy
+from pathlib import Path
+
+ROOT_DIR = Path('{root_str}')
+SAFE_ZONES = ["Studio", "Personal", "Professional", "Media", ".trash", "Meta", "System/logs"]
+
+def is_safe_path(target_path_str) -> bool:
+    try:
+        requested_path = Path(target_path_str).resolve()
+        try:
+            rel_path = requested_path.relative_to(ROOT_DIR)
+        except ValueError:
+            return False # Path Traversal Attack Detected
+
+        return any(zone in rel_path.parts for zone in SAFE_ZONES)
+    except Exception:
+        return False
 
 def apoptosis_hook(event, args):
-    # DEEP APOPTOSIS: The lethal systemic calls we do not allow autonomous agents to execute natively
+    # DEEP APOPTOSIS: Lethal systemic calls blocked entirely
+    # ⚡ THE REMOVAL FIX: Removed "compile" from this low-level runtime audit block array context.
+    # Static compilation attacks are already fully stopped by scan_python_ast before runtime execution.
     forbidden_events = {{
         "os.system",
         "os.exec",
@@ -199,16 +222,27 @@ def apoptosis_hook(event, args):
         "socket.connect",
         "urllib.Request"
     }}
+
     if event in forbidden_events:
         print(f"\\n[APOPTOSIS TRIGGERED] SecurityError: Blocked unauthorized syscall '{{event}}'.", file=sys.stderr)
-        sys.exit(1) # Instantly kill the cell
+        sys.exit(1)
+
+    # 🛡️ THE WRITE VECTOR PATCH: Audit all open() calls for destructive modes
+    if event == "open":
+        file_path, mode, flags = args
+        # Check if the mode string contains write ('w'), append ('a'), or update ('+') permissions
+        if mode is not None and any(m in mode for m in ('w', 'a', '+')):
+            # If they are trying to write, verify the target path is inside a safe sandbox
+            if not is_safe_path(file_path):
+                print(f"\\n[APOPTOSIS TRIGGERED] SecurityError: Unauthorized write operation blocked to '{{file_path}}'.", file=sys.stderr)
+                sys.exit(1)
 
 # 1. Install the immune response
 sys.addaudithook(apoptosis_hook)
 
 # 2. Execute the Swarm's script inside the membrane
 try:
-    runpy.run_path("{target_script_path}", run_name="__main__")
+    runpy.run_path("{safe_script_path}", run_name="__main__")
 except Exception as e:
     print(f"Execution Error: {{e}}", file=sys.stderr)
     sys.exit(1)
