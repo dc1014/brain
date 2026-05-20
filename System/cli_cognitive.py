@@ -1,9 +1,13 @@
 import asyncio
 import json
 import os
-import typer
 import shutil
 import time
+import typer
+
+from pathlib import Path
+from typing import Optional
+
 
 from rich.console import Console
 from System.core.paths import ROOT_DIR
@@ -168,3 +172,50 @@ def compile():
         console.print(
             f"[bold red]Failed to access memory for compilation: {e}[/bold red]"
         )
+
+
+def absorb(
+    path: Path = typer.Argument(
+        ..., help="Path to the folder, codebase, or file to absorb into memory."
+    ),
+    domain: str = typer.Option(
+        "Personal",
+        "--domain",
+        "-d",
+        help="Target domain segment: Personal, Professional, or Studio/<Project>",
+    ),
+    tags: Optional[str] = typer.Option(
+        None,
+        "--tags",
+        "-t",
+        help="Comma-separated conceptual metadata labels to tag this knowledge block.",
+    ),
+) -> None:
+    """🧫 Phagocytosis: Ingests external data, codebases, or documents into long-term structures."""
+    from rich.console import Console
+    from System.tools.ingestion import KnowledgeIngestor
+
+    console = Console()
+
+    if not path.exists():
+        console.print(
+            f"[bold red]🛑 Path mismatch: '{path}' does not exist physical reality.[/bold red]"
+        )
+        raise typer.Exit(code=1)
+
+    console.print(
+        f"[bold magenta]🧫 Absorbing raw stimuli from {path.name} into target domain: {domain}...[/bold magenta]"
+    )
+
+    tag_list = [t.strip() for t in tags.split(",")] if tags else []
+    ingestor = KnowledgeIngestor(target_domain=domain, default_tags=tag_list)
+
+    try:
+        notes_created, bytes_processed = ingestor.ingest(path)
+        console.print(
+            f"[bold green]✅ Synthesis complete! Formed {notes_created} knowledge nodes "
+            f"({bytes_processed / 1024:.1f} KB processed).[/bold green]"
+        )
+    except Exception as e:
+        console.print(f"[bold red]Catastrophic Ingestion Failure: {e}[/bold red]")
+        raise typer.Exit(code=1)

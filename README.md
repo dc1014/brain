@@ -21,6 +21,20 @@ Obsidian serves as the primary UI "glass pane" for viewing and queuing content, 
 
 ---
 
+#### Example Usage
+
+Users can now natively inject deep documentation or context structures directly into the system:
+
+```bash
+# Ingest an API manual into Personal Knowledge base
+./brain absorb ~/Downloads/stripe-api-docs/ -d Personal -t legacy-docs,payment-gateway
+
+# Seed a specialized component library into your engineering Workspace layout
+./brain absorb ./external-templates/auth-module/ -d Studio/My-App -t auth,security
+
+---
+
+
 ## 🧬 Biomimetic Architecture (The Biological Analogs)
 
 Brain OS is not a traditional state machine or a reactive AI wrapper. It is modeled directly on human neuroanatomy and evolutionary biology, treating the operating system as a living, self-maintaining organism.

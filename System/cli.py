@@ -6,7 +6,7 @@ import typer
 
 # 2. Import Biological Modules
 from System.core.boot import bootstrap
-from System.cli_cognitive import task, daydream, evolve, forage, compile
+from System.cli_cognitive import task, daydream, evolve, forage, compile, absorb
 from System.cli_somatic import map_topology, status, list_reflexes, reflex, sleep
 from rich.console import Console
 
@@ -125,6 +125,7 @@ app.command(name="daydream")(daydream)
 app.command(name="evolve")(evolve)
 app.command(name="forage")(forage)
 app.command(name="compile")(compile)
+app.command(name="absorb")(absorb)
 
 # Somatic (Reflexes)
 app.command(name="map-topology")(map_topology)

@@ -44,7 +44,7 @@ async def test_setup_success_unix(
     mock_open = mocker.patch("builtins.open", mocker.mock_open())
     mock_chmod = mocker.patch("System.tools.microsandbox.container_driver.os.chmod")
 
-    # ⚡ THE FIX: Use a safe, validated path so the sandbox doesn't block it
+    # Use a safe, validated path so the sandbox doesn't block it
     safe_workspace = tmp_path / "Studio" / "workspace"
     safe_workspace.mkdir(parents=True)
 
@@ -65,6 +65,8 @@ async def test_setup_success_win32(
     mocker.patch("System.tools.microsandbox.container_driver.sys.platform", "win32")
     mocker.patch("System.tools.microsandbox.container_driver.tarfile.open")
     mocker.patch("builtins.open", mocker.mock_open())
+
+    # ⚡ THE LINTER FIX: Explicitly patch and bind mock_chmod in this test's local scope
     mock_chmod = mocker.patch("System.tools.microsandbox.container_driver.os.chmod")
 
     safe_workspace = tmp_path / "Studio" / "workspace"
@@ -74,7 +76,7 @@ async def test_setup_success_win32(
     success = await driver.setup(safe_workspace, {"TOKEN": "123"})
 
     assert success is True
-    mock_chmod.assert_not_called()
+    mock_chmod.assert_not_called()  # ✅ Now resolves flawlessly with no lint errors
 
 
 @pytest.mark.asyncio
@@ -261,11 +263,17 @@ async def test_egress_firewall_blocks_evil_domain(mocker):
 
     mock_reader = mocker.AsyncMock()
     mock_reader.readline.return_value = b"CONNECT evil-hacker.com:443 HTTP/1.1\r\n"
-    mock_writer = mocker.AsyncMock()
+
+    # ⚡ THE STREAM FIX: Structure properties to flawlessly match an asyncio.StreamWriter
+    mock_writer = mocker.MagicMock()
+    mock_writer.write = mocker.MagicMock()  # StreamWriter.write is synchronous
+    mock_writer.drain = mocker.AsyncMock()  # StreamWriter.drain is asynchronous!
+    mock_writer.close = mocker.MagicMock()  # StreamWriter.close is synchronous
 
     await firewall.handle_client(mock_reader, mock_writer)
 
     mock_writer.write.assert_called_with(b"HTTP/1.1 403 Forbidden\r\n\r\n")
+    mock_writer.drain.assert_awaited_once()  # Confirm buffer flush completed
     mock_writer.close.assert_called_once()
 
 
@@ -279,11 +287,19 @@ async def test_egress_firewall_allows_vercel(mocker):
     mock_reader = mocker.AsyncMock()
     mock_reader.readline.return_value = b"CONNECT api.vercel.com:443 HTTP/1.1\r\n"
     mock_reader.read.return_value = b""
-    mock_writer = mocker.AsyncMock()
+
+    # ⚡ THE STREAM FIX: Structure properties to flawlessly match an asyncio.StreamWriter
+    mock_writer = mocker.MagicMock()
+    mock_writer.write = mocker.MagicMock()
+    mock_writer.drain = mocker.AsyncMock()
 
     mock_remote_reader = mocker.AsyncMock()
     mock_remote_reader.read.return_value = b""
-    mock_remote_writer = mocker.AsyncMock()
+
+    mock_remote_writer = mocker.MagicMock()
+    mock_remote_writer.write = mocker.MagicMock()
+    mock_remote_writer.drain = mocker.AsyncMock()
+    mock_remote_writer.is_closing = mocker.MagicMock(return_value=False)
 
     mocker.patch(
         "System.tools.microsandbox.egress.asyncio.open_connection",
@@ -305,8 +321,15 @@ async def test_egress_firewall_blocks_raw_http(mocker):
 
     mock_reader = mocker.AsyncMock()
     mock_reader.readline.return_value = b"GET http://api.vercel.com/ HTTP/1.1\r\n"
-    mock_writer = mocker.AsyncMock()
+
+    # ⚡ THE STREAM FIX: Structure properties to flawlessly match an asyncio.StreamWriter
+    mock_writer = mocker.MagicMock()
+    mock_writer.write = mocker.MagicMock()
+    mock_writer.drain = mocker.AsyncMock()
+    mock_writer.close = mocker.MagicMock()
 
     await firewall.handle_client(mock_reader, mock_writer)
 
     mock_writer.write.assert_called_with(b"HTTP/1.1 403 Forbidden\r\n\r\n")
+    mock_writer.drain.assert_awaited_once()
+    mock_writer.close.assert_called_once()
