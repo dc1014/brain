@@ -64,13 +64,43 @@ def test_medulla_respiratory_thread_supervision(mocker):
         }
     }
 
-    mock_dermis = mocker.patch("System.neuroanatomy.autonomic.medulla.Dermis")
+    # Patch the abstraction directly at its module origin namespace
+    mock_dermis = mocker.patch("Sense.receptors.dermis.DermisAbstraction")
+
+    # Configure the mock to return a safe instance proxy structure
+    mock_instance = mocker.MagicMock()
+    mock_dermis.return_value = mock_instance
+
+    # Stub out somatic file watcher dependencies to isolate the thread tracking logic
     mocker.patch("System.cli_somatic.watch")
 
-    mocker.patch(
-        "System.neuroanatomy.autonomic.medulla.time.sleep",
-        side_effect=lambda x: setattr(brainstem, "is_alive", False),
+    # Configure a mock thread object that reports its runtime health as alive
+    mock_live_thread = mocker.MagicMock()
+    mock_live_thread.is_alive.return_value = (
+        True  # Tells the second loop frame the daemon is alive!
     )
 
-    brainstem._supervise_threads()
-    mock_dermis.assert_called_once()
+    # ⚡ THE LINTER FIX: Remove the unused variable 'mock_thread_class =' assignment
+    mocker.patch(
+        "System.neuroanatomy.autonomic.medulla.threading.Thread",
+        return_value=mock_live_thread,
+    )
+
+    # Simulate an empty daemons tracking ledger (forcing initial resuscitation)
+    brainstem.daemons = {}
+
+    # Break the infinite loop block on the second evaluation frame cycle safely
+    mocker.patch(
+        "System.neuroanatomy.autonomic.medulla.time.sleep",
+        side_effect=[None, Exception("Loop Break")],
+    )
+
+    try:
+        brainstem._supervise_threads()
+    except Exception as e:
+        if str(e) != "Loop Break":
+            raise e
+
+    # Assert that the abstraction was invoked and assigned to the structural tracking state on the first loop
+    mock_dermis.assert_called_once_with(port=8080)
+    assert "dermis" in brainstem.daemons

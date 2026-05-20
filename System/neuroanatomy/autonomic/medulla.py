@@ -12,7 +12,7 @@ from typing import Any, List, Dict
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR
-from Sense.receptors.dermis import Dermis
+
 
 console = Console()
 LOG_PATH = ROOT_DIR / "System" / "logs"
@@ -262,7 +262,7 @@ class MedullaOblongata:
         daemons_config = self.config_data.get("background_daemons", {})
 
         while self.is_alive:
-            # Dermis / Heartbeat Supervision
+            # 1. Dermis Receptor / Exteroceptive Ingress Supervision
             if daemons_config.get("dermis_receptor", {}).get("enabled", True):
                 if (
                     "dermis" not in self.daemons
@@ -272,20 +272,34 @@ class MedullaOblongata:
                         "[bold red]💓 Medulla: Dermis cardiac arrest detected! Reviving network skin...[/bold red]"
                     )
                     medulla_logger.error(
-                        "Dermis thread collapsed. Initiating automated resuscitation."
+                        "Dermis receptor thread collapsed or missing. Initiating automated resuscitation."
                     )
                     try:
                         port = daemons_config.get("dermis_receptor", {}).get(
                             "secure_port", 8080
                         )
-                        dermis_skin = Dermis(port=port)
-                        dermis_skin.start()
-                        if dermis_skin.server:
-                            self.daemons["dermis"] = threading.current_thread()
+
+                        # ⚡ THE LAZY RUNTIME IMPORT FIX: Isolated from top-level discovery checks
+                        from Sense.receptors.dermis import DermisAbstraction
+
+                        # Instantiate using the upgraded ASGI abstraction layer
+                        dermis_skin = DermisAbstraction(port=port)
+
+                        # Isolate execution cleanly inside a dedicated background channel
+                        dermis_thread = threading.Thread(
+                            target=dermis_skin.start,
+                            name="DermisReceptorThread",
+                            daemon=True,
+                        )
+                        dermis_thread.start()
+
+                        # Save the actual worker thread handle to tracking records
+                        self.daemons["dermis"] = dermis_thread
+
                     except Exception as e:
                         medulla_logger.error(f"Dermis resuscitation failure: {str(e)}")
 
-            # File Watcher / Respiratory Supervision
+            # 2. File Watcher / Somatosensory Reflex Supervision
             if daemons_config.get("file_watcher", {}).get("enabled", True):
                 if (
                     "watcher" not in self.daemons
@@ -302,7 +316,9 @@ class MedullaOblongata:
 
                         if hasattr(somatic, "watch"):
                             watcher_thread = threading.Thread(
-                                target=somatic.watch, daemon=True
+                                target=somatic.watch,
+                                name="SomatosensoryWatcherThread",
+                                daemon=True,
                             )
                             watcher_thread.start()
                             self.daemons["watcher"] = watcher_thread
