@@ -38,6 +38,7 @@ dev = [
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.1.0",
     "pytest-mock>=3.15.1",
+    "pytest-xdist>=3.8.0",
     "ruff>=0.15.12",
 ]
 
@@ -58,10 +59,10 @@ mypy_path = "."
 
 
 [tool.pytest.ini_options]
-addopts = "-v -m \"not eval\" --strict-markers --cov=System --cov-report=term-missing --cov-fail-under=80"
+# ⚡ FAST LOCAL LOOP: Parallel processes are active, strict markers are safe, and heavy coverage tracing is off by default
+addopts = "-v -n auto --dist=loadfile --strict-markers -m \"not eval\""
 pythonpath = [".", "Sense"]
 testpaths = ["System/tests"]
-# SHIFT-LEFT: Prevent Pytest from scanning generated child projects
 norecursedirs = ["Studio", "Personal", "Professional", "Meta", "Media", "node_modules", ".venv"]
 markers = [
     "core: core system functionality",
@@ -73,3 +74,18 @@ members = ["Sense"]
 
 [tool.uv.sources]
 sense = { workspace = true }
+
+[tool.coverage.run]
+# Tells coverage exactly what module path directory to monitor
+source = ["System"]
+omit = [
+    "System/tests/*",
+    "**/node_modules/*",
+    ".venv/*"
+]
+
+[tool.coverage.report]
+# Automatically outputs missing line numbers to your terminal screen
+show_missing = true
+# Enforces the strict CLAUDE.md gate rule programmatically
+fail_under = 80

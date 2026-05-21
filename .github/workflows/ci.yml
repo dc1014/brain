@@ -38,5 +38,7 @@ jobs:
       - name: Run Mypy (Type Checking)
         run: uv run mypy System/ --ignore-missing-imports
 
-      - name: Run Pytest (Unit Tests)
-        run: uv run pytest System/tests/
+      - name: Run Pytest with Strict Coverage (Gate Enforcement)
+        # 🛡️ CI COMPLIANCE PROTECTION: Drops parallel workers to ensure line-tracing metrics
+        # accurately validate the strict >80% code coverage requirement before merge.
+        run: uv run pytest --cov -n 0

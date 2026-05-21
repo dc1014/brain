@@ -181,6 +181,8 @@ def wrap_with_apoptosis(target_script_path: str) -> str:
     Installs a strict Python Audit Hook to physically block OS-level execution,
     file deletions, unauthorized sockets, AND unauthorized write operations outside of safe zones.
     """
+    import uuid  # <--- Add this import here to prevent concurrent process collisions
+
     # ⚡ THE PLATFORM FIX: Enforce clean POSIX forward slashes across all operating systems
     # This prevents Windows backslashes from being compiled as invalid \U unicode escape anomalies
     root_str = Path(ROOT_DIR).as_posix()
@@ -208,8 +210,6 @@ def is_safe_path(target_path_str) -> bool:
 
 def apoptosis_hook(event, args):
     # DEEP APOPTOSIS: Lethal systemic calls blocked entirely
-    # ⚡ THE REMOVAL FIX: Removed "compile" from this low-level runtime audit block array context.
-    # Static compilation attacks are already fully stopped by scan_python_ast before runtime execution.
     forbidden_events = {{
         "os.system",
         "os.exec",
@@ -230,17 +230,13 @@ def apoptosis_hook(event, args):
     # 🛡️ THE WRITE VECTOR PATCH: Audit all open() calls for destructive modes
     if event == "open":
         file_path, mode, flags = args
-        # Check if the mode string contains write ('w'), append ('a'), or update ('+') permissions
         if mode is not None and any(m in mode for m in ('w', 'a', '+')):
-            # If they are trying to write, verify the target path is inside a safe sandbox
             if not is_safe_path(file_path):
                 print(f"\\n[APOPTOSIS TRIGGERED] SecurityError: Unauthorized write operation blocked to '{{file_path}}'.", file=sys.stderr)
                 sys.exit(1)
 
-# 1. Install the immune response
 sys.addaudithook(apoptosis_hook)
 
-# 2. Execute the Swarm's script inside the membrane
 try:
     runpy.run_path("{safe_script_path}", run_name="__main__")
 except Exception as e:
@@ -249,7 +245,11 @@ except Exception as e:
 """
     # Write the membrane to a temporary execution file
     temp_dir = Path(tempfile.gettempdir())
-    membrane_path = normalize_path(temp_dir / "apoptosis_membrane.py")
+
+    # ⚡ UNIQUE PROCESS SHIELD: Append a unique hexadecimal UUID string to isolate concurrent threads
+    membrane_path = normalize_path(
+        temp_dir / f"apoptosis_membrane_{uuid.uuid4().hex}.py"
+    )
     membrane_path.write_text(membrane_code.strip(), encoding="utf-8")
 
     return str(membrane_path)

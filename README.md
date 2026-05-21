@@ -199,6 +199,28 @@ Agents, routing, tooling, everything is managed declaratively in YAML in `System
 > uv run pytest System/tests/
 > ```
 
+Test acceleration:
+
+- For Mac:
+
+```
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+```
+
+- For Windws:
+
+```
+$env:OMP_NUM_THREADS=1
+$env:MKL_NUM_THREADS=1
+$env:OPENBLAS_NUM_THREADS=1
+$env:VECLIB_MAXIMUM_THREADS=1
+$env:NUMEXPR_NUM_THREADS=1
+```
+
 ---
 ## 🤝 Contributing
 
