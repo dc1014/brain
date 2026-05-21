@@ -83,6 +83,9 @@ System/tools/engrams
 # ==============================================================================
 System/config/gut_memory.json
 System/config/hippocampus.db
+System/config/stylistic_fingerprint.json
+System/config/long_term_engram.json
+System/config/*.tmp
 
 Meta/
 Meta/AST/
@@ -98,6 +101,7 @@ Meta/queue.lock
 Meta/hitl_queue*
 Meta/.approved
 Meta/.release_*
+Meta/mirror_observations.jsonl
 
 # Syntensors / Binary parameters
 *.safetensors

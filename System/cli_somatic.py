@@ -1,5 +1,16 @@
+# --- System/cli_somatic.py ---
 import typer
+import subprocess
+import sys
+import ast
+import json
+import time
+import os
+from pathlib import Path
+from typing import Dict, Optional
 from rich.console import Console
+from System.core.paths import ROOT_DIR
+from System.neuroanatomy.cortical.mirror_neurons import MirrorNeurons
 
 console = Console()
 
@@ -38,7 +49,7 @@ def list_reflexes():
     from System.tools import list_engrams
 
     console.print(
-        "[dim cyan]⚡ Reflex Arc Triggered: Querying Cerebellum...[/dim cyan]\n"
+        "[dim cyan]⚡ Reflex Arc Triggered: Querying Cerebellum...[/dim cyan]\\n"
     )
     res = list_engrams()
     console.print(res)
@@ -73,19 +84,26 @@ def sleep():
 
     console.print("[bold blue]🌙 System entering deep sleep phase...[/bold blue]")
 
-    # 1. Lymphatic System: Flush the biological waste (Delete old logs/cache)
     flush()
 
-    # 2. Cerebellum: Autonomously compile recent successes into Zero-Token Engrams
     console.print(
         "[dim cyan]⚙️ Triggering Cerebellar consolidation of motor skills...[/dim cyan]"
     )
     compile()
 
-    # 3. Default Mode Network: Dream and synthesize new ideas
+    console.print(
+        "[dim cyan]🧠 Cortical Consolidation: Re-sampling multi-file style baselines...[/dim cyan]"
+    )
+    try:
+        mn = MirrorNeurons()
+        mn.consolidate_stylistic_baseline()
+    except Exception as e:
+        console.print(
+            f"[dim red]❌ Stylistic baseline consolidation skipped: {e}[/dim red]"
+        )
+
     trigger_daydreams()
 
-    # 4. Lymphatic Database Compaction: Prune index bloat and execute VACUUM
     try:
         from System.neuroanatomy.systemic.lymphatic import trigger_lymphatic_sweep_sync
 
@@ -113,7 +131,6 @@ def expose_dermis(port: int = 8080) -> str:
     )
 
     try:
-        # Uses localhost.run (free, zero-install, native SSH reverse proxy)
         subprocess.run(["ssh", "-R", f"80:localhost:{port}", "nokey@localhost.run"])
         return "Tunnel closed successfully."
     except KeyboardInterrupt:
@@ -128,13 +145,6 @@ def reflex(
     ),
 ):
     """⚡ Executes a compiled, zero-token somatic reflex (Engram) safely."""
-    import sys
-    import ast
-    import subprocess
-    from System.core.paths import ROOT_DIR
-    from rich.console import Console
-
-    console = Console()
     engram_path = ROOT_DIR / "System" / "tools" / "engrams" / f"{engram_name}.py"
 
     if not engram_path.exists():
@@ -145,7 +155,6 @@ def reflex(
 
     console.print(f"[dim cyan]⚡ Firing somatic reflex: {engram_name}...[/dim cyan]")
 
-    # 🛡️ SHIFT-LEFT SECURITY: Rapid Spinal AST Scan
     try:
         code_content = engram_path.read_text(encoding="utf-8")
         tree = ast.parse(code_content)
@@ -165,7 +174,6 @@ def reflex(
         console.print("[bold red]❌ Engram is corrupted (Syntax Error).[/bold red]")
         return
 
-    # 🛡️ ISOLATION: Subprocess Sandbox
     try:
         runner_code = (
             "import sys\n"
@@ -204,7 +212,6 @@ def assimilate(
     ),
 ):
     """🧬 Scans a quarantined external engram and integrates it into permanent muscle memory."""
-    from rich.console import Console
     from System.neuroanatomy.autonomic.cerebellum import CerebellarCompiler
 
     console = Console()
@@ -223,10 +230,155 @@ def assimilate(
         console.print(f"[bold red]🛑 Security Block: {message}[/bold red]")
 
 
-def watch():
-    """🫁 Somatosensory Cortex: File watcher daemon (Respiratory system)."""
-    import time
+def watch(max_loops: Optional[int] = typer.Option(None, hidden=True)):
+    """🫁 Somatosensory Cortex: File watcher daemon (Respiratory system).
 
-    # A simple infinite loop to keep the respiratory thread alive and breathing quietly
+    Autonomously tracks real-time workspace modifications via a low-overhead, dual-rate Phasic-Tonic polling engine.
+    """
+    mn = MirrorNeurons()
+    mtime_cache: Dict[str, float] = {}
+    pending_quantization: Dict[str, float] = {}
+
+    core_domains = ["Studio", "Personal", "Professional", "Meta"]
+    ignore_parts = {".git", "__pycache__", ".venv", ".trash", "node_modules"}
+
+    def _discover_files() -> None:
+        """Autonomously syncs filesystem structural bounds with in-place lookahead pruning gates."""
+        current_tracked = set()
+        for domain in core_domains:
+            domain_path = ROOT_DIR / domain
+            if not domain_path.exists():
+                continue
+            for root, dirs, files in os.walk(str(domain_path)):
+                dirs[:] = [d for d in dirs if d not in ignore_parts]
+                for file in files:
+                    if file.endswith((".py", ".md")):
+                        full_path = os.path.join(root, file).replace("\\", "/")
+                        current_tracked.add(full_path)
+                        if full_path not in mtime_cache:
+                            try:
+                                mtime_cache[full_path] = Path(full_path).stat().st_mtime
+                            except OSError:
+                                pass
+
+        for cached_path in list(mtime_cache.keys()):
+            if cached_path not in current_tracked:
+                mtime_cache.pop(cached_path, None)
+                pending_quantization.pop(cached_path, None)
+
+    _discover_files()
+    console.print(
+        "[bold green]🫁 Somatosensory Cortex: Watchdog initialized active...[/bold green]"
+    )
+
+    loop_count = 0
+    last_tonic_sweep = time.time()
+
     while True:
-        time.sleep(60)
+        if max_loops is not None and loop_count >= max_loops:
+            break
+        loop_count += 1
+
+        time.sleep(1)
+        now = time.time()
+
+        for full_path in list(mtime_cache.keys()):
+            try:
+                if not os.path.exists(full_path):
+                    mtime_cache.pop(full_path, None)
+                    pending_quantization[full_path] = now
+                    continue
+
+                current_mtime = Path(full_path).stat().st_mtime
+                old_mtime = mtime_cache.get(full_path)
+
+                if old_mtime is not None and current_mtime > old_mtime:
+                    mtime_cache[full_path] = current_mtime
+                    pending_quantization[full_path] = now
+                    file_name = os.path.basename(full_path)
+                    console.print(
+                        f"[dim yellow]🦠 Quantization: File '{file_name}' modified. Entering refractory window...[/dim yellow]"
+                    )
+            except OSError:
+                pass
+
+        for full_path in list(pending_quantization.keys()):
+            if now - pending_quantization[full_path] >= 3.0:
+                try:
+                    file_name = os.path.basename(full_path)
+                    if os.path.exists(full_path):
+                        content = Path(full_path).read_text(encoding="utf-8")
+                        mode = "code" if file_name.endswith(".py") else "prose"
+                        mn.analyze_and_mirror_style(content, mode=mode)
+                        console.print(
+                            f"[bold green]🧠 Refractory Window Closed: Stylistic mirror re-profiled via '{file_name}'[/bold green]"
+                        )
+                    pending_quantization.pop(full_path, None)
+                except Exception:
+                    pending_quantization.pop(full_path, None)
+
+        if now - last_tonic_sweep >= 10.0 or max_loops is not None:
+            _discover_files()
+            last_tonic_sweep = now
+
+
+def observe(
+    agent_id: str = typer.Argument(..., help="Identifier of the observed sub-agent."),
+    objective: str = typer.Argument(
+        ..., help="The explicit objective description string."
+    ),
+    steps: str = typer.Argument(
+        ..., help="Comma-separated chain of successful terminal execution commands."
+    ),
+) -> None:
+    """🧠 Mirror Neurons: Instructs the cortex to track and log a successful peer multi-agent timeline track."""
+    mn = MirrorNeurons()
+    command_list = [s.strip() for s in steps.split(",") if s.strip()]
+    mn.observe_and_record(agent_id, objective, command_list)
+
+
+def sync_mirror(
+    prompt: str = typer.Argument(
+        ..., help="The incoming developer prompt string to replicate."
+    ),
+) -> None:
+    """🧠 Mirror Neurons: Queries observed peer arrays to instantly replicate execution tracks for zero tokens."""
+    mn = MirrorNeurons()
+    track = mn.synchronize_muscle_memory(prompt)
+    if track:
+        console.print(
+            "[bold green]✨ Mirror Match Found! Executing cached behavioral track shortcuts natively:[/bold green]"
+        )
+        console.print(json.dumps(track, indent=2))
+    else:
+        console.print(
+            "[yellow]🔍 Mirror Cache Miss: Intent unrecorded. Routing to active cognitive pathways.[/yellow]"
+        )
+
+
+def imitate(
+    path: Path = typer.Argument(
+        ...,
+        help="Path to the file script or obsidian note text to profile style metrics from.",
+    ),
+    mode: str = typer.Option(
+        "code",
+        help="Tuning execution pass type: 'code' or 'prose' contract validation marker.",
+    ),
+) -> None:
+    """🧠 Mirror Neurons: Ingests a plaintext layout configuration file to dynamically fingerprint your personalized style cadences."""
+    if not path.exists():
+        console.print(f"[bold red]🛑 File not found: '{path}'[/bold red]")
+        return
+
+    try:
+        content = path.read_text(encoding="utf-8")
+        mn = MirrorNeurons()
+        mn.analyze_and_mirror_style(content, mode)
+        console.print(
+            f"[bold green]✅ Synaptic Style Card updated successfully via target: {path.name}[/bold green]"
+        )
+    except Exception as e:
+        console.print(
+            f"[bold red]Stylistic fingerprint extraction error: {e}[/bold red]"
+        )

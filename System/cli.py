@@ -1,17 +1,27 @@
+# --- System/cli.py ---
 import sys
 from pathlib import Path
 import os
 import io
 import typer
 
-# 2. Import Biological Modules
+# Import Biological Modules
 from System.core.boot import bootstrap
 from System.cli_cognitive import task, daydream, evolve, forage, compile, absorb
-from System.cli_somatic import map_topology, status, list_reflexes, reflex, sleep
+from System.cli_somatic import (
+    map_topology,
+    status,
+    list_reflexes,
+    reflex,
+    sleep,
+    observe,
+    sync_mirror,
+    imitate,
+    watch,
+)
 from rich.console import Console
 
-
-# 1. ⚡ ZERO-DEBT: Force Universal UTF-8 Output on Windows
+# Force Universal UTF-8 Output on Windows
 if sys.platform.startswith("win") and "pytest" not in sys.modules:
     try:
         sys.stdout = io.TextIOWrapper(
@@ -26,7 +36,6 @@ if sys.platform.startswith("win") and "pytest" not in sys.modules:
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
-
 console = Console()
 app = typer.Typer(
     help="🦾 Brain OS: Biomimetic Agentic Operating System", no_args_is_help=True
@@ -35,14 +44,10 @@ app = typer.Typer(
 
 @app.callback()
 def main():
-    """
-    Global CLI bootloader.
-    Calls bootstrap() which safely loads .env keys into the Vault.
-    """
+    """Global CLI bootloader. Calls bootstrap() which safely loads .env keys into the Vault."""
     if not bootstrap():
         raise typer.Exit(code=1)
 
-    # ⚡ ZERO-DEBT: Restore Interrupted Queue Interception Failsafe
     queue_file = ROOT_DIR / "System" / "execution_queue.json"
     if queue_file.exists():
         if os.environ.get("BRAIN_OS_HEADLESS") == "1":
@@ -79,7 +84,6 @@ def recover():
     trigger_recover()
 
 
-# ⚡ THE BULLETPROOF APPROVER
 @app.command()
 def approve():
     """✅ Dopaminergic Release: Approves pending tasks waiting in Obsidian."""
@@ -87,16 +91,14 @@ def approve():
     md_queue = ROOT_DIR / "Meta" / "Pending_Actions.md"
     approved_flag = ROOT_DIR / "Meta" / ".approved"
 
-    if not queue_file.exists() or os.path.getsize(queue_file) == 0:
+    if not queue_file.exists() or os.getsize(queue_file) == 0:
         console.print(
             "[dim yellow]No pending tasks found in the queue to approve.[/dim yellow]"
         )
         return
 
-    # Drop the global approval flag
     approved_flag.touch()
 
-    # Update the UI
     if md_queue.exists():
         with open(md_queue, "w", encoding="utf-8") as f:
             f.write(
@@ -112,8 +114,6 @@ def approve():
 def setup() -> None:
     """Initializes Brain OS using the interactive, high-fidelity Synaptic Genesis onboarding wizard."""
     import asyncio
-
-    # ⚡ THE ROUTING FIX: Import the wizard exclusively when called, keeping the boot loop lightning fast
     from System.core.onboarding import setup_wizard
 
     asyncio.run(setup_wizard())
@@ -133,6 +133,12 @@ app.command(name="status")(status)
 app.command(name="list-reflexes")(list_reflexes)
 app.command(name="reflex")(reflex)
 app.command(name="sleep")(sleep)
+
+# Cortical Observational Wiring Subcommands
+app.command(name="observe")(observe)
+app.command(name="sync-mirror")(sync_mirror)
+app.command(name="imitate")(imitate)
+app.command(name="watch")(watch)
 
 if __name__ == "__main__":
     app()
