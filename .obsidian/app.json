@@ -12,5 +12,6 @@
     "uv.lock",
     ".git/"
   ],
-  "promptDelete": false
+  "promptDelete": false,
+  "alwaysUpdateLinks": true
 }

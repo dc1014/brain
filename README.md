@@ -1,476 +1,204 @@
-# 🧠 Brain: The Multi-Agent Life OS
+# 🧠 Own Your Brain: An Open-Source, Biomimetic AI Control Plane Inspired by the Unix Philosophy <3
 
-![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg)
-![Architecture](https://img.shields.io/badge/Architecture-Multi--Agent-purple.svg)
+![Pre-Alpha](https://img.shields.io/badge/status-pre--alpha-red) ![Architecture](https://img.shields.io/badge/Architecture-Biomimetic--Multiagent--Daemon-purple.svg) ![Supports](https://img.shields.io/badge/-Obsidian-7C3AED?style=flat-square&logo=obsidian&logoColor=white)
+![Tests](https://img.shields.io/badge/coverage-80%25-green) ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg)
 ![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
-Brain is an open-source "Second Brain" and semi-autonomous agent ecosystem. Think of it as the child of Open Claw and the "Second Brain" Obsidian + Claude setup everyone raves about (while adding Windows + Gemini + ChatGPT support). It bridges the gap between your local file system, unstructured thoughts, LLM reasoning engines, and MCP servers while being as safe as technically possible and minimizing token usage.
+**DISCLAIMER: For engineers reading this, I realized too late I took the biomimicry domain driven design too far. Please forgive me - directory and file names will change soon.**
 
-Obsidian serves as the primary UI "glass pane" for viewing and queuing content, while Python, Claude, ChatGPT, and Gemini act as the autonomous engine. Brain is completely open, though, so bring your own "whatever."
+>🪄 *TLDR: `./brain`  for the interactive Thalamic Setup Wizard 🪄*
+
+> *Personal Statement*: My motivation for Brain is to create and share a system to help us better understand who we are, organize our lives, discover what we are capable of, and to build a community to change what's happening to our world *by working together*. I invite you to Brain with me. Please be kind as I'm just an idiot Product Manager who loves computers and the human spirit.
+>
+> -Daniel Casper, 5/20/2026
+## More than A Second Brain
+
+Forget a "second brain." It's time you got an *actual brain* (albeit a simulated one). Brain let's you:
+
+1. **Think:** Fill Brain with your writing, code, videos, music, art, photos, and files (see `absorb` command). Brain understands all forms of multimedia, code, and most file formats.
+	1. Brain uses **Obsidian** and a collection of MCP servers for the view layer.
+	2. **Memory** - Brain's [five-tier memory approach](docs/Memory.md) (working memory, short term memory, relational epistemic memory, episodic memory, and memory consolidation) is one of its superpowers.
+		1. When combined with Brain's [Anterior Cingulate Cortex](https://en.wikipedia.org/wiki/Anterior_cingulate_cortex) analog, Brain cleans and compacts memories, making them consistent with respect to semantics, time, and conceptual relation.
+
+2. **Act:** Issue tasks to Brain directly from  the CLI (`task`) or Obsidian (`crtl + shift + b` to queue for HITL inspection and `crtl + shift + enter` to execute). Brain can synthesize knowledge, write code, surf the web, transcribe text, speak, understand sound and images/video, and use peripheral devices (see the [Task Positive Network](https://en.wikipedia.org/wiki/Dorsal_attention_network) in human neurology).
+	1. When acting on itself, Brain uses a hybrid approach - non-coding tasks are sandboxed in the host OS while coding tasks are jailed in a microvm / app container. See (`System/tools`).
+	2. When acting on the outside world, Brain uses the `Sense` submodule as a secure and token-efficient transducer through a spinal HAL (microphones, webcams, HTTP / webhooks, sockets, etc.)
+	3. *Three-Layered HITL* -  pre-flight approval, running anything potentially dangerous (like npm install), and retry approval.
+
+3. **Forage and Dream:** Brain attempts to understand **you and fulfill your goals autonomously,** whether hypothesizing, prototyping,  exploring the world around it, or cleaning bad files and code (see `live`, `smell`, `daydream` and `forage` commands), . Brain performs the software analog of the [Default Mode Network](https://en.wikipedia.org/wiki/Default_mode_network) in human neurology.
+	1. *Author's Note*: Since my Brain is full of thoughts on building Brain, it  daydreams about improving itself. See commits [ed09fbd](https://github.com/mrdanielcasper/brain/commit/ed09fbd414be8db44c346d73c7f2c168ba093d45) and [ed34e32](https://github.com/mrdanielcasper/brain/commit/ed34e327f92f90286b3a7ac8bdeb00ec9cd093e6) for examples.
+	2. *Experimental Feature*: When Brain determines changes to its source code, it will create a neuroplasticity file for your review (see `evolve` command).
+	3. *Roadmap item*: I view daydreaming as Brain's most important feature and will be continuously expanded to perform higher cognitive functions, like looking for work, studying your (local) market for opportunities, assisting you in creating art, or deepening your relationships with the people that matter. This will be done through declarative configurations.
+
+4. **Connect:** Full interoperability with other Brains (as well as Hermes, OpenClaw, and OpenHuman, etc. thanks to the Unix philosophy) through ACP/MCP. Share knowledge, memories, and code `engrams` with other Brains and your AI ecosystem.
+	1. *Author's Note*: Highly experimental. We are in pre-alpha, fellows :)
+	2. *Author's Note:* Brain's first user (other than me) was actually my friend's AI, which learned from Brain how to improve crawling the web.
+	3. *Roadmap item*: I plan to create a gift economy between Brains, *obviously* called Hivemind.
+
+All this with:
+- No databases (excluding an ephemeral Python native SQLite DB for memory performance).
+- No dependencies other than the Python ecosystem and microvms (hopefully).
+- As much [token economics](./docs/Token-Economics.md) as I can think of (zero cost runs, semantic compression, memory windows, tool truncation, backoffs, budgets, RAG, local LLM support, dynamic LLM selection, parent process monitoring).
+- **Flat files like its the 1970s where the LLM *sees all and knows all*.**
+	- Including its own source. Brain can work on Brain if you let it (totally unsafe; have fun).
+	- Easy to innovate when we don't worry about scaling to infinity and beyond.
+
+
+*P.S. - I built this by collaborating and arguing with Gemini staring on 4/20, building one module at a time, refining it, paying off tech debt, and adding test coverage. Claude and ChatGPT acted as our reviewers and critics. No vibe coding here. Brain **will** have cognitive biases, conceptual drift (just look at the directory/filenames/code, mae culpa), and misbehaving features (LLMs are indeterministic after all). Please be patient with us as we get past pre-alpha.*
+
+---
+## 🌟 Brain's Core Philosophy
+
+Most AI frameworks let the AI run wild in a container without any regard for context, token economics, security, or protection of the data in that container. So, you get weird behavior, bad outputs, API bills, and your API keys stolen because of a 🪱. Oh, and chock full of YAGNI features, poisoned supply chains, with a global state tucked away in databases (making that global state invisible to the all-seeing AI).
+
+**Brain operates on the contrarian hot-take that we should go back to the 1970s where everything is a file and we try make the runtime safe and economic (only using ephemeral microvms when we code).** And rather than just build another "AI OS," we can get architectural robustness simply by copying biology. Brain treats itself as a living, self-maintaining organism. Our principles:
+
+1. **Own Your Brain:** Put yourself in Brain. Use any LLM. Change it however you like. Brain is yours.
+2. **Unix Philosophy** - Everything is a file, composable, and does one thing well. Thank you, Ken Thompson and Dennis Ritchie.
+3. **Biomimicry** - Why reinvent what biology has already optimized? We unlock *hidden potential at speed* by copying the human mind with the Unix Philosophy.
+	1. For a full list of the 1:1 biological mapping, see [Biomimesis](./docs/Biomimesis.md)
+4. **Zero-Waste Token Economics** - All development actively and aggressively tries to zero out your token costs, including using determinism, local LLMs, and every token optimization technique I can offer (such as executing 90% similar commands without LLM inspection, or saving repeated code-actions
+	1. Preferred order: Determinism > Local LLMs (for lower cognitive tasks) > LLMs
+	2. Enteric System and Cerebellum - repeat commands use 0 cost token evaluation. Procedural code is saved and rerun at 0 cost  with [engrams](https://en.wikipedia.org/wiki/Engram_(neuropsychology)), just like muscle memory in the [cerebellum](https://en.wikipedia.org/wiki/Cerebellum).
+5. **Shift-Left:** Shift left all the things! Security, testability, usability, token economics, performance, readability, quality, and all other "-ities". No vibe coding or slop here - we argue with the AI about every module and feature until its fit for humans.
+	1. **Security** - Brain takes a hybrid and defense-in-depth approach to security. Coding tasks are sandboxed in microvms (Level 1) while non-coding tasks run directly on the host machine (level 0). Secrets are vaulted and actively scanned for in runtime and files. Watchdog kills Brain if it misbehaves like it has [apoptosis](https://en.wikipedia.org/wiki/Apoptosis).
+6. **Be Kind To Your Self And Your Community** - Individuals survive through self-care, and our species survives by collaborating. Let's work together to help each other.
+
+---
+### 👁️ Supercharge Your Obsidian Vault (The Visual Cortex & Somatosensory Layer)
+
+Go beyond passive second brain Obsidian. This Brain elevates your Vault into an active **[Visual Cortex](https://en.wikipedia.org/wiki/Visual_cortex) and [Somatosensory Layer](https://en.wikipedia.org/wiki/Primary_somatosensory_cortex)**—providing a real-time, human-and-machine readable window directly into your whole life (`Meta`, `Studio`, `Personal`, `Professional`, `Media` domains). By banishing databases to the shadow realm, this flat-file architecture creates a self-improving loop where humans and autonomous multi-agent swarms safely collaborate using hybrid XML-Markdown file contracts, step-gated human-in-the-loop verification boundaries, and other Brains (experimental).
+#### 🔬 How Brain Supercharges Your Vault
+
+Backed by the background daemons, Brain optimizes your Vault performance and keeps your notes pristine at near-zero token cost:
+
+- **The Reward Gate ([Nucleus Accumbens](https://en.wikipedia.org/wiki/Nucleus_accumbens)):** Step-gates autonomous swarm tool execution paths inside strict validation blocks until you release inhibition via an explicit manual approval flag in `Meta/Pending_Actions.md`.
+
+- **Static Analysis Profiling ([Olfactory Bulb](https://en.wikipedia.org/wiki/Olfactory_bulb)):** Runs fast, localized regex and linting checks at **$0.00 in API tokens** to flag broken document formatting,  empty placeholders, dead `[[wikilinks]]`, and code smells (get it?) in `Meta/Olfactory_Anomalies.md`.
+
+- **The Graph Backplane ([Anterior Cingulate Cortex](https://en.wikipedia.org/wiki/Anterior_cingulate_cortex)):** Maps explicit cross-note relationships using custom-compiled string matching, strictly protected by an ACC circuit breaker that blocks serialization of `.brain/graph_state.json` if agent looping faults occur.
+
+- **Working Memory Buffer ([Prefrontal Cortex](https://en.wikipedia.org/wiki/Prefrontal_cortex)):** Enforces a strict 12,000-character wall on operational logs, triggering zero-temperature compression to discard text noise and protect your model from reasoning degradation.
+
+- **Vectorless Search ([Wernicke's Area](https://en.wikipedia.org/wiki/Wernicke%27s_area)):** Replaces heavy embedding search lookups with localized SQLite FTS5 keyword lookups (`hippocampus.db`), dynamically re-ranking hits using knowledge graph connection density to inject precise snippets instead of entire files.
+
+- **Quarentine and Cleanup ([Lysosome](https://en.wikipedia.org/wiki/Lysosome)):** Intercepts agent file-deletion calls, safely moving assets into a tracking cell in the `.trash/` directory bound to a historical `manifest.jsonl` ledger for effortless recovery.
+
+### ⚡ Synaptic Setup & Zero-Alt-Tab Workflows
+
+1. **Import the Vault:** Open Obsidian, choose **"Open folder as vault"**, and target the absolute root folder of your cloned Brain OS repository. Initialize directories by running `uv run System/cli.py setup` in your shell.
+
+2. **Innervate the Filesystem:** Run the somatosensory background daemon to automatically trigger zero-cost linting adjustments, AST updates, and local file styling formatters every time you hit save (`Ctrl + S`) inside your notes:
+
+    ```
+  uv run System/cli.py watch
+    ```
+
+3. **Command the Swarm Natively:** Leverage the community **Shell Commands** plugin pre-configured within the repository layout to dispatch and approve pipelines natively without leaving your editor:
+
+    - **Queue Task (`Ctrl + Shift + B`):** `uv run System/cli.py task "{{_task}}" --obsidian` — Safely writes parameters into an execution queue and logs detailed pipeline diagnostics inside `Pending_Actions.md`.
+
+    - **Approve Task (`Ctrl + Shift + Enter`):** `uv run System/cli.py approve` — Releases the subcortical execution lock, firing the active task backlog across parallel swarm channels.
+
+---
+## 👁️ Sense (Sensory Nervous System)
+
+Most agentic frameworks communicate with the external world using raw web scrapers or unmanaged directory dumps, breaking layout context and wasting tokens. Brain solves for this using **`Sense`**— a completely decoupled,  transducer modeled directly on biological sensory organs.
+
+In biology, the brain does not process raw photons; the [retina transduces them into electrical action potentials](https://en.wikipedia.org/wiki/Visual_system). Following this principle, `Sense` intercepts chaotic environmental stimuli (unstructured HTML layouts, media feeds, audio streams, network sockets), strips away noise, and compresses payloads into low-entropy representations ready for cortical attention layers.
+
+### 🔬 How Brain Innervates the Peripheral Boundary
+
+Operating as a standalone package, `Sense` isolates raw environmental intake using explicit hardware receptors and mathematical perimeters:
+
+- **Web Transduction & SSRF Firewall ([Echolocation](https://en.wikipedia.org/wiki/Human_echolocation)):** Passes input URLs through a strict Shift-Left firewall inside `receptors/web.py`. The validator resolves hostnames ahead of time, dropping transactions instantly if a destination maps to a loopback adapter (`localhost`), `0.0.0.0`, or private subnets. Validated text layers are parsed to strip layout nodes (`script`, `nav`, `footer`) and capped at a rigid `MAX_SENSORY_CHARS = 25000` gate to prevent token bloat.
+
+- **Visual & Frame Extraction ([Retina](https://en.wikipedia.org/wiki/Retina)):** Manages multimodal vision streams inside `receptors/vision.py`. Instead of feeding raw, high-overhead video arrays to models, an interval loop samples up to 8 distinct keyframes from media tracks using OpenCV, translating the metrics into low-overhead base64 JPEG data strings.
+
+- **Acoustic Tracks ([Ear](https://en.wikipedia.org/wiki/Ear) & [Mouth](https://en.wikipedia.org/wiki/Mouth)):** Links the host machine's physical microphone and speaker drivers inside `receptors/audio.py`. The recording module captures audio hardware targets at a clean 44.1kHz sample rate, automatically saving paths within a media quarantine boundary to enforce environment isolation.
+
+- **File Format Support ([Gustatory Profiling](https://en.wikipedia.org/wiki/Taste)):** Cross-sections heavy data layouts (multi-page PDFs, database records, large server logs) via `tools/sensory.py`. It samples files by mapping structural blueprints and head/tail dimensions, allowing agents to read large documents efficiently without causing context degradation.
+
+* **Webhook Ingress (https://en.wikipedia.org/wiki/Dermis):** Spawns a hardened FastAPI web server layer via `Sense/receptors/dermis.py` to listen for and transduce incoming external webhook signals. The gateway safely parses incoming reverse tunnel proxies (`X-Forwarded-For`, `X-Real-IP`) to isolate authentic client coordinates before executing a sequential multi-layered security validation chain:
+    1. *Allostatic Load Control:* Temporally throttles burst incoming traffic spikes, enforcing a strict rate limit window capped at 50 requests per rolling 60 seconds per client IP.
+    2. *Anti-OOM Stream Isolation:* Blocks memory-exhaustion payloads immediately if request dimensions exceed a rigid 2MB safe ceiling, processing incoming payload data asynchronously in safe chunks to eliminate memory parsing locks.
+    3. *Cryptographic Verification Chain:* Verifies data packet validity against environmental keys using native HMAC-SHA256 check structures.
+    4. *Sliding Replay Mitigation:* Utilizes a sliding 1,000-item signature FIFO queue to intercept duplicate traffic frames, preventing malicious message reflection attacks.
+
+    Once authenticated, unstructured payload JSON objects are automatically parsed according to declarative layout instructions mapped in `webhooks.yaml`, translated into pure intents, logged to a rotating observer file (`Sense/logs/dermis.log`), and transduced cleanly up the main nervous spinal cord (`transduce_to_spine`) to activate internal cognitive attention loops.
+
+-  **ExoReceptor ([Exocortex](https://en.wikipedia.org/wiki/Brain%E2%80%93computer_interface)):** Spawns an asynchronous background listener inside `receptors/exoreceptor.py` tracking dual-protocol loops (REST webhooks on port `8765` and TCP sockets on port `8766`). Connections are protected by a token-bucket `SynapticRateLimiter` that models synaptic fatigue, dropping burst traffic spikes immediately to protect parser loops from DDoS exploitation.
+
+### 🕹️ Direct Peripheral Triggers: Zero-Token Hardware Testing
+
+Because the peripheral sensory network is completely decoupled from core reasoning layers, developers can manually test, drive, or pipe hardware functions from the terminal at **$0.00 in AI token costs**.
+
+| **Peripheral Receptor Target** | **CLI Execution Track**                                                                | **Biological Analogue & Operational Impact**                                                                                                                                 |
+| ------------------------------ | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Headless Layout Capture**    | `uv run Sense/cli.py screenshot "https://news.ycombinator.com" "workspace_latest.png"` | **The Visual Cortex / Screen Auditing:** Launches a headless browser session via Playwright to capture a full-page image snapshot for layout verification.                   |
+| **Web Sensory Transduction**   | `uv run Sense/cli.py scrape "https://github.com" > codebase_stimulus.md`               | **The Retina / Markdown Scraper:** Fetches external web stimuli, strips display presentation nodes, and transforms raw HTML into pure markdown.                              |
+| **Acoustic Audio Ingestion**   | `uv run Sense/cli.py listen --duration 5 --output local_reflex.wav`                    | **The Physical Ear / Hardware Mic:** Accesses the host's microphone drivers at a clean 44.1kHz sample rate to capture ambient sound files inside media isolation boundaries. |
+| **Vocalization Presenter**     | `uv run Sense/cli.py speak local_reflex.wav`                                           | **The Physical Mouth / Speaker Output:** Streams raw audio wave entries directly out to the host machine's hardware speakers, bypassing cognitive loops.                     |
+| **Zero-Token Static Auditing** | `uv run Sense/cli.py smell "Studio"`                                                   | **The Olfactory Bulb / Rot Detection:** Processes high-speed string matching to find broken note anchors, placeholder headers, and dead `[[wikilinks]]`.                     |
+| **Footprint-Safe Sampling**    | `uv run Sense/cli.py taste "System/logs/medulla.log"`                                  | **The Gustatory System / Taste Profiling:** Inspects dense logs, multi-page PDFs, or huge CSV rows by cross-sectioning layout blueprints to safeguard context windows.       |
+## 💻 Using Brain: Commands & Customization
+
+Brain works as a CLI tool, an in-app Obsidian task queueing and execution pipeline, and a background daemon.
+
+Customizing Brain's LLMs, routes, agent definitions, tools, webhooks, and daemon settings is done through declaratively yaml files under `./System/config`.
+### 📊 Core Ecosystem Command Matrix
+
+Here are the important CLI tools:
+
+| **Command Invocation Track**                                                   | **Target Subsystem File**                     | **Neuroanatomical Layer**            | **Operational Impact & Safety Strategy**                                                                                                                                                                |
+| ------------------------------------------------------------------------------ | --------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`./brain`**                                                                  | `System/core/onboarding.py`                   | **Synaptic Genesis Onboarding**      | Automatically bootstraps local env  and directories.                                                                                                                                                    |
+| **`./brain live`**                                                             | `System/neuroanatomy/systemic/thymus.py`      | **Thymus Watchdog Supervision**      | Spawns the out-of-process parent watchdog to monitor  Brain's child runtime process over a named channel. Instantly executes a `SIGKILL` if code loops or out-of-bounds file traversals occur.          |
+| **`./brain absorb [PATH] [--domain TEXT] [--tags TEXT]`**                      | `System/cli_cognitive.py`                     | **Parietal Lobe Ingestion**          | Ingests directories, scripts, or markdown notes cleanly into Brain's knowledge network.                                                                                                                 |
+| **`./brain task "[DESCRIPTION]" [--domain TEXT] [--route TEXT] [--obsidian]`** | `System/core/orchestrator.py`                 | **Prefrontal Cortex Governance**     | Dispatches goal definitions across parallel swarm threads. If `--obsidian` is active, it enforces an offline safety audit and queues the task inside `Pending_Actions.md` awaiting manual confirmation. |
+| **`./brain daydream`**                                                         | `System/neuroanatomy/autonomic/dmn.py`        | **Default Mode Network**             | Activates a low-priority background thread during idle cycles to prototype modifications, review logs, form hypotheses, and find non-obvious code links.                                                |
+| **`./brain evolve`**                                                           | `System/cli_cognitive.py`                     | **Neuroplastic Synaptic Rewiring**   | Backs up configs (`agents.yaml.bak`) and processes md file updates to reprogram its configs (with HITL).                                                                                                |
+| **`./brain sleep`**                                                            | `System/neuroanatomy/autonomic/medulla.py`    | **Circadian Rest Phase**             | Performs log rotations, triggers skill compilation, and compacts SQLite FTS5 database indices to eliminate tracking bloat.                                                                              |
+| **`./brain forage "[TOPIC]" [--domain TEXT]`**                                 | `System/cli_cognitive.py`                     | **The Forager Drive**                | Drops the pipeline execution loop into a headless sandbox state to scrap external web search loops and extract target fact maps.                                                                        |
+| **`./brain status`**                                                           | `System/tools/topology.py`                    | **Interoceptive Diagnostics**        | Displays live internal performance indicators, including current daily token burn, background PIDs, and calorie limits.                                                                                 |
+| **`./brain compile`**                                                          | `System/neuroanatomy/autonomic/cerebellum.py` | **Cerebellar Skill Encoding**        | Scans completed episodic logs to extract verified workflow executions, compiling complex setups into zero-token muscle memory shell scripts.                                                            |
+| **`./brain reflex [ENGRAM_NAME]`**                                             | `System/cli_somatic.py`                       | **Somatosensory Involuntary Reflex** | Runs an immediate ahead-of-time Abstract Syntax Tree (AST) sweep to block toxic module links before running a script engram within a secure sandbox process.                                            |
+
+### ⚙️ Declarative Customization: Tuning the Cognitive Matrix
+
+Agents, routing, tooling, everything is managed declaratively in YAML in  `System/config/`.
+
+* **Swap Models Instantly:** Brain OS runs on top of LiteLLM, natively supporting 100+ cloud and local LLM options. Point model aliases to local Ollama weights, OpenAI, Anthropic, or OpenRouter instantly inside `models.yaml`.
+* **Edit Personas & Prompts:** Redefine structural workflows, error handling profiles, or system instructions for any sub-agent in pure plaintext inside `agents.yaml`.
+* **Gated File Sandbox Scopes:** Restrict folder permissions and file-system read/write access down to specific workspace directories (least-privilege model) using the granular arrays inside `routes.yaml`.
 
 ---
 
-## 🌟 Core Philosophy
+#### 📊 Configuration Profile Matrix
 
-1. **Own Your Brain:** Your Brain and everything in it—data (Vault), journals, art, code, and business IP—is yours. The system operates strictly on local markdown files. All personal folders are `.gitignore`d.
-2. **Shift-Left Security:** We catch errors, enforce routing, and demand human approval *before* execution. Agents can see everything but can only act within explicitly whitelisted sandboxes.
-3. **The Unix Philosophy:** Everything is a file. Brain acts as the parent orchestrator but delegates software compilation and linting to the sub-projects inside `Studio/`.
-4. **Zero-Waste Token Economics:** Context limits are respected. The system uses a deterministic router to wake up the cheapest, fastest model for simple tasks, saving the heavy reasoning models for complex software architecture.
-5. **Biologically Inspired:** Brain attempts to draw from biology, e.g. memory formation in REM sleep, a Sensory Nervous System engaging the Default Mode Network, etc., wherever possible.
-6. **Hybrid XML/MD Data Contracts:** Brain  does not use brittle YAML frontmatter. All agent routing, metadata, state tracking, and sensory inputs are strictly wrapped in XML tags, while human-readable content remains in standard Markdown. This creates absolute deterministic boundaries for LLM attention mechanisms and regex parsing.
-
----
-
-#### Example Usage
-
-Users can now natively inject deep documentation or context structures directly into the system:
-
-```bash
-# Ingest an API manual into Personal Knowledge base
-./brain absorb ~/Downloads/stripe-api-docs/ -d Personal -t legacy-docs,payment-gateway
-
-# Seed a specialized component library into your engineering Workspace layout
-./brain absorb ./external-templates/auth-module/ -d Studio/My-App -t auth,security
+| Configuration Profile | Core Target File Path | Neuroanatomical Layer & System Impact |
+| :--- | :--- | :--- |
+| **Personas & Code Rules** | `System/config/agents.yaml` | **The Neocortex**: Manages explicit sub-agent guidelines, validation protocols, and execution milestones. |
+| **Endpoint DNA** | `System/config/models.yaml` | **The Hemispheres**: Connects processing tracks to specific provider models, supporting global auto-discovery defaults. |
+| **Pipeline Routing** | `System/config/routes.yaml` | **The Synaptic Pathways**: Maps tool access combinations and sandbox boundaries to clear execution types. |
+| **Vitals & Rhythms** | `System/config/medulla.yaml` | **The Brainstem**: Calibrates active daemon lifecycles, network ports, folder watch fields, and token limits. |
+| **Tension Management**| `System/config/acc.yaml` | **The Anterior Cingulate**: Governs failure tolerances, triggering deterministic low-temperature model swaps to clear loops. |
+| **Signal Translation**| `System/config/webhooks.yaml` | **The Dermis Membrane**: Translates unstructured incoming external webhooks into parsed data templates. |
 
 ---
 
-
-## 🧬 Biomimetic Architecture (The Biological Analogs)
-
-Brain OS is not a traditional state machine or a reactive AI wrapper. It is modeled directly on human neuroanatomy and evolutionary biology, treating the operating system as a living, self-maintaining organism.
-
-### 1. Neuroanatomy & Memory (Data Persistence)
-* **The Hippocampus (Short-Term Memory):** Uses `agent_interactions.jsonl` as a volatile, append-only chronological ledger of daily interactions.
-  * **Long-Term Memory:** The Hippocampus converts short-term context into instantly retrievable long-term memory across all domains (Personal, Professional, Studio, Meta).
-  * **Hybrid Storage (Unix + SQLite):** To maintain the "Glass Brain" Unix philosophy, all memories and code reside in flat `.md` and `.py` files. However, to preserve Token Economics, Brain OS maintains a completely throwaway, ephemeral SQLite FTS5 index (`hippocampus.db`). When the LLM uses the `search_hippocampus` tool, the C-optimized FTS5 engine returns tightly cropped text snippets instead of reading 5,000-line files. The database holds zero authoritative state and can be rebuilt at any time via `brain reindex`.
-* **The Neocortex (Long-Term Memory):** Uses an Obsidian Vault (`.md` files) as a highly structured, associative network of permanent facts linked by `[[wikilinks]]`.
-* **Amnesia (The Forgetting Curve):** Actively rotates and archives the Hippocampus logs daily to prevent context-window bloat. Forgetting noise is required to retain signal.
-
-### 2. Autonomic Nervous System (Background Drives)
-Brain OS does not wait to be spoken to. It runs a stateful, crash-resilient pacemaker (`autonomic.py`) that monitors the passage of time and triggers subconscious drives:
-* **REM Sleep (Circadian Rhythm):** At 2:00 AM, the OS wakes up, reads the Hippocampus, prunes the noise, and consolidates the remaining facts into the Neocortex using `<sleep_summary>` tags.
-* **Default Mode Network (Daydreaming):** When the system is idle for >4 hours, the Subconscious Daydreamer agent wakes up, reads recent experiment logs, and synthesizes novel `<strategic_hypothesis>` ideas. The system invents its own future work.
-* **The Forager (Ultradian Rhythm):** Every 12 hours, a subconscious agent wanders predefined external URLs (news, competitors, server logs) and appends `<foraged_intel>` to a Morning Briefing.
-
-### 3. Cognitive Segregation (Executive vs. Somatic)
-* **Prefrontal Cortex (Brain OS):** Handles executive function—goal setting, planning, routing, and QA auditing. It decides *what* to do.
-* **Somatic Muscle Memory (Forge OS):** Brain OS delegates physical execution (writing code, designing UIs, running tests) to a separate, deterministic factory (Forge). The brain does not micromanage muscle twitches.
-
-### 4. Sensory & Motor Systems (I/O)
-* **The Retina (Transduction):** The `Sense` tool acts as a sensory organ, transducing chaotic environmental noise (raw DOM/HTML) into clean, LLM-readable Markdown.
-* **The Motor Cortex:** Physically decouples the "thinking" (LLM API calls) from the "doing" (Tool execution). It safely unpacks JSON tool calls, executes the requested Python functions, and automatically applies `asyncio.Lock` mechanisms to physical file paths to prevent parallel Swarm agents from corrupting data via race conditions. It also acts as an involuntary circuit breaker, instantly severing the cognitive loop if a motor action returns a `SECURITY BLOCK`.
-
-### 5. Shift-Left Threat Detection (The Amygdala)
-* **The Flinch Reflex:** Before a prompt ever reaches the expensive, analytical LLM router (Prefrontal Cortex), it passes through `amygdala.py`—a sub-millisecond heuristic engine. It flinches and snaps the circuit breaker instantly if it detects prompt injections or catastrophic commands (`rm -rf`).
-
-### 6. Synaptic Clefts (Data Contracts)
-* **Neurotransmitters:** To prevent hallucinations when different parts of the brain communicate, agents pass explicit, deterministic XML tags (`<audit_result grade="FAIL">`) embedded within Markdown files, acting as strict chemical bindings between neural nodes.
-
-### 7. Metabolic Monitoring (Interoception & Vagus Nerve)
-* **Token Metabolism:** Brain OS tracks its own physical energy via `interoception.py`. If the OS burns through its daily token budget (calorie limit), the Vagus nerve signals "Exhaustion," automatically downgrading all tasks away from expensive models (like Claude Sonnet) to ultra-cheap heuristic models (GPT-4o-Mini) to conserve API cash until the next sleep cycle.
-
-### 8. Self-Modification (Neuroplasticity)
-* **Structural Rewiring:** When Brain OS sleeps, it doesn't just log memories passively. If it detects a critical failure pattern in the daily logs, the sleep cycle uses `<neuroplasticity>` XML tools to permanently physically rewrite its own `agents.yaml` source code, altering the system prompt of the offending agent. The OS literally reprograms its own synapses to get smarter over time.
-
-### 9. Procedural Muscle Memory (The Cerebellum)
-* **Engram Synthesis:** When the Prefrontal Cortex (LLM) successfully figures out a complex, multi-step execution (like bootstrapping a React app or configuring Docker), it doesn't waste tokens rethinking it next time. It uses the `<create_engram>` tool to compile those shell steps into a permanent, reusable Bash script stored in the Cerebellum.
-* **Instant Execution:** On future tasks, the OS simply uses `<execute_engram>` to instantly fire the muscle memory script, injecting parameters where appropriate. The system gets exponentially faster and cheaper the more you use it.
-* **Cerebellum Compiler:** Compiling previously executed code into executable and shareable modules for use by other agents or by the user.
-
-
-### 10. Autonomous Bug Fixing (The Microglia)
-* **The Immune System:** When a biological cell gets infected or damaged, Microglia cells swarm the area and destroy the bad cells automatically without you ever consciously knowing you were in danger.
-* **Global Interception:** In Brain OS, if *any* agent (Brain or Forge) runs a shell command that crashes or throws a traceback, it is instantly intercepted by `microglia.py` before the error is returned to the Prefrontal Cortex.
-* **Antibody Synthesis:** The Microglia uses an ultra-fast, cheap heuristic model to read the traceback, synthesize an antibody (a quick patch command like `pip install` or an inline `sed` replacement), execute it, and retry the original command. The OS heals its own runtime errors autonomously.
-
-### 11. Global State Modifiers (The Endocrine System)
-* **Hormonal Overrides:** Brain OS behavior is not strictly deterministic; it can be globally altered by "hormones" injected via CLI flags.
-* **Humoral State Tuning (The Endocrine System):** Brain OS simulates biological neuromodulation via a continuous float vector. Instead of discrete execution flags, the OS releases hormones (`Cortisol`, `Adrenaline`, `Dopamine`) that dynamically wash over the system. High Adrenaline physically truncates `max_tokens` for extreme speed during crises. High Cortisol drops system `temperature` to absolute determinism and forces fallback routing to cheap SLMs to survive resource starvation.
-
-### 12. Semantic Attention (The Thalamus)
-* **Context Gating:** The Thalamus is the brain's sensory relay station, filtering out background noise so the Prefrontal Cortex can focus.
-* **Zero-Debt RAG:** As the Neocortex (`.md` memory files) grows massive, injecting it all into an agent's prompt causes API token bloat and context degradation. Instead of a bloated Vector DB, Brain OS uses `thalamus.py`—a fast, cheap heuristic LLM call that pre-reads the prompt and the memory file, extracting *only* the relevant bullet points before passing them to the agent. The AI's attention remains perfectly scalable.
-
-### 13. Semantic Caching (Enteric Nervous System)
-* **The "Second Brain":** The Enteric Nervous System handles highly familiar, instinctual situations instantly without consulting the Prefrontal Cortex.
-* **Gut Reflexes:** In Brain OS, if you submit a prompt that is >90% semantically similar to a prompt you have used before (e.g., "Run my python tests" vs "Run my python test"), the `enteric.py` organ completely bypasses the expensive Dispatcher LLM. It instantly regurgitates the cached routing configuration, bringing the routing latency from ~5 seconds to 0.01 seconds and costing exactly $0.00 in API tokens.
-* **Gut Brain Axis:** Brain will use engrams created by the motor cortex to achieve 0 token execution of semantically similar commands
-
-### 14. Empathy & Alignment (Mirror Neurons)
-* **Biological Imitation:** Mirror neurons fire when observing another entity, mapping their behavior onto your own brain to foster social alignment.
-* **Stylistic Mimicry:** By running `brain observe <project_name>`, the `mirror_neurons.py` organ scans the code you have manually written. It deduces your exact stylistic preferences (variable casing, commenting structures, architectural patterns) and stages `<neuroplasticity>` tags in the `Mutations.md` file. Once evolved, Brain OS permanently aligns its coding output to match your personal developer DNA.
-
-### 15. Autonomous Prototyping (DMN & Pineal Gland)
-* **The Pineal Gland:** Monitors human interaction logs (`pineal.py`). If the system is idle for hours, it releases Melatonin, signaling the system that it is safe to dream.
-* **REM Paralysis (Git Sandbox):** You can trigger software dreaming via `brain daydream --code --project=my_app`. To protect reality from AI hallucinations, the DMN (`dmn.py`) enforces REM Paralysis. It autonomously creates a new Git branch (e.g., `dream/hypothesis_1234`), traps the AI inside it, and bypasses the `[y/N]` HITL gates. The AI builds entirely new features while you sleep.
-* **Asynchronous HITL:** You wake up, review the git branch diff, and either delete the nightmare or merge the genius directly into `main`. Architectural constraints (ADRs) remain locked.
-
-### 16. Supply Chain Defense (The Blood-Brain Barrier)
-* **Toxin Filtration:** The Blood-Brain Barrier strictly blocks foreign substances from infecting the central nervous system.
-* **Network Isolation:** While Brain OS is operating autonomously in REM Sleep (`BRAIN_OS_HEADLESS=1`), the `blood_brain_barrier.py` organ physically intercepts shell commands. The AI is permitted to execute standard code (`npm run build`, `pytest`), but if it attempts to download external code (`npm install`, `pip install`, `curl | bash`), the barrier rejects the command. This completely immunizes the autonomous dreaming engine from supply-chain attacks, remote code execution, and dependency typo-squatting.
-* **Apoptosis:** If a script manages to bypass the AST static analysis, it is executed inside a membrane utilizing native CPython Audit Hooks (`sys.addaudithook`). If the script attempts to invoke a destructive kernel event (`os.remove`, `socket.connect`), the OS triggers apoptosis and instantly kills the execution thread before the system is harmed.
-
-### 17. Event-Driven Reflexes (Somatosensory Cortex)
-* **Sense of Touch:** The Somatosensory Cortex processes physical sensations.
-* **Zero-Debt Event Bus:** By running `brain watch`, the `somatosensory.py` organ polls your workspace for file saves. When you save a file, it fires a nerve impulse to the Cortex. Instead of waking up the heavy, expensive LLM, the Cortex triggers instant, free local reflexes (like running the `ruff` syntax linter or 0-cost AST updates). Because the Cortex is decoupled from the Receptors, it is natively structured to accept remote API Webhooks in the future.
-
-### 18. Atomic Rollbacks (The Vestibular System)
-* **Sense of Balance:** The Vestibular system detects a loss of equilibrium and triggers a physical reflex to catch you before you fall.
-* **Atomic Transactions:** When the Product Manager uses `write_safe_file` or `append_safe_file`, the `vestibular.py` organ takes a microsecond `.bak` snapshot of the file before it is modified. If the pipeline completes successfully, the snapshots are cleared. If the pipeline aborts (due to a circuit breaker, API error, or security halt), the Vestibular system detects the "fall" and instantly restores all modified files to their original state, guaranteeing Zero-Debt atomic execution.
-* **Checkpoints:** Validated file writes are committed as permanent checkpoints.
-
-### 19. Secret Scanning (The Immune System)
-* **Pathogen Neutralization:** The biological immune system patrols the bloodstream, neutralizing foreign pathogens before they can infect cells.
-* **Shift-Left Secret Scanning:** Before Brain OS is allowed to write or append any file to the filesystem, the `immune_system.py` organ acts as a leukocyte barrier. It scans the outbound text stream using strict Zero-Debt regex patterns for high-entropy secrets (AWS Keys, OpenAI tokens, RSA Private Keys). If Forge hallucinates or attempts to hardcode a live secret into your application, the Immune System instantly intercepts and blocks the disk write, enforcing strict environment-variable `.env` hygiene.
-* **Tier 1 (The Nuclear Option):** At boot, a `SecretVault` singleton ingests all LLM API keys into a locked memory state and explicitly scrubs them from `os.environ`. If an agent is tricked into running a malicious script or `printenv`, the environment is clean and keys cannot be stolen.
-* **Tier 2 (Macrophages):** A regex scanner actively monitors all outbound text streams written by the Swarm. It intercepts and blocks execution if an agent attempts to write hardcoded AWS, Stripe, or RSA keys directly to disk.
-
-### 20. Data Contract Enforcement (Broca's Area)
-* **Speech Articulation:** Broca's Area is responsible for human speech production.
-* **XML Auto-Healing:** Enforcing Principle 5 (Hybrid XML/MD), the `broca.py` organ parses all agent outputs before execution. If an agent forgets a closing XML tag due to token limits, or improperly nests Markdown code blocks inside XML execution tags, Broca's Area instantly auto-heals the syntax. This guarantees flawless agent-to-agent communication without crashing the pipeline.
-
-### 21. Archive & Garbage Collection (The Lymphatic System)
-* **Waste Clearance:** The biological brain flushes cerebrospinal fluid to sweep up metabolic waste, depositing it in lymph nodes.
-* **Zero-Debt Archiving:** To preserve the "Glass Brain" and ensure user data is never destroyed without consent, the `lymphatic.py` organ never hard-deletes old records. Instead, it periodically sweeps old Vestibular `.bak` snapshots and truncates the `agent_interactions.jsonl` file, compressing the waste into a standard `.tar.gz` archive stored in `Meta/Lymph_Nodes/`. You can trigger this via `brain flush`, and permanently destroy the archives via `brain purge`.
-
-### 22. Multi-Agent Swarms (The Prefrontal Cortex)
-* **Executive Orchestration:** The Prefrontal Cortex orchestrates multiple regions of the brain simultaneously.
-* **Parallel Agent Execution:** Complex pipelines (like `SWARM`) utilize native Python `concurrent.futures.ThreadPoolExecutor` to branch the execution pipeline. The system can spawn specialized sub-agents (e.g., a Frontend Engineer and a Backend Engineer) to work on different parts of the codebase at the exact same time, radically reducing wall-clock generation time before merging their context back into a linear QA validation step.
-
-### 23. Spatial Awareness (Proprioception)
-* **Body Tracking:** Proprioception is the biological sense of body position and movement.
-* **Background Process Management:** Standard AI agents hang indefinitely when executing synchronous blocking commands (like starting a React dev server). The `proprioception.py` organ allows Brain OS to spawn detached, asynchronous process groups, recording their Process IDs (PIDs) in `motor_state.json`. Agents use the `manage_background_process` tool to "flex" (start) and "relax" (kill) local servers with full spatial awareness, laying the groundwork for self-hosted visual testing.
-
-### 24. Visual Cortex (The Occipital Lobe)
-* **Visual Perception & Generation:** The Occipital lobe processes raw optical data into semantic meaning.
-* **Multimodal QA:** Encodes images/video, captures screenshots, controls image generation, and manages live webcam perception/recording. Using the `Sense` capability and the `occipital.py` organ, agents can use Headless Chromium to take screenshots of the local web servers they spawn (via Proprioception). The OS then encodes these screenshots into base64 and feeds them to a baseline multimodal model (GPT-4o-mini) to visually verify CSS layouts, UI designs, and color contrast. It can also generate visual assets autonomously using GPT Image.
-
-### 25. Semantic Comprehension (Wernicke's Area)
-* **Meaning Extraction:** Wernicke's Area processes raw vocabulary into semantic comprehension.
-* **Vector-less Semantic Search:** To maintain the "Glass Brain" Unix philosophy, Brain OS strictly forbids opaque binary Vector Databases. Instead, `wernicke.py` acts as an "LLM-as-a-Judge" reranker. When the agent triggers `semantic_search`, the Hippocampus fetches the top 15 broad keyword matches via SQLite BM25, and Wernicke filters the noise, returning only the perfectly matched semantic answers.
-
-### 26. Subconscious Habits (The Basal Ganglia)
-* **Procedural Learning:** The Basal Ganglia is responsible for routine behaviors and habit formation.
-* **Host-Agnostic Cron (Unix Philosophy):** To remain completely portable, Brain OS does not rely on Linux `cron` or Windows Task Scheduler. The Basal Ganglia uses a plain-text `habits.json` file to track intervals, ticked passively by the Pineal Gland.
-* **Shift-Left Security:** Before a habit can be formed, the raw command is routed through the Amygdala to ensure no malicious background tasks are permanently scheduled.
-* **Token Economics:** Habits run purely in the background (using Proprioception) without waking up the expensive LLM Swarm, allowing Brain OS to perform maintenance, backups, and data foraging for free.
-
-### 27. Auditory Processing (The Temporal Lobe)
-* **The Biological Ear:** The Peripheral Nervous System (`Sense`) captures raw environmental audio waveforms via the host's microphone or from local files.
-* **Sensory XML Integration:** Wernicke's Area (Semantic Speech) and the Primary Auditory Cortex (Environmental Sound via Gemini 1.5 Flash) operate in tandem. They combine spoken words and background context (e.g., music playing, birds chirping) into a strict `<sensory_input>` XML tag before passing the reality to the Dispatcher.
-* **Broca's Area (Speech Articulation):** The system does not force speech. Agents are equipped with a `speak` tool, allowing the Prefrontal Cortex to autonomously decide *when* it is appropriate to formulate a vocal response and push it to the physical speakers.
-
-### 28. Homeostasis & API Backoff (The Hypothalamus)
-* **Biological Heart Rate:** When you run a sprint, lactic acid builds up, and the Hypothalamus forces you to breathe and slow down to prevent cardiac arrest.
-* **Swarm Throttling:** When Brain OS spawns highly parallel Swarm agents, it can trigger `HTTP 429 Rate Limit` errors from cloud LLM providers. The `hypothalamus.py` organ physically intercepts these exceptions, inducing an asynchronous Exponential Backoff ("breathing exercises") to safely pause the execution threads until the API quotas recover, ensuring zero crashes under heavy workload.
-
-### 29. Static Rot Detection (The Olfactory Bulb)
-* **Biological Smell:** The only sense that completely bypasses the Thalamus, sending chemical impulses of decay directly to the Limbic system.
-* **Zero-Token Garbage Collection:** `uv run python Sense/cli.py smell`. The Olfactory Bulb uses $0.00 in API tokens, relying instead on `ruff` checks and RegEx math to detect dead code, empty notes, and broken `[[wikilinks]]`. It writes anomalies directly to `Meta/Olfactory_Anomalies.md` for the Swarm to review during sleep.
-
-### 30. The Lysosome (.trash Membrane)
-* **Biological Digestion:** Cells don't destroy waste instantly; lysosomes encapsulate it to prevent toxicity.
-* **HITL Deletion:** Brain OS agents are equipped with `delete_safe_file`. Instead of performing dangerous `os.remove` commands, it acts as a cellular lysosome, safely moving rotting files into a `.trash/` directory and logging a `manifest.jsonl` so humans can effortlessly recover data if the Swarm hallucinates.
-
-### 31. File Sampling (Gustatory System / Taste)
-* **Biological Taste:** Transducing dense physical matter into digestible chemical information.
-* **Token Economics:** `taste_safe_file` allows agents to safely parse massive PDFs, 10,000-row CSVs, and huge logs by sampling the head/tail and truncating the rest, guaranteeing the Swarm's context window never explodes.
-
-### 32. The Parietal Lobe (Spatial Topology Mapping)
-* **Biological Function:** Integrating sensory information to form a 3D spatial map of the environment.
-* **OS Implementation:** The `parietal_lobe` generates mathematical dependency graphs of the OS environment using two distinct modes:
-* **Code Topology (Mermaid.js):** Traces Python, TypeScript, and JavaScript imports so agents understand the "blast radius" of code changes. Outputs clean Mermaid UML diagrams without polluting the vault.
-* **The Vertigo Reflex:** Detects and explicitly warns the Swarm about dangerous circular dependencies in the codebase.
-* **Thought Topology (Obsidian Graph):** Traces `[[Wikilinks]]` between your Markdown notes to map your personal knowledge graph, allowing agents to understand how your thoughts connect natively within Obsidian.
-
-### 33. The Corpus Callosum (Hemispheric Bridging & Local SLMs)
-* **Biological Function:** The nerve bundle bridging the left and right hemispheres of the brain, routing analytical vs. creative tasks.
-* **OS Implementation:** Acts as a dynamic API router. By enabling `USE_LOCAL_SLM=true` in your `.env`, the OS splits tasks based on complexity.
-* **Left Brain (Local SLMs):** Tasks requiring high privacy or deterministic analysis (Threat Detection, Dispatching, Personal Journaling, Basic File Reading, formatting, maintenance, indexing, etc.) are routed locally to Ollama (`llama3`, `phi3`), ensuring 0 API cost and 100% offline privacy.
-* **Right Brain (Cloud LLMs):** Complex synthesis, multi-agent swarming, and software engineering (`FORGE`) are strictly reserved for powerful cloud models (Claude 3.5 Sonnet, GPT-4o).
-
-### 34. Boot Validation (Polymerase)
-* **Biological Function:** DNA Polymerase proofreads the DNA sequence for errors before DNA replication.
-* **OS Implementation:** Ensures the `agents.yaml` configuration is syntactically correct and free of errors before the OS boots up.
-
-### 35. CORS and API Proxy Determinism (Synaptic Pathways)
-* **Biological Function:** The Synaptic Pathways are the routes through which signals travel between neurons.
-* **OS Implementation:** Brain OS uses a deterministic API proxy to route signals between neurons. It uses a CORS (Cross-Origin Resource Sharing) policy to ensure that only authorized origins can access the API.
-
-### 36. Peripherals (The Spine)
-* **The Spine (True PNS Routing):** Sensory receptors (`Sense/`) are decoupled from cognition. All inbound peripheral data flows through `spine.py`. This executes high-speed, zero-token routing: critical faults trigger Somatic Reflexes instantly, state updates hit the Enteric gut, and only novel stimuli ascend to the Thalamus for conscious LLM processing.
-
-### 37. Inbound Web Traffic (Dermis)
-* **The Dermis (Network Skin):** A zero-dependency, background HTTP receptor that acts as the system's skin. It cryptographically verifies inbound webhooks (GitHub, Stripe, etc.), compresses massive JSON payloads into token-efficient sentences, and fires them down the Spine.
-
-### 38. Master Daemon (Medulla Oblongata)
-* **The Medulla Oblongata (Brainstem Master Daemon):** The central nervous system's lower brainstem, responsible for the body's automatic control of breathing, heart rate, and blood pressure. In Brain OS, it acts as the system's life-support system, supervising involuntary system lifecycles, background daemons, circadian schedules, queue processing, and operational homeostasis.
-* **Autonomic Processing:** Runs as a persistent background thread that "never sleeps," ensuring that the system's core functions are always running and that the system recovers automatically from crashes. (e.g. if the Dermis crashes, the Medulla will automatically restart it)
-* **Self-Monitoring Loops:** The Medulla Oblongata is made up of three separate self-monitoring loops that work together to ensure the system's core functions are always running and that the system recovers automatically from crashes.
-    * **Cognitive Heartbeat:** Autonomously processes the pending cognitive task queue (Obsidian notes).
-    * **Homeostasis:** Tracks internal vitals, token budgets, and circadian timing adjustments.
-    * **Respiratory Supervision:** Monitors operational threads, automatically resuscitating crashed organs.
-
-### 39. Episodic Memory (Limbic System Enhancement)
-* **The Hippocampus:** The hippocampus is a brain structure located in the temporal lobe that is involved in learning and memory.
-* **OS Implementation:** The OS implements episodic memory in `System/neuroanatomy/limbic/episodic.py`.
-* **Functionality:**
-  * **The Prefrontal Cortex (Executive Function):** Brain OS no longer suffers from "Swarm Panic." Massive monolithic tasks are intercepted by the PFC, decomposed into actionable sequences, and passed to the Swarm one step at a time via a rolling Working Memory buffer. If a step fails, the PFC halts the cascade.
-  * **Episodic Memory (The Autobiographical Self):** The OS has conquered Anterograde Amnesia. The system permanently encodes its executed goals, steps, and outcomes (success/failure) into an `autobiography.jsonl` engram. The PFC recalls these past experiences before acting, ensuring it never repeats historical mistakes.
-  * **The Default Mode Network (Daydreaming):** During the Medulla's autonomic sleep cycle, the DMN activates, safely surfing your `System/logs` and Obsidian notes to hallucinate codebase refactors and philosophical insights, encoding them as "Epiphanies" for you to review when you wake up.
-
-### 40. Reinforcement Learning (Nucleus Accumbens)
-* **The Nucleus Accumbens:** The nucleus accumbens is a brain structure located in the temporal lobe that is involved in learning and memory.
-* **OS Implementation:** The OS implements reinforcement learning in `System/neuroanatomy/limbic/nucleus_accumbens.py`.
-* **Functionality:**
-    * **Learning from Mistakes:** The system learns from its mistakes by updating its behavior based on the outcome of its actions. When the system fails to complete a task, it updates its behavior to avoid repeating the same mistake in the future.
-    * **Learning from Success:** The system learns from its successes by updating its behavior to repeat the same actions in the future.
-
-### 41. Inter-Brain Communication (Exocortex)
-* **The Exocortex:** The exocortex is the part of the brain that is responsible for communication and sharing with other brains, including engrams, tools, and knowledge.
-* **OS Implementation:** The OS implements the exocortex in `System/neuroanatomy/cortical/exocortex.py`.
-* **The ExoReceptor (Sensory Socket):** To facilitate Exocortex operations, Brain OS runs a lightweight, native `asyncio` socket receptor. External agent frameworks transmit packets to this receptor, which pushes the signal up the `Spine`. The Spine enforces an 8KB Blood-Brain Barrier limit to prevent Denial of Service or Context Window explosions before the `Thalamus` routes the verified signal to the Exocortex.
+> ⚡ **Zero-Debt Verification:** To guarantee profile changes remain safe, verify your edits against our automated test and linting gates ahead of committing additions:
+> ```bash
+> uv run pre-commit run --all-files
+> uv run pytest System/tests/
+> ```
 
 ---
-
-## 🏗️ Architecture & Routing
-
-### 1. The Deterministic Router (The Bouncer)
-Before an expensive agent ever boots up, a high-speed Dispatcher model intercepts the prompt. It enforces hard security rules and calculates the **Intent Domain** and **Execution Route**:
-* ⚡ **FAST:** Simple questions. No tools needed. (Gemini Flash)
-* 📖 **READ_ONLY:** System searches and context aggregation. No file edits.
-* 🗄️ **WORKSPACE:** Vault management. The `Archivist` agent searches, creates, and appends to Markdown files across the `Personal/`, `Professional/`, and `Studio/` domains. (GPT-4o-Mini)
-* 🏭 **FORGE:** Software engineering. Wakes up the `Architect`, `Auditor`, and `Ops` pipeline to write code, stub ASTs, and securely execute shell commands in sub-directories. (Claude 3.5 Sonnet)
-
-### 2. Declarative Agent Pipelines
-Unlike heavy frameworks with hardcoded agent logic, Brain is driven by a single, human-readable YAML file (`System/config/agents.yaml`). The Python engine handles the loops and tool executions, but the intelligence—who the agents are, what models they use, and how they hand off tasks—is completely declarative.
-
-### 3. Hierarchical Context Engineering
-The OS dynamically stacks memory. It always injects `Meta/global-memory.md` (your core identity), but uses intent-mapping to selectively inject `Personal/`, `Professional/`, or `Studio/` memory based on the active task, saving massive amounts of tokens.
-
-### 4. Pluripotent Global Fallback Gating
-If a specified agent engine requests a high-tier processing channel for which no localized environmental credential key file trace can be found, the `SecretVault` automatically implements an advanced lookup mitigation matrix before failing:
-1. **Aggregator Translation:** Routes automatically through an active `OPENROUTER_API_KEY` configuration mapping framework block.
-2. **Global Target Interception:** Automatically defaults the instruction loop back to the explicit user-defined `default` model key provided inside `models.yaml` if it can be successfully validated by an existing host API token.
-3. **Single-Key Fallback:** Maps the request context directly onto the sole provider key deployed on the system workspace environment, preserving zero-configuration execution agility.
----
-
-## 👁️ The Sensory Nervous System (`Sense`)
-
-Brain implements the UNIX philosophy via a completely decoupled transducer system called **`Sense`**.
-
-In biology, the brain does not process raw photons; the retina transduces them into action potentials. Similarly, LLMs should not read raw HTML or massive Git trees. `Sense` fetches external stimuli (websites, repos, PDFs), strips the noise, and transduces them into strictly formatted XML "Action Potentials" that ensure zero context bloat.
-
-Because `Sense` is an independent package in our `uv workspace`, it can be used by Brain OS, Forge, or standalone bash scripts interchangeably, with mathematical **SSRF Security Blocks** ensuring the AI can never autonomously ping your `localhost` or private subnets.
-
-**Testing the Hardware Directly (Zero Tokens):**
-You can test the physical microphone and speakers completely decoupled from the AI:
-* `uv run python -m Sense.cli listen --duration 5 --output test.wav`
-* `uv run python -m Sense.cli speak test.wav`
-
----
-
-## 🫀 The Autonomic Nervous System (`autonomic.py`)
-
-Unlike traditional rigid `cron` jobs, Brain OS uses a stateful biological pacemaker. It does not rely on active timers. Instead, it checks the file system's reality (e.g., *“Have 4 hours passed since the user's last `agent_interactions.jsonl` entry?”*). This makes the system perfectly idempotent and immune to crashes.
-
-If the OS shuts down, the moment it boots back up, it will automatically catch up on missed sleep cycles, foraging runs, and daydreams.
-
-**To start the background processes:**
-`uv run python System/cli.py start-autonomic`
-*(Tip: Run this in a background terminal, `tmux` session, or Windows Background Service)*
-
----
-
-## 🛡️ Security Architecture (The Immune System)
-
-Brain OS treats large language models as untrusted, potentially adversarial entities. To achieve absolute safety without sacrificing portability, Brain OS relies on a **Biomimetic Security Architecture** that wraps the agent in strict, OS-level defense layers.
-
-Before an agent can execute a single line of code or touch a file, it must pass through the entire immune cascade:
-
-### Tier 0: Native Execution Defenses (Default)
-| Defense Layer | Biological Equivalent | Mechanism of Action |
-|---------------|-----------------------|---------------------|
-| **1. The Sandbox (Symlink Armor)** | Cell Membrane | Strict `os.path.realpath` evaluations and active Windows NTFS Junction sniffing (`FILE_ATTRIBUTE_REPARSE_POINT`) mathematically prevent symbolic link directory traversal. Agents can only write to explicit `Studio/` bounds. |
-| **2. AST Toxin Detector** | Blood-Brain Barrier | Python execution tools use `ast.parse` to statically analyze code payloads *before* they are evaluated. It instantly blocks `os.system`, `subprocess`, `eval()`, `exec()`, and `pty` reverse-shell attempts. |
-| **3. Strict Binary Allowlist** | Immune Specificity | Prevents Sandbox Escape via foreign runtimes. Agents are strictly forbidden from executing `node`, `gcc`, or arbitrary binaries natively. They may only use `python`, `npm`, and basic shell utilities. |
-| **4. Zero-Trust Env Scrubber** | Secretion Glands | Core system API keys are loaded directly into memory and *purged* from `os.environ`. When the agent spawns a child process, the host environment is aggressively scrubbed to prevent AWS/Stripe key extraction. |
-| **5. Metabolic Tracking** | ATP / Mitochondria | Every agent action is decorated with an `@motor_neuron` energy cost. Tokens and loop executions are strictly budgeted. If the agent burns too much energy, it enters a forced `Sleep` state. |
-| **6. The Vestibular System** | Homeostasis | Transactional rollbacks. Before the agent executes a destructive file write, the Vestibular system takes an immutable snapshot. If the operation fails, it executes a Git-level reset and violently prunes orphaned directories. |
-| **7. The Thymus Watchdog** | T-Cell Maturation | Brain OS runs via a Parent-Child process architecture. The unkillable Thymus parent monitors the Medulla child via an in-memory IPC pipe. If the agent exhibits high-velocity destructive behavior (e.g., >5 mutations in 10s), the Thymus triggers a SIGKILL. |
-| **8. The OOM & Fork Bomb Shields** | Apoptosis | Prevents host-resource exhaustion attacks. Child processes are capped at 50 PIDs (`RLIMIT_NPROC`), and process output is buffered by chunks (max 8MB). If an agent infinite-loops, the entire process tree is violently pruned. |
-📝 1. The Fixed Architecture Docs (System/tools/README.md)
-Copy everything below this line and append it to your System/tools/README.md file. I have indented the bash block with 4 spaces instead of backticks so it won't break the markdown renderer:
-
-### 🛡️ Tier 1 Sandbox Architecture (microsandbox)
-The microsandbox package provides a pluggable, container-driven Tier 1 execution framework designed to isolate high-risk project builds (e.g., npm run build) and deployment flows. It is strictly enforced via the BRAIN_EXECUTION_TIER=1 environment variable.
-
-Strategic Sandbox Controls
-Zero Host-Directory Leakage: Runtimes are given an empty container root file system scratchpad. The active workspace directory is compressed into an ephemeral tarball and streamed into the container, preventing unauthorized file modifications on the host.
-
-Volatile Memory Secret Inoculation: Secrets (like DEPLOYMENT_TOKEN) are injected into the container using dedicated .env configuration files marked with strict 0o600 access controls.
-
-Outbound Supply-Chain Firewall: A custom asynchronous CONNECT proxy (egress.py) intercepts all traffic leaving the container. Traffic matching approved destination endpoints (e.g., api.vercel.com, registry.npmjs.org) is securely routed; all other egress attempts are forcefully dropped to prevent token exfiltration.
-
-Hard Kernel Security Options: Container execution boundaries are hardened via --cap-drop=ALL (dropping all linux capabilities), --security-opt=no-new-privileges:true (preventing privilege escalation), and strict limits on thread structures (--pids-limit=100) and memory (--memory=1g).
-
-Testing the Sandbox
-Because the sandbox interacts heavily with system sockets and the Docker daemon, the test suite relies on targeted asyncio mocks to prevent CI/CD pipeline hangs. Run the following command to test the isolated package:
-
-uv run pytest System/tests/tools/test_microsandbox.py --cov=System.tools.microsandbox
----
-
-## 🚀 Quick Start Guide
-
-### 1. Bootstrapping the OS
-Brain uses a fast, automated setup script to install dependencies (like `uv`) and configure your environment.
-
-**Mac / Linux Users:**
-```bash
-uv run python -m System.cli init
-```
-
-**Windows Users:**
-```powershell
-uv run python -m System.cli init
-```
-
-### 2. API Keys
-The setup script created a `.env` file in your directory. Open it and add your API keys.
-*Note: Brain defaults to Anthropic's Claude 3.5. If you only have an `OPENAI_API_KEY`, don't worry—the OS will automatically detect this and safely route your tasks to GPT-4o.*
-
-### 3. Vault Initialization
-Because Brain is privacy-first, your personal data directories are ignored in git. Build your safe vault structure and foundational memory files instantly:
-```bash
-uv run python System/cli.py init
-```
-
----
-
-## 🔮 The Obsidian UI (The Glass Pane)
-
-Brain uses the local file system as its database, but **Obsidian** is its official UI. Because we check the `.obsidian/` folder into version control, your vault comes pre-configured with a highly opinionated "Second Brain" layout.
-
-### 1. The Control Room (`Home.md`)
-When you open the vault, you will land on `Home.md`. This is your OS Dashboard. It provides instantaneous links to your active Forge projects (`Studio/`), your scratchpad, and your system logs.
-
-### 2. The Media Quarantine
-By default, pasting images into markdown clutters the root directory. Brain prevents this.
-When you paste an image or PDF into any file in Obsidian, it is automatically routed to `Media/Attachments/`.
-* **The Forge Workflow:** If you want an AI to use an image in a web app, do not put the image in the web app folder. Drop it into Obsidian, then command the OS: `"Copy Media/Attachments/image.png to Studio/My-App/public/logo.png"`.
-
-### 3. The Clean Knowledge Graph
-Obsidian's Graph View is powerful, but indexing `node_modules` and Python caches ruins it.
-* Brain uses hidden `userIgnoreFilters` to completely banish build files and dependencies from Obsidian's index.
-* To filter out raw code files from your graph, open the Graph Settings and set the search filter to: `-path:Studio`
-
-### 4. Running Commands Natively (Zero Alt-Tab)
-You do not need to open a separate terminal to command Brain. The vault is pre-configured with the **Shell Commands** plugin.
-1. Map **Queue Task**: `.\.venv\Scripts\python.exe System\cli.py task "{{_task}}" --obsidian` *(Bind to `Cmd/Ctrl + Shift + B`)*
-2. Map **Execute Queue**: `.\.venv\Scripts\python.exe System\cli.py execute-pending` *(Bind to `Cmd/Ctrl + Shift + Enter`)*
-
----
-
-## 💻 Usage & Commands
-
-Brain operates via a unified CLI router (`System/cli.py`).
-
-### Execute a Task (Terminal Mode)
-If you aren't using the Obsidian GUI, you can run tasks directly. The system will auto-route, assign domains, and spin up the necessary agents safely.
-```bash
-uv run python System/cli.py task "Help me brainstorm a marketing plan for my project."
-```
-
-### View Telemetry & Logs
-Brain logs every token, prompt, and action for perfect local observability.
-```bash
-uv run python System/cli.py logs --limit 3
-```
-
-### 🌙 The Biological Sleep Cycle (Memory Consolidation)
-Inspired by human biology and Anthropic's "Dreams" architecture, Brain OS features a multi-phase memory consolidation system to ensure zero context bloat and data safety.
-
-1. **The Hippocampus (Capture):** Throughout the day, the OS logs fast, unstructured agent interactions to `logs/agent_interactions.jsonl`.
-2. **NREM Sleep (Filtration):** When you execute `sleep`, the OS parses the JSONL, truncating massive code payloads to extract pure conceptual intents.
-3. **Immutable Versioning:** The OS creates a read-only timestamped backup of your current `.md` files in `logs/backups/`.
-4. **REM Sleep (Synaptic Pruning):** The Auditor LLM analyzes the daily log against your existing Markdown memories. It identifies persistent facts, marks old logic as `Superseded` (rather than blindly overwriting history), and maintains a strict 100KB file-size rule.
-5. **Amnesia (Log Rotation):** The daily JSONL is archived, wiping the short-term memory clean for the next day.
-
-```bash
-uv run python System/cli.py sleep
-```
-
----
-
-## ⚙️ Customizing Agents & Pipelines
-
-You never need to touch Python code to change how Brain thinks. Everything is controlled via `System/config/agents.yaml`.
-
-**Swap Models Instantly:** Want to use local models or different providers? Just update the `models` block (LiteLLM supports 100+ providers, including Ollama):
-```yaml
-models:
-  primary_worker: "anthropic/claude-3-5-haiku-latest"
-  local_researcher: "ollama/llama3"
-```
-
-**Edit Prompts & Roles:** Rewrite the Bouncer's rules or the Engineer's system prompt in plain text:
-```yaml
-agents:
-  engineer:
-    name: "Engineer (Claude)"
-    model: "primary_worker"
-    system_prompt: |
-      You are a highly structured system engineer...
-```
-
----
-
-## 🏭 Forge: The Factory Floor
-
-Brain acts as the Project Manager, but it delegates application builds to **Forge**—a deterministic, ATDD-driven React/Python template that lives in your `Studio/` directory.
-
-### 1. Installing Forge
-Brain manages the complete scaffolding and dependency hydration (Shift-Left) for new Forge projects. To spin up a new application:
-```bash
-uv run python System/cli.py task "Use bootstrap_project to create a new project called 'My-App' using the Forge template."
-```
-*Note: `bootstrap_project` automatically clones the repository, renames the remote to `upstream`, and runs `npm install` and `uv sync`.*
-
-### 2. Updating Forge from Remote
-Because Brain renames the original Forge repository remote to `upstream` during installation, you can easily pull the latest architectural updates from the master Forge template without overwriting your custom app code:
-```bash
-uv run python System/cli.py task "Run execute_command to 'git fetch upstream' and 'git merge upstream/main' inside Studio/My-App"
-```
-
-### 3. Prompting Forge (Ticket-Driven Delegation)
-**Never play the "Telephone Game"** by passing dense, multi-step requirements directly into the `operate_forge` command prompt. Instead, use the real-world PM workflow: write a ticket, and tell the engineer to read the ticket.
-
-**The Best-Practice Workflow:**
-1. **Stage Assets:** Use Brain to move any images from `Media/` to the Forge `public/` directory.
-2. **Write the Ticket:** Instruct Brain to write the requirements into `Studio/My-App/docs/product/current_run.md`.
-3. **Dispatch the Worker:** Run `operate_forge` with a minimal instruction.
-
-*For overly complex refactors, use the "Payload Drop" method: Have Brain write the complete raw code to `docs/product/payload.txt`, and instruct Forge to simply copy-paste it into the target file.*
-
-### 4. Debugging Forge (The Ghost in the Machine)
-If Forge reports `Exit Code 0 (Success)` but your browser does not reflect the changes, **do not assume the system is broken.** You are likely experiencing AI Attention Collapse or a "Ghost File" (where the AI successfully wrote the code, but to a hallucinated/orphaned file path).
-
-**The Debug Protocol:**
-1. **Check Telemetry:** Open `Studio/My-App/docs/ops/telemetry.jsonl`. This file contains the exact, unedited JSON payload the AI executed.
-2. **Verify Paths:** Check if the AI wrote to `src/web/Hero.tsx` instead of `src/web/components/Hero.tsx`.
-3. **Check the Router:** Ensure the AI didn't accidentally update `main.tsx` to point to a dead file.
-4. **Fix via Brain:** Instruct the `WORKSPACE` route in Brain to delete the orphaned files and fix the imports.
-
----
-
 ## 🤝 Contributing
-Contributions to the core routing engine and API layers are welcome. Because Brain values Shift-Left engineering, **we enforce strict 100% test coverage on all security and execution bypass logic.**
 
-Please ensure all tests and linters pass before submitting a PR:
-```bash
-uv run pytest System/tests/ --cov
-uv run ruff check .
-```
+Shape the future of Brain - contributions are welcome!  Because Brain values Shift-Left engineering, **we enforce strict 100% test coverage on all security and execution bypass logic.**
+
+Take a look at our [contributing guidelines](./CONTRIBUTING.md) and our [code of conduct](./CODE_OF_CONDUCT.MD).
 
 ---
-*Brain — Designed for humans to collaborate safely with AI.*
+*Brain — Designed for humans to collaborate with each other and AI.*

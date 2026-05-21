@@ -11,7 +11,8 @@ def map_topology():
     console.print(
         "[dim cyan]⚡ Reflex Arc Triggered: Bypassing Prefrontal Cortex...[/dim cyan]"
     )
-    result = map_system_topology()
+
+    result = map_system_topology("mermaid")
 
     if "Success" in result:
         console.print("[bold green]✅ Topology mapped successfully.[/bold green]")
