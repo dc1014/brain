@@ -122,6 +122,17 @@ async def execute_in_sandbox(
         finally:
             await driver.teardown()
 
+    # 🔐 CRITICAL SECURITY REALIGNMENT: Enforce a strict Fail-Closed protocol for unverified/unknown tracks
+    elif route == "UNKNOWN" or route == "UNTRUSTED":
+        console.print(
+            f"[bold red]❌ SECURITY BLOCK: Aborting execution track. Route '{route}' is unmapped or untrusted.[/bold red]"
+        )
+        return ExecutionResult(
+            success=False,
+            output="",
+            block_reason="CRITICAL SECURITY BLOCK: Unverified execution route denied native host access.",
+        )
+
     else:
         console.print(
             f"[dim]⚡ Native Execution Authorized (Route: {route}). Bypassing Tier 1 Container.[/dim]"

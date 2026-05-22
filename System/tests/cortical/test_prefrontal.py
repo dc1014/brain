@@ -1,9 +1,11 @@
-# --- System/tests/cortical/test_prefrontal.py ---
 import os
 import pytest
 from unittest.mock import patch
 from System.neuroanatomy.cortical.prefrontal import execute_pipeline
 from System.neuroanatomy.limbic.thalamus import route_sensory_input
+import yaml  # type: ignore
+from pathlib import Path
+from typing import Dict, List, Any
 
 
 @pytest.mark.asyncio
@@ -23,10 +25,30 @@ async def test_analyze_task_deterministic_blocks() -> None:
 
 
 @pytest.mark.asyncio
-async def test_auditor_headless_retry_bypass(mocker):
-    """Proves headless mode automatically triggers loops on QA failure."""
+async def test_auditor_headless_retry_bypass(mocker, tmp_path: Path) -> None:
+    """Proves headless mode automatically triggers loops on QA failure without host pollution."""
     from System.llm import AgentResponse
     from System.neuroanatomy.cortical.prefrontal import execute_pipeline
+
+    # SHIFT-LEFT ISOLATION: Bind the prefrontal execution path to our isolated temp space
+    mocker.patch("System.neuroanatomy.cortical.prefrontal.ROOT_DIR", tmp_path)
+
+    # Bootstrap an isolated temporary tools configuration file structure
+    tools_dir = tmp_path / "System" / "config"
+    tools_dir.mkdir(parents=True, exist_ok=True)
+
+    # 🔐 TYPE SAFETY REALIGNMENT: Inject explicit types to satisfy strict mypy constraints
+    dummy_tools: Dict[str, List[Any]] = {
+        "base": [],
+        "write": [],
+        "execute": [],
+        "sense_environment": [],
+    }
+    with open(tools_dir / "tools.yaml", "w", encoding="utf-8") as f:
+        yaml.dump(dummy_tools, f)
+
+    # Establish sterile temporary log environments
+    (tmp_path / "logs").mkdir(parents=True, exist_ok=True)
 
     mocker.patch(
         "System.core.orchestrator.route_sensory_input",
@@ -35,7 +57,7 @@ async def test_auditor_headless_retry_bypass(mocker):
     mocker.patch("System.neuroanatomy.cortical.prefrontal.commit_transaction")
     mocker.patch("System.neuroanatomy.cortical.prefrontal.restore_balance")
 
-    # Inject static DNA layout configuration variables
+    # Inject static DNA layout configuration variables safely into memory maps
     mocker.patch(
         "System.neuroanatomy.cortical.prefrontal.get_dna_config",
         return_value={
@@ -85,7 +107,10 @@ async def test_auditor_headless_retry_bypass(mocker):
         "builtins.input", side_effect=Exception("Test failed: HITL prompt triggered!")
     )
 
+    # Execute the isolated pipeline path
     await execute_pipeline("Test retry", "FORGE", "STUDIO")
+
+    # Assert that headless mode correctly bypassed input lines and re-invoked the loop
     assert call_count["qa_auditor"] == 2
 
 

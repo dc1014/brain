@@ -40,15 +40,20 @@ def bypass_amygdala_network_calls(mocker):
 @pytest.fixture(autouse=True)
 def block_test_logging(monkeypatch):
     """
-    Intercepts any attempt to write to the production log file during tests
+    Intercepts any attempt to write to the production log files during tests
     and securely redirects it into the void (os.devnull).
     """
     original_open = builtins.open
 
     def safe_open(file, *args, **kwargs):
         file_path = str(file).lower()
-        # Block the production log, but ALLOW temporary test logs!
-        if "agent_interactions.jsonl" in file_path and "pytest" not in file_path:
+        # 🛡️ ARCHITECTURAL SILENCING: Intercept both interactions AND autobiography logs during test execution frame
+        is_prod_log = (
+            "agent_interactions.jsonl" in file_path
+            or "autobiography.jsonl" in file_path
+        )
+
+        if is_prod_log and "pytest" not in file_path:
             return original_open(os.devnull, *args, **kwargs)
         return original_open(file, *args, **kwargs)
 

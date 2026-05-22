@@ -1,3 +1,4 @@
+# --- System/tests/autonomic/test_dmn.py ---
 from System.neuroanatomy.autonomic.dmn import trigger_daydreams, _gather_dream_context
 
 
@@ -21,6 +22,8 @@ def test_dmn_trigger_daydreams(mocker, tmp_path):
         "System.neuroanatomy.autonomic.dmn._gather_dream_context",
         return_value="Test context",
     )
+    # 🔐 SHIFT-LEFT REPAIR: Target the original source definition path to avoid inline module namespace collisions
+    mocker.patch("System.neuroanatomy.cortical.prefrontal.execute_pipeline")
 
     # Mock the LLM Response
     class MockMessage:
@@ -47,9 +50,6 @@ def test_dmn_trigger_daydreams(mocker, tmp_path):
     assert "electric sheep" in daydream_file.read_text(encoding="utf-8")
 
 
-# --- appending to System/tests/autonomic/test_dmn.py ---
-
-
 def test_trigger_daydreams_with_thalamic_routing(mocker, tmp_path):
     """
     Zero-Debt Test: Proves the Default Mode Network correctly fetches
@@ -61,10 +61,12 @@ def test_trigger_daydreams_with_thalamic_routing(mocker, tmp_path):
         "System.neuroanatomy.autonomic.dmn._gather_dream_context", return_value="Memory"
     )
 
-    # ⚡ THE FIX: Use Pytest's real tmp_path to prevent internal hashlib/path encoding crashes
+    # Use Pytest's real tmp_path to prevent internal hashlib/path encoding crashes
     mocker.patch("System.neuroanatomy.autonomic.dmn.ROOT_DIR", tmp_path)
     # Ensure DNA config loads deterministically without touching the disk
     mocker.patch("System.neuroanatomy.autonomic.dmn.get_dna_config", return_value={})
+    # 🔐 SHIFT-LEFT REPAIR: Target the original source definition path to avoid inline module namespace collisions
+    mocker.patch("System.neuroanatomy.cortical.prefrontal.execute_pipeline")
 
     # Mock the Immune System Vault to simulate dynamic routing
     mock_vault_resolve = mocker.patch(

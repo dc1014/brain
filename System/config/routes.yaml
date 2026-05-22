@@ -9,15 +9,7 @@ routes:
       tools: ["base", "write", "sense_environment"]
       context: ["Meta", "Domain"]
 
-  # FORGE: Delayed on account of rain
-  #   - agent: "product_manager"
-  #     tools: ["base", "write", "execute", "sense_environment"]
-  #     context: ["Meta", "Domain", "Studio"]
-  #   - agent: "qa_auditor"
-  #     tools: ["base"]
-  #     context: ["Meta", "Domain", "Studio"]
-
-  SWARM:
+  CODE_GENERATION:
     - agent: "swarm_architect"
       tools: ["base", "write", "sense_environment"]
       context: ["Meta", "Domain", "Studio", "Professional"]
@@ -35,7 +27,7 @@ routes:
       tools: ["base", "write", "execute"]
       context: ["Meta", "Domain", "Studio", "Professional"]
 
-  # HERMES:
+  # HERMES: Keep this preserved for future communications routing
   #   - agent: "communications_bridge"
   #     tools: ["base", "write", "execute", "sense_environment"]
   #     context: ["Meta", "Studio", "Professional"]
