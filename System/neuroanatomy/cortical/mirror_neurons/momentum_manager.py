@@ -46,7 +46,25 @@ class AllostaticMomentumManager:
                     with open(self.style_path, "r", encoding="utf-8") as f:
                         loaded = json.load(f)
                         if isinstance(loaded, dict):
-                            fingerprint = loaded
+                            # ⚡ DEFENSIVE DICTIONARY MERGE: Preserves the root structure even if the file is `{}`
+                            if "code_conventions" in loaded and isinstance(
+                                loaded["code_conventions"], dict
+                            ):
+                                fingerprint["code_conventions"].update(
+                                    loaded["code_conventions"]
+                                )
+                            if "prose_cadence" in loaded and isinstance(
+                                loaded["prose_cadence"], dict
+                            ):
+                                fingerprint["prose_cadence"].update(
+                                    loaded["prose_cadence"]
+                                )
+                            if "allostatic_momentum" in loaded and isinstance(
+                                loaded["allostatic_momentum"], dict
+                            ):
+                                fingerprint["allostatic_momentum"].update(
+                                    loaded["allostatic_momentum"]
+                                )
                 except Exception:
                     pass
 

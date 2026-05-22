@@ -2,7 +2,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Dict, Any, List, Optional, cast
+from typing import Dict, Any, List, Optional
 from System.core.paths import ROOT_DIR
 from System.neuroanatomy.cortical.mirror_neurons.style_parser import CorticalStyleParser
 from System.neuroanatomy.cortical.mirror_neurons.motor_tracks import (
@@ -35,7 +35,6 @@ class MirrorNeurons:
             Path(sanitized_vault) / "System" / "config" / "long_term_engram.json"
         )
 
-        # Sub-component composite orchestration bindings matching your preferred files
         self._tracks = MotorTrackInterception(self.log_path)
         self._momentum = AllostaticMomentumManager(
             self.style_path, self.engram_path, self.vault_path
@@ -45,7 +44,6 @@ class MirrorNeurons:
             self.style_path, self._resonance_cache
         )
 
-        # SYNAPTIC BRIDGE BOOTSTRAP: Seed layout settings if engram nodes exist
         if not self.style_path.exists() and self.engram_path.exists():
             try:
                 with open(self.engram_path, "r", encoding="utf-8") as f:
@@ -106,9 +104,24 @@ class MirrorNeurons:
                 with open(self.style_path, "r", encoding="utf-8") as f:
                     loaded = json.load(f)
                     if isinstance(loaded, dict):
-                        base_fingerprint = loaded
+                        # ⚡ DEFENSIVE DICTIONARY MERGE: Secure fallback mapping
+                        if "code_conventions" in loaded and isinstance(
+                            loaded["code_conventions"], dict
+                        ):
+                            base_fingerprint["code_conventions"].update(
+                                loaded["code_conventions"]
+                            )
+                        if "prose_cadence" in loaded and isinstance(
+                            loaded["prose_cadence"], dict
+                        ):
+                            base_fingerprint["prose_cadence"].update(
+                                loaded["prose_cadence"]
+                            )
             except Exception:
                 pass
+
+        cc = base_fingerprint["code_conventions"].copy()
+        pc = base_fingerprint["prose_cadence"].copy()
 
         if domain_or_path:
             target_path = (
@@ -142,42 +155,28 @@ class MirrorNeurons:
                         content, mode=mode
                     )
 
-                    cc_target = base_fingerprint.get("code_conventions")
-                    pc_target = base_fingerprint.get("prose_cadence")
-                    if isinstance(cc_target, dict) and mode == "code":
-                        cast(Dict[str, Any], cc_target).update(
-                            local_metrics["code_conventions"]
-                        )
-                    if isinstance(pc_target, dict) and mode == "prose":
-                        cast(Dict[str, Any], pc_target).update(
-                            local_metrics["prose_cadence"]
-                        )
+                    if (
+                        mode == "code"
+                        and local_metrics
+                        and "code_conventions" in local_metrics
+                    ):
+                        cc.update(local_metrics["code_conventions"])
+                    if (
+                        mode == "prose"
+                        and local_metrics
+                        and "prose_cadence" in local_metrics
+                    ):
+                        pc.update(local_metrics["prose_cadence"])
                 except Exception:
                     pass
 
-        cc_final = base_fingerprint.get("code_conventions")
-        pc_final = base_fingerprint.get("prose_cadence")
-
-        cc = cast(
-            Dict[str, Any],
-            cc_final
-            if isinstance(cc_final, dict)
-            else base_fingerprint["code_conventions"],
-        )
-        pc = cast(
-            Dict[str, Any],
-            pc_final
-            if isinstance(pc_final, dict)
-            else base_fingerprint["prose_cadence"],
-        )
-
         return (
             f"\n[STRICT MIRROR STYLE OVERRIDE]\n"
-            f"- Code Indentation Layout: {cc.get('indentation')}\n"
-            f"- Function Naming System: {cc.get('naming')}\n"
-            f"- Mandatory Docstring Signatures: {cc.get('docstrings')}\n"
-            f"- Text Formatting Preference: Bullet type '{pc.get('bullet_style')}' with a {pc.get('tone')} cadence.\n"
-            f"- Nested Indentation Standard: {pc.get('nested_indentation')}\n"
-            f"- Bold Formatting Syntactic Element: {pc.get('bold_preference')}\n"
-            f"- Italics Formatting Syntactic Element: {pc.get('italics_preference')}\n"
+            f"- Code Indentation Layout: {cc.get('indentation', '4-spaces')}\n"
+            f"- Function Naming System: {cc.get('naming', 'snake_case')}\n"
+            f"- Mandatory Docstring Signatures: {cc.get('docstrings', False)}\n"
+            f"- Text Formatting Preference: Bullet type '{pc.get('bullet_style', '-')}' with a {pc.get('tone', 'technical')} cadence.\n"
+            f"- Nested Indentation Standard: {pc.get('nested_indentation', '4-spaces')}\n"
+            f"- Bold Formatting Syntactic Element: {pc.get('bold_preference', 'asterisks')}\n"
+            f"- Italics Formatting Syntactic Element: {pc.get('italics_preference', 'asterisks')}\n"
         )

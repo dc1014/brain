@@ -3,7 +3,7 @@ import sys
 
 
 def apply_unix_resource_limits() -> None:
-    """Limits maximum simultaneous process forks natively under POSIX systems."""
+    """Natively enforces strict memory, disk write size, and process ceilings under POSIX systems."""
     if sys.platform != "win32":
         try:
             os.setsid()
@@ -12,8 +12,16 @@ def apply_unix_resource_limits() -> None:
         try:
             import resource
 
-            resource.setrlimit(
-                resource.RLIMIT_NPROC, (50, 50)
-            )  # Fork bomb protection ceiling
+            # 1. Fork bomb defense: Max 50 simultaneous process threads
+            resource.setrlimit(resource.RLIMIT_NPROC, (50, 50))
+
+            # 2. RAM ceiling: Max 512MB virtual address space size limit
+            mem_limit = 512 * 1024 * 1024
+            resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
+
+            # 3. Disk space isolation: Max 50MB file generation limit
+            file_limit = 50 * 1024 * 1024
+            resource.setrlimit(resource.RLIMIT_FSIZE, (file_limit, file_limit))
+
         except Exception:
             pass

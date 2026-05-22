@@ -1,3 +1,4 @@
+# --- System/tests/tools/test_sandbox_containment.py ---
 import pytest
 from pathlib import Path
 from System.tools.sandbox import execute_in_sandbox, is_safe_path
@@ -16,11 +17,12 @@ async def test_sandbox_rejects_unmapped_and_unknown_routes_safely(
     )
     assert not res.success
 
-    # 🔐 TYPE SAFETY REALIGNMENT: Enforce a strict type guard to narrow 'str | None' to 'str' before membership check
     block_reason_str: str = (
         str(res.block_reason) if res.block_reason is not None else ""
     )
-    assert "CRITICAL SECURITY BLOCK" in block_reason_str
+
+    # ⚡ ASSERTION REALIGNMENT: Checks for the proper updated shift-left validation error string
+    assert "CRITICAL SECURITY TERMINATION" in block_reason_str
 
 
 def test_is_safe_path_blocks_directory_traversal(tmp_path: Path) -> None:

@@ -15,7 +15,6 @@ from System.core.paths import ROOT_DIR
 
 console = Console()
 
-# --- RESTORE GLOBAL PATHS AND OBSERVABILITY STRUCTURES ---
 LOG_PATH = ROOT_DIR / "System" / "logs"
 LOG_PATH.mkdir(parents=True, exist_ok=True)
 
@@ -28,15 +27,29 @@ file_handler.setFormatter(
 if not medulla_logger.handlers:
     medulla_logger.addHandler(file_handler)
 
+_ACTIVE_MEDULLA_INSTANCES: List["MedullaOblongata"] = []
+
+
+def cleanup_active_medullas() -> None:
+    """🛡️ DAEMON REAPER: Cleanly disengages running Medulla instances to eliminate test stalls."""
+    global _ACTIVE_MEDULLA_INSTANCES
+    for instance in _ACTIVE_MEDULLA_INSTANCES:
+        if instance.is_alive:
+            try:
+                instance.stop()
+            except Exception:
+                instance.is_alive = False
+    _ACTIVE_MEDULLA_INSTANCES.clear()
+
 
 class OrchestrationMismatchException(Exception):
-    """⚡ Custom Exception thrown when high-specificity orchestration states collapse prematurely, indicating operational thrashing."""
+    """⚡ Custom Exception thrown when high-specificity orchestration states collapse prematurely."""
 
     pass
 
 
 class DurableTaskLog:
-    """Flat-file Write-Ahead Log (WAL) engine ensuring process state consistency with strict mutex locking."""
+    """Flat-file Write-Ahead Log (WAL) engine ensuring process state consistency."""
 
     def __init__(self, log_dir: str) -> None:
         self.wal_path: str = os.path.join(os.path.abspath(log_dir), "task_queue.jsonl")
@@ -44,7 +57,6 @@ class DurableTaskLog:
         os.makedirs(os.path.abspath(log_dir), exist_ok=True)
 
     def register_intent(self, command_string: str) -> str:
-        """Logs an intent marker before running volatile scripts with synchronized multi-thread access."""
         task_id = str(uuid.uuid4())
         record = {"id": task_id, "cmd": command_string, "status": "PENDING"}
         with self._lock:
@@ -56,7 +68,6 @@ class DurableTaskLog:
         return task_id
 
     def mark_completed(self, task_id: str, final_status: str = "DONE") -> None:
-        """Appends a completion marker to cleanly sign off log state transactions thread-safely."""
         record = {"id": task_id, "status": final_status}
         with self._lock:
             try:
@@ -66,7 +77,6 @@ class DurableTaskLog:
                 pass
 
     def recover_interrupted_tasks(self) -> List[Dict[str, Any]]:
-        """Scans state indicators on boot, flagging tasks that crashed mid-execution loop."""
         if not os.path.exists(self.wal_path):
             return []
 
@@ -94,16 +104,11 @@ class DurableTaskLog:
 
 
 class MedullaOblongata:
-    """
-    The Medulla Oblongata Brainstem Master Daemon.
-    Employs a Contextual Orchestration Specificity (COS) Arbiter to minimize state thrashing.
-    """
+    """The Medulla Oblongata Brainstem Master Daemon."""
 
     def __init__(self) -> None:
         self.config_path = ROOT_DIR / "System" / "config" / "medulla.yaml"
         self.is_alive = False
-
-        # Valid states: SLEEP, IDLE_READY, ORCHESTRATION_MINIMAL, ORCHESTRATION_STANDARD, ORCHESTRATION_CRITICAL
         self.cognitive_state = "SLEEP"
         self.default_profile = "com.brainos.minimal_ready"
 
@@ -117,6 +122,8 @@ class MedullaOblongata:
 
         self.ipc_client: Optional[Any] = None
         self.task_log = DurableTaskLog(str(LOG_PATH))
+
+        _ACTIVE_MEDULLA_INSTANCES.append(self)
 
     def _load_blueprint(self) -> dict[str, Any]:
         if not self.config_path.exists():
@@ -269,7 +276,11 @@ class MedullaOblongata:
                     run_pending_queue()
                 except Exception as e:
                     medulla_logger.error(f"Cognitive heartbeat exception: {str(e)}")
-            time.sleep(15)
+
+            for _ in range(150):
+                if not self.is_alive:
+                    break
+                time.sleep(0.1)
 
     def _monitor_homeostasis(self):
         circadian = self.config_data.get("circadian_rhythm", {})
@@ -292,7 +303,11 @@ class MedullaOblongata:
                 check_energy_levels()
             except Exception as e:
                 medulla_logger.error(f"Homeostasis disruption: {str(e)}")
-            time.sleep(30)
+
+            for _ in range(300):
+                if not self.is_alive:
+                    break
+                time.sleep(0.1)
 
     def _supervise_threads(self):
         daemons_config = self.config_data.get("background_daemons", {})
@@ -378,7 +393,10 @@ class MedullaOblongata:
                     except Exception as e:
                         medulla_logger.error(f"Watcher resuscitation failure: {str(e)}")
 
-            time.sleep(5)
+            for _ in range(50):
+                if not self.is_alive:
+                    break
+                time.sleep(0.1)
 
     def wake(self):
         if self.is_alive:
@@ -394,6 +412,16 @@ class MedullaOblongata:
             self.boot_recovery_sequence()
         except Exception as e:
             medulla_logger.critical(f"WAL Boot recovery crash bypass: {str(e)}")
+
+        try:
+            from System.tools.microsandbox import replenish_worker_pool_detached
+
+            replenish_worker_pool_detached(ROOT_DIR / "Studio")
+            medulla_logger.info(
+                "Medulla brainstem boot: Hydrated sterile process containment worker pool."
+            )
+        except Exception as e:
+            medulla_logger.error(f"Failed to bootstrap unprivileged sandbox pool: {e}")
 
         threading.Thread(target=self._supervise_threads, daemon=True).start()
         threading.Thread(target=self._monitor_homeostasis, daemon=True).start()
@@ -434,41 +462,51 @@ class MedullaOblongata:
         )
 
     def stop(self) -> None:
-        """Retracts neural loops cleanly after running verification barriers."""
         try:
             self.pre_sleep_sequence()
         except Exception as e:
             medulla_logger.error(f"Error during pre-sleep coordination sweep: {e}")
 
-        # 🔌 DAEMON AUTOMATION: Invokes centralized default mode network distillation directly on sleep onset
-        try:
-            from System.neuroanatomy.autonomic.dmn import trigger_daydreams
-
+        # ⚡ SELF-DEFENDING TEST GATEWAY: Absolute block preventing live LLM generation during tests
+        if os.environ.get("BRAIN_OS_TESTING") == "1":
             medulla_logger.info(
-                "Medulla brainstem sleep phase: Invoking default mode network distillation loop."
+                "Medulla sleep phase: Daydream loop bypassed inside testing environment."
             )
-            trigger_daydreams(topic=None, domain="STUDIO")
-        except Exception as dmn_err:
-            medulla_logger.error(
-                f"Failed to execute background subcortex synthesis during disengagement: {dmn_err}"
-            )
+        else:
+            try:
+                from System.neuroanatomy.autonomic.dmn import trigger_daydreams
+
+                medulla_logger.info(
+                    "Medulla brainstem sleep phase: Invoking default mode network distillation loop."
+                )
+                trigger_daydreams(topic=None, domain="STUDIO")
+            except Exception as dmn_err:
+                medulla_logger.error(
+                    f"Failed to execute background subcortex synthesis during disengagement: {dmn_err}"
+                )
 
         self.is_alive = False
         self.cognitive_state = "SLEEP"
 
-        try:
-            parent = psutil.Process(self._main_pid)
-            children = parent.children(recursive=True)
-            for child in children:
-                try:
-                    child.terminate()
-                except psutil.NoSuchProcess:
-                    pass
-            _, alive = psutil.wait_procs(children, timeout=2)
-            for child in alive:
-                child.kill()
-        except Exception as e:
-            medulla_logger.error(f"Process cleanup warning: {str(e)}")
+        # ⚡ SYSTEM PROTECTION GATE: Avoid recursively terminating the pytest runner's entire infrastructure process tree
+        if os.environ.get("BRAIN_OS_TESTING") == "1":
+            medulla_logger.info(
+                "Medulla sleep phase: Bypassed recursive psutil child process sweeps inside testing track."
+            )
+        else:
+            try:
+                parent = psutil.Process(self._main_pid)
+                children = parent.children(recursive=True)
+                for child in children:
+                    try:
+                        child.terminate()
+                    except psutil.NoSuchProcess:
+                        pass
+                _, alive = psutil.wait_procs(children, timeout=2)
+                for child in alive:
+                    child.kill()
+            except Exception as e:
+                medulla_logger.error(f"Process cleanup warning: {str(e)}")
 
         stop_msg = (
             "Medulla Oblongata entering sleep state. All systems spun down cleanly."
@@ -479,7 +517,6 @@ class MedullaOblongata:
 
 def child_boot(ipc_address: str):
     from multiprocessing.connection import Client
-    import time
 
     client = None
     try:
@@ -492,6 +529,7 @@ def child_boot(ipc_address: str):
     medulla.wake()
     try:
         while True:
+            # ⚡ DESIGN INTEGRITY MAINTENANCE: Symmetrical fix to avoid runtime attribute breaks
             time.sleep(1)
     except KeyboardInterrupt:
         medulla.stop()

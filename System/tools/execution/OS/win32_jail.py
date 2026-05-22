@@ -1,21 +1,19 @@
+# --- System/tools/execution/OS/win32_jail.py ---
 import sys
 import uuid
 import ctypes
 
 
 def apply_windows_job_object(pid: int) -> None:
-    """⚡ WIN32 KERNEL MAPPING: Enforces hard resource ceilings on Windows processes."""
+    """
+    ⚡ WIN32 KERNEL MAPPING: Enforces hard resource ceilings on Windows processes.
+    Binds the child process tree to an isolated Job Object wrapper with a 512MB RAM
+    ceiling and active process limits using standard library ctypes calls to remain dependency-free.
+    """
     if sys.platform != "win32":
         return
 
     from ctypes import wintypes
-
-    """
-    ⚡ WIN32 KERNEL MAPPING: Enforces hard resource ceilings on Windows processes.
-    Binds the child process tree to an isolated Job Object wrapper with OOM and fork-bomb limits.
-    """
-    if sys.platform != "win32":
-        return
 
     # Win32 Constants
     JOB_OBJECT_LIMIT_ACTIVE_PROCESS = 0x00000008

@@ -304,6 +304,13 @@ def test_mirror_neurons_transient_file_eviction_handling(
 
 def test_mirror_neurons_allostatic_refractory_window(tmp_path: Path, mocker) -> None:
     """Confirms that the allostatic refractory window clusters successive micro-saves flawlessly before execution."""
+    # ⚡ SCAFFOLDING FIX: Generate the mocked config directory within the sandbox path boundary
+    (tmp_path / "System" / "config").mkdir(parents=True, exist_ok=True)
+    # Seed a placeholder configuration fingerprint record so the module initialization exists natively
+    (tmp_path / "System" / "config" / "stylistic_fingerprint.json").write_text(
+        "{}", encoding="utf-8"
+    )
+
     mocker.patch("System.neuroanatomy.cortical.mirror_neurons.ROOT_DIR", tmp_path)
     mocker.patch("System.cli_somatic.ROOT_DIR", tmp_path)
 
@@ -365,8 +372,15 @@ def test_mirror_neurons_allostatic_refractory_window(tmp_path: Path, mocker) -> 
 
 def test_mirror_neurons_typer_cli_pipeline(tmp_path: Path, mocker) -> None:
     """End-to-end functional test proving Typer app endpoints correctly invoke mirror neuron hooks."""
+    # ⚡ SCAFFOLDING FIX: Generate the mocked config directory within the sandbox path boundary
+    (tmp_path / "System" / "config").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "System" / "config" / "stylistic_fingerprint.json").write_text(
+        "{}", encoding="utf-8"
+    )
+
     mocker.patch("System.neuroanatomy.cortical.mirror_neurons.ROOT_DIR", tmp_path)
     mocker.patch("System.cli_somatic.ROOT_DIR", tmp_path)
+    # ... remainder of your existing Typer app runner endpoints invoke cleanly below ...
 
     observe_result = runner.invoke(
         app,

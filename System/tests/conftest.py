@@ -2,7 +2,18 @@ import os
 import builtins
 import pytest
 import socket
+import psutil
 from unittest.mock import patch
+from System.tools.microsandbox import cleanup_worker_pool
+from System.neuroanatomy.autonomic.medulla import cleanup_active_medullas
+
+
+@pytest.fixture(autouse=True, scope="session")
+def setup_testing_environment():
+    """Enforces a self-defending environment variable barrier across the test session."""
+    os.environ["BRAIN_OS_TESTING"] = "1"
+    os.environ["BRAIN_OS_HEADLESS"] = "1"
+    yield
 
 
 @pytest.fixture(autouse=True)
@@ -149,3 +160,61 @@ def guard_autonomic_daydreams(request):
                 "Daydream bypassed safely inside side-effect daemon test context."
             )
             yield
+
+
+@pytest.fixture(autouse=True)
+def guard_and_clean_autonomic_subcortex(request, tmp_path):
+    """
+    🛡️ Global Kernel Process Tree Reaper: Disables background DMN daydreams,
+    scaffolds mock system configurations for specific tests, and sweeps processes.
+    """
+    # ⚡ SCAFFOLDING CONTAINMENT GATE: Scaffold config only for specific tool/cortical tracks
+    # to protect core DNA and onboarding engines from FileExistsError collisions.
+    if request.module and any(
+        mod in request.module.__name__
+        for mod in [
+            "test_mirror_neurons",
+            "test_sandbox",
+            "test_read_only_sandbox",
+            "test_sandbox_containment",
+        ]
+    ):
+        config_dir = tmp_path / "System" / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        fingerprint_file = config_dir / "stylistic_fingerprint.json"
+        if not fingerprint_file.exists():
+            fingerprint_file.write_text("{}", encoding="utf-8")
+
+    if request.module and "test_dmn" in request.module.__name__:
+        yield
+    else:
+        with patch(
+            "System.neuroanatomy.autonomic.dmn.trigger_daydreams"
+        ) as mock_trigger:
+            mock_trigger.return_value = (
+                "Bypassed safely inside daemon side-effect context."
+            )
+            yield
+
+    # Synchronously clear memory reference loops
+    cleanup_worker_pool()
+    cleanup_active_medullas()
+
+    # ⚡ KERNEL PROCESS REAPER: Query the host operating system to kill escaping child process contexts
+    try:
+        current_process = psutil.Process(os.getpid())
+        for child in current_process.children(recursive=True):
+            if child.name().lower() in [
+                "deno",
+                "deno.exe",
+                "python",
+                "python.exe",
+                "cmd.exe",
+                "bash",
+            ]:
+                try:
+                    child.kill()
+                except Exception:
+                    pass
+    except Exception:
+        pass
