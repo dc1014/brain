@@ -59,7 +59,9 @@ mypy_path = "."
 
 
 [tool.pytest.ini_options]
-# ⚡ FAST LOCAL LOOP: Parallel processes are active, strict markers are safe, and heavy coverage tracing is off by default
+# ⚡ SHIFT-LEFT: Explicit loop isolation prevents parallel test futures from hanging
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 addopts = "-v -n auto --dist=loadfile --strict-markers -m \"not eval\""
 pythonpath = [".", "Sense"]
 testpaths = ["System/tests"]

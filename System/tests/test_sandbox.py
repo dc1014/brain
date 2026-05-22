@@ -24,7 +24,17 @@ async def test_execute_in_sandbox_requires_containment(tmp_path):
 
     mock_proc = AsyncMock()
     mock_proc.returncode = 0
-    mock_proc.communicate.return_value = (b"User-space sandbox verified.\n", b"")
+
+    # ⚡ FIXED: Split the payload into two chunks so the text gets saved to the
+    # output buffer BEFORE the execution token immediately breaks the loop.
+    mock_proc.stdout.read = AsyncMock(
+        side_effect=[
+            b"User-space sandbox verified.\n",
+            b"[__EXECUTION_COMPLETE__]",
+            b"",
+        ]
+    )
+    mock_proc.wait = AsyncMock()
 
     with (
         patch(

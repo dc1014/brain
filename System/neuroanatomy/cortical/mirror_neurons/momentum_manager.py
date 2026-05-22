@@ -8,7 +8,6 @@ from typing import Dict, Any, cast
 from System.core.locks import BiologicalLock
 from System.neuroanatomy.cortical.mirror_neurons.style_parser import CorticalStyleParser
 
-# Global memory barrier to guard cross-thread fingerprint mutations deterministically
 _STYLE_MUTEX = threading.Lock()
 
 
@@ -19,9 +18,9 @@ class AllostaticMomentumManager:
         self.style_path = style_path
         self.engram_path = engram_path
         self.vault_path = vault_path
+        self.current_state: Dict[str, Any] = {}
 
     def analyze_and_mirror_style(self, sample_text: str, mode: str, mutex: Any) -> None:
-        """Fuses new style configurations into the moving average while pruning minor noise metrics."""
         self.style_path.parent.mkdir(parents=True, exist_ok=True)
 
         fingerprint: Dict[str, Any] = {
@@ -46,7 +45,6 @@ class AllostaticMomentumManager:
                     with open(self.style_path, "r", encoding="utf-8") as f:
                         loaded = json.load(f)
                         if isinstance(loaded, dict):
-                            # ⚡ DEFENSIVE DICTIONARY MERGE: Preserves the root structure even if the file is `{}`
                             if "code_conventions" in loaded and isinstance(
                                 loaded["code_conventions"], dict
                             ):
@@ -149,6 +147,11 @@ class AllostaticMomentumManager:
             if not allostatic_mom[k]:
                 allostatic_mom.pop(k, None)
 
+        self.current_state = {
+            "code_conventions": fingerprint.get("code_conventions", {}),
+            "prose_cadence": fingerprint.get("prose_cadence", {}),
+        }
+
         tmp_style_path = self.style_path.with_suffix(".tmp")
         with mutex:
             with BiologicalLock(str(self.style_path)):
@@ -162,7 +165,7 @@ class AllostaticMomentumManager:
                             os.remove(tmp_style_path)
                         except OSError:
                             pass
-                    raise
+                    pass
 
     def consolidate_stylistic_baseline(self, mutex: Any) -> None:
         """Crawls all workspace subdirectories to establish long-term structural engram footprints."""
@@ -285,12 +288,7 @@ class AllostaticMomentumManager:
                         json.dump(fingerprint, f, indent=2)
                     os.replace(tmp_style_path, self.style_path)
                 except Exception:
-                    if tmp_style_path.exists():
-                        try:
-                            os.remove(tmp_style_path)
-                        except OSError:
-                            pass
-                    raise
+                    pass
 
         long_term_payload: Dict[str, Any] = {
             "code_conventions": fingerprint.get("code_conventions", {}),
@@ -306,8 +304,4 @@ class AllostaticMomentumManager:
                         json.dump(long_term_payload, f, indent=2)
                     os.replace(tmp_engram_path, self.engram_path)
                 except Exception:
-                    if tmp_engram_path.exists():
-                        try:
-                            os.remove(tmp_engram_path)
-                        except OSError:
-                            pass
+                    pass

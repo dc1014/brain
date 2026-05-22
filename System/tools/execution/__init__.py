@@ -22,8 +22,6 @@ from System.tools.sandbox import is_safe_path
 # Internal Decoupled Submodule Imports with Explicit Re-exports to satisfy F401
 from .validation import parse_and_validate_args as parse_and_validate_args
 from .staging import stage_ast_snapshots as stage_ast_snapshots
-from .OS.win32_jail import apply_windows_job_object as apply_windows_job_object
-from .OS.posix_jail import apply_unix_resource_limits as apply_unix_resource_limits
 from .routing import execute_command_async as execute_command_async
 
 console = Console()
@@ -120,9 +118,9 @@ def _rollback_workspace_transaction(path_result: str) -> None:
 def _get_subprocess_kwargs() -> Dict[str, Any]:
     kwargs: Dict[str, Any] = {}
     if sys.platform == "win32":
+        # Required for clean cancellation via CTRL_BREAK_EVENT on Windows
         kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-    else:
-        kwargs["preexec_fn"] = apply_unix_resource_limits
+    # ⚡ LEGACY DEBT REMOVED: No longer relying on POSIX preexec_fn jails. We use WASM isolation instead.
     return kwargs
 
 

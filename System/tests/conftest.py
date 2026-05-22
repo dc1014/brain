@@ -218,3 +218,46 @@ def guard_and_clean_autonomic_subcortex(request, tmp_path):
                     pass
     except Exception:
         pass
+
+
+@pytest.fixture
+def safe_subprocess_mock(mocker):
+    """
+    🛡️ SHIFT-LEFT MOCKING: Prevents AsyncMock from swallowing synchronous
+    subprocess methods (.close, .kill) which causes test hangs and coroutine leaks.
+    Inject this into any test that needs to fake an asyncio subprocess.
+    """
+    from unittest.mock import AsyncMock, MagicMock
+
+    # 1. Create the base async mock (THIS WAS MISSING!)
+    mock_proc = AsyncMock()
+
+    mock_proc.stdout = AsyncMock()
+    mock_proc.stdout.at_eof = MagicMock(return_value=False)
+
+    # ⚡ Simulate Deno emitting the cryptographic success signal
+    mock_proc.stdout.readline = AsyncMock(
+        side_effect=[
+            b"User-space V8 sandbox verified.\n",
+            b"[__EXECUTION_COMPLETE__]\n",
+            b"",
+        ]
+    )
+
+    # 2. Force the synchronous properties to be normal MagicMocks
+    mock_proc.stdin = AsyncMock()
+    mock_proc.stdin.close = MagicMock()  # Sync!
+    mock_proc.stdin.write = MagicMock()  # Sync!
+    mock_proc.terminate = MagicMock()  # Sync!
+    mock_proc.kill = MagicMock()  # Sync!
+
+    # 3. Explicitly define async methods
+    mock_proc.wait = AsyncMock()
+    mock_proc.communicate = AsyncMock()
+    mock_proc.stdin.wait_closed = AsyncMock()
+    mock_proc.stdin.drain = AsyncMock()
+
+    # 4. Globally patch the asyncio execution for the duration of the test
+    mocker.patch("asyncio.create_subprocess_exec", return_value=mock_proc)
+
+    return mock_proc

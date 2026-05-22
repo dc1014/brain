@@ -13,7 +13,12 @@ async def test_code_generation_route_mandates_container_execution(tmp_path):
     with patch("System.tools.sandbox.ROOT_DIR", tmp_path):
         mock_proc = AsyncMock()
         mock_proc.returncode = 0
-        mock_proc.communicate.return_value = (b"Sandbox verified.", b"")
+
+        # ⚡ FIXED: Replaced communicate() with chunked read() streams to prevent hanging
+        mock_proc.stdout.read = AsyncMock(
+            side_effect=[b"Sandbox verified.\n", b"[__EXECUTION_COMPLETE__]", b""]
+        )
+        mock_proc.wait = AsyncMock()
 
         with patch(
             "System.tools.sandbox.get_pre_warmed_worker",

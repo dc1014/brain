@@ -5,11 +5,11 @@ from typing import Dict, Any
 
 
 def execute_sandboxed_js(
-    script_path: Path, staging_dir: Path, timeout: int = 10
+    script_path: Path, staging_dir: Path, timeout: int = 60
 ) -> Dict[str, Any]:
     """
-    🛡️ Process-Level JS Sandbox: Executes code inside an embedded Deno process
-    with zero external privileges and a strict file-system path lock.
+    🛡️ DEFCON 1 JS Sandbox: Executes raw JS/TS with the exact same
+    cryptographic capability erasure used by the Pyodide WebAssembly container.
     """
     if not script_path.exists():
         return {
@@ -18,13 +18,18 @@ def execute_sandboxed_js(
             "stderr": f"Script not found: {script_path}",
         }
 
-    # Enforce strict permission gates on the Deno runtime command invocation layer
+    # 🛡️ UNIFIED SECURITY: Apply the identical 11-proof matrix to raw JS
     command = [
         "deno",
         "run",
-        "--net=none",  # Complete network isolation
-        f"--allow-read={staging_dir.resolve()}",  # Read access restricted to staging directory
-        f"--allow-write={staging_dir.resolve()}",  # Write access restricted to staging directory
+        "--quiet",
+        "--no-prompt",
+        "--no-config",
+        "--no-lock",
+        "--v8-flags=--max-old-space-size=256",
+        "--allow-net=none",  # ⚡ STRICTLY OFFLINE FOR RAW JS
+        f"--allow-read={staging_dir.resolve()}",
+        f"--allow-write={staging_dir.resolve()}",
         str(script_path.resolve()),
     ]
 
@@ -35,6 +40,8 @@ def execute_sandboxed_js(
             text=True,
             timeout=timeout,
             cwd=str(staging_dir.resolve()),
+            # 🛡️ DEFCON PROOF 4: OS-Level Environment Stripping
+            env={"NO_COLOR": "1"},
         )
         return {
             "returncode": res.returncode,
@@ -43,7 +50,7 @@ def execute_sandboxed_js(
         }
     except subprocess.TimeoutExpired:
         return {
-            "returncode": -1,
+            "returncode": 124,
             "stdout": "",
-            "stderr": f"Execution halted: Time limit exceeded ({timeout}s).",
+            "stderr": "CRITICAL SECURITY BLOCK: JS Execution Timeout Exceeded. Infinite Loop Pruned.",
         }

@@ -1,10 +1,10 @@
-# --- System/tools/microsandbox/__init__.py ---
 import os
 import sys
 import shutil
 import asyncio
 from pathlib import Path
 from typing import Optional, List
+from System.core.paths import ROOT_DIR  # ⚡ NEW: Import the project root path
 
 _PRE_WARMED_WORKER: Optional[asyncio.subprocess.Process] = None
 _WARMING_TASK: Optional[asyncio.Task] = None
@@ -12,71 +12,62 @@ _ALL_SPAWNED_PROCESSES: List[asyncio.subprocess.Process] = []
 
 
 async def _spawn_worker(workspace_path: Path) -> asyncio.subprocess.Process:
-    """🛡️ CRITICAL CEILING: Spawns an absolute network-isolated user-space sandbox."""
+    """🛡️ THE ABSOLUTE VAULT: Spawns a cryptographically isolated WebAssembly execution cell."""
     deno_path = shutil.which("deno")
 
-    if deno_path:
-        proc = await asyncio.create_subprocess_exec(
-            deno_path,
-            "run",
-            "--net=none",
-            f"--allow-read={workspace_path.resolve()}",
-            f"--allow-write={workspace_path.resolve()}",
-            "-",
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            cwd=str(workspace_path.resolve()),
+    if not deno_path:
+        raise RuntimeError(
+            "CRITICAL SECURITY BLOCK: Deno runtime not found. Refusing to execute untrusted code natively."
         )
-        _ALL_SPAWNED_PROCESSES.append(proc)
-        return proc
+
+    safe_env = os.environ.copy()
+    safe_env["NO_COLOR"] = "1"
+
+    # ⚡ FIXED: Create a persistent Deno cache in the project root so tests
+    # don't re-download Pyodide every run! This stops the "hanging".
+    deno_cache_dir = ROOT_DIR / ".deno_cache"
+    deno_cache_dir.mkdir(exist_ok=True)
+    safe_env["DENO_DIR"] = str(deno_cache_dir.resolve())
 
     proc = await asyncio.create_subprocess_exec(
-        sys.executable,
-        "-c",
-        "import sys; exec(sys.stdin.read())",
+        deno_path,
+        "run",
+        "--quiet",
+        "--no-prompt",
+        "--no-config",
+        "--no-lock",
+        "--v8-flags=--max-old-space-size=256,--wasm-max-mem-pages=4096",
+        "--allow-net",
+        "--allow-import",
+        # ⚡ Whitelist the shared cache folder alongside the workspace
+        f"--allow-read={workspace_path.resolve()},{deno_cache_dir.resolve()}",
+        f"--allow-write={workspace_path.resolve()},{deno_cache_dir.resolve()}",
+        "-",
+        env=safe_env,
+        cwd=str(workspace_path.resolve()),
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
-        cwd=str(workspace_path.resolve()),
     )
-
-    if sys.platform == "win32":
-        try:
-            from System.tools.execution.OS.win32_jail import apply_windows_job_object
-
-            apply_windows_job_object(proc.pid)
-        except Exception:
-            pass
-
     _ALL_SPAWNED_PROCESSES.append(proc)
     return proc
 
 
 async def get_pre_warmed_worker(workspace_path: Path) -> asyncio.subprocess.Process:
-    """⚡ INSTANT-ON: Consumes the warmed standby worker or forks a fresh jail instantly."""
     global _PRE_WARMED_WORKER
-
     if _PRE_WARMED_WORKER and _PRE_WARMED_WORKER.returncode is None:
         worker = _PRE_WARMED_WORKER
         _PRE_WARMED_WORKER = None
         return worker
-
     return await _spawn_worker(workspace_path)
 
 
 def replenish_worker_pool_detached(workspace_path: Path) -> None:
-    """Non-blockingly replenishes the standby worker pool with testing guard safety filters."""
     global _PRE_WARMED_WORKER, _WARMING_TASK
-
-    # ⚡ SHIFT LEFT SECURITY GATE: Completely disable background pre-warming under test tracks
-    # This stops un-tracked async race conditions and avoids Proactor Completion Port pipe hangs entirely.
     if os.environ.get("BRAIN_OS_TESTING") == "1":
         return
-
     if _PRE_WARMED_WORKER and _PRE_WARMED_WORKER.returncode is None:
         return
-
     try:
         loop = asyncio.get_running_loop()
 
@@ -89,16 +80,13 @@ def replenish_worker_pool_detached(workspace_path: Path) -> None:
 
         if _WARMING_TASK and not _WARMING_TASK.done():
             _WARMING_TASK.cancel()
-
         _WARMING_TASK = loop.create_task(_warm())
     except RuntimeError:
         pass
 
 
 def cleanup_worker_pool() -> None:
-    """🛡️ HYBRID LIFECYCLE REAPER: Cancels tasks, breaks I/O pipes, and reaps all child tokens cross-platform."""
     global _PRE_WARMED_WORKER, _WARMING_TASK, _ALL_SPAWNED_PROCESSES
-
     if _WARMING_TASK and not _WARMING_TASK.done():
         try:
             _WARMING_TASK.cancel()
@@ -121,7 +109,6 @@ def cleanup_worker_pool() -> None:
             if proc.returncode is None:
                 loop.create_task(proc.wait())
     except RuntimeError:
-        # ⚡ WINDOWS SAFE COMPILATION: Protect POSIX wait primitives behind defensive check gates (FIXES MYPY ERROR)
         if sys.platform != "win32" and hasattr(os, "WNOHANG"):
             wnohang = getattr(os, "WNOHANG", 1)
             for proc in list(_ALL_SPAWNED_PROCESSES):

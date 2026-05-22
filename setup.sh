@@ -2,6 +2,13 @@
 # --- setup.sh ---
 echo "🧠 Bootstrapping Brain OS..."
 
+if ! command -v deno &> /dev/null
+then
+    echo "CRITICAL: Deno is required for Brain's secure WebAssembly Sandbox."
+    echo "Please install Deno: curl -fsSL https://deno.land/install.sh | sh"
+    exit 1
+fi
+
 # 1. Install uv if missing
 if ! command -v uv &> /dev/null; then #
     echo "📦 Installing uv (Python's ultra-fast package manager)..." #

@@ -1,5 +1,4 @@
 # --- System/tools/__init__.py ---
-
 from typing import Any
 from System.core.paths import ROOT_DIR, normalize_path
 from System.core.schemas import ExecutionResult
@@ -62,7 +61,7 @@ from .cognitive import (
     transmit_telepathy,
 )
 
-# ⚡ DYNAMIC/OPTIONAL REGISTRATIONS: Signatures identically mirror the original imports
+# ⚡ DYNAMIC/OPTIONAL REGISTRATIONS
 try:
     from .forge import bootstrap_project, operate_forge
 except Exception:
@@ -126,13 +125,10 @@ def learn(*args: Any, **kwargs: Any) -> Any:
     return None
 
 
-# ⚡ INTERNAL ATTRIBUTE BACK-MAPPING
 execute_engram = execute_engram_tool
-
 
 # ==============================================================================
 # 🛡️ THE EXPLICIT MYPY/RUFF EXPORT BARRIER
-# Completely prevents circular analysis failures by hardcoding the public API.
 # ==============================================================================
 __all__ = [
     "ROOT_DIR",

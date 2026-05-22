@@ -107,3 +107,6 @@ Meta/mirror_observations.jsonl
 # Syntensors / Binary parameters
 *.safetensors
 *.bin
+
+# Deno / Pyodide WASM Local Cache
+.deno_cache/

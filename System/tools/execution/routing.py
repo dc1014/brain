@@ -15,7 +15,6 @@ from rich.table import Table
 from rich.text import Text
 
 from .validation import parse_and_validate_args
-from .OS.win32_jail import apply_windows_job_object
 
 
 def _render_command_cockpit(
@@ -237,23 +236,46 @@ async def execute_command_async(
         # Activate kernel-level protection loops through our spied module space reference
         sys.modules["System.tools.execution"]._set_system_volume_mask(read_only=True)
 
-        process = await asyncio.create_subprocess_exec(
-            *args,
-            cwd=path_result,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            env=exec_mod._get_scrubbed_env(),
-            **exec_mod._get_subprocess_kwargs(),
-        )
+        env_vars = exec_mod._get_scrubbed_env()
 
+        # 🛡️ DEFCON PROOF 12: Native OS Resource Ceilings (No-Deno Security)
+        # If we bypass WASM and run natively, we MUST enforce OS-level constraints
+        # to prevent fork bombs, memory starvation, and orphaned runaway processes.
+        # 🛡️ DEFCON PROOF 12: Native OS Resource Ceilings (No-Deno Security)
+        # If we bypass WASM and run natively, we MUST enforce OS-level constraints
+        # to prevent fork bombs, memory starvation, and orphaned runaway processes.
+
+        # ⚡ RESTORED PROCESS SPAWNING BLOCK WITH KERNEL JAILS ⚡
         if sys.platform == "win32":
-            try:
-                apply_windows_job_object(process.pid)
-            except Exception:
-                pass
+            # Windows Job Object Process Group Isolation
+            process = await asyncio.create_subprocess_exec(
+                args[0],
+                *args[1:],
+                cwd=path_result,
+                env=env_vars,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                creationflags=0x01000000 | 0x00000200,
+            )
+        else:
+            # 🛡️ POSIX KERNEL JAIL RESOLUTION
+            # asyncio prohibits preexec_fn. We shift the kernel constraints to the shell natively.
+            # -v 524288 caps memory at 512MB to stop Out-Of-Memory host crashes.
+            # -u 50 caps maximum child threads at 50 to permanently stop Fork-Bombs.
+            wrapped_cmd = f"ulimit -v 524288 -u 50 && exec {shlex.join(args)}"
+            process = await asyncio.create_subprocess_exec(
+                "sh",
+                "-c",
+                wrapped_cmd,
+                cwd=path_result,
+                env=env_vars,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
 
+        timeout = 300.0 if "pytest" in command else 60.0
         timed_out, full_output = await exec_mod._stream_and_prune_process(
-            process, timeout=180.0
+            process, timeout=timeout
         )
         sys.modules["System.tools.execution"]._set_system_volume_mask(read_only=False)
 

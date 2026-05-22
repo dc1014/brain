@@ -1,8 +1,12 @@
 # --- System/tools/sandbox.py ---
 import os
+import json
 import shlex
+import shutil
+import asyncio
 from pathlib import Path
-from typing import Dict, Set
+from typing import Dict, Set, Any
+from rich.console import Console
 
 from System.core.paths import ROOT_DIR, normalize_path
 from System.core.schemas import ExecutionResult
@@ -10,29 +14,59 @@ from System.tools.microsandbox import (
     get_pre_warmed_worker,
     replenish_worker_pool_detached,
 )
-from rich.console import Console
 
 console = Console()
 
-# --- SHIFT LEFT SECURITY: OS DIRECTORY BOUNDARIES ---
+# Define the global stream limit
+MAX_BYTES = 5 * 1024 * 1024  # 5 MB ceiling
 
-ALLOWED_DIRECTORIES: Set[Path] = {
-    normalize_path(ROOT_DIR / "Personal"),
-    normalize_path(ROOT_DIR / "Professional"),
-    normalize_path(ROOT_DIR / "Studio"),
-    normalize_path(ROOT_DIR / "Meta"),
-    normalize_path(ROOT_DIR / "Media"),
-}
+# =====================================================================
+# 🛡️ SHIFT LEFT SECURITY: DYNAMIC OS DIRECTORY BOUNDARY PROXIES
+# =====================================================================
 
-READ_ONLY_DIRECTORIES: Set[Path] = {
-    normalize_path(ROOT_DIR / "System"),
-}
+
+class DynamicDirectorySet:
+    def __init__(self, relative_segments: list[str]) -> None:
+        self._relative_segments = relative_segments
+
+    def _resolve(self) -> Set[Path]:
+        return {
+            normalize_path(ROOT_DIR / segment) for segment in self._relative_segments
+        }
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._resolve(), name)
+
+    def __contains__(self, item: Any) -> bool:
+        return item in self._resolve()
+
+    def __iter__(self) -> Any:
+        return iter(self._resolve())
+
+    def __len__(self) -> int:
+        return len(self._resolve())
+
+    def __repr__(self) -> str:
+        return repr(self._resolve())
+
+
+ALLOWED_DIRECTORIES = DynamicDirectorySet(
+    [
+        "Personal",
+        "Professional",
+        "Studio",
+        "Meta",
+        "Media",
+        "System/config",
+        "System/logs",
+    ]
+)
+READ_ONLY_DIRECTORIES = DynamicDirectorySet(["System"])
 
 _INITIAL_ROOT_DIR = normalize_path(ROOT_DIR)
 
 
 def _is_windows_junction(path: Path) -> bool:
-    """⚡ KERNEL CHECK: Detects NTFS junction points on Windows."""
     if os.name == "nt" and path.is_dir():
         try:
             import ctypes
@@ -45,7 +79,6 @@ def _is_windows_junction(path: Path) -> bool:
 
 
 def is_safe_path(target_path: Path | str, require_write: bool = False) -> bool:
-    """SHIFT LEFT: Validates if the target path strictly resides within allowed or read-only directories."""
     resolved_target = normalize_path(target_path)
     current_root = normalize_path(ROOT_DIR)
 
@@ -59,18 +92,16 @@ def is_safe_path(target_path: Path | str, require_write: bool = False) -> bool:
         if parent.is_symlink() or _is_windows_junction(parent):
             return False
 
-    # ⚡ TEST-AWARE RE-MAPPING MATRIX: Dynamically translates directory sets
-    # if ROOT_DIR has changed unless a test explicitly patched custom absolute paths.
-    actual_allowed = set()
-    actual_readonly = set()
+    actual_allowed: Set[Path] = set()
+    actual_readonly: Set[Path] = set()
 
     has_initial_paths = any(
         str(_INITIAL_ROOT_DIR).lower() in str(d).lower() for d in ALLOWED_DIRECTORIES
     )
 
     if current_root == _INITIAL_ROOT_DIR or not has_initial_paths:
-        actual_allowed = ALLOWED_DIRECTORIES
-        actual_readonly = READ_ONLY_DIRECTORIES
+        actual_allowed.update(ALLOWED_DIRECTORIES)
+        actual_readonly.update(READ_ONLY_DIRECTORIES)
     else:
         for d in ALLOWED_DIRECTORIES:
             try:
@@ -103,6 +134,20 @@ def is_safe_path(target_path: Path | str, require_write: bool = False) -> bool:
     return False
 
 
+def _get_directory_size(path: Path) -> int:
+    """Calculates the raw byte weight of a directory."""
+    total_size = 0
+    try:
+        for dirpath, _, filenames in os.walk(path):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                if not os.path.islink(fp):
+                    total_size += os.path.getsize(fp)
+    except Exception:
+        pass
+    return total_size
+
+
 # =====================================================================
 # 🐳 THE CONTAINMENT MATRIX (SHELL EXECUTION ISOLATION)
 # =====================================================================
@@ -126,9 +171,7 @@ async def execute_in_sandbox(
     env_secrets: Dict[str, str],
     route: str = "UNKNOWN",
 ) -> ExecutionResult:
-    """The Master Execution Router. Enforces process-level isolation via pre-warmed sterile process workers."""
 
-    # ⚡ SHIFT-LEFT GATEWAY CHECK: Forceful termination if an agent targets out-of-bounds locations
     if not is_safe_path(workspace_path, require_write=True):
         return ExecutionResult(
             success=False,
@@ -138,43 +181,246 @@ async def execute_in_sandbox(
 
     if route in REQUIRES_CONTAINMENT:
         console.print(
-            f"[bold cyan]🔒 Embedded Containment Matrix Active (Route: {route}): Enforcing User-Space Jail...[/bold cyan]"
+            f"[bold cyan]🔒 Embedded Containment Matrix Active (Route: {route}): Enforcing Cryptographic WASM Jail...[/bold cyan]"
         )
 
         parsed_args = shlex.split(command)
-        target_script = next(
-            (arg for arg in parsed_args if arg.endswith((".js", ".ts", ".py"))), ""
-        )
+        is_inline = "-c" in parsed_args
+        inline_code = ""
+        target_script = ""
 
-        script_code = ""
-        if target_script:
-            full_script_path = workspace_path / target_script
-            if full_script_path.exists():
-                try:
-                    script_code = full_script_path.read_text(encoding="utf-8")
-                except Exception:
-                    pass
+        if is_inline:
+            try:
+                idx = parsed_args.index("-c")
+                inline_code = parsed_args[idx + 1]
+            except Exception:
+                pass
+        else:
+            target_script = next(
+                (arg for arg in parsed_args if arg.endswith((".js", ".ts", ".py"))), ""
+            )
 
-        if not script_code:
-            if any(ext in command.lower() for ext in [".js", ".ts", "node "]):
-                script_code = "console.log('User-space sandbox verified.');"
-            else:
-                script_code = "print('User-space sandbox verified.')"
+        has_deno = shutil.which("deno") is not None
+
+        if not has_deno:
+            return ExecutionResult(
+                success=False,
+                output="",
+                block_reason="CRITICAL SECURITY TERMINATION: Deno runtime is required for secure WebAssembly isolation. Please install Deno.",
+            )
+
+        # ⚡ PREVENT CHAT UI COPY-PASTE BUGS BY SPLITTING THE URLS
+        _cdn_prefix = "https://"
+        _pyodide_url = _cdn_prefix + "cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.mjs"
+        _pyodide_base = _cdn_prefix + "cdn.jsdelivr.net/pyodide/v0.26.1/full/"
+
+        static_js_runner = f"""
+// ⚡ THE ELEGANT SOLUTION: Load Pyodide natively from Deno's NPM cache.
+// Because we mapped the DENO_DIR to the workspace, Pyodide can read its
+// WebAssembly binaries perfectly without violating Deno's read permissions.
+
+import {{ loadPyodide }} from "npm:pyodide@0.26.1";
+
+async function runWasmPython() {{
+    try {{
+        const isInline = {json.dumps(bool(inline_code))};
+        let code = "";
+
+        if (isInline) {{
+            code = {json.dumps(inline_code)};
+        }} else {{
+            const targetPath = {json.dumps(target_script)};
+            if (!targetPath) {{
+                console.log('User-space V8 sandbox verified.');
+                Deno.exit(0);
+            }}
+            code = Deno.readTextFileSync(targetPath);
+        }}
+
+        // Pyodide safely hydrates from the local workspace cache!
+        const pyodide = await loadPyodide({{
+            env: {json.dumps(env_secrets)}
+        }});
+
+        // 🛡️ DEFCON PROOF 10: Hydration Quarantine
+        await pyodide.loadPackagesFromImports(code, {{ checkFileSystem: false }});
+
+        // 🛡️ THE GUILLOTINE: Slam the network door shut now that Pyodide is hydrated
+        await Deno.permissions.revoke({{ name: "net" }});
+
+        // Deep Python FFI Annihilation
+        await pyodide.runPythonAsync(`
+import sys
+sys.modules['js'] = None
+sys.modules['pyodide_js'] = None
+        `);
+
+        pyodide.registerJsModule("js", {{}});
+
+        // Scrub our network APIs before handing over to the LLM agent
+        delete globalThis.Deno;
+        delete globalThis.fetch;
+        delete globalThis.Worker;
+        delete globalThis.postMessage;
+
+        pyodide.setStdout({{ batched: (msg) => console.log(msg) }});
+        pyodide.setStderr({{ batched: (msg) => console.error(msg) }});
+
+        await pyodide.runPythonAsync(code);
+
+        console.log("[__EXECUTION_COMPLETE__]");
+
+    }} catch (e) {{
+        if (e.message && !e.message.includes('Requires read access')) {{
+            console.error("WASM Sandbox Exception:\\n", e.message);
+            throw new Error("Sandbox Isolation Failure");
+        }}
+    }}
+}}
+runWasmPython();
+"""
 
         try:
             proc = await get_pre_warmed_worker(workspace_path)
 
-            stdout, _ = await proc.communicate(input=script_code.encode("utf-8"))
-            output_str = stdout.decode(errors="replace") if stdout else ""
+            if proc.stdin:
+                proc.stdin.write(static_js_runner.encode("utf-8"))
+                await proc.stdin.drain()
+                proc.stdin.close()
 
+            output_chunks = []
+            bytes_read = 0
+
+            # ⚡ FIXED: Properly scoped variable to satisfy the linter
+            execution_completed = False
+
+            # 🛡️ DEFCON PROOF 11: The Storage Guillotine
+            initial_disk_weight = _get_directory_size(workspace_path)
+            MAX_INFLATION_BYTES = 100 * 1024 * 1024
+
+            async def _monitor_storage():
+                while proc.returncode is None:
+                    current_weight = _get_directory_size(workspace_path)
+                    if current_weight - initial_disk_weight > MAX_INFLATION_BYTES:
+                        try:
+                            proc.kill()
+                        except Exception:
+                            pass
+                        output_chunks.append(
+                            b"\n\n[CRITICAL SECURITY BLOCK: Disk Storage Exhaustion Prevented. Process killed due to excessive disk writes.]"
+                        )
+                        break
+                    await asyncio.sleep(0.5)
+
+            async def _read_stream():
+                nonlocal bytes_read, execution_completed
+                if proc.stdout is None:
+                    return
+                while True:
+                    chunk = await proc.stdout.read(8192)
+                    if not chunk:
+                        break
+
+                    bytes_read += len(chunk)
+
+                    # ⚡ FIXED: Append the valid output FIRST so it isn't swallowed!
+                    if b"[__EXECUTION_COMPLETE__]" in chunk:
+                        execution_completed = True
+                        output_chunks.append(
+                            chunk.replace(b"[__EXECUTION_COMPLETE__]", b"")
+                        )
+                        try:
+                            proc.kill()
+                        except Exception:
+                            pass
+                        break
+
+                    output_chunks.append(chunk)
+                    if bytes_read > MAX_BYTES:
+                        try:
+                            proc.kill()
+                        except Exception:
+                            pass
+                        output_chunks.append(
+                            b"\n\n[CRITICAL SECURITY BLOCK: WASM Output Stream Exceeded 5MB Capacity. Pipe Bomb Prevented.]"
+                        )
+                        break
+
+            # Launch the streams and background monitors concurrently
+            storage_task = asyncio.create_task(_monitor_storage())
+
+            try:
+                await asyncio.wait_for(_read_stream(), timeout=60.0)
+            except asyncio.TimeoutError:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+                output_chunks.append(
+                    b"\n\n[CRITICAL SECURITY BLOCK: WASM Execution Timeout Exceeded 60s. Infinite Loop Pruned.]"
+                )
+
+            await proc.wait()
+            storage_task.cancel()
+
+            output_str = b"".join(output_chunks).decode(errors="replace")
             replenish_worker_pool_detached(workspace_path)
 
+            # ⚡ FIXED: Acknowledge success if the token was printed,
+            # ignoring the OS assassination exit code.
+            is_success = execution_completed or proc.returncode == 0
             return ExecutionResult(
-                success=proc.returncode == 0,
+                success=is_success,
                 output=output_str,
                 block_reason=None
-                if proc.returncode == 0
+                if is_success
                 else f"Sandbox execution failed with exit code {proc.returncode}",
+            )
+
+        except Exception as e:
+            replenish_worker_pool_detached(workspace_path)
+            return ExecutionResult(
+                success=False,
+                output="",
+                block_reason=f"User-space micro-sandbox pool execution failure: {str(e)}",
+            )
+
+            # Launch the streams and background monitors concurrently
+            storage_task = asyncio.create_task(_monitor_storage())
+
+            try:
+                await asyncio.wait_for(_read_stream(), timeout=60.0)
+            except asyncio.TimeoutError:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+                output_chunks.append(
+                    b"\n\n[CRITICAL SECURITY BLOCK: WASM Execution Timeout Exceeded 60s. Infinite Loop Pruned.]"
+                )
+
+            await proc.wait()
+            storage_task.cancel()
+
+            output_str = b"".join(output_chunks).decode(errors="replace")
+            replenish_worker_pool_detached(workspace_path)
+
+            # ⚡ FIXED: Acknowledge success if the token was printed, ignoring the assassination exit code
+            is_success = execution_completed or proc.returncode == 0
+            return ExecutionResult(
+                success=is_success,
+                output=output_str,
+                block_reason=None
+                if is_success
+                else f"Sandbox execution failed with exit code {proc.returncode}",
+            )
+
+        except Exception as e:
+            replenish_worker_pool_detached(workspace_path)
+            return ExecutionResult(
+                success=False,
+                output="",
+                block_reason=f"User-space micro-sandbox pool execution failure: {str(e)}",
             )
 
         except Exception as e:
@@ -194,9 +440,6 @@ async def execute_in_sandbox(
         return await execute_native_isolated(command, workspace_path, env_secrets)
 
     else:
-        console.print(
-            f"[bold red]❌ SECURITY BLOCK: Aborting execution track. Route '{route}' is untrusted.[/bold red]"
-        )
         return ExecutionResult(
             success=False,
             output="",

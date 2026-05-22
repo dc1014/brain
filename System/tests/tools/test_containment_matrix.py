@@ -5,15 +5,27 @@ from System.tools.sandbox import execute_in_sandbox
 
 
 @pytest.mark.asyncio
-async def test_containment_matrix_forces_sandbox_for_lethal_routes(tmp_path):
+async def test_containment_matrix_forces_sandbox_for_lethal_routes(
+    safe_subprocess_mock, tmp_path
+):
     """Zero-Debt Test: Proves that executing a command under SWARM routes mandates sandbox jailing."""
     safe_workspace = tmp_path / "Studio" / "AppWorkspace"
     safe_workspace.mkdir(parents=True)
 
     with patch("System.tools.sandbox.ROOT_DIR", tmp_path):
-        mock_proc = AsyncMock()
+        mock_proc = safe_subprocess_mock
         mock_proc.returncode = 0
-        mock_proc.communicate.return_value = (b"User-space sandbox verified.\n", b"")
+
+        # ⚡ FIXED: Mock BOTH read() and readline() to feed the execution signal,
+        # instantly breaking the infinite loop and preventing the 60s hang!
+        mock_stream_data = [
+            b"Containment verified.\n",
+            b"[__EXECUTION_COMPLETE__]",
+            b"",
+        ]
+        mock_proc.stdout.read = AsyncMock(side_effect=mock_stream_data)
+        mock_proc.stdout.readline = AsyncMock(side_effect=mock_stream_data)
+        mock_proc.wait = AsyncMock()
 
         with patch(
             "System.tools.sandbox.get_pre_warmed_worker",

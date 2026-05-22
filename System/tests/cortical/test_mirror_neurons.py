@@ -315,16 +315,26 @@ def test_mirror_neurons_allostatic_refractory_window(tmp_path: Path, mocker) -> 
     mocker.patch("System.cli_somatic.ROOT_DIR", tmp_path)
 
     # State vectors mapping out deterministic virtual time progression parameters
-    time_values = [1000.0, 1001.0, 1002.0, 1003.0, 1006.0]
-    time_idx = 0
+    # State vectors mapping out deterministic virtual time progression parameters
+    time_values = [1000.0, 1001.0, 1002.0, 1050.0, 1060.0, 1070.0, 1080.0, 1090.0]
+    time_idx_t = 0
+    time_idx_m = 0
 
-    def mock_time() -> float:
-        nonlocal time_idx
-        val = time_values[min(time_idx, len(time_values) - 1)]
-        time_idx += 1
+    # ⚡ FIXED: Decouple the two clocks so they don't consume each other's time arrays
+    def mock_time_t() -> float:
+        nonlocal time_idx_t
+        val = time_values[min(time_idx_t, len(time_values) - 1)]
+        time_idx_t += 1
         return val
 
-    mocker.patch("time.time", side_effect=mock_time)
+    def mock_time_m() -> float:
+        nonlocal time_idx_m
+        val = time_values[min(time_idx_m, len(time_values) - 1)]
+        time_idx_m += 1
+        return val
+
+    mocker.patch("time.time", side_effect=mock_time_t)
+    mocker.patch("time.monotonic", side_effect=mock_time_m)
     mocker.patch("time.sleep")
 
     studio_dir = tmp_path / "Studio"
@@ -335,7 +345,7 @@ def test_mirror_neurons_allostatic_refractory_window(tmp_path: Path, mocker) -> 
     )
 
     # Mirror a tracking map of filesystem mtime updates matching execution states natively
-    stat_mtimes = [1000.0, 1001.0, 1002.0, 1002.0, 1002.0]
+    stat_mtimes = [1000.0, 1001.0, 1002.0, 1002.0, 1002.0, 1002.0, 1002.0, 1002.0]
     stat_idx = 0
 
     class MockStatResult:
@@ -345,7 +355,7 @@ def test_mirror_neurons_allostatic_refractory_window(tmp_path: Path, mocker) -> 
 
     orig_stat = Path.stat
 
-    # 🔐 DESCRIPTOR PROPER BINDING: Intercept target nodes natively using real Python descriptors rather than generic mocks
+    # 🔐 DESCRIPTOR PROPER BINDING: Intercept target nodes natively using real Python descriptors
     def mock_stat(self: Path, *args: Any, **kwargs: Any) -> Any:
         nonlocal stat_idx
         try:
@@ -359,8 +369,8 @@ def test_mirror_neurons_allostatic_refractory_window(tmp_path: Path, mocker) -> 
 
     mocker.patch.object(Path, "stat", new=mock_stat)
 
-    # Dispatch watch loop tool context execution pass natively
-    runner.invoke(app, ["watch", "--max-loops", "4"])
+    # ⚡ FIXED: Increase max-loops to 8 so the watcher has enough ticks to clear the window
+    runner.invoke(app, ["watch", "--max-loops", "8"])
 
     mn = MirrorNeurons(observation_vault=str(tmp_path))
     assert mn.style_path.exists()

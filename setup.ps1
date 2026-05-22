@@ -1,6 +1,12 @@
 # --- setup.ps1 ---
 Write-Host "🧠 Bootstrapping Brain OS..." -ForegroundColor Cyan
 
+if (-not (Get-Command "deno" -ErrorAction SilentlyContinue)) {
+    Write-Host "CRITICAL: Deno is required for Brain's secure WebAssembly Sandbox." -ForegroundColor Red
+    Write-Host "Please install Deno: iwr https://deno.land/install.ps1 -useb | iex" -ForegroundColor Yellow
+    exit 1
+}
+
 # 1. Install uv if missing
 if (!(Get-Command uv -ErrorAction SilentlyContinue)) { #
     Write-Host "📦 Installing uv (Python's ultra-fast package manager)..." -ForegroundColor Yellow #
