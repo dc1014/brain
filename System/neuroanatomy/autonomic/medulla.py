@@ -319,11 +319,32 @@ class MedullaOblongata:
         daemons_config = self.config_data.get("background_daemons", {})
 
         while self.is_alive:
+            # --- 1. DERMIS membrana MONITORING ---
             if daemons_config.get("dermis_receptor", {}).get("enabled", True):
-                if (
-                    "dermis" not in self.daemons
-                    or not self.daemons["dermis"].is_alive()
-                ):
+                if "dermis" not in self.daemons:
+                    # 🔐 INITIAL BOOT: Initialize the secure network thread cleanly without false-positive error logs
+                    try:
+                        port = daemons_config.get("dermis_receptor", {}).get(
+                            "secure_port", 8080
+                        )
+                        from Sense.receptors.dermis import DermisAbstraction
+
+                        dermis_skin = DermisAbstraction(port=port)
+                        self.active_instances["dermis"] = dermis_skin
+
+                        dermis_thread = threading.Thread(
+                            target=dermis_skin.start,
+                            name="DermisReceptorThread",
+                            daemon=True,
+                        )
+                        dermis_thread.start()
+                        self.daemons["dermis"] = dermis_thread
+                    except Exception as e:
+                        medulla_logger.error(
+                            f"Dermis initial boot setup failure: {str(e)}"
+                        )
+                elif not self.daemons["dermis"].is_alive():
+                    # 🚨 GENUINE CRASH: Alert the console only if a running server thread collapses at runtime
                     console.print(
                         "[bold red]💓 Medulla: Dermis cardiac arrest detected! Reviving network skin...[/bold red]"
                     )
@@ -331,7 +352,6 @@ class MedullaOblongata:
                         port = daemons_config.get("dermis_receptor", {}).get(
                             "secure_port", 8080
                         )
-
                         from Sense.receptors.dermis import DermisAbstraction
 
                         dermis_skin = DermisAbstraction(port=port)
@@ -347,11 +367,27 @@ class MedullaOblongata:
                     except Exception as e:
                         medulla_logger.error(f"Dermis resuscitation failure: {str(e)}")
 
+            # --- 2. SOMATOSENSORY CORTEX WATCHER MONITORING ---
             if daemons_config.get("file_watcher", {}).get("enabled", True):
-                if (
-                    "watcher" not in self.daemons
-                    or not self.daemons["watcher"].is_alive()
-                ):
+                if "watcher" not in self.daemons:
+                    # 🔐 INITIAL BOOT: Spin up the polling file watcher daemon silently
+                    try:
+                        import System.cli_somatic as somatic
+
+                        if hasattr(somatic, "watch"):
+                            watcher_thread = threading.Thread(
+                                target=somatic.watch,
+                                name="SomatosensoryWatcherThread",
+                                daemon=True,
+                            )
+                            watcher_thread.start()
+                            self.daemons["watcher"] = watcher_thread
+                    except Exception as e:
+                        medulla_logger.error(
+                            f"Watcher initial boot setup failure: {str(e)}"
+                        )
+                elif not self.daemons["watcher"].is_alive():
+                    # 🚨 GENUINE CRASH: Alert the console only if the somatic daemon loop crashes post-boot
                     console.print(
                         "[bold yellow]🫁 Medulla: Watcher respiratory arrest detected! Reviving somatosensory cortex...[/bold yellow]"
                     )

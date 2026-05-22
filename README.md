@@ -196,7 +196,7 @@ Agents, routing, tooling, everything is managed declaratively in YAML in `System
 > ⚡ **Zero-Debt Verification:** To guarantee profile changes remain safe, verify your edits against our automated test and linting gates ahead of committing additions:
 > ```bash
 > uv run pre-commit run --all-files
-> uv run pytest System/tests/
+> uv run pytest --cov -n 0
 > ```
 
 Test acceleration:

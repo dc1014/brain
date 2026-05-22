@@ -1,4 +1,3 @@
-# --- System/cli_somatic.py ---
 import typer
 import subprocess
 import sys
@@ -49,7 +48,7 @@ def list_reflexes():
     from System.tools import list_engrams
 
     console.print(
-        "[dim cyan]⚡ Reflex Arc Triggered: Querying Cerebellum...[/dim cyan]\\n"
+        "[dim cyan]⚡ Reflex Arc Triggered: Querying Cerebellum...[/dim cyan]\n"
     )
     res = list_engrams()
     console.print(res)
@@ -235,6 +234,11 @@ def watch(max_loops: Optional[int] = typer.Option(None, hidden=True)):
 
     Autonomously tracks real-time workspace modifications via a low-overhead, dual-rate Phasic-Tonic polling engine.
     """
+    # 🔐 CRITICAL REALIGNMENT GUARD: If called programmatically inside a background thread,
+    # normalize the Typer descriptor OptionInfo object value back to a clean None state.
+    if not isinstance(max_loops, int):
+        max_loops = None
+
     mn = MirrorNeurons()
     mtime_cache: Dict[str, float] = {}
     pending_quantization: Dict[str, float] = {}
