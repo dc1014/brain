@@ -1,6 +1,7 @@
+# --- System/tools/sandbox.py ---
 import os
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Set
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR, normalize_path
@@ -11,16 +12,15 @@ console = Console()
 
 # --- SHIFT LEFT SECURITY: OS DIRECTORY BOUNDARIES ---
 
-# ⚡ ZERO-DEBT: Myelinate the strict OS boundaries at load time
-ALLOWED_DIRECTORIES: set[Path] = {
+ALLOWED_DIRECTORIES: Set[Path] = {
     normalize_path(ROOT_DIR / "Personal"),
     normalize_path(ROOT_DIR / "Professional"),
     normalize_path(ROOT_DIR / "Studio"),
     normalize_path(ROOT_DIR / "Meta"),
-    normalize_path(ROOT_DIR / "Media"),  # The universal binary blob store
+    normalize_path(ROOT_DIR / "Media"),
 }
 
-READ_ONLY_DIRECTORIES: set[Path] = {
+READ_ONLY_DIRECTORIES: Set[Path] = {
     normalize_path(ROOT_DIR / "System"),
 }
 
@@ -31,7 +31,6 @@ def _is_windows_junction(path: Path) -> bool:
         try:
             import ctypes
 
-            # FILE_ATTRIBUTE_REPARSE_POINT = 0x400
             attrs = ctypes.windll.kernel32.GetFileAttributesW(str(path))  # type: ignore[attr-defined]
             return attrs != -1 and bool(attrs & 0x400)
         except Exception:
@@ -40,26 +39,19 @@ def _is_windows_junction(path: Path) -> bool:
 
 
 def is_safe_path(target_path: Path | str, require_write: bool = False) -> bool:
-    """
-    SHIFT LEFT: Validates if the target path strictly resides within allowed or read-only directories.
-    This must be called BEFORE any file system operation is attempted.
-    """
-    # ⚡ ZERO-DEBT: Force all incoming paths through the Myelin Sheath
+    """SHIFT LEFT: Validates if the target path strictly resides within allowed or read-only directories."""
     resolved_target = normalize_path(target_path)
 
-    # 1. SHIFT-LEFT: Reject symlinks and Windows junctions directly on the target
     if resolved_target.exists():
         if resolved_target.is_symlink() or _is_windows_junction(resolved_target):
             return False
 
-    # 2. SHIFT-LEFT: Reject symlinks and junctions anywhere in the parent chain
     for parent in resolved_target.parents:
         if parent == ROOT_DIR:
             break
         if parent.is_symlink() or _is_windows_junction(parent):
             return False
 
-    # 3. Check Write-Allowed Zones
     for allowed_dir in ALLOWED_DIRECTORIES:
         try:
             resolved_target.relative_to(allowed_dir)
@@ -67,7 +59,6 @@ def is_safe_path(target_path: Path | str, require_write: bool = False) -> bool:
         except ValueError:
             continue
 
-    # 4. Check Read-Only Zones (if write is not explicitly required)
     if not require_write:
         for ro_dir in READ_ONLY_DIRECTORIES:
             try:
@@ -83,12 +74,17 @@ def is_safe_path(target_path: Path | str, require_write: bool = False) -> bool:
 # 🐳 THE CONTAINMENT MATRIX (SHELL EXECUTION ISOLATION)
 # =====================================================================
 
-REQUIRES_CONTAINMENT = {
-    # "FORGE", later
+REQUIRES_CONTAINMENT: Set[str] = {
     "SWARM",
-    # "HERMES", later
     "STATIC_PAGE",
     "CODE_GENERATION",
+}
+
+# 🔐 SAFE-BY-DEFAULT WHITELIST: Explicitly authorized native non-coding routes
+ALLOWED_NATIVE_ROUTES: Set[str] = {
+    "WORKSPACE",
+    "DOCUMENTATION",
+    "ANALYTICS",
 }
 
 
@@ -122,22 +118,21 @@ async def execute_in_sandbox(
         finally:
             await driver.teardown()
 
-    # 🔐 CRITICAL SECURITY REALIGNMENT: Enforce a strict Fail-Closed protocol for unverified/unknown tracks
-    elif route == "UNKNOWN" or route == "UNTRUSTED":
+    elif route in ALLOWED_NATIVE_ROUTES:
         console.print(
-            f"[bold red]❌ SECURITY BLOCK: Aborting execution track. Route '{route}' is unmapped or untrusted.[/bold red]"
+            f"[dim]⚡ Native Execution Authorized (Route: {route}). Bypassing Tier 1 Container.[/dim]"
+        )
+        from System.tools.execution import execute_native_isolated
+
+        return await execute_native_isolated(command, workspace_path, env_secrets)
+
+    # 🔐 CRITICAL FAIL-CLOSED GATEWAY: Treat all unmapped, arbitrary, or missing routes as hostile and block them instantly
+    else:
+        console.print(
+            f"[bold red]❌ SECURITY BLOCK: Aborting execution track. Route '{route}' is untrusted or unmapped.[/bold red]"
         )
         return ExecutionResult(
             success=False,
             output="",
-            block_reason="CRITICAL SECURITY BLOCK: Unverified execution route denied native host access.",
+            block_reason=f"CRITICAL SECURITY BLOCK: Route '{route}' is not explicitly whitelisted for execution.",
         )
-
-    else:
-        console.print(
-            f"[dim]⚡ Native Execution Authorized (Route: {route}). Bypassing Tier 1 Container.[/dim]"
-        )
-
-        from System.tools.execution import execute_native_isolated
-
-        return await execute_native_isolated(command, workspace_path, env_secrets)

@@ -3,12 +3,11 @@ import sys
 import asyncio
 import subprocess
 import uuid
-import tarfile  # ⚡ THE FIX: Moved to module level so pytest can mock it
+import tarfile
 from pathlib import Path
 from typing import Dict, Optional
 from rich.console import Console
 
-# ⚡ THE FIX: Import the paths module dynamically to prevent mock attribute errors
 from System.core import paths
 from System.core.schemas import ExecutionResult
 from System.tools.microsandbox.driver import BaseSandboxDriver
@@ -34,7 +33,6 @@ class ContainerSandboxDriver(BaseSandboxDriver):
             resolved_workspace = Path(workspace_path).resolve()
 
             try:
-                # ⚡ THE FIX: Use paths.ROOT_DIR dynamically
                 rel_parts = resolved_workspace.relative_to(
                     paths.ROOT_DIR.resolve()
                 ).parts
@@ -69,15 +67,11 @@ class ContainerSandboxDriver(BaseSandboxDriver):
 
             def _make_tar() -> None:
                 if self.tarball_path:
-                    # ⚡ THE FIX: Removed the local 'import tarfile' from here
                     with tarfile.open(self.tarball_path, "w:gz") as tar:
                         tar.add(resolved_workspace, arcname=".")
 
             await asyncio.to_thread(_make_tar)
 
-            # ... (Keep the rest of the file exactly the same)
-
-            # PHASE 3: VOLATILE TOKEN INOCULATION
             self.env_file_path = (
                 self.tarball_path.with_suffix(".env") if self.tarball_path else None
             )
@@ -88,10 +82,9 @@ class ContainerSandboxDriver(BaseSandboxDriver):
                 if sys.platform != "win32":
                     os.chmod(self.env_file_path, 0o600)
 
-            # HARDENED KERNEL CONSTRAINTS
-            # Note: Explicit POSIX format required for env-file path passing into docker CLI
             env_posix_path = self.env_file_path.as_posix() if self.env_file_path else ""
 
+            # 🔐 HARDENED KERNEL CONSTRAINTS: Injected read-only mounts, user namespace jailing, and core pooling limitations
             cmd = [
                 "docker",
                 "create",
@@ -99,22 +92,31 @@ class ContainerSandboxDriver(BaseSandboxDriver):
                 self.sandbox_id,
                 "--workdir",
                 "/workspace",
+                "--user",
+                "1000:1000",  # Enforce non-root execution inside the guest container
+                "--read-only",  # Mutate the container root filesystem into strict read-only mode
+                "--tmpfs",
+                "/tmp:rw,noexec,nosuid,size=64m",  # Restrict writable buffers to explicit limits
+                "--tmpfs",
+                "/workspace:rw,size=512m",  # Isolate active workspace files inside safe memory pages
                 "--env-file",
                 env_posix_path,
                 "--cap-drop",
-                "ALL",  # Amputate capabilities
+                "ALL",  # Sever all kernel capabilities completely
                 "--security-opt",
-                "no-new-privileges:true",  # Block SUID privilege escalations
+                "no-new-privileges:true",  # Permanently block SUID privilege escalations
                 "--pids-limit",
-                "100",  # Limit execution tree threads
+                "100",  # Prevent fork-bomb attacks from freezing host process slots
                 "--memory",
-                "1g",  # Set memory ceilings
+                "1g",  # Tighten physical memory allocation ceiling thresholds
+                "--cpus",
+                "1.0",  # Enforce single-core allocations to completely neutralize CPU exhaustion DoS loops
                 "--add-host",
                 "host.docker.internal:host-gateway",
                 "--env",
-                f"HTTPS_PROXY=http://host.docker.internal:{proxy_port}",
+                f"HTTPS_PROXY=[http://host.docker.internal](http://host.docker.internal):{proxy_port}",
                 "--env",
-                f"HTTP_PROXY=http://host.docker.internal:{proxy_port}",
+                f"HTTP_PROXY=[http://host.docker.internal](http://host.docker.internal):{proxy_port}",
                 "node:20-slim",
                 "sh",
                 "-c",
