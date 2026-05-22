@@ -22,11 +22,17 @@ async def test_execute_in_sandbox_requires_containment(tmp_path):
     workspace = tmp_path / "Studio"
     workspace.mkdir()
 
+    # ⚡ FIXED: Completely structure the stdin stream so write/close are synchronous, but drain is async.
+    from unittest.mock import Mock, patch
+
+    mock_stdin = Mock()
+    mock_stdin.drain = AsyncMock()
+
     mock_proc = AsyncMock()
     mock_proc.returncode = 0
+    mock_proc.stdin = mock_stdin
+    mock_proc.kill = Mock()  # Synchronous process assassination
 
-    # ⚡ FIXED: Split the payload into two chunks so the text gets saved to the
-    # output buffer BEFORE the execution token immediately breaks the loop.
     mock_proc.stdout.read = AsyncMock(
         side_effect=[
             b"User-space sandbox verified.\n",

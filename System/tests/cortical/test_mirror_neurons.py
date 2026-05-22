@@ -382,7 +382,6 @@ def test_mirror_neurons_allostatic_refractory_window(tmp_path: Path, mocker) -> 
 
 def test_mirror_neurons_typer_cli_pipeline(tmp_path: Path, mocker) -> None:
     """End-to-end functional test proving Typer app endpoints correctly invoke mirror neuron hooks."""
-    # ⚡ SCAFFOLDING FIX: Generate the mocked config directory within the sandbox path boundary
     (tmp_path / "System" / "config").mkdir(parents=True, exist_ok=True)
     (tmp_path / "System" / "config" / "stylistic_fingerprint.json").write_text(
         "{}", encoding="utf-8"
@@ -390,7 +389,10 @@ def test_mirror_neurons_typer_cli_pipeline(tmp_path: Path, mocker) -> None:
 
     mocker.patch("System.neuroanatomy.cortical.mirror_neurons.ROOT_DIR", tmp_path)
     mocker.patch("System.cli_somatic.ROOT_DIR", tmp_path)
-    # ... remainder of your existing Typer app runner endpoints invoke cleanly below ...
+
+    # ⚡ FIXED: Typer's stream routing can silently swallow rich console output during Pytest runs.
+    # We patch the console explicitly to verify the behavioral output regardless of internal pipe routing.
+    mock_print = mocker.patch("System.cli_somatic.console.print")
 
     observe_result = runner.invoke(
         app,
@@ -400,18 +402,32 @@ def test_mirror_neurons_typer_cli_pipeline(tmp_path: Path, mocker) -> None:
             "Compile Workspace Assets",
             "uv run ruff check ., pytest System/",
         ],
+        catch_exceptions=False,  # ⚡ Surface any hidden Typer exceptions
     )
     assert observe_result.exit_code == 0
 
-    sync_mirror_result = runner.invoke(app, ["sync-mirror", "Compile Workspace Assets"])
+    sync_mirror_result = runner.invoke(
+        app, ["sync-mirror", "Compile Workspace Assets"], catch_exceptions=False
+    )
     assert sync_mirror_result.exit_code == 0
-    assert "Mirror Match Found!" in sync_mirror_result.stdout
+
+    # Mathematically prove the console was commanded to print the success signal
+    printed_strings = " ".join(
+        [str(call.args[0]) for call in mock_print.call_args_list if call.args]
+    )
+    assert "Mirror Match Found!" in printed_strings
 
     sample_file = tmp_path / "sample.py"
     sample_file.write_text(
         'def modular_snake():\n  """Docs"""\n  pass', encoding="utf-8"
     )
 
-    imitate_result = runner.invoke(app, ["imitate", str(sample_file), "--mode", "code"])
+    imitate_result = runner.invoke(
+        app, ["imitate", str(sample_file), "--mode", "code"], catch_exceptions=False
+    )
     assert imitate_result.exit_code == 0
-    assert "Synaptic Style Card updated" in imitate_result.stdout
+
+    printed_strings_imitate = " ".join(
+        [str(call.args[0]) for call in mock_print.call_args_list if call.args]
+    )
+    assert "Synaptic Style Card updated" in printed_strings_imitate

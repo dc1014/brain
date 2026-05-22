@@ -1,6 +1,6 @@
 # --- System/tests/tools/test_code_generation_enforcement.py ---
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 from System.tools.sandbox import execute_in_sandbox
 
 
@@ -11,10 +11,17 @@ async def test_code_generation_route_mandates_container_execution(tmp_path):
     safe_workspace.mkdir(parents=True)
 
     with patch("System.tools.sandbox.ROOT_DIR", tmp_path):
+        # ⚡ FIXED: Perfectly structure the async/sync bounds to eliminate all Pytest coroutine RuntimeWarnings
+        from unittest.mock import Mock, AsyncMock
+
+        mock_stdin = Mock()
+        mock_stdin.drain = AsyncMock()
+
         mock_proc = AsyncMock()
         mock_proc.returncode = 0
+        mock_proc.stdin = mock_stdin
+        mock_proc.kill = Mock()
 
-        # ⚡ FIXED: Replaced communicate() with chunked read() streams to prevent hanging
         mock_proc.stdout.read = AsyncMock(
             side_effect=[b"Sandbox verified.\n", b"[__EXECUTION_COMPLETE__]", b""]
         )

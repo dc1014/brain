@@ -1,6 +1,7 @@
 # --- System/neuroanatomy/limbic/hippocampus.py ---
 import re
 import json
+import hashlib
 import asyncio
 import sqlite3
 import time
@@ -33,44 +34,79 @@ GRAPH_LEDGER_PATH = ROOT_DIR / ".brain" / "graph_state.json"
 # =====================================================================
 
 
+# =====================================================================
+# 1. EPHEMERAL WORKING MEMORY (SQLite FTS5 + Graph-Boosted RRF + CAS)
+# =====================================================================
+
+
 def _get_conn() -> sqlite3.Connection:
-    """Initializes the FTS5 virtual table for blazingly fast full-text search."""
+    """Initializes the FTS5 virtual table and the CAS tracking registry."""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""
         CREATE VIRTUAL TABLE IF NOT EXISTS memories
         USING fts5(filepath, content, timestamp UNINDEXED);
     """)
+    # ⚡ NEW: Create the Content Addressable Storage (CAS) tracking registry
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS file_hashes (
+            filepath TEXT PRIMARY KEY,
+            content_hash TEXT
+        );
+    """)
     return conn
 
 
-def encode_memory(filepath: str, content: str) -> None:
-    """Encodes a file into the ephemeral index. Replaces existing index for the same file."""
+def _compute_hash(content: str) -> str:
+    """Computes a rapid SHA-256 cryptographic hash of the content string."""
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def encode_memory(filepath: str, content: str) -> bool:
+    """
+    Surgically updates a single file inside the FTS5 index.
+    Utilizes a CAS gatekeeper to abort O(N) processing if the file content is unchanged.
+    Returns True if the index was updated, False if skipped due to matching hash.
+    """
     try:
         conn = _get_conn()
         cursor = conn.cursor()
+        new_hash = _compute_hash(content)
+
+        # 🛡️ THE CAS GATEKEEPER: Check the hash registry
+        cursor.execute(
+            "SELECT content_hash FROM file_hashes WHERE filepath = ?", (filepath,)
+        )
+        row = cursor.fetchone()
+        if row and row[0] == new_hash:
+            conn.close()
+            return False  # Abort execution path! Hash matches perfectly.
+
+        # ⚡ O(1) MUTATION: Delete old path, insert fresh state, update hash registry
         cursor.execute("DELETE FROM memories WHERE filepath = ?", (filepath,))
         cursor.execute(
             "INSERT INTO memories (filepath, content, timestamp) VALUES (?, ?, ?)",
             (filepath, content, int(time.time())),
         )
+        cursor.execute(
+            "INSERT OR REPLACE INTO file_hashes (filepath, content_hash) VALUES (?, ?)",
+            (filepath, new_hash),
+        )
         conn.commit()
         conn.close()
+        return True
     except Exception as e:
-        console.print(f"[dim red]Hippocampus encoding error: {e}[/dim red]")
+        console.print(f"[dim red]Hippocampus single encoding error: {e}[/dim red]")
+        return False
 
 
 def rebuild_index() -> None:
-    """Completely wipes and rebuilds the SQLite index and supervised Relational Graph Backplane from flat-files."""
-    console.print("[dim]🧠 Hippocampus: Rebuilding ephemeral search index...[/dim]")
-    if DB_PATH.exists():
-        try:
-            DB_PATH.unlink()
-        except PermissionError:
-            console.print(
-                "[bold red]🛑 Cannot rebuild index: Database is locked.[/bold red]"
-            )
-            return
+    """Incrementally syncs the SQLite index and Supervised Graph Backplane from flat-files using CAS."""
+    console.print(
+        "[dim]🧠 Hippocampus: Syncing ephemeral search index via CAS gatekeeper...[/dim]"
+    )
+
+    # ⚡ FIXED: We no longer unlink/delete the DB file, otherwise we lose our persistent hash registry!
 
     conn = _get_conn()
     cursor = conn.cursor()
@@ -87,6 +123,8 @@ def rebuild_index() -> None:
     }
     core_domains = ["Studio", "Meta", "Personal", "Professional"]
 
+    active_filepaths = set()
+
     for target in core_domains:
         target_dir = ROOT_DIR / target
         if not target_dir.exists():
@@ -97,14 +135,45 @@ def rebuild_index() -> None:
                 if any(ignored in filepath.parts for ignored in ignore_dirs):
                     continue
                 try:
+                    rel_path = str(filepath.relative_to(ROOT_DIR).as_posix())
+                    active_filepaths.add(rel_path)
+
                     content = filepath.read_text(encoding="utf-8")
-                    rel_path = str(filepath.relative_to(ROOT_DIR))
+                    new_hash = _compute_hash(content)
+
+                    # 🛡️ Check CAS Gatekeeper
+                    cursor.execute(
+                        "SELECT content_hash FROM file_hashes WHERE filepath = ?",
+                        (rel_path,),
+                    )
+                    row = cursor.fetchone()
+
+                    if row and row[0] == new_hash:
+                        continue  # Hash matches, perfectly cached! Skip DB mutation.
+
+                    # Mutation required
+                    cursor.execute(
+                        "DELETE FROM memories WHERE filepath = ?", (rel_path,)
+                    )
                     cursor.execute(
                         "INSERT INTO memories (filepath, content, timestamp) VALUES (?, ?, ?)",
                         (rel_path, content, int(time.time())),
                     )
+                    cursor.execute(
+                        "INSERT OR REPLACE INTO file_hashes (filepath, content_hash) VALUES (?, ?)",
+                        (rel_path, new_hash),
+                    )
                 except Exception:
                     continue
+
+    # 🧹 Clean up orphaned files from the index (files in DB but no longer on disk)
+    cursor.execute("SELECT filepath FROM file_hashes")
+    indexed_paths = {row[0] for row in cursor.fetchall()}
+    deleted_paths = indexed_paths - active_filepaths
+
+    for deleted_path in deleted_paths:
+        cursor.execute("DELETE FROM memories WHERE filepath = ?", (deleted_path,))
+        cursor.execute("DELETE FROM file_hashes WHERE filepath = ?", (deleted_path,))
 
     conn.commit()
     conn.close()
@@ -118,7 +187,7 @@ def rebuild_index() -> None:
         )
 
     console.print(
-        "[bold green]✨ Hippocampus index successfully rebuilt from flat files![/bold green]"
+        "[bold green]✨ Hippocampus index successfully synced from flat files![/bold green]"
     )
 
 
