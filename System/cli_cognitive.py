@@ -87,11 +87,24 @@ def task(
     asyncio.run(pfc.execute_goal(description, domain, route))
 
 
-def daydream():
-    """🌌 Activates the Default Mode Network to process idle thoughts."""
+def daydream(
+    topic: Optional[str] = typer.Argument(
+        None,
+        help="An optional topic or theme to anchor the Daydreamer's cognitive focus.",
+    ),
+    domain: Optional[str] = typer.Option(
+        None,
+        "--domain",
+        "-d",
+        help="Explicitly scope the daydream destination vault (STUDIO, PERSONAL, PROFESSIONAL, MEDIA).",
+    ),
+):
+    """🌌 Activates the Default Mode Network to process thoughts and generate strategic insights."""
     from System.neuroanatomy.autonomic.dmn import trigger_daydreams
 
-    trigger_daydreams()
+    # Catch the final execution status engram trace
+    result = trigger_daydreams(topic=topic, domain=domain)
+    console.print(f"[bold cyan]✨ {result}[/bold cyan]")
 
 
 def evolve():

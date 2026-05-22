@@ -1,199 +1,135 @@
-import asyncio
-import subprocess
+import os
 import time
-import random
+import asyncio
 from pathlib import Path
-from datetime import datetime
+from typing import Optional
 from rich.console import Console
-from litellm import completion  # type: ignore
 
 from System.core.paths import ROOT_DIR
-from System.core.locks import BiologicalLock
-from System.core.dna import get_dna_config
-from System.neuroanatomy.systemic.immune_system import vault
+from System.neuroanatomy.cortical.prefrontal import execute_pipeline
 
 console = Console()
 
 
-def generate_dream_branch_name() -> str:
-    """Generates a timestamped branch name for the dream state."""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return f"dream/hypothesis_{timestamp}"
+def _gather_dream_context(daydream_file: Path) -> str:
+    """Gathers recent short-term logs and past hypotheses cleanly via standard Python file reads."""
+    context_pieces = []
+
+    log_file = ROOT_DIR / "System" / "logs" / "experiment_log.md"
+    if log_file.exists():
+        try:
+            log_text = log_file.read_text(encoding="utf-8").strip()
+            if log_text:
+                context_pieces.append(
+                    f"--- RECENT WAKING TELEMETRY LOGS ---\n{log_text[-3000:]}"
+                )
+        except Exception:
+            pass
+
+    medulla_log = ROOT_DIR / "System" / "logs" / "medulla.log"
+    if medulla_log.exists():
+        try:
+            medulla_text = medulla_log.read_text(encoding="utf-8").strip()
+            if medulla_text:
+                context_pieces.append(
+                    f"--- RECENT MEDULLA DAEMON LOGS ---\n{medulla_text[-3000:]}"
+                )
+        except Exception:
+            pass
+
+    if daydream_file.exists():
+        try:
+            history_text = daydream_file.read_text(encoding="utf-8").strip()
+            if history_text:
+                context_pieces.append(
+                    f"--- HISTORICAL STRATEGIC HYPOTHESES ---\n{history_text[-3000:]}"
+                )
+        except Exception:
+            pass
+
+    if not context_pieces:
+        agents_config = ROOT_DIR / "System" / "config" / "agents.yaml"
+        if agents_config.exists():
+            try:
+                context_pieces.append(
+                    f"--- CORE SYSTEM CONFIGURATIONS FOR REFLECTION ---\n{agents_config.read_text(encoding='utf-8')[:4000]}"
+                )
+            except Exception:
+                pass
+
+    return "\n\n".join(context_pieces)
 
 
-def _get_current_branch(target_dir: Path) -> str:
-    """Identifies the current active branch before sleep."""
-    try:
-        res = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=str(target_dir),
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return res.stdout.strip()
-    except subprocess.CalledProcessError:
-        return "main"
+def trigger_daydreams(topic: Optional[str] = None, domain: Optional[str] = None) -> str:
+    """The Hardened Default Mode Network (DMN). Synthesizes strategic insights via secure agent routing."""
+    # ⚡ DEFAULT SCOPE RESTORATION: Default clean runs globally to NONE instead of STUDIO
+    target_domain_raw = (
+        domain if domain is not None else os.environ.get("BRAIN_OS_DOMAIN", "NONE")
+    )
+    assigned_domain = str(target_domain_raw).upper()
 
+    target_workspace = ROOT_DIR / "Meta" / "DMN"
+    daydream_file = target_workspace / "daydreams.md"
+    daydream_file.parent.mkdir(parents=True, exist_ok=True)
 
-def enforce_rem_paralysis(project_name: str) -> tuple[str | None, str | None]:
-    """
-    Traps the AI in an isolated Git branch before it starts writing code.
-    Returns (dream_branch_name, original_branch_name) if successful.
-    """
-    target_dir = ROOT_DIR / "Studio" / project_name
+    # Ingest short-term logs safely using clean Python file streams
+    dream_context = _gather_dream_context(daydream_file)
+    if not dream_context.strip() and not topic:
+        return "No neurological context available to daydream."
 
-    if not target_dir.exists():
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    if topic:
         console.print(
-            f"[bold red]Cannot dream in {project_name}. Directory not found.[/bold red]"
+            f"\n[bold magenta]🌌 DMN ACTIVE:[/bold magenta] Directing focus onto topic: [underline]{topic}[/underline] inside [bold]{assigned_domain}[/bold]"
         )
-        return None, None
-
-    is_repo = subprocess.run(
-        ["git", "status"], cwd=str(target_dir), capture_output=True
-    )
-    if is_repo.returncode != 0:
-        console.print(
-            f"[bold red]Cannot induce REM paralysis: {project_name} is not a git repository.[/bold red]"
-        )
-        return None, None
-
-    original_branch = _get_current_branch(target_dir)
-    dream_branch = generate_dream_branch_name()
-
-    console.print(
-        f"[bold blue]💤 Inducing REM Paralysis. Shifting to isolated dream state: {dream_branch}[/bold blue]"
-    )
-    subprocess.run(
-        ["git", "checkout", "-b", dream_branch],
-        cwd=str(target_dir),
-        capture_output=True,
-    )
-
-    return dream_branch, original_branch
-
-
-def wake_from_rem(project_name: str, dream_branch: str, original_branch: str) -> None:
-    target_dir = ROOT_DIR / "Studio" / project_name
-    if not target_dir.exists():
-        return
-
-    console.print(
-        "[bold yellow]☀️ Waking from REM sleep. Consolidating dream state...[/bold yellow]"
-    )
-    subprocess.run(["git", "add", "."], cwd=str(target_dir), capture_output=True)
-    subprocess.run(
-        ["git", "commit", "-m", f"Autonomic Dream Sequence: {dream_branch}"],
-        cwd=str(target_dir),
-        capture_output=True,
-    )
-    res = subprocess.run(
-        ["git", "checkout", original_branch],
-        cwd=str(target_dir),
-        capture_output=True,
-        text=True,
-    )
-
-    if res.returncode == 0:
-        console.print(
-            f"[bold green]✨ Reality Restored. Active branch is back to '{original_branch}'. The dream is saved in '{dream_branch}'.[/bold green]"
+        input_payload = (
+            f"Current Timestamp: {timestamp}\n"
+            f"Assigned Execution Domain Subsystem: {assigned_domain}\n"
+            f"Topic Target: {topic}\n\n"
+            f"BACKGROUND DATA CONTEXT:\n{dream_context}\n\n"
+            f"INSTRUCTION: Thoroughly analyze the context regarding '{topic}'. Synthesize your strategic insights, "
+            f"format them cleanly under a '## 🌌 Epiphany ({timestamp})' markdown header line block, and immediately "
+            f"call your `append_safe_file` tool to append your finished report content into the file path: 'Meta/DMN/daydreams.md'."
         )
     else:
         console.print(
-            f"[bold red]⚠️ Wake Error: Failed to restore branch '{original_branch}'. {res.stderr}[/bold red]"
+            f"\n[bold magenta]🌌 DMN ACTIVE:[/bold magenta] Synthesizing trends for domain: [bold]{assigned_domain}[/bold]"
         )
-
-
-def _gather_dream_context() -> str:
-    """Forages for random memories, recent errors, and code snippets to form a dream context."""
-    context_parts = []
-
-    log_path = ROOT_DIR / "System" / "logs" / "medulla.log"
-    if log_path.exists():
-        with BiologicalLock(str(log_path)):
-            with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
-                lines = f.readlines()
-                if lines:
-                    context_parts.append(
-                        "RECENT AUTONOMIC LOGS:\n" + "".join(lines[-20:])
-                    )
-
-    vault_dirs = [ROOT_DIR / "Personal", ROOT_DIR / "Studio", ROOT_DIR / "Meta"]
-    all_md_files = []
-    for d in vault_dirs:
-        if d.exists():
-            all_md_files.extend(list(d.rglob("*.md")))
-
-    if all_md_files:
-        chosen_files = random.sample(all_md_files, min(3, len(all_md_files)))
-        for random_file in chosen_files:
-            with BiologicalLock(str(random_file)):
-                with open(random_file, "r", encoding="utf-8", errors="ignore") as f:
-                    content = f.read()
-                    context_parts.append(
-                        f"MEMORY ENGRAM ({random_file.name}):\n{content[:1000]}"
-                    )
-
-    return "\n\n---\n\n".join(context_parts)
-
-
-def trigger_daydreams() -> str:
-    """
-    The Default Mode Network entry point for sleep cycles.
-    Invoked by the Pineal Gland during idle periods.
-    """
-    console.print(
-        "\n[dim magenta]🧠 DMN: Scanning for projects to optimize during REM sleep...[/dim magenta]"
-    )
-
-    dream_context = _gather_dream_context()
-    if not dream_context.strip():
-        return "No context available for daydreaming."
-
-    prompt = (
-        "You are the Default Mode Network (DMN) of Brain OS. The system is asleep. "
-        "Form a novel connection or suggest a codebase refactor based on these recent memories and errors.\n\n"
-        f"DREAM CONTEXT:\n{dream_context}\n\n"
-        "Format your response as a concise Markdown note."
-    )
+        input_payload = (
+            f"Current Timestamp: {timestamp}\n"
+            f"Assigned Execution Domain Subsystem: {assigned_domain}\n\n"
+            f"BACKGROUND DATA CONTEXT:\n{dream_context}\n\n"
+            f"INSTRUCTION: Scan recent logs for anomalies, state-machine trends, or refactoring loops. Synthesize your strategic insights, "
+            f"format them cleanly under a '## 🌌 Epiphany ({timestamp})' markdown header line block, and immediately "
+            f"call your `append_safe_file` tool to append your finished report content into the file path: 'Meta/DMN/daydreams.md'."
+        )
 
     try:
-        base_model = (
-            get_dna_config().get("models", {}).get("fast", "gemini/gemini-2.5-flash")
-        )
-
-        # 🧠 THALAMIC ROUTING: Dynamically mutate the sleep cycle model
-        routed_model, api_key = vault.resolve_routing(base_model)
-
-        response = completion(
-            model=routed_model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.8,
-            api_key=api_key,  # ⚡ Supply the safely resolved key
-        )
-        epiphany = response.choices[0].message.content
-
-        daydream_dir = ROOT_DIR / "Meta" / "DMN"
-        daydream_dir.mkdir(parents=True, exist_ok=True)
-        daydream_file = daydream_dir / "daydreams.md"
-
-        with BiologicalLock(str(daydream_file)):
-            with open(daydream_file, "a", encoding="utf-8") as f:
-                timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-                f.write(f"\n## 🌌 Epiphany ({timestamp})\n{epiphany}\n\n---\n")
-
-        # ... inside trigger_daydreams()
         console.print(
-            f"[dim purple]✨ DMN: Epiphany consolidated into {daydream_file.relative_to(ROOT_DIR)}[/dim purple]"
+            "[dim magenta]🧠 DMN: Awakening 'The Daydreamer (DMN)' agent within secure pipeline...[/dim magenta]"
         )
 
-        # ⚡ THE FIX: Automatically process structural Epiphanies under CODE_GENERATION to enforce isolation
-        from System.neuroanatomy.cortical.prefrontal import execute_pipeline
-
+        # Fire execution. The orchestrator handles displaying layout mirrors natively to your terminal screen.
         asyncio.run(
-            execute_pipeline(epiphany, "CODE_GENERATION", "STUDIO", origin="AUTONOMIC")
+            execute_pipeline(
+                input_payload,
+                "SUBCONSCIOUS_DAYDREAM",
+                assigned_domain,
+                origin="AUTONOMIC",
+            )
         )
-        return "Daydream cycle completed successfully."
+
+        # Settle file system hooks
+        time.sleep(0.5)
+
     except Exception as e:
-        console.print(f"[bold red]❌ DMN Nightmare: {str(e)}[/bold red]")
-        return f"Nightmare: {str(e)}"
+        console.print(f"[bold red]❌ DMN Execution Failure: {str(e)}[/bold red]")
+        return f"Failure: {str(e)}"
+
+    # ⚡ UNCONDITIONAL LEDGER LINK: Projects your clickable path reference safely at the conclusion of the track
+    absolute_clickable_link = f"file:///{str(daydream_file).replace('\\', '/')}"
+    return (
+        f"Centralized Default Mode Network sequence complete.\n"
+        f"🔗 [bold cyan]Ledger updated natively at:[/bold cyan] Meta/DMN/daydreams.md\n"
+        f"🔗 [bold cyan]Clickable Local File URL Link:[/bold cyan] [underline]{absolute_clickable_link}[/underline]"
+    )

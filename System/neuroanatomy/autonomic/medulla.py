@@ -103,12 +103,10 @@ class MedullaOblongata:
         self.config_path = ROOT_DIR / "System" / "config" / "medulla.yaml"
         self.is_alive = False
 
-        # ⚡ COS ARBITER TIERS: Replaced binary active toggle with specificity-weighted states
         # Valid states: SLEEP, IDLE_READY, ORCHESTRATION_MINIMAL, ORCHESTRATION_STANDARD, ORCHESTRATION_CRITICAL
         self.cognitive_state = "SLEEP"
         self.default_profile = "com.brainos.minimal_ready"
 
-        # Diagnostics telemetry tracking for state transitions
         self._last_tier_elevation_time = 0.0
         self._min_duration_threshold_seconds = 1.5
 
@@ -130,23 +128,16 @@ class MedullaOblongata:
             return yaml.safe_load(f).get("medulla", {})
 
     def calculate_specificity_score(self, command_string: str) -> int:
-        """⚡ COS ARBITER SCORING: Evaluates expected resource intensity, duration, and criticality."""
-        score = 10  # Baseline signature score
-
-        # Resource intensity markers
+        score = 10
         if "execute_pipeline" in command_string or "dispatch_task" in command_string:
             score += 40
         if "playwright" in command_string or "chromium" in command_string:
             score += 30
-
-        # Criticality markers
         if "recovery" in command_string or "acc" in command_string:
             score += 25
-
         return score
 
     def allocate_orchestration_tier(self, score: int) -> str:
-        """⚡ COS ARBITER TIERS: Maps numerical specificity scores directly to appropriate resource tiers."""
         if score >= 70:
             return "ORCHESTRATION_CRITICAL"
         if score >= 40:
@@ -154,18 +145,15 @@ class MedullaOblongata:
         return "ORCHESTRATION_MINIMAL"
 
     def modulate_runtime_state(self, target_state: str) -> None:
-        """Modulates active states while continuously checking for premature disengagement churn loops."""
         current_state = self.cognitive_state
         now = time.time()
 
-        # Catch rapid down-modulations originating from high-specificity states
         if current_state in (
             "ORCHESTRATION_STANDARD",
             "ORCHESTRATION_CRITICAL",
         ) and target_state in ("IDLE_READY", "ORCHESTRATION_MINIMAL"):
             elapsed = now - self._last_tier_elevation_time
             if elapsed < self._min_duration_threshold_seconds:
-                # Trigger diagnostic exception sequence to flag inefficient state thrashing
                 msg = f"State churn detected! Slid from {current_state} to {target_state} in {elapsed:.4f}s."
                 medulla_logger.warning(f"COS Arbiter [Exception Intercepted]: {msg}")
                 raise OrchestrationMismatchException(msg)
@@ -179,7 +167,6 @@ class MedullaOblongata:
         )
 
     def boot_recovery_sequence(self) -> None:
-        """Sweeps Write-Ahead Logs on boot and modulates recovery settings through the ACC."""
         interrupted_tasks = self.task_log.recover_interrupted_tasks()
         if not interrupted_tasks:
             return
@@ -213,14 +200,12 @@ class MedullaOblongata:
                 "engine_override", "openai/gpt-4o-mini"
             )
 
-            # Compute specificity for the resuscitated task loop
             score = self.calculate_specificity_score(cmd_str)
             target_tier = self.allocate_orchestration_tier(score)
 
             try:
                 self.modulate_runtime_state(target_tier)
             except OrchestrationMismatchException:
-                # Recover gracefully from early diagnostic assertions during recovery loops
                 self.cognitive_state = target_tier
 
             threading.Thread(
@@ -232,7 +217,6 @@ class MedullaOblongata:
     def _execute_recovered_task_safely(
         self, task_id: str, command: str, temperature: float, engine: str
     ) -> None:
-        """Background execution engine executing resuscitated tasks under ACC context parameters."""
         try:
             env_override = os.environ.copy()
             env_override["BRAIN_RECOVERY_TEMPERATURE"] = str(temperature)
@@ -263,7 +247,6 @@ class MedullaOblongata:
                 f"WAL Recovery tracking critical system exception for {task_id}: {str(e)}"
             )
         finally:
-            # ⚡ BASELINE PROFILE FIX: Reset safely back to minimal ready active profile instead of sleeping
             if self.cognitive_state in (
                 "ORCHESTRATION_STANDARD",
                 "ORCHESTRATION_CRITICAL",
@@ -274,9 +257,7 @@ class MedullaOblongata:
                     self.cognitive_state = "ORCHESTRATION_MINIMAL"
 
     def _cognitive_heartbeat(self):
-        """Autonomously processes the pending task queue across tiered active state configurations."""
         while self.is_alive:
-            # ⚡ ACTIVE PROFILE ALLOCATION: Serve trivial tasks within the minimalist profile boundaries
             if self.cognitive_state in (
                 "ORCHESTRATION_MINIMAL",
                 "ORCHESTRATION_STANDARD",
@@ -291,7 +272,6 @@ class MedullaOblongata:
             time.sleep(15)
 
     def _monitor_homeostasis(self):
-        """Metabolic Loop: Tracks internal vitals, token budgets, and circadian timing adjustments."""
         circadian = self.config_data.get("circadian_rhythm", {})
         sleep_time = circadian.get("sleep_trigger_time", "03:00")
 
@@ -315,14 +295,11 @@ class MedullaOblongata:
             time.sleep(30)
 
     def _supervise_threads(self):
-        """Respiratory Loop: Monitors operational threads, resuscitating crashed components on-demand."""
         daemons_config = self.config_data.get("background_daemons", {})
 
         while self.is_alive:
-            # --- 1. DERMIS membrana MONITORING ---
             if daemons_config.get("dermis_receptor", {}).get("enabled", True):
                 if "dermis" not in self.daemons:
-                    # 🔐 INITIAL BOOT: Initialize the secure network thread cleanly without false-positive error logs
                     try:
                         port = daemons_config.get("dermis_receptor", {}).get(
                             "secure_port", 8080
@@ -344,7 +321,6 @@ class MedullaOblongata:
                             f"Dermis initial boot setup failure: {str(e)}"
                         )
                 elif not self.daemons["dermis"].is_alive():
-                    # 🚨 GENUINE CRASH: Alert the console only if a running server thread collapses at runtime
                     console.print(
                         "[bold red]💓 Medulla: Dermis cardiac arrest detected! Reviving network skin...[/bold red]"
                     )
@@ -367,10 +343,8 @@ class MedullaOblongata:
                     except Exception as e:
                         medulla_logger.error(f"Dermis resuscitation failure: {str(e)}")
 
-            # --- 2. SOMATOSENSORY CORTEX WATCHER MONITORING ---
             if daemons_config.get("file_watcher", {}).get("enabled", True):
                 if "watcher" not in self.daemons:
-                    # 🔐 INITIAL BOOT: Spin up the polling file watcher daemon silently
                     try:
                         import System.cli_somatic as somatic
 
@@ -387,7 +361,6 @@ class MedullaOblongata:
                             f"Watcher initial boot setup failure: {str(e)}"
                         )
                 elif not self.daemons["watcher"].is_alive():
-                    # 🚨 GENUINE CRASH: Alert the console only if the somatic daemon loop crashes post-boot
                     console.print(
                         "[bold yellow]🫁 Medulla: Watcher respiratory arrest detected! Reviving somatosensory cortex...[/bold yellow]"
                     )
@@ -408,7 +381,6 @@ class MedullaOblongata:
             time.sleep(5)
 
     def wake(self):
-        """Sparks autonomic activity, establishing the Default Orchestration Baseline Profile safely."""
         if self.is_alive:
             return
         self.is_alive = True
@@ -427,15 +399,12 @@ class MedullaOblongata:
         threading.Thread(target=self._monitor_homeostasis, daemon=True).start()
         threading.Thread(target=self._cognitive_heartbeat, daemon=True).start()
 
-        # ⚡ DEFAULT BASELINE PROFILE: Drop back into the minimal Ready active layer
-        # This replaces the heavy binary toggle with com.brainos.minimal_ready behavior
         self.cognitive_state = "ORCHESTRATION_MINIMAL"
         medulla_logger.info(
             f"System profile established: {self.default_profile} [ORCHESTRATION_MINIMAL]"
         )
 
     def pre_sleep_sequence(self) -> None:
-        """⚡ THE SYNCHRONIZATION BARRIER: Awaits graceful thread teardowns cooperatively."""
         console.print(
             "\n[bold magenta]💤 Medulla: Initiating PRE_SLEEP_SEQUENCE handshake...[/bold magenta]"
         )
@@ -471,6 +440,19 @@ class MedullaOblongata:
         except Exception as e:
             medulla_logger.error(f"Error during pre-sleep coordination sweep: {e}")
 
+        # 🔌 DAEMON AUTOMATION: Invokes centralized default mode network distillation directly on sleep onset
+        try:
+            from System.neuroanatomy.autonomic.dmn import trigger_daydreams
+
+            medulla_logger.info(
+                "Medulla brainstem sleep phase: Invoking default mode network distillation loop."
+            )
+            trigger_daydreams(topic=None, domain="STUDIO")
+        except Exception as dmn_err:
+            medulla_logger.error(
+                f"Failed to execute background subcortex synthesis during disengagement: {dmn_err}"
+            )
+
         self.is_alive = False
         self.cognitive_state = "SLEEP"
 
@@ -496,7 +478,6 @@ class MedullaOblongata:
 
 
 def child_boot(ipc_address: str):
-    """Bootloader for the Thymus to spawn the Medulla as a secure subprocess."""
     from multiprocessing.connection import Client
     import time
 

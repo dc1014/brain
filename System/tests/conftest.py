@@ -2,6 +2,7 @@ import os
 import builtins
 import pytest
 import socket
+from unittest.mock import patch
 
 
 @pytest.fixture(autouse=True)
@@ -127,3 +128,24 @@ def enforce_strict_offline_testing(monkeypatch):
         )
 
     monkeypatch.setattr(socket, "getaddrinfo", block_network_egress)
+
+
+@pytest.fixture(autouse=True)
+def guard_autonomic_daydreams(request):
+    """
+    🛡️ Subcortex Isolation Guard: Automatically disables background DMN daydreams
+    for all side-effect daemon tests (like Medulla/Thalamus shutdowns) unless
+    the suite explicitly targets test_dmn.py.
+    """
+    # If the active running test file is explicitly test_dmn.py, allow full execution
+    if "test_dmn" in request.module.__name__:
+        yield
+    else:
+        # For all other tests, mock trigger_daydreams out to prevent loop hangs
+        with patch(
+            "System.neuroanatomy.autonomic.dmn.trigger_daydreams"
+        ) as mock_trigger:
+            mock_trigger.return_value = (
+                "Daydream bypassed safely inside side-effect daemon test context."
+            )
+            yield
