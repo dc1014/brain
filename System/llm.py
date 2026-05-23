@@ -122,6 +122,16 @@ def get_system_context(
     except ImportError:
         pass  # Failsafe in case the Limbic system is temporarily offline
 
+    # ⚡ CORE BELIEFS: Inject long-term semantic knowledge about the user and project
+    try:
+        from System.neuroanatomy.limbic.hippocampus import get_core_beliefs
+
+        beliefs = get_core_beliefs()
+        if beliefs:
+            base_prompt += f"\n\nCORE BELIEFS & PROJECT RULES:\n{beliefs}\n"
+    except ImportError:
+        pass
+
     schema_dict = {
         "thought_process": "Your internal reasoning and planning.",
         "tool_calls": [
@@ -209,17 +219,14 @@ async def run_agent_async(
     try:
         from System.neuroanatomy.pathways.corpus_callosum import route_hemisphere
         from System.neuroanatomy.cortical.motor_cortex import execute_tools
+        from System.neuroanatomy.cortical.working_memory import compress_message_array
 
         model_string = route_hemisphere(route, model_string)
 
         for iteration in range(5):
-            if len(messages) > 7:
-                window = messages[-5:]
-                while window and window[0].get("role") == "tool":
-                    window.pop(0)
-                pruned_messages = [messages[0], messages[1]] + window
-            else:
-                pruned_messages = messages
+            # ⚡ ZERO-DEBT: Dynamically compress bloated history arrays
+            messages = await compress_message_array(messages, model_string)
+            pruned_messages = messages
 
             # 🛡️ IMMUNE SYSTEM: Check the Vault
             _has_anthropic = bool(vault.get_secret("ANTHROPIC_API_KEY"))

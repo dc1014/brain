@@ -1,3 +1,6 @@
+import json
+from typing import Any
+
 from rich.console import Console
 from litellm import acompletion  # type: ignore
 from System.core.dna import get_dna_config
@@ -72,3 +75,94 @@ class WorkingMemory:
             )
         except Exception as e:
             console.print(f"[dim red]PFC Compression Failed: {e}[/dim red]")
+
+
+async def compress_message_array(
+    messages: list[dict[str, Any]], current_model: str
+) -> list[dict[str, Any]]:
+    """
+    Evaluates the token footprint of the message array. If it approaches context limits,
+    spawns a fast background model to compress the historical middle into a dense Working Memory block.
+    Uses recursive summarization to maintain infinite context without exceeding token bounds.
+    """
+    try:
+        text_content = json.dumps(messages, default=str)
+        # 1. Fast heuristic: Only compress if the array is getting heavy (>12k chars) and has a middle
+        if len(text_content) < 12000 and len(messages) <= 6:
+            return messages
+
+        console.print(
+            "[dim magenta]🧠 Context Window Bloated: Compressing historical messages...[/dim magenta]"
+        )
+
+        head = messages[:2]
+        tail = messages[-2:]
+        middle = messages[2:-2]
+
+        if not middle:
+            return messages
+
+        # 2. Extract previous working memory from the User prompt so the compressor can carry it forward
+        user_content = head[1].get("content", "")
+        old_summary = ""
+        if "--- COMPRESSED WORKING MEMORY ---" in user_content:
+            parts = user_content.split("--- COMPRESSED WORKING MEMORY ---")
+            user_content = parts[0].strip()
+            old_summary = parts[1].strip()
+
+        # 3. Format the history
+        history_text = ""
+        if old_summary:
+            history_text += f"[PREVIOUS WORKING MEMORY]: {old_summary}\n\n"
+
+        for m in middle:
+            role = m.get("role", "unknown")
+            content = m.get("content", "")
+            if isinstance(content, str):
+                history_text += f"[{role.upper()}]: {content}\n\n"
+            else:
+                history_text += f"[{role.upper()}]: {json.dumps(content)}\n\n"
+
+        prompt = (
+            "You are the Prefrontal Cortex Context Compressor.\n"
+            "Summarize the following historical conversation and tool executions into a highly dense, "
+            "bulleted 'Working Memory' block. Retain all factual data, discovered file paths, code snippets, and tool outcomes. "
+            "Discard all conversational filler and JSON formatting.\n\n"
+            f"HISTORY TO COMPRESS:\n{history_text}"
+        )
+
+        fast_model = (
+            get_dna_config().get("models", {}).get("fast", "gemini/gemini-2.5-flash")
+        )
+
+        # 4. Spawn the background compression pulse
+        response = await acompletion(
+            model=fast_model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+            api_key=vault.get_api_key_for_model(fast_model),
+        )
+
+        summary = response.choices[0].message.content.strip()
+
+        # 5. Inject the new compressed memory directly into the original User prompt
+        new_user_content = (
+            user_content + f"\n\n--- COMPRESSED WORKING MEMORY ---\n{summary}"
+        )
+        new_head = [head[0], {"role": "user", "content": new_user_content}]
+
+        console.print(
+            "[dim green]✅ Historical context successfully compressed into Working Memory.[/dim green]"
+        )
+
+        return new_head + tail
+
+    except Exception as e:
+        console.print(
+            f"[dim red]Context Compression Failed: {e}. Falling back to FIFO amnesia.[/dim red]"
+        )
+        # 🛡️ Legacy Fallback: Strict 5-message FIFO
+        window = messages[-5:]
+        while window and window[0].get("role") == "tool":
+            window.pop(0)
+        return [messages[0], messages[1]] + window

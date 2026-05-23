@@ -10,11 +10,11 @@ Brain OS resolves this constraint by implementing a **5-Tier Biomimetic Cognitiv
 
 | Cognitive Memory Layer | Core Storage Subsystem Model | Preservation & Optimization Strategy |
 | --- | --- | --- |
-| **1. Working Memory** | Volatile high-frequency RAM buffer inside `working_memory.py`. | Enforces a strict 12,000-character boundary gate, triggering zero-temperature compression to prevent prompt bloat. |
+| **1. Working Memory** | Volatile high-frequency RAM buffer inside `working_memory.py`. | Dynamically intercepts arrays exceeding 12,000 characters and executes a recursive **Rolling Context Compression** to prevent context amnesia or token death spirals. |
 | **2. Short-Term Memory** | SQLite FTS5 Virtual Table Indexing inside `hippocampus.py`. | Replaces slow, expensive vector model search requests with keyword ranking and extracts precise snippet text windows. |
 | **3. Knowledge Topology** | Relational backplane mapped to `.brain/graph_state.json`. | Parses explicit note connection syntax and uses an ACC monitoring hook to block file writing if looping faults occur. |
 | **4. Episodic Memory** | Thread-safe, lock-protected JSONL stream inside `episodic.py`. | Registers permanent historical completion entries to track workflow success and optimize prioritization trees. |
-| **5. Synaptic Vault** | Persistent low-entropy Markdown document logs across system folders. | Runs background sleep cycles to clean conversational text filler from runtime logs and archive technical project depth indefinitely. |
+| **5. Synaptic Vault & Core Beliefs** | Persistent Markdown document logs and `Core_Beliefs.md` across system folders. | Runs background sleep cycles to clean runtime logs, archive technical depth, and extract persistent semantic beliefs (e.g., framework preferences) for zero-shot personalization. |
 
 ---
 
@@ -27,7 +27,7 @@ When a process executes or telemetry is generated, data flows down through the f
                              │
                              ▼
          ┌──────────────────────────────────────┐
-         │ 1. Cortical Working Memory Buffer    │  <-- 12k Character Compression Wall
+         │ 1. Cortical Working Memory Buffer    │  <-- Rolling Context Compression (12k Wall)
          └───────────────────┬──────────────────┘
                              │
                              ▼
@@ -52,8 +52,9 @@ When a process executes or telemetry is generated, data flows down through the f
                              │
                              ▼
          ┌──────────────────────────────────────┐
-         │ 5. Synaptic Markdown Memory Vault    │  <-- Low-Entropy Domain Documenting
+         │ 5. Synaptic Vault & Belief Injection │  <-- Low-Entropy Domain Documenting
          └──────────────────────────────────────┘
+
 
 ```
 
@@ -64,21 +65,16 @@ When a process executes or telemetry is generated, data flows down through the f
 ### 1. Cortical Working Memory (The Semantic Compressor)
 
 * **Source Subsystem Location:** `System/neuroanatomy/cortical/working_memory.py`
-* **Primary Interface Class:** `WorkingMemory`
+* **Primary Interface Class:** `WorkingMemory` & `compress_message_array`
 * **Storage Latency Model:** Volatile, high-frequency runtime memory arrays.
 
 #### Implementation Mechanics
 
-Active sub-agent execution steps and system outputs are passed to `add_event`. The buffer encapsulates raw telemetry inside explicit XML semantic tags (`<activity_node>`, `<raw_telemetry>`, `<actions_taken>`). This ensures strict model attention profiling, focusing downstream evaluation calls cleanly on factual content while discarding loose text artifacts.
+Active sub-agent execution steps and JSON tool outputs are passed directly into the execution history array. Unlike legacy agents that suffer from "amnesia" by silently discarding older messages (FIFO), Brain OS evaluates the active token footprint of the entire conversation.
 
-The buffer constantly evaluates its cumulative footprint against a strict character gateway:
+When total logs cross the 12,000 character threshold, `compress_message_array()` executes. It fires an asynchronous background call using a fast, high-efficiency model (e.g., `gemini-2.5-flash`) to summarize the historical middle-nodes of the conversation.
 
-```python
-self.compression_threshold_chars = 12000
-
-```
-
-When total logs cross this threshold, `compress_if_bloated()` executes. It fires an asynchronous call (`acompletion`) using a fast, high-efficiency model running at a completely deterministic zero temperature setting (`temperature=0.0`). The processor strips away conversational filler and consolidates the execution stream into a compact bulleted list of "Established Facts" and "Current State" wrapped inside `<summary_update>` tags. This dense summary is appended to the `established_facts` long-term array, and the high-frequency log list is flushed completely, preventing context bloat.
+The processor strips away conversational filler, flattens synthetic tool results, and consolidates the execution stream into a compact bulleted list. This **Working Memory** block is then seamlessly injected directly into the active User prompt. This grants the agent a mathematically infinite, rolling context window while preserving strict API role-sequence compliance (Anthropic/OpenAI) by keeping the execution head and tail untouched.
 
 ---
 
@@ -95,6 +91,7 @@ Rather than spending tokens or processing time querying external vector database
 ```sql
 CREATE VIRTUAL TABLE IF NOT EXISTS memories
 USING fts5(filepath, content, timestamp UNINDEXED);
+
 
 ```
 
@@ -117,6 +114,7 @@ The system extracts explicit cross-document connections by parsing markdown file
 ```python
 self.link_regex = re.Pattern = re.compile(r"\[([a-zA-Z_0-9\-]+)::\[\[([^\]]+)\]\]\]")
 
+
 ```
 
 This syntax explicitly extracts custom relationship structures across system notes (e.g., `[resolves::[[daydreams]]]`).
@@ -126,6 +124,7 @@ To prevent technical debt or loop pollution within long-term relational structur
 ```python
 if tension_report.get("action") == "FORCE_STRATEGY_SHIFT":
     raise RuntimeError("Graph write suspended by Anterior Cingulate Cortex due to high tension...")
+
 
 ```
 
@@ -149,23 +148,19 @@ The moment the entry is written to disk, it executes a dopamine reinforcement ch
 
 ---
 
-### 5. Synaptic Consolidation (Long-Term Domain Documentation)
+### 5. Synaptic Consolidation (Long-Term Domain Documentation & Core Beliefs)
 
 * **Source Subsystems:** `System/neuroanatomy/limbic/hippocampus.py` & `System/neuroanatomy/autonomic/dmn.py`
-* **Primary Targets:** `_encode_short_term_memory()`, `trigger_daydreams()`, `_gather_dream_context()`
-* **Storage Latency Model:** Permanent Markdown files organized across specific system directories.
+* **Primary Targets:** `_encode_short_term_memory()`, `_extract_and_update_beliefs()`, `trigger_daydreams()`
+* **Storage Latency Model:** Permanent Markdown files (`Core_Beliefs.md` and domain memories) organized across specific system directories.
 
 #### Implementation Mechanics
 
-During low-load phases, idle intervals, or system shutdown sequences, the engine initiates long-term memory consolidation via `consolidate_short_term_memory()`. The subcortex processes these memories through a structured two-pass routine:
+During low-load phases, idle intervals, or manual `sleep()` sequences, the engine initiates long-term memory consolidation via `consolidate_short_term_memory()`. The subcortex processes these memories through a structured three-pass routine:
 
 * **Log Foraging & Sorting:** Pass 1 walks directory paths to locate all `agent_interactions.jsonl` files. It grabs the last 50 transactions and classifies them into explicit functional domains (e.g., `STUDIO`, `META`, `PERSONAL`, `PROFESSIONAL`).
-* **Low-Entropy Text Distillation:** Pass 2 routes the raw logs to a distillation pipeline model. The engine strips out transient tool error histories, temporary variables, and intermediate text filler, condensing the logs into a technical bulleted summary highlighting architecture updates and project changes.
-* **Vault Archiving:** This long-term memory summary is appended directly into targeted Markdown files across specific workspace subfolders:
-* Core system summaries append to: `Meta/global-memory.md`
-* Unique domain records append to: `{Domain}/{domain_name}-memory.md`
-
-
+* **Semantic Belief Extraction:** Pass 2 isolates user prompts and system responses to extract persistent rules. It distills facts like framework preferences, directory structures, and environment goals, appending them to `Meta/Core_Beliefs.md`. These "Beliefs" are dynamically injected into the system prompt upon subsequent reboots to achieve zero-shot personalization.
+* **Low-Entropy Vault Archiving:** Pass 3 strips out transient tool error histories, condensing the logs into a technical bulleted summary highlighting architecture updates and project changes. Core system summaries append to `Meta/global-memory.md` while unique domain records append to `{Domain}/{domain_name}-memory.md`.
 
 Concurrently, the **Default Mode Network (DMN)** triggers background reflection cycles via `trigger_daydreams()`. It crawls through historic system errors in `medulla.log` alongside randomized files across user markdown vaults to identify non-obvious optimizations. These optimizations are recorded as insights within `daydreams.md`, and the system can automatically schedule execution code changes under isolated git branches to evaluate them safely.
 
@@ -174,19 +169,24 @@ Concurrently, the **Default Mode Network (DMN)** triggers background reflection 
 ## 🧬 Memory Encoding & Retrieval Flow
 
 ### 1. The CAS Gatekeeper & Event-Driven Indexing
+
 Instead of running an expensive $O(N)$ full-directory crawl across the vault, the Hippocampus utilizes incremental event-driven indexing hooked into the Somatosensory watcher daemon. Before a file is parsed or analyzed, its content is hashed (`sha256`). If the hash matches the SQLite `file_hashes` tracking registry, the system immediately aborts the parsing pipeline, skipping regex checks and saving massive CPU cycles.
 
 ### 2. The Ripgrep Engine & Context Window Protection
+
 When an agent executes a global search (`global_text_search`), Brain OS completely bypasses Python's internal memory allocation limits by dropping into a native `ripgrep` (`rg`) subprocess.
 
 To protect the LLM from token degradation when retrieving massive files, the Hippocampus employs a **Hybrid Illusion**. If the Ripgrep search hits a massive file, Python silently intercepts the output and stitches the pre-computed Semantic Sidecar summary directly to the top of the search result. The agent gains total technical omniscience without ever flooding its context window.
 
 ### 3. Sleep Cycle Synaptic Consolidation
+
 During inactive idle intervals, or system shutdown sequences, the engine initiates long-term memory consolidation via `consolidate_short_term_memory()`. The subcortex processes these memories through a structured routine:
 
 * **Semantic Compaction Sweep:** The daemon scans the FTS5 index for any "heavy" files (>3,000 characters) that have been modified. It uses a low-cost, high-speed model (like `gemini-2.5-flash` or `gpt-4o-mini`) to compress the file into a dense, 2-3 sentence technical abstract, storing it safely in the `semantic_cache` sidecar without corrupting the user's local Obsidian files.
-* **Log Foraging & Sorting:** It walks directory paths to locate all `agent_interactions.jsonl` files, grabs the last 50 transactions, and classifies them into explicit functional domains (e.g., `STUDIO`, `META`, `PERSONAL`).
+* **Belief Extraction:** Passive extraction of long-term semantic rules and workspace architectures into `Core_Beliefs.md` for permanent agent personalization.
 * **Low-Entropy Text Distillation:** It strips out transient tool error histories, temporary variables, and intermediate text filler, condensing the logs into a technical bulleted summary highlighting architecture updates and project changes.
 * **Vault Archiving:** This long-term memory summary is appended directly into targeted Markdown files across specific workspace subfolders (`Meta/global-memory.md`).
 
-Concurrently, the **Default Mode Network (DMN)** triggers background reflection cycles via `trigger_daydreams()`. It crawls through historic system errors in `medulla.log` alongside randomized files across user markdown vaults to identify non-obvious optimizations, recording them safely in `daydreams.md`.
+```
+
+```

@@ -30,6 +30,7 @@ DB_PATH = ROOT_DIR / "System" / "config" / "hippocampus.db"
 QUEUE_FILE_PATH = ROOT_DIR / "System" / "execution_queue.json"
 QUEUE_LOCK = BiologicalLock(QUEUE_FILE_PATH)
 GRAPH_LEDGER_PATH = ROOT_DIR / ".brain" / "graph_state.json"
+BELIEFS_FILE_PATH = ROOT_DIR / "Meta" / "Core_Beliefs.md"
 
 # =====================================================================
 # 1. EPHEMERAL WORKING MEMORY (SQLite FTS5 + Graph-Boosted RRF)
@@ -415,6 +416,79 @@ async def _compact_heavy_memory(filepath: str, content: str) -> bool:
         return False
 
 
+async def _extract_and_update_beliefs() -> None:
+    """Scans recent interactions to extract and merge long-term semantic beliefs and user preferences."""
+    log_file = ROOT_DIR / "logs" / "agent_interactions.jsonl"
+    if not log_file.exists():
+        return
+
+    try:
+        lines = log_file.read_text(encoding="utf-8").splitlines()[-50:]
+        payload = ""
+        for line in lines:
+            data = json.loads(line)
+            payload += f"User: {data.get('user_prompt', '')[:300]}\nAction: {data.get('response', '')[:300]}\n\n"
+    except Exception:
+        return
+
+    from System.core.dna import get_dna_config
+
+    model = (
+        "gemini/gemini-2.5-flash"
+        if vault.get_api_key_for_model("gemini/")
+        else get_dna_config().get("models", {}).get("fast", "openai/gpt-4o-mini")
+    )
+    api_key = vault.get_api_key_for_model(model)
+
+    if not api_key or not payload.strip():
+        return
+
+    console.print(
+        "[dim blue]🧠 Hippocampus: Scanning recent interactions for new Core Beliefs...[/dim blue]"
+    )
+
+    current_beliefs = ""
+    if BELIEFS_FILE_PATH.exists():
+        current_beliefs = BELIEFS_FILE_PATH.read_text(encoding="utf-8")
+
+    prompt = (
+        "You are the Belief Consolidator for Brain OS.\n"
+        "Analyze the following recent interactions and extract any PERSISTENT user preferences, "
+        "architectural rules, or long-term facts (e.g., 'The user prefers TypeScript', 'The project uses FastAPI').\n"
+        "Merge any new findings with the CURRENT BELIEFS. Discard redundant information.\n"
+        "Do NOT extract transient tasks (e.g., 'Fixed a bug in auth').\n"
+        "Return ONLY the updated complete list of beliefs as a Markdown bulleted list. If no beliefs exist, return an empty string.\n\n"
+        f"--- CURRENT BELIEFS ---\n{current_beliefs}\n\n"
+        f"--- RECENT INTERACTIONS ---\n{payload}"
+    )
+
+    try:
+        response = await acompletion(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+            api_key=api_key,
+        )
+        new_beliefs = str(response.choices[0].message.content).strip()
+
+        if new_beliefs and new_beliefs.startswith("-"):
+            BELIEFS_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with open(BELIEFS_FILE_PATH, "w", encoding="utf-8") as f:
+                f.write(new_beliefs)
+            console.print(
+                "[bold green]🧠 Hippocampus: Core Beliefs successfully updated.[/bold green]"
+            )
+    except Exception as e:
+        console.print(f"[dim red]⚠️ Hippocampus Error extracting beliefs: {e}[/dim red]")
+
+
+def get_core_beliefs() -> str:
+    """Retrieves the synthesized Core Beliefs preamble."""
+    if BELIEFS_FILE_PATH.exists():
+        return BELIEFS_FILE_PATH.read_text(encoding="utf-8").strip()
+    return ""
+
+
 async def _encode_short_term_memory() -> None:
     """Summarizes active JSONL ledgers into dense, long-term markdown memories by DOMAIN."""
     ledgers = list(ROOT_DIR.rglob("agent_interactions.jsonl"))
@@ -514,8 +588,12 @@ async def _encode_short_term_memory() -> None:
 
 def consolidate_short_term_memory() -> None:
     """Synchronous wrapper for the sleep cycle."""
+
+    async def _run_all():
+        await asyncio.gather(_encode_short_term_memory(), _extract_and_update_beliefs())
+
     try:
-        asyncio.run(_encode_short_term_memory())
+        asyncio.run(_run_all())
     except Exception as e:
         console.print(f"[dim red]Hippocampus async error: {e}[/dim red]")
 

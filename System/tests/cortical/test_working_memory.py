@@ -86,3 +86,78 @@ async def test_compress_if_bloated_api_failure_graceful(mocker):
 
     assert len(memory.recent_activity) == 1
     assert len(memory.established_facts) == 0
+
+
+@pytest.mark.asyncio
+async def test_compress_message_array_success(mocker):
+    """Verifies that massive message arrays are successfully compressed into a single Working Memory block."""
+    from System.neuroanatomy.cortical.working_memory import compress_message_array
+
+    # 1. Create a bloated history array (>12,000 chars) to trigger compression
+    bloat = "A" * 15000
+    messages = [
+        {"role": "system", "content": "system prompt"},
+        {"role": "user", "content": "original user prompt"},
+        {"role": "assistant", "content": "thought 1"},
+        {"role": "user", "content": f"bloated tool result: {bloat}"},
+        {"role": "assistant", "content": "thought 2"},
+        {"role": "user", "content": "tool result 2"},
+        {"role": "assistant", "content": "thought 3 (tail)"},
+        {"role": "user", "content": "tool result 3 (tail)"},
+    ]
+
+    mock_response = mocker.AsyncMock()
+    mock_response.choices[0].message.content = "COMPRESSED HISTORICAL SUMMARY"
+
+    mocker.patch(
+        "System.neuroanatomy.cortical.working_memory.acompletion",
+        return_value=mock_response,
+    )
+    mocker.patch(
+        "System.neuroanatomy.systemic.immune_system.vault.get_api_key_for_model",
+        return_value="fake_key",
+    )
+
+    compressed_msgs = await compress_message_array(messages, "gpt-4o")
+
+    # 2. Assert the array was shrunk significantly
+    assert len(compressed_msgs) == 4  # head(2) + tail(2)
+
+    # 3. Assert the Working Memory was perfectly injected into the User prompt
+    user_msg = compressed_msgs[1]["content"]
+    assert "original user prompt" in user_msg
+    assert "--- COMPRESSED WORKING MEMORY ---" in user_msg
+    assert "COMPRESSED HISTORICAL SUMMARY" in user_msg
+
+
+@pytest.mark.asyncio
+async def test_compress_message_array_fallback(mocker):
+    """Verifies that if the compression API crashes, it safely falls back to a 5-message FIFO."""
+    from System.neuroanatomy.cortical.working_memory import compress_message_array
+
+    bloat = "A" * 15000
+    messages = [
+        {"role": "system", "content": "system prompt"},
+        {"role": "user", "content": "user prompt"},
+        {"role": "assistant", "content": "thought 1"},
+        {"role": "user", "content": f"bloated tool result: {bloat}"},
+        {"role": "assistant", "content": "thought 2"},
+        {"role": "tool", "content": "tool result 2"},
+        {"role": "assistant", "content": "thought 3"},
+        {"role": "user", "content": "tool result 3"},
+    ]
+
+    # Force the API to crash
+    mocker.patch(
+        "System.neuroanatomy.cortical.working_memory.acompletion",
+        side_effect=Exception("API Down"),
+    )
+
+    fallback_msgs = await compress_message_array(messages, "gpt-4o")
+
+    # Assert it fell back to head(2) + tail(max 5, but strips leading tools)
+    # The tail logic will grab the last 5: bloat, thought 2, tool 2, thought 3, result 3
+    # It should not contain the `tool result 2` as a leading tool.
+    assert len(fallback_msgs) <= 7
+    assert fallback_msgs[0]["role"] == "system"
+    assert fallback_msgs[1]["role"] == "user"

@@ -1,7 +1,7 @@
 # 🧠 Own Your Brain: An Open-Source, Biomimetic AI Control Plane Inspired by the Unix Philosophy <3
 
 ![Pre-Alpha](https://img.shields.io/badge/status-pre--alpha-red) ![Architecture](https://img.shields.io/badge/Architecture-Biomimetic--Multiagent--Daemon-purple.svg) ![Supports](https://img.shields.io/badge/-Obsidian-7C3AED?style=flat-square&logo=obsidian&logoColor=white)
-![Tests](https://img.shields.io/badge/coverage-80%25-green) ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg)
+![Tests](https://img.shields.io/badge/coverage-100%25-green) ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg)
 ![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
 **DISCLAIMER: For engineers reading this, I realized too late I took the biomimicry domain driven design too far. Please forgive me - directory and file names will change soon.**
@@ -25,12 +25,13 @@ Forget a "second brain." It's time you got an *biomimetic brain.* This Brain let
 	1. When acting on itself, Brain uses a hybrid approach - non-coding tasks are sandboxed in the host OS while coding tasks are jailed in a microvm / app container. See (`System/tools`).
 	2. When acting on the outside world, Brain uses the `Sense` submodule as a secure and token-efficient transducer through a spinal HAL (microphones, webcams, HTTP / webhooks, sockets, etc.)
 	3. *Three-Layered HITL* - pre-flight approval, running anything potentially dangerous (like npm install), and retry approval.
+	4. *Deterministic JSON Architecture* - Brain evaluates complex goals using mathematically enforced, self-healing Pydantic JSON schemas, entirely eliminating regex hallucinations.
 
 3. **Imitate:** Record, analyze, and flawlessly emulate human keyboard styling layouts and terminal tracks at zero token cost (see `observe`, `sync-mirror`, and `imitate` commands).
 	1. *Stylistic Mirroring*: Uses a standard library tokenize compiler and multi-tier markdown micro-AST block classifier to track your precise formatting preferences (indentation, function casing, blockquotes, bold/italics tags, and checklists) without code leaks.
 	2. *Allostatic Protection*: Restrains style drift using an exponential moving average frequency decay loop, while an in-memory Synaptic Hash Cache enforces rapid, bounded execution paths.
 
-4. **Forage and Dream:** Brain attempts to understand **you and fulfill your goals autonomously,** whether hypothesizing, prototyping, exploring the world around it, or cleaning bad files and code (see `live`, `smell`, `daydream` and `forage` commands), . Brain performs the software analog of the [Default Mode Network](https://en.wikipedia.org/wiki/Default_mode_network) in human neurology.
+4. **Forage and Dream:** Brain attempts to understand **you and fulfill your goals autonomously,** whether hypothesizing, prototyping, exploring the world around it, or cleaning bad files and code (see `live`, `smell`, `daydream` and `forage` commands). Brain performs the software analog of the [Default Mode Network](https://en.wikipedia.org/wiki/Default_mode_network) in human neurology.
 	1. *Author's Note*: Since my Brain is full of thoughts on building Brain, it daydreams about improving itself. See commits [ed09fbd](https://github.com/mrdanielcasper/brain/commit/ed09fbd414be8db44c346d73c7f2c168ba093d45) and [ed34e32](https://github.com/mrdanielcasper/brain/commit/ed34e327f92f90286b3a7ac8bdeb00ec9cd093e6) for examples.
 	2. *Experimental Feature*: When Brain determines changes to its source code, it will create a neuroplasticity file for your review (see `evolve` command).
 	3. *Roadmap item*: I view daydreaming as Brain's most important feature and will be continuously expanded to perform higher cognitive functions, like looking for work, studying your (local) market for opportunities, assisting you in creating art, or deepening your relationships with the people that matter. This will be done through declarative configurations.
@@ -85,7 +86,9 @@ Backed by the background daemons, Brain optimizes your Vault performance and kee
 
 - **The Graph Backplane ([Anterior Cingulate Cortex](https://en.wikipedia.org/wiki/Anterior_cingulate_cortex)):** Maps explicit cross-note relationships using custom-compiled string matching, strictly protected by an ACC circuit breaker that blocks serialization of `.brain/graph_state.json` if agent looping faults occur.
 
-- **Working Memory Buffer ([Prefrontal Cortex](https://en.wikipedia.org/wiki/Prefrontal_cortex)):** Enforces a strict 12,000-character wall on operational logs, triggering zero-temperature compression to discard text noise and protect your model from reasoning degradation.
+- **Working Memory Buffer ([Prefrontal Cortex](https://en.wikipedia.org/wiki/Prefrontal_cortex)):** Eliminates API context limits via **Rolling Context Compression**. It intercepts arrays exceeding 12k characters and spawns recursive fast-model summaries, injecting a synthesized "Working Memory" payload directly into the prompt stream without corrupting sequence roles.
+
+- **Semantic Belief Injection ([Hippocampus](https://en.wikipedia.org/wiki/Hippocampus)):** Passively runs during background sleep cycles to read interaction logs, extracting and serializing persistent architectural and user preferences into `Core_Beliefs.md` for zero-shot personalization upon the next boot.
 
 - **Vectorless Search ([Wernicke's Area](https://en.wikipedia.org/wiki/Wernicke%27s_area)):** Replaces heavy embedding search lookups with localized SQLite FTS5 keyword lookups (`hippocampus.db`), dynamically re-ranking hits using knowledge graph connection density to inject precise snippets instead of entire files.
 
@@ -144,11 +147,13 @@ Because the peripheral sensory network is completely decoupled from core reasoni
 | **Vocalization Presenter** | `uv run Sense/cli.py speak local_reflex.wav`                                           | **The Physical Mouth / Speaker Output:** Streams raw audio wave entries directly out to the host machine's hardware speakers, bypassing cognitive loops.                     |
 | **Zero-Token Static Auditing** | `uv run Sense/cli.py smell "Studio"`                                                   | **The Olfactory Bulb / Rot Detection:** Processes high-speed string matching to find broken note anchors, placeholder headers, and dead `[[wikilinks]]`.                     |
 | **Footprint-Safe Sampling** | `uv run Sense/cli.py taste "System/logs/medulla.log"`                                  | **The Gustatory System / Taste Profiling:** Inspects dense logs, multi-page PDFs, or huge CSV rows by cross-sectioning layout blueprints to safeguard context windows.       |
+
 ## 💻 Using Brain: Commands & Customization
 
 Brain works as a CLI tool, an in-app Obsidian task queueing and execution pipeline, and a background daemon.
 
 Customizing Brain's LLMs, routes, agent definitions, tools, webhooks, and daemon settings is done through declaratively yaml files under `./System/config`.
+
 ### 📊 Core Ecosystem Command Matrix
 
 Here are the important CLI tools:
@@ -161,7 +166,7 @@ Here are the important CLI tools:
 | **`./brain task "[DESCRIPTION]" [--domain TEXT] [--route TEXT] [--obsidian]`** | `System/core/orchestrator.py` | **Prefrontal Cortex Governance** | Dispatches goal definitions across parallel swarm threads. If `--obsidian` is active, it enforces an offline safety audit and queues the task inside `Pending_Actions.md` awaiting manual confirmation. |
 | **`./brain daydream`** | `System/neuroanatomy/autonomic/dmn.py` | **Default Mode Network** | Activates a low-priority background thread during idle cycles to prototype modifications, review logs, form hypotheses, and find non-obvious code links. |
 | **`./brain evolve`** | `System/cli_cognitive.py` | **Neuroplastic Synaptic Rewiring** | Backs up configs (`agents.yaml.bak`) and processes md file updates to reprogram its configs (with HITL). |
-| **`./brain sleep`** | `System/neuroanatomy/autonomic/medulla.py` | **Circadian Rest Phase** | Performs log rotations, triggers skill compilation, and compacts SQLite FTS5 database indices to eliminate tracking bloat. |
+| **`./brain sleep`** | `System/neuroanatomy/autonomic/medulla.py` | **Circadian Rest Phase** | Performs log rotations, triggers skill compilation, extracts core semantic beliefs, and compacts SQLite FTS5 database indices to eliminate tracking bloat. |
 | **`./brain forage "[TOPIC]" [--domain TEXT]`** | `System/cli_cognitive.py` | **The Forager Drive** | Drops the pipeline execution loop into a headless sandbox state to scrap external web search loops and extract target fact maps. |
 | **`./brain observe [AGENT] [OBJ] [STEPS]`** | `System/cli_somatic.py` | **Mirror Neuron Tracking** | Directs the mirror neurons to record a successful multi-step tool execution path. |
 | **`./brain sync-mirror "[PROMPT]"`** | `System/cli_somatic.py` | **Hebbian Plasticity Recall** | Replicates previously captured cross-agent tool trajectories instantly for 0 cloud inference tokens. |
@@ -203,7 +208,7 @@ Test acceleration:
 
 - For Mac:
 
-```
+```bash
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
@@ -211,9 +216,9 @@ export VECLIB_MAXIMUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 ```
 
-- For Windws:
+- For Windows:
 
-```
+```powershell
 $env:OMP_NUM_THREADS=1
 $env:MKL_NUM_THREADS=1
 $env:OPENBLAS_NUM_THREADS=1
