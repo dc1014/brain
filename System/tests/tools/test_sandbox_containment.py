@@ -95,3 +95,30 @@ async def test_storage_bomb_guillotine(secure_workspace: Path, mocker) -> None:
 
     assert result.success is False
     assert "CRITICAL SECURITY BLOCK: Disk Storage Exhaustion Prevented" in result.output
+
+
+@pytest.mark.asyncio
+async def test_missing_deno_runtime_triggers_guillotine(
+    secure_workspace: Path, mocker
+) -> None:
+    """DEFCON PROOF: Verifies that the sandbox safely aborts if the Deno runtime is missing from the host."""
+
+    # Mock shutil.which to simulate an environment where Deno is not installed
+    mocker.patch("System.tools.sandbox.shutil.which", return_value=None)
+
+    malicious_script = secure_workspace / "ghost_script.py"
+    malicious_script.write_text("print('Hello')", encoding="utf-8")
+
+    result = await execute_in_sandbox(
+        f"python {malicious_script.name}",
+        workspace_path=secure_workspace,
+        env_secrets={},
+        route="CODE_GENERATION",
+    )
+
+    # ⚡ SHIFT-LEFT SECURITY: Verify the sandbox refuses to execute without mathematical WASM isolation
+    assert result.success is False
+    assert "CRITICAL SECURITY TERMINATION" in str(result.block_reason)
+    assert "Deno runtime is required for secure WebAssembly isolation" in str(
+        result.block_reason
+    )
