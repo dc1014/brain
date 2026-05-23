@@ -160,10 +160,14 @@ async def test_sandbox_allows_execution_when_opted_in(mocker, tmp_path: Path) ->
     # Mock the new Deno Pre-warmed Worker pool
     mock_proc = mocker.AsyncMock()
     mock_proc.returncode = 0
-    # Simulate the worker executing and streaming the completion flag
     mock_proc.stdout.read = mocker.AsyncMock(
         side_effect=[b"Executed cleanly.[__EXECUTION_COMPLETE__]", b""]
     )
+
+    # ⚡ ZERO-DEBT FIX: Explicitly mock these as synchronous to prevent "never awaited" warnings
+    mock_proc.stdin.write = mocker.MagicMock()
+    mock_proc.stdin.close = mocker.MagicMock()
+    mock_proc.kill = mocker.MagicMock()
 
     mocker.patch("System.tools.sandbox.get_pre_warmed_worker", return_value=mock_proc)
     mocker.patch("System.tools.sandbox.replenish_worker_pool_detached")

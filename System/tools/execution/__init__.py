@@ -337,14 +337,16 @@ def deploy_project(
 
 
 async def execute_native_isolated(
-    command_array: list[str], workspace_path: Path, env_secrets: Dict[str, str]
+    command: list[str], workspace_path: Path, env_secrets: Dict[str, str]
 ) -> ExecutionResult:
+    # 🔐 SHIFT-LEFT SECURITY: Accept strictly parsed array lists to prevent shell injection payloads
     env = _get_scrubbed_env()
     for key, value in env_secrets.items():
         env[key] = value
     try:
+        # 🛡️ THE FIX: Use create_subprocess_exec to bypass OS shell evaluation entirely
         proc = await asyncio.create_subprocess_exec(
-            *command_array,
+            *command,
             cwd=str(workspace_path.resolve()),
             env=env,
             stdout=asyncio.subprocess.PIPE,

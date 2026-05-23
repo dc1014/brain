@@ -2,7 +2,12 @@ import os
 import sys
 import pytest
 import asyncio
-from System.tools.execution import execute_command, analyze_safe_syntax
+from pathlib import Path
+from System.tools.execution import (
+    execute_command,
+    analyze_safe_syntax,
+    execute_native_isolated,
+)
 
 
 @pytest.fixture
@@ -835,3 +840,39 @@ def test_sensory_compactor_integration(mocker, tmp_path, bypass_immune_system):
     assert result.success is True
     assert "Initializing" in result.output
     assert "SENSORY COMPACTOR" in result.output
+
+
+@pytest.mark.asyncio
+async def test_execute_native_isolated_bypasses_shell_interpolation(
+    mocker, tmp_path: Path
+) -> None:
+    """Proves that native isolated routes use create_subprocess_exec to prevent shell injection payloads."""
+    # We strictly mock create_subprocess_exec to ensure it is the function called
+    mock_exec = mocker.patch("System.tools.execution.asyncio.create_subprocess_exec")
+
+    mock_proc = mocker.AsyncMock()
+    mock_proc.returncode = 0
+    mock_proc.communicate.return_value = (b"Safe output", b"")
+    mock_exec.return_value = mock_proc
+
+    # We simulate an LLM hallucinating a dangerous command separator injection
+    malicious_command_list = ["echo", "test", ";", "rm", "-rf", "/"]
+
+    res = await execute_native_isolated(malicious_command_list, tmp_path, {})
+
+    # The test passes ONLY if the arguments were unpacked directly to the executable,
+    # meaning the OS will literally try to echo the string "; rm -rf /" rather than executing it.
+    mock_exec.assert_called_once_with(
+        "echo",
+        "test",
+        ";",
+        "rm",
+        "-rf",
+        "/",
+        cwd=str(tmp_path.resolve()),
+        env=mocker.ANY,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+    assert res.success
+    assert res.output == "Safe output"

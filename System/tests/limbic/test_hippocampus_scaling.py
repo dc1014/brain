@@ -14,8 +14,20 @@ def clean_db(tmp_path, mocker):
     test_db = tmp_path / "hippocampus_test.db"
     mocker.patch("System.neuroanatomy.limbic.hippocampus.DB_PATH", test_db)
     yield
-    if test_db.exists():
-        test_db.unlink()
+
+    # ⚡ FIX: Gracefully handle Windows file locking on WAL DBs during teardown.
+    # Python's GC will eventually release the SQLite file handles.
+    try:
+        if test_db.exists():
+            test_db.unlink()
+        wal_file = tmp_path / "hippocampus_test.db-wal"
+        if wal_file.exists():
+            wal_file.unlink()
+        shm_file = tmp_path / "hippocampus_test.db-shm"
+        if shm_file.exists():
+            shm_file.unlink()
+    except PermissionError:
+        pass
 
 
 def test_cas_hash_generation():

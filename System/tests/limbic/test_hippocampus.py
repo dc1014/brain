@@ -1,3 +1,5 @@
+import asyncio
+from System.neuroanatomy.limbic.hippocampus import _get_conn
 from System.neuroanatomy.limbic.hippocampus import (
     encode_memory,
     recall_memory,
@@ -7,7 +9,6 @@ from System.neuroanatomy.limbic.hippocampus import (
     clear_pipeline_state,
 )
 from unittest.mock import patch, MagicMock
-import asyncio
 
 
 def test_hippocampus_ephemeral_rebuild(monkeypatch, tmp_path):
@@ -111,3 +112,18 @@ def test_hippocampus_pipeline_persistence(monkeypatch, tmp_path):
     # 4. Assert the Lymphatic flush correctly clears the state
     clear_pipeline_state()
     assert not mock_queue_file.exists(), "Hippocampus failed to clear the state file!"
+
+
+def test_hippocampus_enables_wal_mode_for_concurrency(mocker) -> None:
+    """Proves that WAL mode is explicitly enabled to prevent database locking during multi-agent loops."""
+    # Intercept the native sqlite3 connection hook
+    mock_connect = mocker.patch(
+        "System.neuroanatomy.limbic.hippocampus.sqlite3.connect"
+    )
+    mock_conn = mock_connect.return_value
+
+    # Initialize the database connection
+    _get_conn()
+
+    # Assert the Write-Ahead Logging pragma was executed before the connection was returned
+    mock_conn.execute.assert_any_call("PRAGMA journal_mode=WAL;")

@@ -42,21 +42,31 @@ BELIEFS_FILE_PATH = ROOT_DIR / "Meta" / "Core_Beliefs.md"
 # =====================================================================
 
 
-def _get_conn() -> sqlite3.Connection:
-    """Initializes the FTS5 virtual table, CAS tracking registry, and Semantic Sidecar."""
+def _get_conn():
+    """Initializes the FTS5 virtual table and auxiliary stores for fast full-text search."""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+
+    # Increase timeout to prevent locks during heavy multi-agent concurrency
+    conn = sqlite3.connect(DB_PATH, timeout=15.0)
+
+    # ⚡ CONCURRENCY FIX: Enable Write-Ahead Logging (WAL)
+    conn.execute("PRAGMA journal_mode=WAL;")
+
+    # 1. The FTS5 Lexical Search Table
     conn.execute("""
         CREATE VIRTUAL TABLE IF NOT EXISTS memories
         USING fts5(filepath, content, timestamp UNINDEXED);
     """)
+
+    # 2. The CAS Gatekeeper Registry
     conn.execute("""
         CREATE TABLE IF NOT EXISTS file_hashes (
             filepath TEXT PRIMARY KEY,
             content_hash TEXT
         );
     """)
-    # ⚡ NEW: The Hybrid Semantic Sidecar to protect the Agent's context window
+
+    # 3. The Semantic Abstract Sidecar
     conn.execute("""
         CREATE TABLE IF NOT EXISTS semantic_cache (
             filepath TEXT PRIMARY KEY,
@@ -64,6 +74,8 @@ def _get_conn() -> sqlite3.Connection:
             last_summarized INTEGER
         );
     """)
+
+    conn.commit()
     return conn
 
 
