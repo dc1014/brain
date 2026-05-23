@@ -71,7 +71,8 @@ def _is_windows_junction(path: Path) -> bool:
         try:
             import ctypes
 
-            attrs = ctypes.windll.kernel32.GetFileAttributesW(str(path))
+            # ⚡ FIXED: Added explicit mypy ignore rule to survive Linux CI environment static analysis passes
+            attrs = ctypes.windll.kernel32.GetFileAttributesW(str(path))  # type: ignore[attr-defined]
             return attrs != -1 and bool(attrs & 0x400)
         except Exception:
             pass
