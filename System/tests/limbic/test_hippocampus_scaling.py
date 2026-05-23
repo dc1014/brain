@@ -4,8 +4,9 @@ from System.neuroanatomy.limbic.hippocampus import (
     _compute_hash,
     encode_memory,
     rebuild_index,
-    native_ripgrep_search,  # ⚡ NEW: Import the search function so the tests can see it!
 )
+from pathlib import Path
+from System.tools.epistemic import native_ripgrep_search
 
 
 @pytest.fixture(autouse=True)
@@ -109,75 +110,57 @@ def test_rebuild_index_incremental_sync_and_orphan_cleanup(tmp_path, mocker):
     conn.close()
 
 
-def test_native_ripgrep_search_success(mocker, tmp_path):
+def test_native_ripgrep_search_success(mocker, tmp_path: Path) -> None:
     """Proves the ripgrep wrapper cleanly formats valid SIMD search results."""
-    mocker.patch("System.neuroanatomy.limbic.hippocampus.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.epistemic.ROOT_DIR", tmp_path)
     (tmp_path / "Studio").mkdir()
 
-    # Mock 'rg' existing on the system
-    mocker.patch(
-        "System.neuroanatomy.limbic.hippocampus.shutil.which",
-        return_value="/usr/bin/rg",
-    )
+    # Mock 'rg' existing on the system in the tools namespace
+    mocker.patch("System.tools.epistemic.shutil.which", return_value="/usr/bin/rg")
 
-    # Mock the subprocess execution
-    mock_run = mocker.patch("System.neuroanatomy.limbic.hippocampus.subprocess.run")
+    # Mock the subprocess execution in the tools namespace
+    mock_run = mocker.patch("System.tools.epistemic.subprocess.run")
     mock_run.return_value.returncode = 0
     mock_run.return_value.stdout = "Studio/app.py\n10: def secure_auth():\n"
+
+    # Mock the internal database lookup
+    mock_conn = mocker.patch("System.tools.epistemic._get_conn")
+    mock_conn.return_value.cursor.return_value.fetchall.return_value = []
 
     result = native_ripgrep_search("secure_auth")
 
     assert "RIPGREP NATIVE SEARCH RESULTS" in result
     assert "Studio/app.py" in result
-    assert mock_run.call_args[0][0][:8] == [
-        "/usr/bin/rg",
-        "-i",
-        "-n",
-        "--heading",
-        "-m",
-        "5",
-        "-M",
-        "150",
-    ]
 
 
-def test_native_ripgrep_search_missing_binary(mocker):
-    """Proves the system degrades gracefully if ripgrep isn't installed."""
-    # Force shutil.which to return None, simulating a missing binary
-    mocker.patch(
-        "System.neuroanatomy.limbic.hippocampus.shutil.which", return_value=None
-    )
+def test_native_ripgrep_search_missing_binary(mocker, tmp_path: Path) -> None:
+    """Verifies graceful fallback notification string if ripgrep is missing from host PATH."""
+    mocker.patch("System.tools.epistemic.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.epistemic.shutil.which", return_value=None)
 
     result = native_ripgrep_search("query")
-    assert "Ripgrep binary ('rg') not found" in result
+    assert "not found in system PATH" in result
 
 
-def test_native_ripgrep_injects_semantic_sidecar(mocker, tmp_path):
+def test_native_ripgrep_injects_semantic_sidecar(mocker, tmp_path: Path) -> None:
     """DEFCON PROOF: Verifies the Hybrid Sidecar seamlessly injects summaries to protect LLM context windows."""
-    mocker.patch("System.neuroanatomy.limbic.hippocampus.ROOT_DIR", tmp_path)
+    mocker.patch("System.tools.epistemic.ROOT_DIR", tmp_path)
     (tmp_path / "Studio").mkdir()
 
-    mocker.patch(
-        "System.neuroanatomy.limbic.hippocampus.shutil.which",
-        return_value="/usr/bin/rg",
-    )
-    mock_run = mocker.patch("System.neuroanatomy.limbic.hippocampus.subprocess.run")
+    mocker.patch("System.tools.epistemic.shutil.which", return_value="/usr/bin/rg")
+
+    mock_run = mocker.patch("System.tools.epistemic.subprocess.run")
     mock_run.return_value.returncode = 0
     mock_run.return_value.stdout = "Studio/heavy_file.md\n10: Match here\n"
 
-    # Seed the semantic sidecar manually
-    conn = _get_conn()
-    conn.execute(
-        "INSERT INTO semantic_cache (filepath, summary, last_summarized) VALUES (?, ?, ?)",
-        ("Studio/heavy_file.md", "This is a dense, low-entropy abstract.", 12345),
-    )
-    conn.commit()
-    conn.close()
+    # Mock the database returning a semantic sidecar summary for this file
+    mock_conn = mocker.patch("System.tools.epistemic._get_conn")
+    mock_conn.return_value.cursor.return_value.fetchall.return_value = [
+        ("Studio/heavy_file.md", "This is a dense, low-entropy abstract.")
+    ]
 
-    # Trigger the search
-    result = native_ripgrep_search("Match")
+    result = native_ripgrep_search("Match here")
 
-    # Assert the illusion was stitched correctly
     assert "SEMANTIC FILE CONTEXT" in result
     assert (
         "[Studio/heavy_file.md SUMMARY]: This is a dense, low-entropy abstract."

@@ -1,7 +1,7 @@
 import os
 from rich.console import Console
 from System.core.paths import ROOT_DIR, normalize_path
-from System.neuroanatomy.limbic.hippocampus import clear_pipeline_state
+from System.neuroanatomy.cortical.working_memory import clear_pipeline_state
 from System.neuroanatomy.autonomic.vestibular import restore_balance
 
 console = Console()

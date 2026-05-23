@@ -6,8 +6,6 @@ import asyncio
 import sqlite3
 import time
 import os
-import shutil
-import subprocess
 from datetime import datetime
 from typing import Dict, Any, List
 
@@ -46,10 +44,10 @@ def _get_conn():
     """Initializes the FTS5 virtual table and auxiliary stores for fast full-text search."""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-    # Increase timeout to prevent locks during heavy multi-agent concurrency
+    # Enforce a 15-second busy timeout to prevent blocks under high multi-agent concurrency
     conn = sqlite3.connect(DB_PATH, timeout=15.0)
 
-    # ⚡ CONCURRENCY FIX: Enable Write-Ahead Logging (WAL)
+    # ⚡ AUDIT CHECKLIST ITEM: Enable Write-Ahead Logging (WAL) mode for simultaneous read/write
     conn.execute("PRAGMA journal_mode=WAL;")
 
     # 1. The FTS5 Lexical Search Table
@@ -648,107 +646,3 @@ def run_semantic_compaction_sweep() -> None:
         asyncio.run(compact_all())
     except Exception as e:
         console.print(f"[dim red]Semantic sweep async error: {e}[/dim red]")
-
-
-def persist_pipeline_state(
-    description: str,
-    route_type: str,
-    domain: str,
-    remaining_steps: List[Dict[str, Any]],
-) -> None:
-    """Hippocampus: Saves the current state of the execution pipeline to disk."""
-    QUEUE_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
-
-    with QUEUE_LOCK.acquire_sync():
-        with open(QUEUE_FILE_PATH, "w", encoding="utf-8") as f:
-            json.dump(
-                {
-                    "original_task": description,
-                    "route_type": route_type,
-                    "domain": domain,
-                    "remaining_steps": remaining_steps,
-                },
-                f,
-                indent=2,
-            )
-
-
-def clear_pipeline_state() -> None:
-    """Lymphatic System: Clears the execution queue upon graceful termination."""
-    with QUEUE_LOCK.acquire_sync():
-        if QUEUE_FILE_PATH.exists():
-            try:
-                os.remove(QUEUE_FILE_PATH)
-            except OSError:
-                pass
-
-
-def native_ripgrep_search(query: str) -> str:
-    """
-    Bypasses Python memory allocation entirely by dropping into a compiled
-    Rust ripgrep subprocess for blazing-fast global regex/text searches.
-    """
-    rg_path = shutil.which("rg")
-    if not rg_path:
-        return "⚠️ Ripgrep binary ('rg') not found in system PATH. Please install ripgrep to unlock native search speeds."
-
-    # ⚡ Target only core domains to prevent grepping massive node_modules or .git histories
-    core_domains = ["Studio", "Meta", "Personal", "Professional"]
-    search_paths = [
-        str((ROOT_DIR / d).resolve()) for d in core_domains if (ROOT_DIR / d).exists()
-    ]
-
-    if not search_paths:
-        return "No valid knowledge domains found to search."
-
-    try:
-        # -i: Ignore case
-        # -n: Line numbers
-        # --heading: Group matches by file (highly readable for LLMs)
-        # -m 5: Max 5 matches per file (prevents context window flooding)
-        # -M 150: Max line length (prevents minified JS from blowing up the prompt)
-        cmd = [
-            rg_path,
-            "-i",
-            "-n",
-            "--heading",
-            "-m",
-            "5",
-            "-M",
-            "150",
-            query,
-        ] + search_paths
-
-        result = subprocess.run(cmd, capture_output=True, text=True)
-
-        if result.returncode == 1:
-            return f"No matches found across the vault for: '{query}'"
-        elif result.returncode > 1:
-            return f"Ripgrep execution error: {result.stderr}"
-
-        rg_output = result.stdout.strip()
-
-        # ⚡ TIER 2 ILLUSION: Seamlessly stitch sidecar summaries into the ripgrep output
-        # This protects the LLM's context window by giving it the abstract BEFORE it tries to read the file.
-        conn = _get_conn()
-        cursor = conn.cursor()
-        cursor.execute("SELECT filepath, summary FROM semantic_cache")
-        summaries = cursor.fetchall()
-        conn.close()
-
-        stitched_context = []
-        for fp, summ in summaries:
-            if fp in rg_output:
-                stitched_context.append(f"[{fp} SUMMARY]: {summ}")
-
-        final_output = "--- RIPGREP NATIVE SEARCH RESULTS ---\n"
-        if stitched_context:
-            final_output += (
-                "--- SEMANTIC FILE CONTEXT ---\n" + "\n".join(stitched_context) + "\n\n"
-            )
-
-        final_output += rg_output
-        return final_output
-
-    except Exception as e:
-        return f"Ripgrep subprocess failure: {str(e)}"

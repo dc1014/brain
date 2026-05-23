@@ -1,6 +1,7 @@
 # --- System/tests/autonomic/test_medulla.py ---
 import pytest
 import time
+from pathlib import Path
 from System.neuroanatomy.autonomic.medulla import (
     MedullaOblongata,
     OrchestrationMismatchException,
@@ -190,3 +191,22 @@ def test_medulla_boot_sequence_respects_startup_grace_window(mocker) -> None:
         medulla._supervise_threads()
     except Exception:
         pass
+
+
+def test_medulla_wake_clears_stale_lock_files(mocker, tmp_path: Path) -> None:
+    """Proves that calling wake() sweeps and deletes any lingering .lock files from previous hard crashes."""
+    mocker.patch("System.neuroanatomy.autonomic.medulla.ROOT_DIR", tmp_path)
+    mocker.patch("System.neuroanatomy.autonomic.medulla.medulla_logger")
+    mocker.patch("System.neuroanatomy.autonomic.medulla.threading.Thread")
+
+    # Seed a fake stale lock file in the workspace
+    stale_lock = tmp_path / "subsystem_process.lock"
+    stale_lock.write_text("LOCKED", encoding="utf-8")
+    assert stale_lock.exists()
+
+    medulla = MedullaOblongata()
+    medulla.default_profile = "minimal_ready"
+    medulla.wake()
+
+    # Assert that the file system reaper successfully unlinked it
+    assert not stale_lock.exists()

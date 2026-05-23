@@ -414,8 +414,27 @@ class MedullaOblongata:
                 time.sleep(0.1)
 
     def wake(self):
+        """Sparks autonomic activity, establishing the Default Orchestration Baseline Profile safely."""
         if self.is_alive:
             return
+
+        # 🔐 HARDENED BOOT RECOVERY: Clean up any stale file-based lock flags left behind by
+        # previous hard process terminations or watchdog unlinks to prevent startup hangs.
+        try:
+            for root, _, files in os.walk(str(ROOT_DIR)):
+                for f in files:
+                    if f.endswith(".lock"):
+                        lock_file = os.path.join(root, f)
+                        try:
+                            os.unlink(lock_file)
+                            console.print(
+                                f"[dim yellow]🧹 Purged stale process lock: {f}[/dim yellow]"
+                            )
+                        except Exception:
+                            pass
+        except Exception as e:
+            medulla_logger.error(f"Stale lock file recovery sweep failed: {str(e)}")
+
         self.is_alive = True
         self.cognitive_state = "IDLE_READY"
 
@@ -428,20 +447,11 @@ class MedullaOblongata:
         except Exception as e:
             medulla_logger.critical(f"WAL Boot recovery crash bypass: {str(e)}")
 
-        try:
-            from System.tools.microsandbox import replenish_worker_pool_detached
-
-            replenish_worker_pool_detached(ROOT_DIR / "Studio")
-            medulla_logger.info(
-                "Medulla brainstem boot: Hydrated sterile process containment worker pool."
-            )
-        except Exception as e:
-            medulla_logger.error(f"Failed to bootstrap unprivileged sandbox pool: {e}")
-
         threading.Thread(target=self._supervise_threads, daemon=True).start()
         threading.Thread(target=self._monitor_homeostasis, daemon=True).start()
         threading.Thread(target=self._cognitive_heartbeat, daemon=True).start()
 
+        # ⚡ DEFAULT BASELINE PROFILE: Drop back into the minimal Ready active layer
         self.cognitive_state = "ORCHESTRATION_MINIMAL"
         medulla_logger.info(
             f"System profile established: {self.default_profile} [ORCHESTRATION_MINIMAL]"

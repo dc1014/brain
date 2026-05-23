@@ -21,13 +21,11 @@ from System.neuroanatomy.autonomic.interoception import (
 from System.neuroanatomy.autonomic.vestibular import commit_transaction, restore_balance
 from System.neuroanatomy.systemic.immune_system import vault
 from System.neuroanatomy.limbic.episodic import recall_recent_episodes, encode_episode
-from System.neuroanatomy.limbic.hippocampus import (
+from System.neuroanatomy.cortical.working_memory import (
     persist_pipeline_state,
     clear_pipeline_state,
+    WorkingMemory,
 )
-
-# Clean, isolated working memory model module import
-from System.neuroanatomy.cortical.working_memory import WorkingMemory
 
 console = Console()
 

@@ -13,6 +13,11 @@ def setup_testing_environment():
     """Enforces a self-defending environment variable barrier across the test session."""
     os.environ["BRAIN_OS_TESTING"] = "1"
     os.environ["BRAIN_OS_HEADLESS"] = "1"
+
+    # 🔐 TESTING REALIGNMENT SHIELD: Globally enable code execution for the test suite scope
+    # so containment matrix and guillotine checks can execute. Specific opt-in unit tests
+    # explicitly clear or mock this to 'false' to evaluate read-only boundaries.
+    os.environ["BRAIN_ENABLE_CODE_EXECUTION"] = "true"
     yield
 
 
