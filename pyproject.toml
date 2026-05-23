@@ -5,6 +5,7 @@ description = "Brain is the first biomimetic control plane for AI tooling - inte
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    # ⚡ CORE FOOTPRINT: The absolute minimum required for cognition, routing, parsing, and memory.
     "litellm>=1.83.14",
     "python-dotenv>=1.2.2",
     "rich>=15.0.0",
@@ -14,20 +15,29 @@ dependencies = [
     "tree-sitter-python>=0.25.0",
     "tree-sitter-typescript>=0.23.2",
     "tree-sitter-javascript>=0.25.0",
-    "sense",
-    "playwright>=1.59.0",
     "psutil>=7.2.2",
-    "sounddevice>=0.5.5",
-    "soundfile>=0.13.1",
-    "numpy>=2.4.4",
     "pypdf>=6.11.0",
     "pydantic>=2.12.5",
-    "opencv-python-headless>=4.9.0.80",
     "aiohttp>=3.13.4",
     "aiosqlite>=0.22.1",
     "filelock>=3.29.0",
     "fastapi>=0.136.1",
     "uvicorn>=0.47.0",
+    "sense",
+]
+
+[project.optional-dependencies]
+# 👁️ VISION CORTEX: Multimodal capabilities, layout auditing, and screenshot rendering
+vision = [
+    "playwright>=1.59.0",
+    "opencv-python-headless>=4.9.0.80",
+    "numpy>=2.4.4"
+]
+
+# 👂 AUDITORY CORTEX: Physical voice input/output via system microphones and speakers
+audio = [
+    "sounddevice>=0.5.5",
+    "soundfile>=0.13.1",
 ]
 
 [dependency-groups]

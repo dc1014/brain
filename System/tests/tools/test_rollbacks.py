@@ -50,7 +50,7 @@ async def test_execution_failure_triggers_rollback(mocker, tmp_path):
 
     spy_rollback = mocker.spy(os, "chmod")
 
-    result = await execute_command_async("python crashing_script.py", "Studio")
+    result = await execute_command_async(["python", "crashing_script.py"], "Studio")
 
     assert result.success is False
     assert spy_rollback.called, (

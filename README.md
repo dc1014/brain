@@ -6,11 +6,23 @@
 
 **DISCLAIMER: For engineers reading this, I realized too late I took the biomimicry domain driven design too far. Please forgive me - directory and file names will change soon.**
 
->🪄 *TLDR: `./brain`  for the interactive Thalamic Setup Wizard 🪄*
+>🪄 *TLDR: Run `bash setup.sh` (or `.\setup.ps1`) to launch the Thalamic Setup Wizard. Once configured, simply type `brain` from anywhere on your machine! 🪄*
 
 > *Personal Statement*: My motivation for Brain is to create and share a system to help us better understand who we are, organize our lives, discover what we are capable of, and to build a community to change what's happening to our world *by working together*. I invite you to Brain with me. Please be kind as I'm just an idiot Product PM who loves computers and the human spirit.
 >
 > - Daniel Casper, 5/20/2026
+
+---
+
+## 🚀 Quick Start
+
+Brain features a progressive enhancement architecture. The core installation takes less than 5 seconds.
+
+1. Clone the repository and navigate inside.
+2. Run the instant bootloader: `bash setup.sh` (Mac/Linux) or `.\setup.ps1` (Windows).
+3. Complete the biomimetic Setup Wizard (TUI) to safely opt-in to autonomous features and sensory organs.
+4. Restart your terminal to load the global alias.
+5. Type `brain` from any directory on your computer to wake the system.
 
 ### 🛡️ Safe-by-Default (Advisory Mode)
 For your absolute physical protection, Brain OS implements a strict **fail-closed, opt-in security model** for code execution. Out of the box, the system runs in a secure, read-only **Advisory Mode**:
@@ -18,6 +30,8 @@ For your absolute physical protection, Brain OS implements a strict **fail-close
 * **Semantic Alignment:** Agents are structurally informed via their system prompts to act solely as expert advisers, writing clean scripts to disk and providing step-by-step manual execution instructions.
 
 To unlock full autonomous micro-sandbox container execution, explicitly opt-in by adding the following variable to your `.env` configuration - `BRAIN_ENABLE_CODE_EXECUTION=true`.
+
+---
 
 ## More than A Second Brain
 

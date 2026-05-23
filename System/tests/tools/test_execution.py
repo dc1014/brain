@@ -449,8 +449,10 @@ def test_execute_command_amygdala_blocked(mocker, tmp_path):
     assert "Semantic Threat Detected" in result.output
 
 
-def test_execute_command_malformed_syntax(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
+def test_execute_command_malformed_syntax(
+    mocker, tmp_path, bypass_immune_system
+):  # ⚡ ADDED HERE
     # Using an unclosed quote to trigger ValueError in shlex
     result = execute_command("echo 'unclosed quote", "Studio")
     assert result.success is False
@@ -488,7 +490,7 @@ async def test_execute_command_immune_healing(mocker, tmp_path, bypass_immune_sy
         return_value=(True, "Healed successfully!"),
     )
 
-    result = await execute_command_async("python fails.py", "Studio")
+    result = await execute_command_async(["python", "fails.py"], "Studio")
     assert result.success is True
     assert "Healed successfully!" in result.output
 
@@ -649,7 +651,7 @@ def test_sync_wrapper_running_loop(mocker, tmp_path, bypass_immune_system):
     )
 
     async def run_in_loop():
-        return execute_command("echo safe", "Studio")
+        return execute_command(["echo", "safe"], "Studio")
 
     result = asyncio.run(run_in_loop())
     assert result.success is True

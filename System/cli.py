@@ -51,6 +51,7 @@ def main():
 
 @app.command()
 def live():
+    """⚡ Synaptic Resonance: Boots the background multi-agent daemons and establishes continuous somatic loops."""
     from System.neuroanatomy.systemic.thymus import ThymusGland
 
     console.print(
@@ -67,6 +68,7 @@ def live():
 
 @app.command()
 def halt():
+    """🛑 Emergency Brake: Instantly kills all active background daemon processes and file watchers."""
     from System.neuroanatomy.autonomic.vagus_nerve import trigger_halt
 
     trigger_halt()
@@ -74,6 +76,7 @@ def halt():
 
 @app.command()
 def recover():
+    """🩹 Autonomic Recovery: Reboots the systemic daemons and clears locked memory states."""
     from System.neuroanatomy.autonomic.vagus_nerve import trigger_recover
 
     trigger_recover()
@@ -109,9 +112,9 @@ def approve():
 def setup() -> None:
     """Initializes Brain OS using the interactive, high-fidelity Synaptic Genesis onboarding wizard."""
     import asyncio
-    from System.core.onboarding import setup_wizard
+    from System.core.onboarding.cli import main as run_onboarding
 
-    asyncio.run(setup_wizard())
+    asyncio.run(run_onboarding())
 
 
 # Cognitive (CNS)

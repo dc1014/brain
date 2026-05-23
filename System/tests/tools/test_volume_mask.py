@@ -40,7 +40,7 @@ async def test_native_execution_enforces_read_only_volume_mask(mocker, tmp_path)
     # Spy on the volume mask lifecycle
     spy_chmod = mocker.spy(os, "chmod")
 
-    result = await execute_command_async("echo 'Volume Protection Active'", "Studio")
+    result = await execute_command_async(["echo", "Volume Protection Active"], "Studio")
 
     assert result.success is True
     assert spy_chmod.called, (

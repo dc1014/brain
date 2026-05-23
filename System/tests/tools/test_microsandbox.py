@@ -107,6 +107,6 @@ async def test_native_routing_kernel_jails(tmp_path: Path, mocker) -> None:
     mocker.patch.dict("os.environ", {"BRAIN_OS_HEADLESS": "1"})
 
     # Execute a command that routes natively
-    await execute_command_async("python test.py", "Studio", route="WORKSPACE")
+    await execute_command_async(["python", "test.py"], "Studio", route="WORKSPACE")
 
     mock_create.assert_called_once()

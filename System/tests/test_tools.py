@@ -93,7 +93,7 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
     studio_dir = tmp_path / "Studio" / "TestProject"
     studio_dir.mkdir(parents=True, exist_ok=True)
 
-    block_result = execute_command("ls", "../../")
+    block_result = execute_command(["ls"], "../../")
     assert "PATH TRAVERSAL BLOCKED" in block_result
 
     # Add 'mocker' to the parameters
@@ -345,7 +345,7 @@ def test_execute_command_headless_bypass(monkeypatch, tmp_path):
         "builtins.input", lambda *args: pytest.fail("HITL prompt was not bypassed!")
     )
 
-    result = execute_command("python --version", "Studio")
+    result = execute_command(["python", "--version"], "Studio")
 
     assert "PATH TRAVERSAL BLOCKED" not in result
     assert "<shell_output>" in result  # Check for the restored XML contract
