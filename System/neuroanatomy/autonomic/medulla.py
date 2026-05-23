@@ -38,7 +38,11 @@ def cleanup_active_medullas() -> None:
         if instance.is_alive:
             try:
                 instance.stop()
-            except Exception:
+            except Exception as e:
+                # ⚡ P1 FIX: Log the disengagement failure instead of passing silently
+                medulla_logger.error(
+                    f"Failed to cleanly disengage medulla instance: {e}"
+                )
                 instance.is_alive = False
     _ACTIVE_MEDULLA_INSTANCES.clear()
 
@@ -64,8 +68,9 @@ class DurableTaskLog:
             try:
                 with open(self.wal_path, "a", encoding="utf-8") as f:
                     f.write(json.dumps(record) + "\n")
-            except Exception:
-                pass
+            except Exception as e:
+                # ⚡ P1 FIX: Ensure failed intent registrations are explicitly logged
+                medulla_logger.error(f"WAL Write Error (register_intent): {e}")
         return task_id
 
     def mark_completed(self, task_id: str, final_status: str = "DONE") -> None:
@@ -74,8 +79,8 @@ class DurableTaskLog:
             try:
                 with open(self.wal_path, "a", encoding="utf-8") as f:
                     f.write(json.dumps(record) + "\n")
-            except Exception:
-                pass
+            except Exception as e:
+                medulla_logger.error(f"WAL Write Error (mark_completed): {e}")
 
     def recover_interrupted_tasks(self) -> List[Dict[str, Any]]:
         if not os.path.exists(self.wal_path):
@@ -98,8 +103,9 @@ class DurableTaskLog:
                             states[t_id] = evt
                         else:
                             states.pop(t_id, None)
-            except Exception:
-                pass
+            except Exception as e:
+                # ⚡ P1 FIX: Log corruption during recovery rather than failing silently
+                medulla_logger.error(f"WAL Read Error (recover_interrupted_tasks): {e}")
 
         return list(states.values())
 
@@ -204,9 +210,13 @@ class MedullaOblongata:
             modulation_chemistry = acc.inspect_context_buffer(mock_history)
 
             target_temp = modulation_chemistry.get("temperature", 0.0)
-            target_engine = modulation_chemistry.get(
-                "engine_override", "openai/gpt-4o-mini"
+            # ⚡ P1 FIX: Inherit the fast fallback model from the user's DNA identity
+            from System.core.dna import get_dna_config
+
+            fallback = (
+                get_dna_config().get("models", {}).get("fast", "openai/gpt-4o-mini")
             )
+            target_engine = modulation_chemistry.get("engine_override", fallback)
 
             score = self.calculate_specificity_score(cmd_str)
             target_tier = self.allocate_orchestration_tier(score)

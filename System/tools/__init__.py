@@ -100,31 +100,6 @@ except Exception:
         return ""
 
 
-# ⚡ LINT STUBS
-def look(*args: Any, **kwargs: Any) -> Any:
-    return None
-
-
-def listen(*args: Any, **kwargs: Any) -> Any:
-    return None
-
-
-def think(*args: Any, **kwargs: Any) -> Any:
-    return None
-
-
-def remember(*args: Any, **kwargs: Any) -> Any:
-    return None
-
-
-def recall(*args: Any, **kwargs: Any) -> Any:
-    return None
-
-
-def learn(*args: Any, **kwargs: Any) -> Any:
-    return None
-
-
 execute_engram = execute_engram_tool
 
 # ==============================================================================

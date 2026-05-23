@@ -408,29 +408,6 @@ async def test_option_b_tier_1_deployment_routed(
     assert "Simulated deploy" in result.output
 
 
-def test_tier_1_fail_closed_missing_dependency(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
-    mocker.patch.dict(
-        os.environ, {"BRAIN_EXECUTION_TIER": "1", "BRAIN_OS_HEADLESS": "1"}
-    )
-    mocker.patch("importlib.util.find_spec", return_value=None)
-    result = execute_command("echo 'dangerous payload'", "Studio")
-    assert result.success is False
-    assert "Hardware isolation engine not found" in result.output
-
-
-def test_tier_1_wip_routing_when_installed(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
-    mocker.patch.dict(
-        os.environ, {"BRAIN_EXECUTION_TIER": "1", "BRAIN_OS_HEADLESS": "1"}
-    )
-    mock_spec = mocker.MagicMock()
-    mocker.patch("importlib.util.find_spec", return_value=mock_spec)
-    result = execute_command("echo 'safe payload'", "Studio")
-    assert result.success is False
-    assert "Sandbox engine initialized" in result.output
-
-
 # -------------------------------------------------------------------------
 # NEW COVERAGE TESTS: AUXILIARY TOOLS & SAD PATHS
 # -------------------------------------------------------------------------
@@ -473,19 +450,6 @@ def test_execute_command_empty(mocker, tmp_path, bypass_immune_system):
     result = execute_command("   ", "Studio")
     assert result.success is False
     assert "Empty command" in result.output
-
-
-def test_tier_1_microsandbox_exception(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
-    mocker.patch.dict(
-        os.environ, {"BRAIN_EXECUTION_TIER": "1", "BRAIN_OS_HEADLESS": "1"}
-    )
-    mocker.patch("importlib.util.find_spec", side_effect=Exception("Simulated crash"))
-
-    result = execute_command("echo test", "Studio")
-
-    assert result.success is False
-    assert result.block_reason == "Sandbox crash"
 
 
 @pytest.mark.asyncio

@@ -186,11 +186,16 @@ async def run_agent_async(
                 and not _has_anthropic
                 and _has_openai
             ):
-                if step == 0:
+                if iteration == 0:
                     console.print(
-                        "[yellow]⚠️ Anthropic key missing. Falling back to OpenAI.[/yellow]"
+                        "[yellow]⚠️ Anthropic key missing. Falling back to configured heavy model.[/yellow]"
                     )
-                model_string = "openai/gpt-4o"
+                # ⚡ P1 FIX: Respect the user's heavy fallback preference from their DNA
+                from System.core.dna import get_dna_config
+
+                model_string = (
+                    get_dna_config().get("models", {}).get("heavy", "openai/gpt-4o")
+                )
 
             # 🧠 THALAMIC ROUTING: Mutate model strings and resolve auto-discovered keys
             routed_model, api_key = vault.resolve_routing(mod_model)

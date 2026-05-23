@@ -360,10 +360,13 @@ async def _compact_heavy_memory(filepath: str, content: str) -> bool:
     and stores it in the Sidecar Registry to protect LLM context windows.
     Returns True if successfully compacted, False otherwise.
     """
+    # ⚡ P1 FIX: Respect the DNA's fast model preference if Gemini isn't available
+    from System.core.dna import get_dna_config
+
     model = (
         "gemini/gemini-2.5-flash"
         if vault.get_api_key_for_model("gemini/")
-        else "openai/gpt-4o-mini"
+        else get_dna_config().get("models", {}).get("fast", "openai/gpt-4o-mini")
     )
     api_key = vault.get_api_key_for_model(model)
 

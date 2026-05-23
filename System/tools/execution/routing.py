@@ -168,12 +168,6 @@ async def execute_command_async(
             env_secrets={},
             route=route,
         )
-    elif execution_tier == "1":
-        import System.tools.execution as exec_pkg
-
-        return exec_pkg._run_tier_1_microsandbox(
-            shlex.join(parsed_args), normalize_path(ROOT_DIR / directory_path)
-        )
 
     from .staging import stage_ast_snapshots
 

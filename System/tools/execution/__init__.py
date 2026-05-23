@@ -7,7 +7,6 @@ import socket
 import asyncio
 import threading
 import subprocess
-import importlib.util
 import signal
 import shutil as shutil
 from pathlib import Path
@@ -164,27 +163,6 @@ async def _stream_and_prune_process(
         except Exception:
             process.kill()
         return True, ""
-
-
-def _run_tier_1_microsandbox(command: str, target_dir: Path) -> ExecutionResult:
-    try:
-        if importlib.util.find_spec("System.tools.microsandbox") is None:
-            return ExecutionResult(
-                success=False,
-                output="SECURITY BLOCK: Hardware isolation engine not found.",
-                block_reason="Missing Isolation Engine",
-            )
-        return ExecutionResult(
-            success=False,
-            output="Sandbox engine initialized but execution routing is WIP.",
-            block_reason="WIP",
-        )
-    except Exception as e:
-        return ExecutionResult(
-            success=False,
-            output=f"Sandbox failure: {str(e)}",
-            block_reason="Sandbox crash",
-        )
 
 
 def execute_command(
