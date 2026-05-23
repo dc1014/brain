@@ -81,9 +81,10 @@ sense = { workspace = true }
 # Tells coverage exactly what module path directory to monitor
 source = ["System"]
 omit = [
-    "System/tests/*",
-    "**/node_modules/*",
-    ".venv/*"
+    "System/cli.py",
+    "System/cli_*.py",
+    "System/smoke_test.py",
+    "System/tools/engrams/*"
 ]
 
 [tool.coverage.report]

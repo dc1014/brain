@@ -1,7 +1,7 @@
 import os
 import pytest
 from unittest.mock import AsyncMock, patch
-from System.neuroanatomy.cortical.prefrontal import execute_pipeline
+from System.neuroanatomy.cortical.prefrontal import execute_pipeline, PrefrontalCortex
 from System.neuroanatomy.limbic.thalamus import route_sensory_input
 import yaml  # type: ignore
 from pathlib import Path
@@ -205,3 +205,57 @@ async def test_pipeline_payload_canonical_compaction(tmp_path):
 
         assert "\n\n\n" not in compiled_prompt
         assert "  " not in compiled_prompt
+
+
+@pytest.mark.asyncio
+async def test_decompose_goal_bypass(mocker):
+    mocker.patch.dict(os.environ, {"BRAIN_OS_BYPASS_PFC": "1"})
+    pfc = PrefrontalCortex()
+    res = await pfc.decompose_goal("Do work")
+    assert res == ["Do work"]
+
+
+@pytest.mark.asyncio
+async def test_decompose_goal_success(mocker):
+    mocker.patch.dict(os.environ, {"BRAIN_OS_BYPASS_PFC": "0"})
+    pfc = PrefrontalCortex()
+
+    mock_response = AsyncMock()
+    mock_response.choices[
+        0
+    ].message.content = '<tasks_json>["task 1", "task 2"]</tasks_json>'
+    mock_response.usage = {"total_tokens": 10}
+
+    mocker.patch(
+        "System.neuroanatomy.cortical.prefrontal.acompletion",
+        return_value=mock_response,
+    )
+    mocker.patch(
+        "System.neuroanatomy.systemic.immune_system.vault.get_api_key_for_model",
+        return_value="key",
+    )
+    mocker.patch(
+        "System.neuroanatomy.cortical.prefrontal.get_dna_config",
+        return_value={"models": {"fast": "fast"}},
+    )
+
+    res = await pfc.decompose_goal("Do work")
+    assert res == ["task 1", "task 2"]
+
+
+@pytest.mark.asyncio
+async def test_execute_goal(mocker):
+    pfc = PrefrontalCortex()
+    mocker.patch.object(pfc, "decompose_goal", return_value=["Step 1"])
+    mocker.patch(
+        "System.neuroanatomy.limbic.episodic.recall_recent_episodes",
+        return_value="past",
+    )
+    mocker.patch("System.neuroanatomy.limbic.episodic.encode_episode")
+    mock_dispatch = mocker.patch(
+        "System.core.orchestrator.dispatch_task", new_callable=AsyncMock
+    )
+
+    res = await pfc.execute_goal("Do work")
+    assert "Consolidated 1 pulses" in res
+    mock_dispatch.assert_called_once()
