@@ -64,7 +64,7 @@ def test_tier_0_hitl_denial(mocker, tmp_path, bypass_immune_system):
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "0"}
     )
     mocker.patch("System.tools.execution.asyncio.to_thread", return_value="n")
-    result = execute_command("npm run build", "Studio")
+    result = execute_command(["npm", "run", "build"], "Studio")
     assert result.success is False
     assert "User explicitly denied command execution" in result.output
 
@@ -100,7 +100,7 @@ def test_tier_0_timeout_orphan_pruning(mocker, tmp_path, bypass_immune_system):
     sleep_script = bypass_immune_system / "sleep.py"
     sleep_script.write_text("import time\ntime.sleep(300)")
 
-    result = execute_command("python sleep.py", "Studio")
+    result = execute_command(["python", "sleep.py"], "Studio")
 
     assert result.success is False
     assert "ERROR: Command timed out" in result.output
@@ -157,7 +157,7 @@ async def test_tier_0_oom_shield(mocker, tmp_path, bypass_immune_system):
         "System.neuroanatomy.systemic.microglia.trigger_immune_response_async",
         return_value=(False, "Mocked Microglia Failure"),
     )
-    result = await execute_command_async("echo 'spam'", "Studio")
+    result = await execute_command_async(["echo", "spam"], "Studio")
 
     assert "SECURITY BLOCK: Execution halted due to excessive output" in result.output
     mock_kill.assert_called_once()
@@ -173,7 +173,7 @@ def test_binary_allowlist_blocks_node(mocker, tmp_path, bypass_immune_system):
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
-    result = execute_command("node malware.js", "Studio")
+    result = execute_command(["node", "malware.js"], "Studio")
     assert result.success is False
     assert "Execution of 'node' natively is strictly forbidden" in result.output
 
@@ -183,24 +183,29 @@ def test_python_interactive_i_flag_blocked(mocker, tmp_path, bypass_immune_syste
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
-    result = execute_command("python -i", "Studio")
+    result = execute_command(["python", "-i"], "Studio")
     assert result.success is False
-    assert "Merged or inline Python flags (-c, -m, -i) are forbidden" in result.output
+    assert "Python flags (-c, -m, -i) are strictly forbidden" in result.output
 
 
-# --- Inside System/tests/tools/test_execution.py ---
-
-
-def test_windows_npm_newline_injection_blocked(mocker, tmp_path, bypass_immune_system):
+def test_defensive_flag_injection_npm(mocker, tmp_path, bypass_immune_system):
+    """Zero-Debt: Proves untrusted node lifecycles are automatically neutralized."""
     mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
-    mocker.patch.dict(
-        os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
-    )
-    mocker.patch("System.tools.execution.sys.platform", "win32")
-    result = execute_command('npm run build "\n" del C:\\*', "Studio")
-    assert result.success is False
-    # ⚡ THE FIX: Adjusted assertion string to validate our pristine Level 1 Lookahead block!
-    assert "strictly forbidden" in result.output
+    from System.tools.execution.validation import parse_and_validate_args
+
+    args, bins, err = parse_and_validate_args(["npm", "run", "build"])
+    assert "--ignore-scripts" in args
+    assert err is None
+
+
+def test_defensive_flag_injection_uv(mocker, tmp_path, bypass_immune_system):
+    """Zero-Debt: Proves arbitrary internet package downloads are explicitly blocked."""
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    from System.tools.execution.validation import parse_and_validate_args
+
+    args, bins, err = parse_and_validate_args(["uv", "run", "pytest"])
+    assert "--offline" in args
+    assert err is None
 
 
 def test_nested_sandbox_escape_path_smuggling(mocker, tmp_path, bypass_immune_system):
@@ -208,7 +213,7 @@ def test_nested_sandbox_escape_path_smuggling(mocker, tmp_path, bypass_immune_sy
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
-    result_path = execute_command("npx /usr/bin/node malware.js", "Studio")
+    result_path = execute_command(["npx", "/usr/bin/node", "malware.js"], "Studio")
     assert result_path.success is False
     assert "Smuggled forbidden binary" in result_path.output
     assert "node" in result_path.output
@@ -225,7 +230,7 @@ def test_pytest_ast_evasion_blocked(mocker, tmp_path, bypass_immune_system):
     )
     test_file = bypass_immune_system / "test_malware.py"
     test_file.write_text("import os; os.system('bad')")
-    result = execute_command("pytest", "Studio")
+    result = execute_command(["pytest"], "Studio")
     assert result.success is False
     assert "AST Violation found" in result.output
 
@@ -241,7 +246,7 @@ def test_phantom_extension_ast_bypass_blocked(mocker, tmp_path, bypass_immune_sy
     )
     phantom_script = bypass_immune_system / "data.txt"
     phantom_script.write_text("import os; os.system('bad')")
-    result = execute_command("python data.txt", "Studio")
+    result = execute_command(["python", "data.txt"], "Studio")
     assert result.success is False
     assert "AST Violation found" in result.output
 
@@ -251,7 +256,7 @@ def test_pytest_trojan_horse_traversal_blocked(mocker, tmp_path, bypass_immune_s
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
-    result = execute_command("pytest --rootdir=../../../", "Studio")
+    result = execute_command(["pytest", "--rootdir=../../../"], "Studio")
     assert result.success is False
     assert (
         "Path traversal and absolute paths are strictly forbidden in pytest arguments"
@@ -264,7 +269,9 @@ def test_uv_run_strict_nested_allowlist(mocker, tmp_path, bypass_immune_system):
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
-    result = execute_command("uv run awk 'BEGIN {system(\"rm -rf /\")}'", "Studio")
+    result = execute_command(
+        ["uv", "run", "awk", "BEGIN {system('rm -rf /')}"], "Studio"
+    )
     assert result.success is False
     assert (
         "Smuggled nested binary 'awk' is not in the strict allowlist" in result.output
@@ -277,7 +284,7 @@ def test_phase5_flag_merging_evasion_blocked(mocker, tmp_path, bypass_immune_sys
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
     result = execute_command(
-        "python -Oic \"import os; os.system('rm -rf /')\"", "Studio"
+        ["python", "-Oic", "import os; os.system('rm -rf /')"], "Studio"
     )
     assert result.success is False
     # ⚡ THE FIX: Adjusted assertion string to validate our pristine Level 1 Lookahead block!
@@ -297,7 +304,7 @@ def test_phase5_directory_main_payload_blocked(mocker, tmp_path, bypass_immune_s
     module_dir.mkdir()
     main_file = module_dir / "__main__.py"
     main_file.write_text("import os; os.system('bad')")
-    result = execute_command("python math_utils", "Studio")
+    result = execute_command(["python", "math_utils"], "Studio")
     assert result.success is False
     assert "AST Violation in __main__" in result.output
 
@@ -330,7 +337,7 @@ def test_ast_secondary_payload_smuggling_blocked(
         return_value="wrapped_safe.py",
     )
 
-    result = execute_command("python safe.py evil.py", "Studio")
+    result = execute_command(["python", "safe.py", "evil.py"], "Studio")
     assert result.success is False
     assert "AST Violation in secondary payload" in result.output
 
@@ -349,7 +356,7 @@ def test_phase6_pytest_m_flag_allowed(mocker, tmp_path, bypass_immune_system):
         return_value=mock_process,
     )
 
-    result = execute_command('pytest -m "slow"', "Studio")
+    result = execute_command(["pytest", "-m", "slow"], "Studio")
     assert result.success is True
     assert "Tests passed" in result.output
 
@@ -418,7 +425,7 @@ def test_execute_command_path_traversal_blocked(mocker, tmp_path):
         "System.neuroanatomy.systemic.blood_brain_barrier.validate_execution_path",
         return_value=(False, "Path Traversal Detected"),
     )
-    result = execute_command("echo test", "Studio")
+    result = execute_command(["echo", "test"], "Studio")
     assert result.success is False
     assert "Path Traversal Detected" in result.output
 
@@ -432,7 +439,7 @@ def test_execute_command_amygdala_blocked(mocker, tmp_path):
         "System.neuroanatomy.limbic.amygdala.scan_command",
         return_value=(False, "Semantic Threat Detected"),
     )
-    result = execute_command("echo test", "Studio")
+    result = execute_command(["echo", "test"], "Studio")
     assert result.success is False
     assert "Semantic Threat Detected" in result.output
 
@@ -447,7 +454,7 @@ def test_execute_command_malformed_syntax(mocker, tmp_path, bypass_immune_system
 
 def test_execute_command_empty(mocker, tmp_path, bypass_immune_system):
     mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
-    result = execute_command("   ", "Studio")
+    result = execute_command([], "Studio")
     assert result.success is False
     assert "Empty command" in result.output
 
@@ -712,7 +719,7 @@ def test_phase7_flag_parameter_desync_blocked(mocker, tmp_path, bypass_immune_sy
         return_value="wrapped_target.py",
     )
 
-    result = execute_command("python -W ignore target.py", "Studio")
+    result = execute_command(["python", "-W", "ignore", "target.py"], "Studio")
 
     assert result.success is False
     assert "AST Guard caught real execution target" in result.output
@@ -727,7 +734,7 @@ def test_phase8_npx_package_assignment_bypass_blocked(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
 
-    result = execute_command("npx --package=bash forbidden-cmd", "Studio")
+    result = execute_command(["npx", "--package=bash", "forbidden-cmd"], "Studio")
 
     assert result.success is False
     assert (
@@ -770,7 +777,7 @@ def test_phase9_toctou_atomic_snapshot_enforced(mocker, tmp_path, bypass_immune_
         "System.tools.execution.asyncio.create_subprocess_exec", return_value=mock_exec
     )
 
-    result = execute_command("python race_condition.py", "Studio")
+    result = execute_command(["python", "race_condition.py"], "Studio")
 
     assert result.success is True
     assert captured_scan_path is not None
@@ -796,6 +803,6 @@ def test_phase10_windows_local_binary_hijacking_blocked(
         "System.tools.execution.validation.shutil.which", return_value=str(fake_python)
     )
 
-    result = execute_command("python safe_script.py", "Studio")
+    result = execute_command(["python", "safe_script.py"], "Studio")
     assert result.success is False
     assert "Local binary hijacking detected" in result.output

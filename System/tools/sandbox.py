@@ -166,7 +166,7 @@ ALLOWED_NATIVE_ROUTES: Set[str] = {
 
 
 async def execute_in_sandbox(
-    command: str,
+    command: list[str] | str,
     workspace_path: Path,
     env_secrets: Dict[str, str],
     route: str = "UNKNOWN",
@@ -179,12 +179,17 @@ async def execute_in_sandbox(
             block_reason="CRITICAL SECURITY TERMINATION: Attempted out-of-bounds workspace execution access.",
         )
 
+    # ⚡ ZERO-DEBT FIXED: Initialize and normalize parsed_args at the top function scope
+    if isinstance(command, str):
+        parsed_args = shlex.split(command)
+    else:
+        parsed_args = [str(arg) for arg in command]
+
     if route in REQUIRES_CONTAINMENT:
         console.print(
             f"[bold cyan]🔒 Embedded Containment Matrix Active (Route: {route}): Enforcing Cryptographic WASM Jail...[/bold cyan]"
         )
 
-        parsed_args = shlex.split(command)
         is_inline = "-c" in parsed_args
         inline_code = ""
         target_script = ""
@@ -290,8 +295,6 @@ runWasmPython();
 
             output_chunks = []
             bytes_read = 0
-
-            # ⚡ FIXED: Properly scoped variable to satisfy the linter
             execution_completed = False
 
             # 🛡️ DEFCON PROOF 11: The Storage Guillotine
@@ -323,7 +326,6 @@ runWasmPython();
 
                     bytes_read += len(chunk)
 
-                    # ⚡ FIXED: Append the valid output FIRST so it isn't swallowed!
                     if b"[__EXECUTION_COMPLETE__]" in chunk:
                         execution_completed = True
                         output_chunks.append(
@@ -346,7 +348,6 @@ runWasmPython();
                         )
                         break
 
-            # Launch the streams and background monitors concurrently
             storage_task = asyncio.create_task(_monitor_storage())
 
             try:
@@ -366,8 +367,6 @@ runWasmPython();
             output_str = b"".join(output_chunks).decode(errors="replace")
             replenish_worker_pool_detached(workspace_path)
 
-            # ⚡ FIXED: Acknowledge success if the token was printed,
-            # ignoring the OS assassination exit code.
             is_success = execution_completed or proc.returncode == 0
             return ExecutionResult(
                 success=is_success,
@@ -375,52 +374,6 @@ runWasmPython();
                 block_reason=None
                 if is_success
                 else f"Sandbox execution failed with exit code {proc.returncode}",
-            )
-
-        except Exception as e:
-            replenish_worker_pool_detached(workspace_path)
-            return ExecutionResult(
-                success=False,
-                output="",
-                block_reason=f"User-space micro-sandbox pool execution failure: {str(e)}",
-            )
-
-            # Launch the streams and background monitors concurrently
-            storage_task = asyncio.create_task(_monitor_storage())
-
-            try:
-                await asyncio.wait_for(_read_stream(), timeout=60.0)
-            except asyncio.TimeoutError:
-                try:
-                    proc.kill()
-                except Exception:
-                    pass
-                output_chunks.append(
-                    b"\n\n[CRITICAL SECURITY BLOCK: WASM Execution Timeout Exceeded 60s. Infinite Loop Pruned.]"
-                )
-
-            await proc.wait()
-            storage_task.cancel()
-
-            output_str = b"".join(output_chunks).decode(errors="replace")
-            replenish_worker_pool_detached(workspace_path)
-
-            # ⚡ FIXED: Acknowledge success if the token was printed, ignoring the assassination exit code
-            is_success = execution_completed or proc.returncode == 0
-            return ExecutionResult(
-                success=is_success,
-                output=output_str,
-                block_reason=None
-                if is_success
-                else f"Sandbox execution failed with exit code {proc.returncode}",
-            )
-
-        except Exception as e:
-            replenish_worker_pool_detached(workspace_path)
-            return ExecutionResult(
-                success=False,
-                output="",
-                block_reason=f"User-space micro-sandbox pool execution failure: {str(e)}",
             )
 
         except Exception as e:
@@ -437,7 +390,8 @@ runWasmPython();
         )
         from System.tools.execution import execute_native_isolated
 
-        return await execute_native_isolated(command, workspace_path, env_secrets)
+        # ⚡ ZERO-DEBT FIXED: Safely passes our scoped list to satisfy the type checker and eliminate variable race errors
+        return await execute_native_isolated(parsed_args, workspace_path, env_secrets)
 
     else:
         return ExecutionResult(

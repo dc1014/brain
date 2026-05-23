@@ -86,7 +86,7 @@ def approve():
     md_queue = ROOT_DIR / "Meta" / "Pending_Actions.md"
     approved_flag = ROOT_DIR / "Meta" / ".approved"
 
-    if not queue_file.exists() or os.getsize(queue_file) == 0:
+    if not queue_file.exists() or os.path.getsize(queue_file) == 0:
         console.print(
             "[dim yellow]No pending tasks found in the queue to approve.[/dim yellow]"
         )

@@ -25,13 +25,10 @@ def _render_command_cockpit(
     execution_tier: str,
 ) -> Panel:
     """Renders a comprehensive, high-fidelity terminal user dashboard split into a clean tactical grid layout."""
-
-    # 📡 MAIN CONTENT MATRIX: Establish a structured horizontal grid for tracking columns
     layout_grid = Table.grid(padding=(0, 2))
-    layout_grid.add_column()  # Left Column: Telemetry
-    layout_grid.add_column()  # Right Column: Firewall Status
+    layout_grid.add_column()
+    layout_grid.add_column()
 
-    # Left Box Data: Vector parameters
     vector_table = Table.grid(padding=(0, 1))
     vector_table.add_column(style="bold cyan")
     vector_table.add_column(style="white")
@@ -51,7 +48,6 @@ def _render_command_cockpit(
         f"[magenta]⚔️ {', '.join(effective_binaries).upper()}[/magenta]",
     )
 
-    # Right Box Data: Firewall perimeters
     firewall_table = Table.grid(padding=(0, 1))
     firewall_table.add_column(style="bold blue")
     firewall_table.add_column(style="dim white")
@@ -61,7 +57,6 @@ def _render_command_cockpit(
     firewall_table.add_row("✓ Amygdala  :", " Heuristic screening passed.")
     firewall_table.add_row("✓ Isolation :", f" Tier {execution_tier} ({tier_desc})")
 
-    # Embed sub-panels inside the layout column slots cleanly
     layout_grid.add_row(
         Panel(
             vector_table,
@@ -75,7 +70,6 @@ def _render_command_cockpit(
         ),
     )
 
-    # 🧬 BASE PANEL: Ephemeral Staging Area Status Block
     staging_table = Table.grid(padding=(0, 1))
     staging_table.add_column(style="bold magenta", width=18)
     staging_table.add_column(style="white")
@@ -95,7 +89,6 @@ def _render_command_cockpit(
         "[bold red]Recursive Kernel Protection Mask Activated. Application files set to read-only (IMMUTABLE).[/bold red]",
     )
 
-    # Master dashboard wrapper assembly grid
     master_frame = Table.grid(padding=(0, 0))
     master_frame.add_column()
     master_frame.add_row(
@@ -125,11 +118,15 @@ def _render_command_cockpit(
     return Panel(master_frame, title=title_text, border_style="magenta", expand=True)
 
 
+# ⚡ FIX: Gracefully accepts either format and normalizes for downward compatibility
 async def execute_command_async(
-    command: str, directory_path: str, route: str = "UNKNOWN"
+    command: list[str] | str, directory_path: str, route: str = "UNKNOWN"
 ) -> ExecutionResult:
     from System.neuroanatomy.systemic.blood_brain_barrier import validate_execution_path
     from System.neuroanatomy.limbic.amygdala import scan_command
+
+    # ⚡ ZERO-DEBT: Normalize to string for legacy text-based scanners to satisfy MyPy
+    command_str = command if isinstance(command, str) else shlex.join(command)
 
     is_safe_path_result, path_result = validate_execution_path(directory_path)
     if not is_safe_path_result:
@@ -139,7 +136,8 @@ async def execute_command_async(
             block_reason=path_result,
         )
 
-    is_safe_cmd, threat_reason = scan_command(command)
+    # Now using command_str so Amygdala string processing doesn't crash
+    is_safe_cmd, threat_reason = scan_command(command_str)
     if not is_safe_cmd:
         return ExecutionResult(
             success=False,
@@ -148,7 +146,7 @@ async def execute_command_async(
         )
 
     parsed_args, effective_binaries, parse_err = parse_and_validate_args(command)
-    if parse_err is not None:  # ⚡ FIX: Explicitly check for None
+    if parse_err is not None:
         return parse_err
 
     if parsed_args is None or effective_binaries is None:
@@ -174,7 +172,7 @@ async def execute_command_async(
     args, created_snapshots, stage_err = stage_ast_snapshots(
         parsed_args, effective_binaries, path_result
     )
-    if stage_err is not None:  # ⚡ FIX: Explicitly check for None
+    if stage_err is not None:
         return stage_err
 
     if args is None:
@@ -184,7 +182,6 @@ async def execute_command_async(
             block_reason="Staging Error",
         )
 
-    # Target parent runtime tools namespace handle safely to maintain test-spy compatibility
     exec_mod = sys.modules["System.tools.execution"]
 
     try:
@@ -192,10 +189,9 @@ async def execute_command_async(
 
         create_snapshot(directory_path)
 
-        # ⚡ THE VISUAL UPGRADE INTERCEPT: Renders cockpit only during live, interactive terminal runs
         if os.environ.get("BRAIN_OS_HEADLESS") != "1":
             panel = _render_command_cockpit(
-                command,
+                command_str,
                 path_result,
                 effective_binaries,
                 created_snapshots,
@@ -205,7 +201,6 @@ async def execute_command_async(
             exec_mod.console.print(panel)
 
             try:
-                # Thread-safe baseline input mechanics to pass historical headless test expectations perfectly!
                 auth = await asyncio.to_thread(
                     input, "↳ Synaptic Authorization Handle [y/N]: "
                 )
@@ -227,21 +222,10 @@ async def execute_command_async(
                     "\n[bold green]⚡ TRANSMISSION AUTHORIZED: Firing synaptic process tree...[/bold green]\n"
                 )
 
-        # Activate kernel-level protection loops through our spied module space reference
         sys.modules["System.tools.execution"]._set_system_volume_mask(read_only=True)
-
         env_vars = exec_mod._get_scrubbed_env()
 
-        # 🛡️ DEFCON PROOF 12: Native OS Resource Ceilings (No-Deno Security)
-        # If we bypass WASM and run natively, we MUST enforce OS-level constraints
-        # to prevent fork bombs, memory starvation, and orphaned runaway processes.
-        # 🛡️ DEFCON PROOF 12: Native OS Resource Ceilings (No-Deno Security)
-        # If we bypass WASM and run natively, we MUST enforce OS-level constraints
-        # to prevent fork bombs, memory starvation, and orphaned runaway processes.
-
-        # ⚡ RESTORED PROCESS SPAWNING BLOCK WITH KERNEL JAILS ⚡
         if sys.platform == "win32":
-            # Windows Job Object Process Group Isolation
             process = await asyncio.create_subprocess_exec(
                 args[0],
                 *args[1:],
@@ -252,10 +236,6 @@ async def execute_command_async(
                 creationflags=0x01000000 | 0x00000200,
             )
         else:
-            # 🛡️ POSIX KERNEL JAIL RESOLUTION
-            # asyncio prohibits preexec_fn. We shift the kernel constraints to the shell natively.
-            # -v 524288 caps memory at 512MB to stop Out-Of-Memory host crashes.
-            # -u 50 caps maximum child threads at 50 to permanently stop Fork-Bombs.
             wrapped_cmd = f"ulimit -v 524288 -u 50 && exec {shlex.join(args)}"
             process = await asyncio.create_subprocess_exec(
                 "sh",
@@ -267,7 +247,7 @@ async def execute_command_async(
                 stderr=asyncio.subprocess.STDOUT,
             )
 
-        timeout = 300.0 if "pytest" in command else 60.0
+        timeout = 300.0 if "pytest" in command_str else 60.0
         timed_out, full_output = await exec_mod._stream_and_prune_process(
             process, timeout=timeout
         )
@@ -288,7 +268,7 @@ async def execute_command_async(
             )
 
             healed, heal_msg = await trigger_immune_response_async(
-                command, full_output, path_result
+                command_str, full_output, path_result
             )
             return (
                 ExecutionResult(

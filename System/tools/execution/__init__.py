@@ -105,7 +105,6 @@ def _rollback_workspace_transaction(path_result: str) -> None:
                     or ".wrapped_" in item.name
                     or "apoptosis_membrane" in item.name
                 ):
-                    # Enforce strict traditional os module namespace hooks for spy capture compliance
                     os.chmod(str(item), stat.S_IWRITE)
                     os.remove(str(item))
             except Exception:
@@ -117,9 +116,7 @@ def _rollback_workspace_transaction(path_result: str) -> None:
 def _get_subprocess_kwargs() -> Dict[str, Any]:
     kwargs: Dict[str, Any] = {}
     if sys.platform == "win32":
-        # Required for clean cancellation via CTRL_BREAK_EVENT on Windows
         kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-    # ⚡ LEGACY DEBT REMOVED: No longer relying on POSIX preexec_fn jails. We use WASM isolation instead.
     return kwargs
 
 
@@ -165,8 +162,9 @@ async def _stream_and_prune_process(
         return True, ""
 
 
+# ⚡ FIX: Adjusted entry point typing to natively accept lists from the LLM core
 def execute_command(
-    command: str, directory_path: str, route: str = "UNKNOWN"
+    command: list[str] | str, directory_path: str, route: str = "UNKNOWN"
 ) -> ExecutionResult:
     try:
         loop = asyncio.get_running_loop()
@@ -340,14 +338,14 @@ def deploy_project(
 
 
 async def execute_native_isolated(
-    command: str, workspace_path: Path, env_secrets: Dict[str, str]
+    command_array: list[str], workspace_path: Path, env_secrets: Dict[str, str]
 ) -> ExecutionResult:
     env = _get_scrubbed_env()
     for key, value in env_secrets.items():
         env[key] = value
     try:
-        proc = await asyncio.create_subprocess_shell(
-            command,
+        proc = await asyncio.create_subprocess_exec(
+            *command_array,
             cwd=str(workspace_path.resolve()),
             env=env,
             stdout=asyncio.subprocess.PIPE,
