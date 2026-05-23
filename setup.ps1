@@ -16,6 +16,12 @@ if (!(Get-Command uv -ErrorAction SilentlyContinue)) { #
     Write-Host "✅ uv is already installed." -ForegroundColor Green #
 } #
 
+# ⚡ Install Ripgrep for Native Search
+if (!(Get-Command rg -ErrorAction SilentlyContinue)) {
+    Write-Host "Installing Ripgrep (rg) for native search speeds..." -ForegroundColor Cyan
+    winget install BurntSushi.ripgrep.MSVC --accept-source-agreements --accept-package-agreements
+}
+
 # ⚡ NATIVE PROCESS CONTRAINMENT: Auto-install Deno as the default user-space execution layer
 Write-Host "🦕 Checking for User-Space Runtime Sandbox (Deno)..." -ForegroundColor Cyan
 if (!(Get-Command deno -ErrorAction SilentlyContinue)) {

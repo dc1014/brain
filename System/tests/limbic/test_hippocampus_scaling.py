@@ -2,8 +2,9 @@ import pytest
 from System.neuroanatomy.limbic.hippocampus import (
     _get_conn,
     _compute_hash,
-    encode_memory,  # ⚡ Reverted to original name
+    encode_memory,
     rebuild_index,
+    native_ripgrep_search,  # ⚡ NEW: Import the search function so the tests can see it!
 )
 
 
@@ -94,3 +95,46 @@ def test_rebuild_index_incremental_sync_and_orphan_cleanup(tmp_path, mocker):
     cursor.execute("SELECT * FROM memories WHERE filepath = ?", ("Studio/doc.md",))
     assert cursor.fetchone() is None
     conn.close()
+
+
+def test_native_ripgrep_search_success(mocker, tmp_path):
+    """Proves the ripgrep wrapper cleanly formats valid SIMD search results."""
+    mocker.patch("System.neuroanatomy.limbic.hippocampus.ROOT_DIR", tmp_path)
+    (tmp_path / "Studio").mkdir()
+
+    # Mock 'rg' existing on the system
+    mocker.patch(
+        "System.neuroanatomy.limbic.hippocampus.shutil.which",
+        return_value="/usr/bin/rg",
+    )
+
+    # Mock the subprocess execution
+    mock_run = mocker.patch("System.neuroanatomy.limbic.hippocampus.subprocess.run")
+    mock_run.return_value.returncode = 0
+    mock_run.return_value.stdout = "Studio/app.py\n10: def secure_auth():\n"
+
+    result = native_ripgrep_search("secure_auth")
+
+    assert "RIPGREP NATIVE SEARCH RESULTS" in result
+    assert "Studio/app.py" in result
+    assert mock_run.call_args[0][0][:8] == [
+        "/usr/bin/rg",
+        "-i",
+        "-n",
+        "--heading",
+        "-m",
+        "5",
+        "-M",
+        "150",
+    ]
+
+
+def test_native_ripgrep_search_missing_binary(mocker):
+    """Proves the system degrades gracefully if ripgrep isn't installed."""
+    # Force shutil.which to return None, simulating a missing binary
+    mocker.patch(
+        "System.neuroanatomy.limbic.hippocampus.shutil.which", return_value=None
+    )
+
+    result = native_ripgrep_search("query")
+    assert "Ripgrep binary ('rg') not found" in result

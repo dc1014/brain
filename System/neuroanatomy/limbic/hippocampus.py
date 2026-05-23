@@ -6,6 +6,8 @@ import asyncio
 import sqlite3
 import time
 import os
+import shutil
+import subprocess
 from datetime import datetime
 from typing import Dict, Any, List
 
@@ -481,3 +483,53 @@ def clear_pipeline_state() -> None:
                 os.remove(QUEUE_FILE_PATH)
             except OSError:
                 pass
+
+
+def native_ripgrep_search(query: str) -> str:
+    """
+    Bypasses Python memory allocation entirely by dropping into a compiled
+    Rust ripgrep subprocess for blazing-fast global regex/text searches.
+    """
+    rg_path = shutil.which("rg")
+    if not rg_path:
+        return "⚠️ Ripgrep binary ('rg') not found in system PATH. Please install ripgrep to unlock native search speeds."
+
+    # ⚡ Target only core domains to prevent grepping massive node_modules or .git histories
+    core_domains = ["Studio", "Meta", "Personal", "Professional"]
+    search_paths = [
+        str((ROOT_DIR / d).resolve()) for d in core_domains if (ROOT_DIR / d).exists()
+    ]
+
+    if not search_paths:
+        return "No valid knowledge domains found to search."
+
+    try:
+        # -i: Ignore case
+        # -n: Line numbers
+        # --heading: Group matches by file (highly readable for LLMs)
+        # -m 5: Max 5 matches per file (prevents context window flooding)
+        # -M 150: Max line length (prevents minified JS from blowing up the prompt)
+        cmd = [
+            rg_path,
+            "-i",
+            "-n",
+            "--heading",
+            "-m",
+            "5",
+            "-M",
+            "150",
+            query,
+        ] + search_paths
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode == 1:
+            return f"No matches found across the vault for: '{query}'"
+        elif result.returncode > 1:
+            return f"Ripgrep execution error: {result.stderr}"
+
+        # We inject a small header so the LLM understands the output format
+        return f"--- RIPGREP NATIVE SEARCH RESULTS ---\n{result.stdout.strip()}"
+
+    except Exception as e:
+        return f"Ripgrep subprocess failure: {str(e)}"

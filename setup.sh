@@ -18,6 +18,18 @@ else #
     echo "✅ uv is already installed." #
 fi #
 
+# ⚡ Install Ripgrep for Native Search
+if ! command -v rg &> /dev/null; then
+    echo -e "${BLUE}Installing Ripgrep (rg) for native search speeds...${NC}"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        brew install ripgrep
+    elif command -v apt-get &> /dev/null; then
+        sudo apt-get update && sudo apt-get install -y ripgrep
+    else
+        echo -e "${YELLOW}⚠️ Please install ripgrep manually: https://github.com/BurntSushi/ripgrep${NC}"
+    fi
+fi
+
 # 1.5. Hardware Senses (Linux Only)
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then #
     echo "📦 Checking for Biological Ear hardware drivers (PortAudio)..." #

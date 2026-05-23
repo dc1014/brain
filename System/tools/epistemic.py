@@ -110,3 +110,13 @@ def json_dump_fallback(data: List[Dict[str, str]]) -> str:
 
 def trajectory_data_format(data: List[Dict[str, str]]) -> List[Dict[str, str]]:
     return data
+
+
+def global_text_search(query: str) -> str:
+    """
+    Executes a blazing-fast global regex search across the entire knowledge vault.
+    Use this to find exact string matches, variable names, or phrases across all files.
+    """
+    from System.neuroanatomy.limbic.hippocampus import native_ripgrep_search
+
+    return native_ripgrep_search(query)

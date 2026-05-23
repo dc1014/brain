@@ -45,3 +45,17 @@ def test_historical_fact_consolidation_supersession() -> None:
 
     assert 'valid_until="2026-05-19"' in processed_md
     assert '<fact type="mrr" value="8000" date="2026-05-19" />' in processed_md
+
+
+def test_global_text_search_routing(mocker):
+    """Verifies the epistemic tool correctly routes queries to the ripgrep engine."""
+    from System.tools.epistemic import global_text_search
+
+    mock_rg = mocker.patch(
+        "System.neuroanatomy.limbic.hippocampus.native_ripgrep_search"
+    )
+    mock_rg.return_value = "Mocked Ripgrep Output"
+
+    res = global_text_search("find_me")
+    assert res == "Mocked Ripgrep Output"
+    mock_rg.assert_called_once_with("find_me")
