@@ -168,8 +168,17 @@ class SensoryTransducer:
         self.progress_pattern = re.compile(
             r"([\s\d%]+[░■▰▱▬█=>-]+\s*[\d.]+[:\d]*\s*[M|K|G]?B/s|⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏)"
         )
+
+        # ⚡ FIXED: Added explicit tracking matching for bracketed linter summaries ([*])
         self.package_noise = re.compile(
-            r"^(resolved|downloaded|installed|audited|checked|funding)\s+\d+.*$",
+            r"^("
+            r"resolved|downloaded|installed|audited|checked|funding|fetching|extracting|"
+            r"requirement\s+already\s+satisfied|"
+            r"\[\d+/\d+\]\s+(resolving|fetching|linking)|"
+            r"\[\s*[\d.]+(ms|s)\]\s+bun\s+|"
+            r"all\s+checks\s+passed|\d+\s+files?\s+would\s+be\s+reformatted|"
+            r"\[\*\]\s*\d+\s+files?\s+checked"
+            r")\s*.*$",
             re.IGNORECASE,
         )
 

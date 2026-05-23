@@ -139,3 +139,24 @@ def test_transducer_masks_vault_secrets_before_truncation(mocker):
     # Confirm plaintext credential signatures are completely non-existent
     assert "super_secret_token_string_xyz_12345" not in compacted
     assert "[MOCK_DEPLOYMENT_TOKEN_REDACTED]" in compacted
+
+
+def test_transducer_filters_extended_package_and_linter_noise():
+    """Zero-Debt: Proves that extended pip, yarn, bun, and ruff boilerplate lines get dropped cleanly."""
+    from System.neuroanatomy.sensory.somatosensory import SensoryTransducer
+
+    transducer = SensoryTransducer()
+
+    verbose_log = (
+        "Requirement already satisfied: pydantic>=2.0 in ./.venv/lib/python3.12\n"
+        "[*] 0 files checked cleanly\n"
+        "[1/4] Resolving packages...\n"
+        "Real operational warning signature here"
+    )
+
+    compacted = transducer.compact_terminal_output(["uv"], verbose_log)
+
+    assert "Requirement already satisfied" not in compacted
+    assert "files checked" not in compacted
+    assert "Resolving packages" not in compacted
+    assert "Real operational warning signature here" in compacted
