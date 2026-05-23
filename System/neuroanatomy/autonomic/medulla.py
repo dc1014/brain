@@ -7,6 +7,7 @@ import psutil
 import os
 import uuid
 import json
+import shlex
 import subprocess
 from typing import Any, List, Dict, Optional
 from rich.console import Console
@@ -229,9 +230,13 @@ class MedullaOblongata:
             env_override["BRAIN_RECOVERY_TEMPERATURE"] = str(temperature)
             env_override["BRAIN_RECOVERY_ENGINE"] = str(engine)
 
+            # ⚡ P0 FIX: Safely split the command string to completely eliminate
+            # the shell=True command injection vulnerability.
+            safe_command = shlex.split(command)
+
             result = subprocess.run(
-                command,
-                shell=True,
+                safe_command,
+                shell=False,
                 capture_output=True,
                 text=True,
                 env=env_override,

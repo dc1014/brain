@@ -168,7 +168,7 @@ async def run_agent_async(
 
         model_string = route_hemisphere(route, model_string)
 
-        for step in range(15):
+        for iteration in range(15):
             if len(messages) > 7:
                 window = messages[-5:]
                 while window and window[0].get("role") == "tool":
@@ -234,9 +234,9 @@ async def run_agent_async(
 
             # --- ⚡ DELEGATE TO MOTOR CORTEX ---
             if hasattr(message, "tool_calls") and message.tool_calls:
-                # ⚡ THE ROUTE RELAY: Pass the route down into the execution stack
+                # ⚡ P0 FIX: Pass the local 'iteration' variable instead of the shadowed 'step'
                 tool_messages, new_actions, halt_text = await execute_tools(
-                    message.tool_calls, role_name, step_index=step, route=route
+                    message.tool_calls, role_name, step_index=iteration, route=route
                 )
 
                 messages.extend(tool_messages)
