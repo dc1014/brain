@@ -1,4 +1,5 @@
 # --- System/tests/tools/test_sandbox_containment.py ---
+import os
 import pytest
 from pathlib import Path
 from System.tools.sandbox import execute_in_sandbox
@@ -122,3 +123,84 @@ async def test_missing_deno_runtime_triggers_guillotine(
     assert "Deno runtime is required for secure WebAssembly isolation" in str(
         result.block_reason
     )
+
+
+@pytest.mark.asyncio
+async def test_sandbox_safe_by_default_blocks_execution(mocker, tmp_path: Path) -> None:
+    """Proves the system rejects code execution when the global opt-in flag is missing."""
+    # Ensure the environment variable is explicitly removed for this test
+    mocker.patch.dict(os.environ, clear=True)
+    # Bypass the directory check so we strictly test the Opt-In gate
+    mocker.patch("System.tools.sandbox.is_safe_path", return_value=True)
+
+    res = await execute_in_sandbox(
+        command="npm install",
+        workspace_path=tmp_path,
+        env_secrets={},
+        route="CODE_GENERATION",  # A route that REQUIRES_CONTAINMENT
+    )
+
+    assert not res.success
+    block_reason_str: str = (
+        str(res.block_reason) if res.block_reason is not None else ""
+    )
+    assert "OPT-IN REQUIRED" in block_reason_str
+
+
+@pytest.mark.asyncio
+async def test_sandbox_allows_execution_when_opted_in(mocker, tmp_path: Path) -> None:
+    """Proves the system allows WASM containment execution when the user explicitly opts in."""
+    # Simulate a user opting in via environment variables
+    mocker.patch.dict(os.environ, {"BRAIN_ENABLE_CODE_EXECUTION": "true"})
+
+    # Bypass directory and Deno installation checks for the unit test
+    mocker.patch("System.tools.sandbox.is_safe_path", return_value=True)
+    mocker.patch("System.tools.sandbox.shutil.which", return_value="/usr/bin/deno")
+
+    # Mock the new Deno Pre-warmed Worker pool
+    mock_proc = mocker.AsyncMock()
+    mock_proc.returncode = 0
+    # Simulate the worker executing and streaming the completion flag
+    mock_proc.stdout.read = mocker.AsyncMock(
+        side_effect=[b"Executed cleanly.[__EXECUTION_COMPLETE__]", b""]
+    )
+
+    mocker.patch("System.tools.sandbox.get_pre_warmed_worker", return_value=mock_proc)
+    mocker.patch("System.tools.sandbox.replenish_worker_pool_detached")
+
+    # Mock the transducer to bypass sensory parsing logic in testing
+    mock_transducer = mocker.patch(
+        "System.neuroanatomy.sensory.somatosensory.SensoryTransducer"
+    )
+    mock_transducer.return_value.compact_terminal_output.return_value = (
+        "Executed cleanly."
+    )
+
+    res = await execute_in_sandbox(
+        command="npm install",
+        workspace_path=tmp_path,
+        env_secrets={},
+        route="CODE_GENERATION",
+    )
+
+    assert res.success
+    assert "Executed cleanly" in res.output
+
+
+@pytest.mark.asyncio
+async def test_sandbox_rejects_unmapped_and_unknown_routes_safely(
+    mocker, tmp_path: Path
+) -> None:
+    """Verifies that any route not explicitly whitelisted is failed-closed to safeguard the host system."""
+    mocker.patch("System.tools.sandbox.is_safe_path", return_value=True)
+    res = await execute_in_sandbox(
+        command="echo 'unauthorized action'",
+        workspace_path=tmp_path,
+        env_secrets={},
+        route="ADVERSARIAL_BYPASS_ATTEMPT",
+    )
+    assert not res.success
+    block_reason_str: str = (
+        str(res.block_reason) if res.block_reason is not None else ""
+    )
+    assert "CRITICAL SECURITY BLOCK" in block_reason_str

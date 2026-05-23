@@ -173,6 +173,11 @@ async def execute_in_sandbox(
     route: str = "UNKNOWN",
 ) -> ExecutionResult:
 
+    # 🔐 SAFE-BY-DEFAULT: Global kill-switch for autonomous code execution. Must be explicitly opted-in.
+    code_execution_enabled = os.environ.get(
+        "BRAIN_ENABLE_CODE_EXECUTION", "false"
+    ).lower() in ("true", "1", "yes")
+
     if not is_safe_path(workspace_path, require_write=True):
         return ExecutionResult(
             success=False,
@@ -187,6 +192,20 @@ async def execute_in_sandbox(
         parsed_args = [str(arg) for arg in command]
 
     if route in REQUIRES_CONTAINMENT:
+        # 🛡️ THE GATEKEEPER: Abort instantly if the user hasn't enabled code execution
+        if not code_execution_enabled:
+            console.print(
+                f"\n[bold red]❌ SECURITY BLOCK: Containment requested for route '{route}', but execution is disabled.[/bold red]"
+            )
+            console.print(
+                "[dim]For your safety, Brain OS runs in a read-only state by default. To enable autonomous execution, set BRAIN_ENABLE_CODE_EXECUTION=true.[/dim]\n"
+            )
+            return ExecutionResult(
+                success=False,
+                output="",
+                block_reason="OPT-IN REQUIRED: Autonomous code execution is disabled by default.",
+            )
+
         console.print(
             f"[bold cyan]🔒 Embedded Containment Matrix Active (Route: {route}): Enforcing Cryptographic WASM Jail...[/bold cyan]"
         )

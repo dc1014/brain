@@ -248,6 +248,34 @@ async def execute_pipeline(
     with open(tools_path, "r", encoding="utf-8") as f:
         available_tools = yaml.safe_load(f)
 
+    # 🔐 COGNITIVE TOOL PRUNING: Shift-Left Safety Enforcement
+    # If the user has not explicitly opted into code execution, we physically remove
+    # the execution tools from the AI's payload so it cannot hallucinate loops trying to call them.
+    code_execution_enabled = os.environ.get(
+        "BRAIN_ENABLE_CODE_EXECUTION", "false"
+    ).lower() in ("true", "1", "yes")
+
+    if not code_execution_enabled:
+        restricted_tools = {
+            "execute_in_sandbox",
+            "execute_code",
+            "run_terminal_command",
+            "run_script",
+            "deno_executor",
+            "execute_command",
+        }
+        for group in available_tools:
+            if isinstance(available_tools[group], list):
+                available_tools[group] = [
+                    t
+                    for t in available_tools[group]
+                    if (isinstance(t, str) and t not in restricted_tools)
+                    or (isinstance(t, dict) and t.get("name") not in restricted_tools)
+                ]
+        console.print(
+            "\n[dim yellow]🛡️ Cognitive Pruning: Code execution tools hidden from active LLM context (Opt-In Required).[/dim yellow]"
+        )
+
     pipeline = (
         resume_pipeline
         if resume_pipeline is not None

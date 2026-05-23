@@ -1,8 +1,9 @@
 import asyncio
 import json
+import os
 import pytest
 from unittest.mock import MagicMock
-from System.llm import run_agent_async
+from System.llm import run_agent_async, get_system_context
 
 
 def test_token_truncator_protects_context(mocker) -> None:  # type: ignore
@@ -420,3 +421,40 @@ async def test_run_agent_async_json_self_healing_bridge(mocker):
 
     assert len(synthetic_tools) == 1
     assert synthetic_tools[0].function.name == "write_safe_file"
+
+
+def test_get_system_context_injects_advisory_mode_when_execution_disabled(
+    mocker,
+) -> None:
+    """Proves the system safely aligns the AI's context when code execution is disabled."""
+    # Ensure the opt-in flag is explicitly disabled
+    mocker.patch.dict(os.environ, {"BRAIN_ENABLE_CODE_EXECUTION": "false"}, clear=True)
+
+    # Mock the configuration loader
+    mocker.patch(
+        "System.core.dna.get_dna_config",
+        return_value={"agents": {"pm": {"system_prompt": "I am the Product Manager."}}},
+    )
+
+    context = get_system_context("pm")
+
+    assert "I am the Product Manager." in context
+    assert "[SYSTEM ADVISORY]" in context
+    assert "Safe-by-Default (Advisory) mode" in context
+    assert "do NOT have access to code execution tools" in context
+
+
+def test_get_system_context_skips_advisory_mode_when_execution_enabled(mocker) -> None:
+    """Proves the system removes the advisory warning when the user explicitly opts in."""
+    # Simulate a user opting in via their setup config
+    mocker.patch.dict(os.environ, {"BRAIN_ENABLE_CODE_EXECUTION": "true"}, clear=True)
+
+    mocker.patch(
+        "System.core.dna.get_dna_config",
+        return_value={"agents": {"pm": {"system_prompt": "I am the Product Manager."}}},
+    )
+
+    context = get_system_context("pm")
+
+    assert "I am the Product Manager." in context
+    assert "[SYSTEM ADVISORY]" not in context

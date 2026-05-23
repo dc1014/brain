@@ -259,3 +259,71 @@ async def test_execute_goal(mocker):
     res = await pfc.execute_goal("Do work")
     assert "Consolidated 1 pulses" in res
     mock_dispatch.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_cognitive_tool_pruning_hides_execution_tools(
+    mocker, tmp_path: Path
+) -> None:
+    """Proves that execution tools are dynamically removed from the LLM context if not opted in."""
+    from System.neuroanatomy.cortical.prefrontal import execute_pipeline
+
+    mocker.patch("System.neuroanatomy.cortical.prefrontal.ROOT_DIR", tmp_path)
+
+    # Bootstrap an isolated temporary tools configuration file structure with dangerous tools
+    tools_dir = tmp_path / "System" / "config"
+    tools_dir.mkdir(parents=True, exist_ok=True)
+    dummy_tools = {
+        "base": ["read_file"],
+        "execute": ["execute_in_sandbox", "deno_executor", "safe_linter_tool"],
+    }
+    with open(tools_dir / "tools.yaml", "w", encoding="utf-8") as f:
+        yaml.dump(dummy_tools, f)
+
+    (tmp_path / "logs").mkdir(parents=True, exist_ok=True)
+
+    # Mock peripheral systems
+    mocker.patch(
+        "System.core.orchestrator.route_sensory_input",
+        return_value=(True, "Approved", "FORGE", "STUDIO", {"total_tokens": 10}),
+    )
+    mocker.patch("System.neuroanatomy.cortical.prefrontal.commit_transaction")
+    mocker.patch("System.neuroanatomy.cortical.prefrontal.restore_balance")
+
+    # Inject static DNA layout configuration variables
+    mocker.patch(
+        "System.neuroanatomy.cortical.prefrontal.get_dna_config",
+        return_value={
+            "routes": {
+                "FORGE": [{"agent": "product_manager", "tools": ["execute", "base"]}]
+            },
+            "agents": {
+                "product_manager": {
+                    "name": "PM",
+                    "model": "mock",
+                    "system_prompt": "",
+                    "creates_milestone": True,
+                }
+            },
+            "models": {"mock": "mock"},
+        },
+    )
+
+    mock_run_agent = mocker.patch(
+        "System.neuroanatomy.cortical.prefrontal.run_agent_async"
+    )
+    mock_run_agent.return_value.usage = {}
+    mock_run_agent.return_value.text = "Executed safely."
+    mock_run_agent.return_value.actions = []
+
+    # 1. 🔐 ENFORCEMENT TEST: Ensure tools are scrubbed when opt-in is false
+    mocker.patch.dict(os.environ, {"BRAIN_ENABLE_CODE_EXECUTION": "false"}, clear=True)
+    await execute_pipeline("Test pruning", "FORGE", "STUDIO")
+
+    # Extract the active_tools list passed to the agent kwargs
+    called_tools = mock_run_agent.call_args[1].get("tools", [])
+
+    assert "execute_in_sandbox" not in called_tools
+    assert "deno_executor" not in called_tools
+    assert "safe_linter_tool" in called_tools
+    assert "read_file" in called_tools

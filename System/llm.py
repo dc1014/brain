@@ -2,6 +2,7 @@ from System.core.schemas import AgentResponseSchema, MarkdownTranslator, ToolCal
 import asyncio
 import json
 import litellm  # type: ignore
+import os
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -122,37 +123,17 @@ def get_system_context(
     except ImportError:
         pass  # Failsafe in case the Limbic system is temporarily offline
 
-    # ⚡ CORE BELIEFS: Inject long-term semantic knowledge about the user and project
-    try:
-        from System.neuroanatomy.limbic.hippocampus import get_core_beliefs
-
-        beliefs = get_core_beliefs()
-        if beliefs:
-            base_prompt += f"\n\nCORE BELIEFS & PROJECT RULES:\n{beliefs}\n"
-    except ImportError:
-        pass
-
-    schema_dict = {
-        "thought_process": "Your internal reasoning and planning.",
-        "tool_calls": [
-            {
-                "tool_name": "exact_name_of_tool_to_run",
-                "parameters": {"arg1": "value1"},
-                "reasoning": "Why you need this tool.",
-            }
-        ],
-        "final_response": "Your final text to the user. MUST be a string if task is complete. Null if executing tools.",
-    }
-
-    base_prompt += (
-        "\nCRITICAL PROTOCOL - STRUCTURED OUTPUT REQUIRED:\n"
-        "1. You MUST output your ENTIRE response as a single, valid JSON object.\n"
-        "2. Do NOT wrap it in markdown block quotes.\n"
-        "3. HALT CONDITION: If you have finished the task or want to stop, you MUST pass an empty array [] for 'tool_calls' and provide a 'final_response'.\n"
-        "4. DO NOT hallucinate fake tools like 'verification_complete'. Only use tools explicitly provided to you.\n"
-        "Your output MUST perfectly match this JSON schema:\n"
-        f"{json.dumps(schema_dict, indent=2)}\n"
-    )
+    # 🔐 SAFE-BY-DEFAULT COGNITIVE ALIGNMENT: Tell the AI exactly why its tools are missing
+    code_execution_enabled = os.environ.get(
+        "BRAIN_ENABLE_CODE_EXECUTION", "false"
+    ).lower() in ("true", "1", "yes")
+    if not code_execution_enabled:
+        base_prompt += (
+            "\n\n[SYSTEM ADVISORY]: You are currently running in Safe-by-Default (Advisory) mode. "
+            "You do NOT have access to code execution tools (like execute_in_sandbox or execute_command). "
+            "Do not attempt to execute code. Instead, draft the final files to the workspace using your file writing tools, "
+            "and clearly instruct the human user on how to run them in their terminal.\n"
+        )
 
     return base_prompt.strip()
 

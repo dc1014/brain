@@ -12,6 +12,13 @@
 >
 > - Daniel Casper, 5/20/2026
 
+### 🛡️ Safe-by-Default (Advisory Mode)
+For your absolute physical protection, Brain OS implements a strict **fail-closed, opt-in security model** for code execution. Out of the box, the system runs in a secure, read-only **Advisory Mode**:
+* **Cognitive Tool Pruning:** Execution tools are completely stripped from agent payloads before reasoning begins, preventing infinite loops and token drain.
+* **Semantic Alignment:** Agents are structurally informed via their system prompts to act solely as expert advisers, writing clean scripts to disk and providing step-by-step manual execution instructions.
+
+To unlock full autonomous micro-sandbox container execution, explicitly opt-in by adding the following variable to your `.env` configuration - `BRAIN_ENABLE_CODE_EXECUTION=true`.
+
 ## More than A Second Brain
 
 Forget a "second brain." It's time you got an *biomimetic brain.* This Brain let's you:

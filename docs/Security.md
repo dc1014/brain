@@ -10,6 +10,7 @@ Brain **attempts** to solve this by enforcing **Shift-Left Perimeter Defense-in-
 
 | Security Vector | Risk Prevented | Underlying Implementation Subsystem |
 | --- | --- | --- |
+| **Unauthorized Autonomous Execution** | Rogues, exploits, or loop hallucinations executing shell commands without human verification. | **Safe-by-Default Opt-In Gateway**: Controlled via `BRAIN_ENABLE_CODE_EXECUTION` (defaults to `false`). Combines Shift-Left Cognitive Tool Pruning and System Advisory prompt injection to neutralize runtime execution vectors until explicitly enabled. |
 | **Command Injection & Exfiltration** | Reverse-shells, secret token scraping, and unauthorized network fetching. | **WebAssembly (WASM) Bridge**: Network capabilities mathematically severed via strict Deno flags (`--allow-net` whitelists only Pyodide CDNs). |
 | **Malicious Scripts** | Dangerous system manipulation, root privilege escalation, or dynamic evaluation workarounds. | **Tier 1 Deno Isolate**: Syntax tree inspection backed by absolute WebAssembly virtualized execution containment. |
 | **File Destruction & Path Traversal** | Arbitrary deletions, NTFS junction/symlink escapes, or out-of-bounds writing. | **Dynamic Path Proxies**: `DynamicDirectorySet` intercepts symlink bypasses *before* execution. Limits read/write strictly to `workspace_path`. |
@@ -20,9 +21,17 @@ Brain **attempts** to solve this by enforcing **Shift-Left Perimeter Defense-in-
 
 ## 🏗️ Deep Dive: Defense-in-Depth Layers
 
-#### The WebAssembly (WASM) Micro-Sandbox (`System/tools/sandbox.py` & `microsandbox/__init__.py`)
+### 1. The Safe-by-Default Cognitive Alignment Sheath
 
-To prevent an agent from exploiting the host operating system, Brain dynamically routes untrusted logic through a **Deno V8 Isolate Bridge** running Pyodide (CPython compiled to WebAssembly). We enforce a rigorous 11-Proof Matrix (Mathematical Guillotines) to guarantee host safety:
+To maintain an uncompromised host system while optimizing token economics, Brain OS separates security enforcement into three decoupled systemic horizons when running in its default state (`BRAIN_ENABLE_CODE_EXECUTION=false`):
+
+* **The Infrastructure Gateway Gatekeeper (`System/tools/sandbox.py`):** The absolute master execution router checks for explicit human consent before spawning sandboxed workers. If the opt-in flag evaluates to false, it immediately fails closed, returning an `OPT-IN REQUIRED` termination signal.
+* **Shift-Left Cognitive Tool Pruning (`System/neuroanatomy/cortical/prefrontal.py`):** The Prefrontal Cortex intercepts the pipeline hydration phase. If code execution is disabled, all execution-capable tools are dynamically stripped from the available tool schema dictionary *before* it is packaged for the LLM. By hiding the tools entirely, the agent is structurally incapable of attempting an execution invocation loop.
+* **System Advisory Prompt Injection (`System/llm.py`):** To prevent semantic confusion or helpless loops, the system context builder embeds an immutable `[SYSTEM ADVISORY]` block into the agent's base system prompt. This aligns the AI's reasoning engine to an advisory-only role, instructing it to draft final files to the workspace disk and provide clear, manual terminal instructions for the human user.
+
+### 2. The WebAssembly (WASM) Micro-Sandbox (`System/tools/sandbox.py` & `microsandbox/__init__.py`)
+
+When explicitly opted-in by the developer, Brain dynamically routes untrusted logic through a **Deno V8 Isolate Bridge** running Pyodide (CPython compiled to WebAssembly). We enforce a rigorous 11-Proof Matrix (Mathematical Guillotines) to guarantee host safety:
 
 * **Double Sandbox Paradigm:** Generated Python code does not execute via `sys.executable`. Instead, it executes *inside* a WASM memory boundary, which is itself trapped *inside* a Deno V8 isolate process.
 * **Network Exfiltration Blackholing:** Network routing is violently restricted via native Deno flags (`--allow-net` and `--allow-import`). The runtime is physically prohibited from making outbound socket connections to unapproved servers (whitelisted strictly to `unpkg.com` and `cdn.jsdelivr.net` over port 443 for runtime hydration).
@@ -37,7 +46,7 @@ To prevent an agent from exploiting the host operating system, Brain dynamically
 
 ## ⚠️ Known Gaps & Honest Limitations
 
-While the containment matrix provides military-grade sandboxing for generated code, true autonomy brings inherent risks. To remain completely transparent, these are the known theoretical gaps in the current security model:
+While the containment matrix provides military-grade sandboxing for generated code (so the AI tells me), true autonomy brings inherent risks. To remain completely transparent, these are the known theoretical gaps in the current security model:
 
 1. **DNS-Based Data Exfiltration:** While `--allow-net` strictly locks HTTP traffic to Pyodide CDNs, Deno still relies on the host OS for DNS resolution. Highly sophisticated malware generated by the LLM could theoretically encode secrets into forged subdomains (e.g., `fetch("https://my-stolen-secret.unpkg.com")`). While the connection will fail, the DNS lookup will broadcast the secret in plaintext to the local network router.
 2. **Denial of Service (DoS) of the Agent Loop:** An agent can easily trap itself in an infinite `while True:` loop. While our 60-second timeout guillotine guarantees the host OS is unharmed, the agent will waste its turn, requiring self-healing retries that burn LLM API tokens.
