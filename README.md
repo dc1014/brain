@@ -57,7 +57,77 @@ All this with:
 	- Easy to innovate when we don't worry about scaling to infinity and beyond.
 
 
-*P.S. - I built this by collaborating and arguing with Gemini staring on 4/20, building one module at a time, refining it, paying off tech debt, and adding test coverage. Claude and ChatGPT acted as our reviewers and critics. No vibe coding here. Brain **will** have cognitive biases, conceptual drift (just look at the directory/filenames/code, mae culpa), and misbehaving features (LLMs are indeterministic after all). Please be patient with us as we get past pre-alpha.*
+>*P.S. - I built this by collaborating and arguing with Gemini staring on 4/20, building one module at a time, refining it, paying off tech debt, and adding test coverage. Claude and ChatGPT acted as our reviewers and critics. No vibe coding here. Brain **will** have cognitive biases, conceptual drift (just look at the directory/filenames/code, mae culpa), and misbehaving features (LLMs are indeterministic after all). Please be patient with us as we get past pre-alpha.*
+
+---
+
+## 🗺️ System Topology & Cognitive Flow Architecture
+
+The system operates as a decoupled, biomimetic control loop. Environmental exoreceptor signals and webhooks pass through the Sensory Layer to undergo token compaction before entering the Cortical executive attention window, guarded continuously by autonomic neuromodulation feedback and limbic memory indexing.
+
+```mermaid
+graph TB
+    %% --- Subgraph Layout Layering ---
+    subgraph SENSORY_LAYER [Sensory & Receptor Matrix]
+        RECEPTORS["Peripheral Receptors<br>‹Sense/receptors/›<br>• audio.py / vision.py / web.py<br>• Raw Telemetry Ingestion"]
+        SOMATO["Somatosensory Cortex<br>‹System/neuroanatomy/sensory/somatosensory.py›<br>• Sensory Transducer Engine<br>• Output Stream Compactor"]
+    end
+
+    subgraph CORTICAL_LAYER [Cortical Executive Window]
+        PFC["Prefrontal Cortex<br>‹System/neuroanatomy/cortical/prefrontal.py›<br>• Goal Decomposition & Sequencing<br>• Execution Pulse Regulation"]
+        WM["Working Memory<br>‹System/neuroanatomy/cortical/working_memory.py›<br>• Dynamic Context Slicing<br>• Rolling Memory Compression"]
+    end
+
+    subgraph AUTONOMIC_LAYER [Autonomic Neuromodulation]
+        ACC["Anterior Cingulate (ACC)<br>‹System/neuroanatomy/autonomic/acc.py›<br>• Conflict & Error Monitoring<br>• Circuit Breaker Trigger"]
+        Endocrine["Endocrine System<br>‹System/neuroanatomy/systemic/endocrine.py›<br>• Humoral Bloodstream Vector<br>• Token Budget Squeeze Regulation"]
+    end
+
+    subgraph LIMBIC_LAYER [Limbic Memory Subsystem]
+        Wernicke["Wernicke's Area<br>‹System/neuroanatomy/cortical/wernicke.py›<br>• Lexical/Relational Backplane<br>• Graph-Boosted RRF Re-ranking"]
+        Hippo["Hippocampus<br>‹System/neuroanatomy/limbic/hippocampus.py›<br>• SQLite FTS5 Query Engine<br>• Semantic Sidecar Cache Generator<br>• SHA-256 CAS Gatekeeper"]
+        NA["Nucleus Accumbens<br>‹System/neuroanatomy/limbic/nucleus_accumbens.py›<br>• Failure Analysis Protocol<br>• Long-Term Potentiation (LTP) Rules"]
+    end
+
+    subgraph PERIPHERAL_LAYER [Peripheral Execution & Ingress]
+        Sandbox["Sandbox Gateway<br>‹System/tools/sandbox.py›<br>• Safe Directory Boundaries<br>• Ephemeral Deno WASM Jail"]
+        Dermis["Dermis Membrane Ingress<br>‹Sense/receptors/dermis.py›<br>• FastAPI Webhook Receptor<br>• Signature Verification & Firewall"]
+    end
+
+    %% --- Deterministic Data Flows ---
+    Env([External Environment / Workspace]) -->|Raw Audio/Vision Sensation| RECEPTORS
+    Env -->|External REST API Payloads| Dermis
+
+    Dermis -->|Unstructured Data Streams| SOMATO
+    RECEPTORS -->|Perceptual Arrays| SOMATO
+    SOMATO -->|Dense Token-Compacted Context| WM
+
+    PFC -->|Pulse Context| WM
+    WM -->|Token Burn Telemetry| ACC
+    ACC -->|Modulation Feedback Signals| Endocrine
+    Endocrine -->|Dynamic Token Budgets & Model Swaps| PFC
+    PFC -->|Outcome Context Evaluations| NA
+    NA -->|Plasticity Rules Prompt Injections| Hippo
+    Hippo -->|Lexical Matches Data| Wernicke
+    Wernicke -->|Graph-Boosted Recall Buffers| PFC
+    PFC -->|Untrusted Script Generation Tasks| Sandbox
+    Sandbox -->|Volatile Terminal Output Logs| SOMATO
+
+    %% --- Premium Structural Theme Styling ---
+    classDef sensory fill:#e6f4ea,stroke:#137333,stroke-width:2px,color:#137333;
+    classDef cortical fill:#e8f0fe,stroke:#1a73e8,stroke-width:2px,color:#1a73e8;
+    classDef autonomic fill:#fce8e6,stroke:#c5221f,stroke-width:2px,color:#c5221f;
+    classDef limbic fill:#ffe8f9,stroke:#b80672,stroke-width:2px,color:#b80672;
+    classDef peripheral fill:#fef7e0,stroke:#b06000,stroke-width:2px,color:#b06000;
+    classDef envNode fill:#ffffff,stroke:#5f6368,stroke-width:2px,stroke-dasharray: 5 5,color:#3c4043;
+
+    class RECEPTORS,SOMATO sensory;
+    class PFC,WM cortical;
+    class ACC,Endocrine autonomic;
+    class Wernicke,Hippo,NA limbic;
+    class Sandbox,Dermis peripheral;
+    class Env envNode;
+```
 
 ---
 ## 🌟 Brain's Core Philosophy
