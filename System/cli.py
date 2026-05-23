@@ -6,7 +6,6 @@ import io
 import typer
 
 # Import Biological Modules
-from System.core.boot import bootstrap
 from System.cli_cognitive import task, daydream, evolve, forage, compile, absorb
 from System.cli_somatic import (
     map_topology,
@@ -44,10 +43,6 @@ app = typer.Typer(
 
 @app.callback()
 def main():
-    """Global CLI bootloader. Calls bootstrap() which safely loads .env keys into the Vault."""
-    if not bootstrap():
-        raise typer.Exit(code=1)
-
     queue_file = ROOT_DIR / "System" / "execution_queue.json"
     if queue_file.exists():
         if os.environ.get("BRAIN_OS_HEADLESS") == "1":

@@ -148,7 +148,7 @@ async def execute_command_async(
         )
 
     parsed_args, effective_binaries, parse_err = parse_and_validate_args(command)
-    if parse_err:
+    if parse_err is not None:  # ⚡ FIX: Explicitly check for None
         return parse_err
 
     if parsed_args is None or effective_binaries is None:
@@ -174,7 +174,7 @@ async def execute_command_async(
     args, created_snapshots, stage_err = stage_ast_snapshots(
         parsed_args, effective_binaries, path_result
     )
-    if stage_err:
+    if stage_err is not None:  # ⚡ FIX: Explicitly check for None
         return stage_err
 
     if args is None:

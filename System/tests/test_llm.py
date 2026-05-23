@@ -1,4 +1,5 @@
 import asyncio
+import json
 import pytest
 from unittest.mock import MagicMock
 from System.llm import run_agent_async
@@ -224,3 +225,198 @@ def test_apply_humoral_modulation_token_limit_routing(mocker):
     # Strict Validation
     assert max_tokens == 1337
     mock_calc.assert_called_once_with("anthropic/claude-3-opus")
+
+
+@pytest.mark.asyncio
+async def test_run_agent_async_json_structured_output_bridge(mocker):
+    """
+    Zero-Debt Test: Proves that the new Pydantic JSON Structured Output bridge
+    successfully parses strict JSON, translates it to Obsidian Markdown,
+    and synthesizes legacy tool calls for the Motor Cortex.
+    """
+    from System.llm import run_agent_async
+
+    # 1. Simulate the LLM returning STRICT JSON matching our new AgentResponseSchema
+    mock_json_payload = {
+        "thought_process": "Executing JSON bridge test.",
+        "tool_calls": [
+            {
+                "tool_name": "read_safe_file",
+                "parameters": {"filepath": "defcon_test.txt"},
+                "reasoning": "Need file data.",
+            }
+        ],
+        "final_response": "I have executed the tool synthetically.",
+    }
+
+    mock_acompletion = mocker.patch("System.llm.acompletion")
+
+    mock_message_1 = mocker.MagicMock()
+    mock_message_1.content = json.dumps(mock_json_payload)
+    mock_message_1.tool_calls = None
+    mock_response_1 = mocker.MagicMock()
+    mock_response_1.choices = [mocker.MagicMock(message=mock_message_1)]
+    mock_response_1.usage = mocker.MagicMock(prompt_tokens=5, completion_tokens=5)
+
+    mock_halt = {
+        "thought_process": "Task done.",
+        "tool_calls": [],
+        "final_response": "Done.",
+    }
+    mock_message_2 = mocker.MagicMock()
+    mock_message_2.content = json.dumps(mock_halt)
+    mock_message_2.tool_calls = None
+    mock_response_2 = mocker.MagicMock()
+    mock_response_2.choices = [mocker.MagicMock(message=mock_message_2)]
+    mock_response_2.usage = mocker.MagicMock(prompt_tokens=5, completion_tokens=5)
+
+    mock_acompletion.side_effect = [mock_response_1, mock_response_2]
+
+    # 2. Mock the Motor Cortex to intercept the SYNTHETIC tool calls
+    mock_execute_tools = mocker.patch(
+        "System.neuroanatomy.cortical.motor_cortex.execute_tools",
+        return_value=(
+            [{"role": "tool", "content": "File read."}],
+            ["Mocked Tool Executed"],
+            None,
+        ),
+    )
+
+    # Prevent other side effects
+    mocker.patch("System.llm.log_interaction")
+    mocker.patch("System.llm.vault.get_secret", return_value="dummy_key")
+    mocker.patch(
+        "System.llm.EndocrineSystem.get_humoral_vector",
+        return_value={"dopamine": 0.5, "cortisol": 0.0, "adrenaline": 0.0},
+    )
+
+    # 3. Execute the agent
+    res = await run_agent_async(
+        role_name="test_agent",
+        model_string="gpt-4o-mini",
+        system_prompt="sys",
+        user_prompt="usr",
+    )
+
+    # 4. ASSERTION 1: Prove the JSON was translated into human-readable Markdown
+    assert "> **Thought:** Executing JSON bridge test." in res.text
+    assert "`[ read_safe_file ]`" in res.text
+    assert "I have executed the tool synthetically." in res.text
+
+    # 5. ASSERTION 2: Prove the Synthetic Tool Call was generated and passed to the Motor Cortex correctly
+    mock_execute_tools.assert_called_once()
+    synthetic_tools = mock_execute_tools.call_args[0][
+        0
+    ]  # The first argument passed to execute_tools
+
+    assert len(synthetic_tools) == 1
+    assert synthetic_tools[0].function.name == "read_safe_file"
+
+    # Prove the parameters survived the JSON -> Synthetic Object translation
+    parsed_args = json.loads(synthetic_tools[0].function.arguments)
+    assert parsed_args["filepath"] == "defcon_test.txt"
+
+
+def test_extract_json_from_text():
+    """Zero-Debt Test: Proves the regex extractor perfectly isolates JSON from LLM markdown hallucinations."""
+    from System.llm import extract_json_from_text
+
+    # UI-Safe backtick generation to prevent parsing crashes
+    bt = chr(96) * 3
+
+    # 1. Pure JSON
+    assert extract_json_from_text('{"a": 1}') == '{"a": 1}'
+
+    # 2. Standard Markdown code block
+    assert extract_json_from_text(f'{bt}json\n{{"b": 2}}\n{bt}') == '{"b": 2}'
+
+    # 3. Sloppy formatting
+    assert extract_json_from_text(f'{bt}\n  {{"c": 3}}  \n{bt}') == '{"c": 3}'
+
+    # 4. Conversational wrapping (Classic LLM hallucination)
+    assert (
+        extract_json_from_text(
+            f'Here is the json:\n{bt}json\n{{"d": 4}}\n{bt}\nHope it helps!'
+        )
+        == '{"d": 4}'
+    )
+
+    # 5. Naked JSON with conversational garbage
+    assert extract_json_from_text('Here is the json: {"e": 5} Have fun.') == '{"e": 5}'
+
+
+@pytest.mark.asyncio
+async def test_run_agent_async_json_self_healing_bridge(mocker):
+    """
+    Zero-Debt Test: Proves that if an LLM suffers from context collapse and
+    spits out a naked array of tool calls instead of the root schema,
+    the engine intercepts it, heals the schema, and executes the tools.
+    """
+    from System.llm import run_agent_async
+
+    # Simulate LLM hallucinating a naked array of tools (bypassing the root schema)
+    naked_tools_payload = [
+        {
+            "tool_name": "write_safe_file",
+            "parameters": {"filepath": "healed.txt"},
+            "reasoning": "Forgot the root wrapper.",
+        }
+    ]
+
+    mock_acompletion = mocker.patch("System.llm.acompletion")
+
+    mock_message_1 = mocker.MagicMock()
+    mock_message_1.content = json.dumps(naked_tools_payload)
+    mock_message_1.tool_calls = None
+    mock_response_1 = mocker.MagicMock()
+    mock_response_1.choices = [mocker.MagicMock(message=mock_message_1)]
+    mock_response_1.usage = mocker.MagicMock(prompt_tokens=5, completion_tokens=5)
+
+    mock_halt = {
+        "thought_process": "Task done.",
+        "tool_calls": [],
+        "final_response": "Done.",
+    }
+    mock_message_2 = mocker.MagicMock()
+    mock_message_2.content = json.dumps(mock_halt)
+    mock_message_2.tool_calls = None
+    mock_response_2 = mocker.MagicMock()
+    mock_response_2.choices = [mocker.MagicMock(message=mock_message_2)]
+    mock_response_2.usage = mocker.MagicMock(prompt_tokens=5, completion_tokens=5)
+
+    mock_acompletion.side_effect = [mock_response_1, mock_response_2]
+
+    mock_execute_tools = mocker.patch(
+        "System.neuroanatomy.cortical.motor_cortex.execute_tools",
+        return_value=(
+            [{"role": "tool", "content": "File written."}],
+            ["Mock Tool Executed"],
+            None,
+        ),
+    )
+
+    # Block external side effects
+    mocker.patch("System.llm.log_interaction")
+    mocker.patch("System.llm.vault.get_secret", return_value="dummy_key")
+    mocker.patch(
+        "System.llm.EndocrineSystem.get_humoral_vector",
+        return_value={"dopamine": 0.5, "cortisol": 0.0, "adrenaline": 0.0},
+    )
+
+    res = await run_agent_async(
+        role_name="test_agent",
+        model_string="gpt-4o-mini",
+        system_prompt="sys",
+        user_prompt="usr",
+    )
+
+    # 1. Assert the schema was healed and the Markdown Translator was triggered with default text
+    assert "> **Thought:** Forgot the root wrapper." in res.text
+    assert "`[ write_safe_file ]`" in res.text
+
+    # 2. Assert the synthetic tool was generated correctly and sent to the Motor Cortex
+    mock_execute_tools.assert_called_once()
+    synthetic_tools = mock_execute_tools.call_args[0][0]
+
+    assert len(synthetic_tools) == 1
+    assert synthetic_tools[0].function.name == "write_safe_file"

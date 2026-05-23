@@ -132,7 +132,7 @@ def test_interrupted_queue_interception(monkeypatch, tmp_path, mocker):
         "System.neuroanatomy.cortical.prefrontal.execute_pipeline",
         new_callable=mocker.AsyncMock,
     )
-    monkeypatch.setattr("System.cli.bootstrap", lambda: True)
+    mocker.patch("System.core.boot.bootstrap", return_value=True)
 
     from System.cli import main
 

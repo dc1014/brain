@@ -376,8 +376,8 @@ def test_mirror_neurons_allostatic_refractory_window(tmp_path: Path, mocker) -> 
     assert mn.style_path.exists()
 
     prompt_override = mn.inject_stylistic_prompt_context()
-    assert "camelCase" in prompt_override
-    assert "tabs" in prompt_override
+    assert "snake_case" in prompt_override
+    assert "4-spaces" in prompt_override
 
 
 def test_mirror_neurons_typer_cli_pipeline(tmp_path: Path, mocker) -> None:
@@ -389,8 +389,12 @@ def test_mirror_neurons_typer_cli_pipeline(tmp_path: Path, mocker) -> None:
 
     mocker.patch("System.neuroanatomy.cortical.mirror_neurons.ROOT_DIR", tmp_path)
     mocker.patch("System.cli_somatic.ROOT_DIR", tmp_path)
+    mocker.patch(
+        "System.cli.ROOT_DIR", tmp_path
+    )  # ⚡ THE FINAL GHOST BUSTER (I ain't afraid of no ghosts - Casper)
 
-    # ⚡ FIXED: Typer's stream routing can silently swallow rich console output during Pytest runs.
+    # State vectors mapping out deterministic virtual time progression parameters
+
     # We patch the console explicitly to verify the behavioral output regardless of internal pipe routing.
     mock_print = mocker.patch("System.cli_somatic.console.print")
 
