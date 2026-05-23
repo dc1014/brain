@@ -1,7 +1,7 @@
 # 🧠 Own Your Brain: An Open-Source, Biomimetic AI Control Plane Inspired by the Unix Philosophy <3
 
 ![Pre-Alpha](https://img.shields.io/badge/status-pre--alpha-red) ![Architecture](https://img.shields.io/badge/Architecture-Biomimetic--Multiagent--Daemon-purple.svg) ![Supports](https://img.shields.io/badge/-Obsidian-7C3AED?style=flat-square&logo=obsidian&logoColor=white)
-![Tests](https://img.shields.io/badge/coverage-100%25-green) ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg)
+![Tests](https://img.shields.io/badge/coverage-80%25-green) ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg)
 ![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
 **DISCLAIMER: For engineers reading this, I realized too late I took the biomimicry domain driven design too far. Please forgive me - directory and file names will change soon.**
@@ -63,7 +63,7 @@ Most AI frameworks let the AI run wild in a container without any regard for con
 2. **Unix Philosophy** - Everything is a file, composable, and does one thing well. Thank you, Ken Thompson and Dennis Ritchie.
 3. **Biomimicry** - Why reinvent what biology has already optimized? We unlock *hidden potential at speed* by copying the human mind with the Unix Philosophy.
 	1. For a full list of the 1:1 biological mapping, see [Biomimesis](./docs/Biomimesis.md)
-4. **Zero-Waste Token Economics** - All development actively and aggressively tries to zero out your token costs, including using determinism, local LLMs, and every token optimization technique I can offer (such as executing 90% similar commands without LLM inspection, or saving repeated code-actions).
+4. **Zero-Waste Token Economics** - All development actively and aggressively tries to zero out your token costs, including using determinism, local LLMs, and every token optimization technique I can offer (such as executing 90% similar commands without LLM inspection, or saving repeated code-actions). This includes algorithmic line deduplication pre-passes, canonical context formatting, and deterministic message payload pre-slicing to bypass expensive LLM API calls seamlessly.
 	1. Preferred order: Determinism > Local LLMs (for lower cognitive tasks) > LLMs
 	2. Enteric System and Cerebellum - repeat commands use 0 cost token evaluation. Procedural code is saved and rerun at 0 cost with [engrams](https://en.wikipedia.org/wiki/Engram_(neuropsychology)), just like muscle memory in the [cerebellum](https://en.wikipedia.org/wiki/Cerebellum).
 5. **Shift-Left:** Shift left all the things! Security, testability, usability, token economics, performance, readability, quality, and all other "-ities". No vibe coding or slop here - we argue with the AI about every module and feature until its fit for humans.
@@ -86,7 +86,7 @@ Backed by the background daemons, Brain optimizes your Vault performance and kee
 
 - **The Graph Backplane ([Anterior Cingulate Cortex](https://en.wikipedia.org/wiki/Anterior_cingulate_cortex)):** Maps explicit cross-note relationships using custom-compiled string matching, strictly protected by an ACC circuit breaker that blocks serialization of `.brain/graph_state.json` if agent looping faults occur.
 
-- **Working Memory Buffer ([Prefrontal Cortex](https://en.wikipedia.org/wiki/Prefrontal_cortex)):** Eliminates API context limits via **Rolling Context Compression**. It intercepts arrays exceeding 12k characters and spawns recursive fast-model summaries, injecting a synthesized "Working Memory" payload directly into the prompt stream without corrupting sequence roles.
+- **Working Memory Buffer ([Prefrontal Cortex](https://en.wikipedia.org/wiki/Prefrontal_cortex)):** Eliminates API context limits via **Rolling Context Compression**. Before routing to AI, it uses zero-cost canonical context formatting to strip redundant whitespaces, algorithmic line deduplication to drop repetitive logs, and deterministic payload slicing for messages over 4,000 characters. If the 12k character threshold is still breached, it spawns recursive fast-model summaries, injecting a synthesized "Working Memory" payload directly into the prompt stream without corrupting sequence roles.
 
 - **Semantic Belief Injection ([Hippocampus](https://en.wikipedia.org/wiki/Hippocampus)):** Passively runs during background sleep cycles to read interaction logs, extracting and serializing persistent architectural and user preferences into `Core_Beliefs.md` for zero-shot personalization upon the next boot.
 
@@ -116,6 +116,8 @@ In biology, the brain does not process raw photons; the [retina transduces them 
 ### 🔬 How Brain Innervates the Peripheral Boundary
 
 Operating as a standalone package, `Sense` isolates raw environmental intake using explicit hardware receptors and mathematical perimeters:
+
+- **Deterministic Sensory Transducer (Inspired by [TokenJuice](https://github.com/vincentkoc/tokenjuice) Engine):** A pure-Python deterministic sensory engine natively compacts execution traces at $0 cost before they reach cognitive layers. Pre-compiled regex matrices instantly strip ANSI color codes, transient progress spinners, and auxiliary package manager noise (e.g., `pip`, `yarn`, `bun` boilerplate), protecting context windows from verbose terminal slop.
 
 - **Web Transduction & SSRF Firewall ([Echolocation](https://en.wikipedia.org/wiki/Human_echolocation)):** Passes input URLs through a strict Shift-Left firewall inside `receptors/web.py`. The validator resolves hostnames ahead of time, dropping transactions instantly if a destination maps to a loopback adapter (`localhost`), `0.0.0.0`, or private subnets. Validated text layers are parsed to strip layout nodes (`script`, `nav`, `footer`) and capped at a rigid `MAX_SENSORY_CHARS = 25000` gate to prevent token bloat.
 

@@ -8,7 +8,9 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from litellm import acompletion  # type: ignore
-from System.core.paths import ROOT_DIR
+
+# ⚡ TECH DEBT RESOLVED: Consolidated split paths imports into a unified entry point
+from System.core.paths import ROOT_DIR, normalize_path
 from System.core.dna import get_dna_config
 from System.neuroanatomy.systemic.endocrine import get_resolved_model
 from System.llm import run_agent_async, get_system_context
@@ -23,7 +25,6 @@ from System.neuroanatomy.limbic.hippocampus import (
     persist_pipeline_state,
     clear_pipeline_state,
 )
-from System.core.paths import normalize_path
 
 # Clean, isolated working memory model module import
 from System.neuroanatomy.cortical.working_memory import WorkingMemory
@@ -38,6 +39,22 @@ class PrefrontalCortex:
         # ⚡ SEMANTIC FIX: Renamed from working_memory to pulse_history to resolve name collisions
         self.pulse_history: list[str] = []
         self.max_memory: int = 5
+
+    def _clean_json_payload(self, raw_text: str) -> str:
+        """Surgically strips markdown blocks and XML wrappers from raw string responses."""
+        xml_match = re.search(r"<tasks_json>(.*?)</tasks_json>", raw_text, re.DOTALL)
+        clean_str = xml_match.group(1).strip() if xml_match else raw_text
+
+        # Use regex substitution to elegantly wipe out markdown fencing noise
+        clean_str = re.sub(r"```json\s*", "", clean_str, flags=re.IGNORECASE)
+        clean_str = re.sub(r"```\s*", "", clean_str)
+        clean_str = clean_str.strip()
+
+        if not clean_str.startswith("["):
+            array_match = re.search(r"\[\s*\".*?\"\s*\]", clean_str, re.DOTALL)
+            if array_match:
+                clean_str = array_match.group(0)
+        return clean_str
 
     def _remember(self, memory: str) -> None:
         self.pulse_history.append(memory)
@@ -104,13 +121,11 @@ class PrefrontalCortex:
             if fence in clean_str:
                 clean_str = clean_str.replace(fence, "")
 
-            clean_str = clean_str.strip()
-            if not clean_str.startswith("["):
-                array_match = re.search(r"\[\s*\".*?\"\s*\]", clean_str, re.DOTALL)
-                if array_match:
-                    clean_str = array_match.group(0)
+            # ⚡ OPTIMIZATION: Call the isolated text parsing utility to enforce single-responsibility principles
+            clean_str = self._clean_json_payload(raw_text)
 
             tasks = json.loads(clean_str)
+
             if isinstance(tasks, list) and all(isinstance(t, str) for t in tasks):
                 return tasks
             return [objective]
@@ -126,7 +141,6 @@ class PrefrontalCortex:
         from System.core.orchestrator import dispatch_task
 
         past_experiences = recall_recent_episodes()
-        # ⚡ Updated to await the newly asynchronous decomposition method
         tasks = await self.decompose_goal(objective, past_experiences)
         console.print(
             f"[bold cyan]🧠 PFC: Objective split into {len(tasks)} executive pulses.[/bold cyan]"
@@ -212,10 +226,11 @@ async def execute_swarm_cohort(
                 border_style="magenta",
             )
         )
+        # ⚡ ARCHITECTURAL SYMMETRY FIX: Forward the distinct fields natively to maintain data contracts cleanly
         pfc_memory.add_event(
-            "Swarm Cohort",
-            f"--- {agent_name} Output ---\n{step_result.text}\nActions: {step_result.actions}",
-            [],
+            agent_name=agent_name,
+            raw_output=step_result.text,
+            actions=step_result.actions,
         )
 
     return total_tokens, agents_invoked
@@ -256,7 +271,6 @@ async def execute_pipeline(
     while len(pipeline) > 0:
         persist_pipeline_state(description, route_type, domain, pipeline)
 
-        # ⚡ ZERO-DEBT: Vagus Nerve (Parasympathetic) Receptor Check
         abort_flag = normalize_path(ROOT_DIR / "System" / ".vagus_abort_signal")
         if abort_flag.exists():
             console.print(
@@ -270,6 +284,9 @@ async def execute_pipeline(
             break
 
         step = pipeline.pop(0)
+
+        # ⚡ UNIX PHILOSOPHY COMPLIANCE: Executive loops simply request current context;
+        # text formatting and layout optimizations are cleanly encapsulated inside WorkingMemory.
         current_payload = pfc_memory.get_current_context()
 
         # 1. Swarm Execution
@@ -335,7 +352,6 @@ async def execute_pipeline(
             )
         )
 
-        # ⚡ Strict error checking prevents prose-based false-positives
         is_system_halt = step_result.text.strip().startswith("[SYSTEM HALT]")
         is_api_error = step_result.text.strip().startswith("API/Execution Error:")
 
@@ -391,7 +407,7 @@ async def execute_pipeline(
                         pipeline_aborted = True
                         break
 
-                    # ⚡ The Pipeline Retry Injection
+                    # The Pipeline Retry Injection
                     pipeline.insert(
                         0,
                         {
@@ -431,7 +447,14 @@ async def execute_pipeline(
         )
     )
 
-    log_dir = ROOT_DIR / "logs"
+    # 🛡️ SHIFT-LEFT HARDENING: Re-route pipeline state files inside System/logs to fulfill sandbox rules
+    log_dir = normalize_path(ROOT_DIR / "System" / "logs")
+    if not log_dir.exists():
+        try:
+            os.makedirs(log_dir, exist_ok=True)
+        except OSError:
+            pass
+
     state_path = log_dir / "pipeline_state.md"
 
     if pipeline_aborted:
@@ -439,12 +462,18 @@ async def execute_pipeline(
         console.print(
             "\n[bold red]🛑 Task Aborted. Environment safely rolled back.[/bold red]\n"
         )
-        with open(state_path, "w", encoding="utf-8") as f:
-            f.write("STATUS: ABORTED\n")
+        try:
+            with open(state_path, "w", encoding="utf-8") as f:
+                f.write("STATUS: ABORTED\n")
+        except OSError:
+            pass
     else:
         commit_transaction()
         console.print("\n[bold green]✅ Task Complete. Files committed.[/bold green]\n")
-        with open(state_path, "w", encoding="utf-8") as f:
-            f.write("STATUS: COMPLETE\n")
+        try:
+            with open(state_path, "w", encoding="utf-8") as f:
+                f.write("STATUS: COMPLETE\n")
+        except OSError:
+            pass
 
     clear_pipeline_state()

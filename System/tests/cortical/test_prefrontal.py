@@ -1,6 +1,6 @@
 import os
 import pytest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from System.neuroanatomy.cortical.prefrontal import execute_pipeline
 from System.neuroanatomy.limbic.thalamus import route_sensory_input
 import yaml  # type: ignore
@@ -159,3 +159,49 @@ async def test_synaptic_consolidation_commits_mid_pipeline(
     await execute_pipeline("Test task", "TEST_ROUTE", "STUDIO")
 
     assert mock_commit.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_pipeline_payload_canonical_compaction(tmp_path):
+    """Proves that redundant pipeline whitespaces and structural newlines are tightly compacted."""
+    import System.neuroanatomy.cortical.prefrontal as pf
+
+    with (
+        patch.object(pf, "ROOT_DIR", tmp_path),
+        patch("System.neuroanatomy.cortical.prefrontal.get_dna_config") as mock_dna,
+        patch("System.neuroanatomy.cortical.prefrontal.yaml.safe_load") as mock_yaml,
+        patch("System.neuroanatomy.cortical.prefrontal.run_agent_async") as mock_agent,
+    ):
+        # ⚡ FIXED: Expanded the mock configuration mapping to supply required agent definitions
+        mock_dna.return_value = {
+            "routes": {"WORKSPACE": [{"agent": "test_agent"}]},
+            "agents": {
+                "test_agent": {
+                    "name": "TestAgent",
+                    "model": "fast",
+                    "system_prompt": "You are a verification baseline.",
+                    "creates_milestone": False,
+                }
+            },
+            "models": {"fast": "gemini/gemini-2.5-flash"},
+        }
+        mock_yaml.return_value = {}
+
+        mock_res = AsyncMock()
+        mock_res.text = "Execution finished"
+        mock_res.usage = {"total_tokens": 10}
+        mock_agent.return_value = mock_res
+
+        # Write temporary mock configuration file structures
+        config_dir = tmp_path / "System" / "config"
+        config_dir.mkdir(parents=True)
+        (config_dir / "tools.yaml").touch()
+
+        await pf.execute_pipeline("Test compaction target", "WORKSPACE", "GENERAL")
+
+        # Confirm that the user prompt passed down to the active agent contains no bloated line breaks
+        called_args, called_kwargs = mock_agent.call_args
+        compiled_prompt = called_kwargs.get("user_prompt", "")
+
+        assert "\n\n\n" not in compiled_prompt
+        assert "  " not in compiled_prompt

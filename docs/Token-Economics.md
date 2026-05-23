@@ -8,13 +8,13 @@ By treating token windows and API requests as a scarce biological resource, the 
 
 ## 🎯 Summary of Token Optimization Controls
 
-| Subsystem Component     | Control Feature                                    | Token Preservation Strategy                                                                                                  |
-| ----------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **`interoception.py`**  | Daily Token予算 Perimeter (`500k` Cap)               | Hard physical lock halts execution when limit is breached, preventing financial overruns from agent loop faults.             |
-| **`medulla.py`**        | Contextual Orchestration Specificity (COS) Arbiter | Routes trivial operations to lightweight, cost-effective models while reserving expensive models for high-intensity tasks.   |
-| **`working_memory.py`** | Cortical 12,000-Character Wall & Compressor        | Flushes runtime log arrays by condensing detailed execution steps into dense, low-entropy technical bullet points.           |
-| **`hippocampus.py`**    | SQLite FTS5 Indexed Lookups & Re-Ranks             | Bypasses expensive multi-pass model vector searches, injecting precise context windows rather than whole files into prompts. |
-| **`Sense / Receptors`** | Perimeter Filtering & Payload Truncation           | Limits incoming unstructured peripheral data text blocks at the socket line before they can reach reasoning layers.          |
+| Subsystem Component | Control Feature | Token Preservation Strategy |
+| --- | --- | --- |
+| **`interoception.py`** | Daily Token Budget Perimeter (`500k` Cap) | Hard physical lock halts execution when limit is breached, preventing financial overruns from agent loop faults. |
+| **`medulla.py`** | Contextual Orchestration Specificity (COS) Arbiter | Routes trivial operations to lightweight, cost-effective models while reserving expensive models for high-intensity tasks. |
+| **`working_memory.py`** | Cortical Algorithmic Pre-Passes & LLM Compressor | Bypasses AI costs natively via canonical formatting, line deduplication, and message slicing before falling back to LLM condensation. |
+| **`hippocampus.py`** | SQLite FTS5 Indexed Lookups & Re-Ranks | Bypasses expensive multi-pass model vector searches, injecting precise context windows rather than whole files into prompts. |
+| **`somatosensory.py`** / **`Sense`** | Sensory Transducer & Perimeter Truncation | Uses TokenJuice-inspired deterministic regex to strip ANSI, terminal spinners, and package noise at $0 cost before reasoning ingestion. |
 
 ---
 
@@ -49,14 +49,11 @@ To protect the daily budget from being exhausted by trivial tasks, the brainstem
 As an active task pipeline executes, the Prefrontal Cortex framework (`WorkingMemory`) uses explicit constraints to manage the context window, preventing prompt bloating and model attention degradation.
 
 * **Structured Attention Trees:** Raw sub-agent output logs and terminal telemetries are encapsulated inside explicit XML-style tags (`<activity_node>`, `<raw_telemetry>`, `<actions_taken>`). This targets model attention specifically on execution facts, minimizing structural token noise.
-* **The Character Footprint Wall:** The volatile buffer monitors its cumulative footprint against a strict character length gate:
-```python
-self.compression_threshold_chars = 12000
-
-```
-
-
-* **Zero-Temperature Text Distillation:** When length breaches this wall, `compress_if_bloated()` executes. It feeds the accumulated activity log into a fast consolidation model operating at `temperature=0.0`. The model discards all conversational text filler and synthesizes raw logs into a highly technical, dense bulleted list of "Established Facts" and "Current State" wrapped inside `<summary_update>` blocks.
+* **Zero-Cost Canonical Context Formatting:** Before context payloads are copied into the multi-agent prompt windows of parallel swarm cohorts, redundant newlines and layout whitespaces are algorithmically stripped. This natively minimizes token footprints from multiplying across wide parallel executions.
+* **The Character Footprint Wall:** The volatile buffer monitors its cumulative footprint against a strict character length gate: `self.compression_threshold_chars = 12000`.
+* **Algorithmic Line Deduplication Pre-Pass:** When the footprint wall is breached, the system executes a $0 cost Python pre-pass to filter out repetitive log sequences (like recursive error loops or redundant tool trace dumps) while preserving XML nodes. If this native text compaction shrinks the footprint back below the 12,000-character wall, the expensive LLM summary call is bypassed entirely.
+* **Deterministic Message Payload Pre-Slicing:** During array evaluation, individual historical messages exceeding 4,000 characters are algorithmically head/tail sliced (retaining the first and last 20 lines) to dramatically minimize the input token weight processed by the summarization model.
+* **Zero-Temperature Text Distillation (Fallback):** If the algorithmic pre-passes cannot clear enough space, `compress_if_bloated()` feeds the accumulated activity log into a fast consolidation model operating at `temperature=0.0`. The model discards all conversational text filler and synthesizes raw logs into a highly technical, dense bulleted list wrapped inside `<summary_update>` blocks.
 * **Volatile Memory Flush:** This compact summary updates the long-term `established_facts` tracking cache, and the high-frequency log array is completely cleared. This loop stops linear context explosion, ensuring prompt inputs remain tightly bounded.
 
 ---
@@ -73,7 +70,10 @@ When an agent needs to recall past tasks or project context, reading entire file
 
 ## 5. Sensory Ingestion Gating (The Sense Membrane)
 
-Unchecked streaming data from peripheral receptors (like web page scrapers, audio processing devices, or vision streams) can introduce large amounts of unstructured text noise, threatening token economics. The `Sense` module mitigates this at the ingestion perimeter:
+Unchecked streaming data from peripheral receptors (like web page scrapers, audio processing devices, or execution pipelines) can introduce large amounts of unstructured text noise, threatening token economics. The `Sense` module mitigates this at the ingestion perimeter:
 
+* **Deterministic Sensory Transducer (TokenJuice Engine):** Inspired by the TokenJuice architectural model, a pure-Python deterministic sensory engine natively compacts execution traces at $0 cost before they reach cognitive layers. Pre-compiled regex matrices instantly strip ANSI color codes, transient progress spinners, and auxiliary package manager noise (e.g., `pip`, `yarn`, `bun` boilerplate), protecting context windows from verbose terminal slop.
 * **Inert Sensory Encapsulation:** Raw external signals are neutralized via `scrub_payload`. This replaces problematic character chains and locks text payloads inside static read-only token boundaries (`[[UNVERIFIED SENSORY STIMULUS]] ... [[END SENSORY INPUT]]`). This structure enforces rigid token alignment, preventing incoming web data or logs from masquerading as system instructions and causing expensive reasoning inflation.
 * **Perimeter Payload Truncation:** Subsystems (such as the FastAPI-driven web interface layer `DermisAbstraction` or web scrapers) restrict incoming text size directly at the socket level. Payloads are clipped to explicit character thresholds before they can pass to the Thalamus or Prefrontal Cortex, protecting the system's token budget.
+
+---

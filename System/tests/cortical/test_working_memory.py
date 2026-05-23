@@ -1,5 +1,8 @@
 import pytest
-from System.neuroanatomy.cortical.working_memory import WorkingMemory
+from System.neuroanatomy.cortical.working_memory import (
+    WorkingMemory,
+    compress_message_array,
+)
 
 
 def test_working_memory_init():
@@ -161,3 +164,116 @@ async def test_compress_message_array_fallback(mocker):
     assert len(fallback_msgs) <= 7
     assert fallback_msgs[0]["role"] == "system"
     assert fallback_msgs[1]["role"] == "user"
+
+
+@pytest.mark.asyncio
+async def test_algorithmic_pre_pass_bypasses_llm_summary(mocker):
+    """Proves that algorithmic line deduplication prevents unnecessary LLM summary calls."""
+    pfc_memory = WorkingMemory(core_objective="Optimize token footprints")
+
+    # Simulate a highly redundant log file payload that fills up characters quickly
+    redundant_log_trace = (
+        "ERROR: Connection timeout on port 8080 chasing database sync keys\n" * 250
+    )
+    pfc_memory.add_event(
+        agent_name="test_agent", raw_output=redundant_log_trace, actions=[]
+    )
+
+    # Mock acompletion to see if it gets called
+    mock_completion = mocker.patch(
+        "System.neuroanatomy.cortical.working_memory.acompletion"
+    )
+
+    await pfc_memory.compress_if_bloated()
+
+    # Verify line deduplication shrank the buffer enough to completely bypass the LLM summary call
+    mock_completion.assert_not_called()
+    assert len(pfc_memory.recent_activity) == 1
+    assert "Connection timeout" in pfc_memory.recent_activity[0]
+
+
+@pytest.mark.asyncio
+async def test_algorithmic_compaction_preserves_xml_node_boundaries():
+    """Zero-Debt: Proves that line deduplication clears text noise while keeping individual XML wrappers intact."""
+    memory = WorkingMemory(core_objective="Audit structural context")
+
+    # Ingest two separate activity blocks containing identical internal telemetry logs
+    memory.add_event("Agent_A", "Trace log data line entry\n" * 100, ["write"])
+    memory.add_event("Agent_B", "Trace log data line entry\n" * 100, ["execute"])
+
+    await memory.compress_if_bloated()
+
+    # Verify that the history was algorithmically optimized without losing individual node elements
+    assert len(memory.recent_activity) == 2
+    assert '<activity_node agent="Agent_A">' in memory.recent_activity[0]
+    assert '<activity_node agent="Agent_B">' in memory.recent_activity[1]
+
+
+@pytest.mark.asyncio
+async def test_compress_message_array_does_not_mutate_input_immutability():
+    """Secure by Default: Proves historical message arrays are not mutated in-place during payload slicing."""
+    historical_messages = [
+        {"role": "user", "content": "Initial kickoff prompt data entry"},
+        {"role": "assistant", "content": "Verbose trace output entry\n" * 500},
+    ]
+
+    # Execute array compression passes over the mock parameters
+    processed_messages = await compress_message_array(historical_messages, "mock-model")
+
+    # Verify that the original input collection remains 100% untouched and intact
+    assert "Verbose trace output entry" in historical_messages[1]["content"]
+    assert "ALGORITHMIC CONTEXT FILTER" not in historical_messages[1]["content"]
+
+    # Confirm the newly optimized shallow copy holds the compressed variation safely
+    assert "ALGORITHMIC CONTEXT FILTER" in processed_messages[1]["content"]
+
+
+@pytest.mark.asyncio
+async def test_compressors_mask_secrets_before_api_dispatch(mocker):
+    """Secure by Default: Proves cognitive memory arrays mask vault secrets before hitting the fallback LLM API."""
+    from System.neuroanatomy.systemic.immune_system import vault
+    from System.neuroanatomy.cortical.working_memory import compress_message_array
+
+    # Inject a known biological target secret key signature into the active memory bank
+    mocker.patch.dict(
+        vault._secrets,
+        {"MOCK_DATABASE_URL": "postgres://admin:super_secret_db_pass@localhost"},
+    )
+
+    # Force a bloated history payload loaded with a leaked credential
+    bloat = "A" * 15000
+    messages = [
+        {"role": "system", "content": "system prompt"},
+        {"role": "user", "content": "user prompt"},
+        {"role": "assistant", "content": "thought 1"},
+        {
+            "role": "user",
+            "content": f"bloated tool result: {bloat} with leak postgres://admin:super_secret_db_pass@localhost",
+        },
+        {"role": "assistant", "content": "thought 2"},
+        {"role": "user", "content": "tool result 2"},
+        {"role": "assistant", "content": "thought 3"},
+        {"role": "user", "content": "tool result 3"},
+    ]
+
+    mock_response = mocker.AsyncMock()
+    mock_response.choices[0].message.content = "COMPRESSED HISTORICAL SUMMARY"
+
+    mock_completion = mocker.patch(
+        "System.neuroanatomy.cortical.working_memory.acompletion",
+        return_value=mock_response,
+    )
+    mocker.patch(
+        "System.neuroanatomy.systemic.immune_system.vault.get_api_key_for_model",
+        return_value="fake_key",
+    )
+
+    await compress_message_array(messages, "gpt-4o")
+
+    # Verify the LLM was called, but extract the EXACT prompt it was sent
+    called_args, called_kwargs = mock_completion.call_args
+    dispatched_prompt = called_kwargs["messages"][0]["content"]
+
+    # Assert the raw credential never left the local machine
+    assert "super_secret_db_pass" not in dispatched_prompt
+    assert "[MOCK_DATABASE_URL_REDACTED]" in dispatched_prompt

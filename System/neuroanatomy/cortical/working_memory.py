@@ -1,4 +1,5 @@
 import json
+import re
 from typing import Any
 
 from rich.console import Console
@@ -39,21 +40,65 @@ class WorkingMemory:
             context += "<recent_pipeline_activity>\n"
             context += "\n\n".join(self.recent_activity)
             context += "\n</recent_pipeline_activity>"
-        return context
+
+        # ⚡ UNIX PHILOSOPHY: Centralize canonical string layout compaction inside the memory subsystem
+        context = re.sub(r"\n{3,}", "\n\n", context)
+        context = re.sub(r"[ \t]{2,}", " ", context)
+        return context.strip()
 
     async def compress_if_bloated(self) -> None:
-        current_text = "\n".join(self.recent_activity)
+        raw_text = "\n".join(self.recent_activity)
+        if len(raw_text) < self.compression_threshold_chars:
+            return
+
+        # ⚡ STRUCTURAL FIX: Deduplicate repetitive text lines while preserving independent XML nodes
+        seen_lines = set()
+        optimized_activity = []
+
+        for event in self.recent_activity:
+            event_lines = []
+            for line in event.splitlines():
+                trimmed = line.strip()
+                if trimmed and len(trimmed) > 50 and trimmed in seen_lines:
+                    continue
+                # Shield structural system XML boundaries from being accidentally ingested by the duplicate tracker
+                if (
+                    trimmed
+                    and len(trimmed) > 50
+                    and not trimmed.startswith(
+                        (
+                            "<activity_node",
+                            "</activity_node",
+                            "<raw_telemetry",
+                            "</raw_telemetry",
+                        )
+                    )
+                ):
+                    seen_lines.add(trimmed)
+                event_lines.append(line)
+            optimized_activity.append("\n".join(event_lines))
+
+        current_text = "\n".join(optimized_activity)
+
+        # Check if the algorithmic pass successfully cleared space without invoking cloud resources
         if len(current_text) < self.compression_threshold_chars:
+            self.recent_activity = optimized_activity
+            console.print(
+                "[dim green]⚡ Token Optimization: Algorithmic pruning cleared memory bloat while preserving XML nodes.[/dim green]"
+            )
             return
 
         console.print(
-            "[dim magenta]🧠 PFC Buffer Full: Compressing working memory...[/dim magenta]"
+            "[dim magenta]🧠 PFC Buffer Full: Compressing working memory via fallback summary model...[/dim magenta]"
         )
+        # 🛡️ SHIFT-LEFT SECURITY: Scrub secrets from internal cognitive loops before background LLM dispatch
+        safe_current_text = vault.mask_secrets(current_text)
+
         prompt = (
             "You are the Prefrontal Cortex. Synthesize the following pipeline activity into a highly "
             "concise, bulleted list of 'Established Facts' and 'Current State' wrapped in <summary_update> tags.\n"
             "Discard all conversational filler and preserve ONLY technical facts, code paths, and outcomes.\n\n"
-            f"ACTIVITY LOG:\n{current_text}"
+            f"ACTIVITY LOG:\n{safe_current_text}"
         )
         try:
             model = (
@@ -83,26 +128,40 @@ async def compress_message_array(
     """
     Evaluates the token footprint of the message array. If it approaches context limits,
     spawns a fast background model to compress the historical middle into a dense Working Memory block.
-    Uses recursive summarization to maintain infinite context without exceeding token bounds.
     """
     try:
-        text_content = json.dumps(messages, default=str)
-        # 1. Fast heuristic: Only compress if the array is getting heavy (>12k chars) and has a middle
+        # ⚡ ZERO-DEBT FIXED: Reconstruct array via shallow copies to eliminate in-place mutation side-effects
+        optimized_messages = []
+        for msg in messages:
+            msg_copy = dict(msg)
+            content = msg_copy.get("content", "")
+            if isinstance(content, str) and len(content) > 4000:
+                lines = content.splitlines()
+                if len(lines) > 60:
+                    msg_copy["content"] = (
+                        "\n".join(lines[:20])
+                        + f"\n\n--- [ALGORITHMIC CONTEXT FILTER: Sliced {len(lines) - 40} lines of structural noise] ---\n\n"
+                        + "\n".join(lines[-20:])
+                    )
+            optimized_messages.append(msg_copy)
+
+        text_content = json.dumps(optimized_messages, default=str)
         if len(text_content) < 12000 and len(messages) <= 6:
-            return messages
+            # ⚡ FIXED: Return the optimized messages array to preserve individual payload slicing passes
+            return optimized_messages
 
         console.print(
             "[dim magenta]🧠 Context Window Bloated: Compressing historical messages...[/dim magenta]"
         )
 
-        head = messages[:2]
-        tail = messages[-2:]
-        middle = messages[2:-2]
+        head = optimized_messages[:2]
+        tail = optimized_messages[-2:]
+        middle = optimized_messages[2:-2]
 
         if not middle:
             return messages
 
-        # 2. Extract previous working memory from the User prompt so the compressor can carry it forward
+        # Extract previous working memory from the User prompt so the compressor can carry it forward
         user_content = head[1].get("content", "")
         old_summary = ""
         if "--- COMPRESSED WORKING MEMORY ---" in user_content:
@@ -110,7 +169,7 @@ async def compress_message_array(
             user_content = parts[0].strip()
             old_summary = parts[1].strip()
 
-        # 3. Format the history
+        # Format the history
         history_text = ""
         if old_summary:
             history_text += f"[PREVIOUS WORKING MEMORY]: {old_summary}\n\n"
@@ -123,19 +182,22 @@ async def compress_message_array(
             else:
                 history_text += f"[{role.upper()}]: {json.dumps(content)}\n\n"
 
+        # 🛡️ SHIFT-LEFT SECURITY: Scrub secrets from conversation history before background LLM dispatch
+        safe_history_text = vault.mask_secrets(history_text)
+
         prompt = (
             "You are the Prefrontal Cortex Context Compressor.\n"
             "Summarize the following historical conversation and tool executions into a highly dense, "
             "bulleted 'Working Memory' block. Retain all factual data, discovered file paths, code snippets, and tool outcomes. "
             "Discard all conversational filler and JSON formatting.\n\n"
-            f"HISTORY TO COMPRESS:\n{history_text}"
+            f"HISTORY TO COMPRESS:\n{safe_history_text}"
         )
 
         fast_model = (
             get_dna_config().get("models", {}).get("fast", "gemini/gemini-2.5-flash")
         )
 
-        # 4. Spawn the background compression pulse
+        # Spawn the background compression pulse
         response = await acompletion(
             model=fast_model,
             messages=[{"role": "user", "content": prompt}],
@@ -145,7 +207,7 @@ async def compress_message_array(
 
         summary = response.choices[0].message.content.strip()
 
-        # 5. Inject the new compressed memory directly into the original User prompt
+        # Inject the new compressed memory directly into the original User prompt
         new_user_content = (
             user_content + f"\n\n--- COMPRESSED WORKING MEMORY ---\n{summary}"
         )
@@ -161,7 +223,6 @@ async def compress_message_array(
         console.print(
             f"[dim red]Context Compression Failed: {e}. Falling back to FIFO amnesia.[/dim red]"
         )
-        # 🛡️ Legacy Fallback: Strict 5-message FIFO
         window = messages[-5:]
         while window and window[0].get("role") == "tool":
             window.pop(0)
