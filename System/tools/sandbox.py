@@ -367,6 +367,13 @@ runWasmPython();
             output_str = b"".join(output_chunks).decode(errors="replace")
             replenish_worker_pool_detached(workspace_path)
 
+            # ⚡ SHIFT-LEFT TOKEN ECONOMICS: Apply deterministic compaction to WASM streams
+            from System.neuroanatomy.sensory.somatosensory import SensoryTransducer
+
+            output_str = SensoryTransducer().compact_terminal_output(
+                parsed_args, output_str
+            )
+
             is_success = execution_completed or proc.returncode == 0
             return ExecutionResult(
                 success=is_success,
@@ -390,8 +397,15 @@ runWasmPython();
         )
         from System.tools.execution import execute_native_isolated
 
-        # ⚡ ZERO-DEBT FIXED: Safely passes our scoped list to satisfy the type checker and eliminate variable race errors
-        return await execute_native_isolated(parsed_args, workspace_path, env_secrets)
+        result = await execute_native_isolated(parsed_args, workspace_path, env_secrets)
+
+        # ⚡ SHIFT-LEFT TOKEN ECONOMICS: Compact native sandbox bypass route output streams
+        from System.neuroanatomy.sensory.somatosensory import SensoryTransducer
+
+        result.output = SensoryTransducer().compact_terminal_output(
+            parsed_args, result.output
+        )
+        return result
 
     else:
         return ExecutionResult(

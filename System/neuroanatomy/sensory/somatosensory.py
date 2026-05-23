@@ -1,7 +1,9 @@
-from System.core.paths import ROOT_DIR
+import re
 import time
+from System.core.paths import ROOT_DIR
 from pathlib import Path
 from rich.console import Console
+from typing import List
 
 console = Console()
 
@@ -148,3 +150,67 @@ def start_local_watcher(
 
     except KeyboardInterrupt:
         console.print("\n[dim]Somatosensory Cortex offline.[/dim]")
+
+
+class SensoryTransducer:
+    """
+    A pure-Python deterministic sensory engine inspired by TokenJuice.
+    Protects Prefrontal Lobe context windows from verbose terminal slop.
+    """
+
+    def __init__(self, max_lines: int = 50, head_slice: int = 20, tail_slice: int = 25):
+        self.max_lines = max_lines
+        self.head_slice = head_slice
+        self.tail_slice = tail_slice
+
+        # Pre-compiled fast regex engines for terminal noise removal
+        self.ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        self.progress_pattern = re.compile(
+            r"([\s\d%]+[░■▰▱▬█=>-]+\s*[\d.]+[:\d]*\s*[M|K|G]?B/s|⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏)"
+        )
+        self.package_noise = re.compile(
+            r"^(resolved|downloaded|installed|audited|checked|funding)\s+\d+.*$",
+            re.IGNORECASE,
+        )
+
+    def compact_terminal_output(self, command_array: List[str], raw_output: str) -> str:
+        """
+        Processes safe sandbox outputs, filtering environment noise and applying
+        deterministic line constraints.
+        """
+        if not raw_output or not command_array:
+            return raw_output
+
+        binary = str(command_array[0]).lower().strip()
+
+        # 🛡️ SAFE-INVENTORY POLICY: Data-view commands must remain 100% raw
+        inventory_binaries = {"cat", "type", "dir", "ls"}
+        if binary in inventory_binaries:
+            return raw_output
+
+        # Pass 1: Strip ANSI color codes and structural decorations instantly
+        clean_text = self.ansi_escape.sub("", raw_output)
+
+        lines = clean_text.splitlines()
+        filtered_lines = []
+
+        # Pass 2: Clean out progress indicators, spinners, and packaging metrics
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            # ⚡ ZERO-DEBT: Drop the entire transient line if a progress bar or spinner is found
+            if self.progress_pattern.search(line) or self.package_noise.match(stripped):
+                continue
+            filtered_lines.append(line)
+
+        # Pass 3: Enforce strict deterministic line-slicing margins
+        if len(filtered_lines) > self.max_lines:
+            dropped_count = len(filtered_lines) - (self.head_slice + self.tail_slice)
+            head = filtered_lines[: self.head_slice]
+            tail = filtered_lines[-self.tail_slice :]
+
+            compaction_banner = f"\n--- [SENSORY COMPACTOR: Truncated {dropped_count} lines of intermediate terminal noise] ---\n"
+            return "\n".join(head) + compaction_banner + "\n".join(tail)
+
+        return "\n".join(filtered_lines)

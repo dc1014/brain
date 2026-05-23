@@ -71,3 +71,44 @@ def test_somatosensory_cortex_ast_reflex(monkeypatch, tmp_path):
 
     assert ast_file.exists(), "The AST shadow map file was not created!"
     assert "def mock_func(): pass" in ast_file.read_text(encoding="utf-8")
+
+
+def test_transducer_strips_ansi_and_noise():
+    from System.neuroanatomy.sensory.somatosensory import SensoryTransducer
+
+    transducer = SensoryTransducer()
+
+    # Separated standalone ephemeral spinner frames into their own independent lines
+    noisy_input = "\x1b[31mError: check failed\x1b[0m\n⠋ Loading packages...\nDownloaded 42 packages looking for funding"
+    compacted = transducer.compact_terminal_output(["pytest"], noisy_input)
+
+    assert "Error:" in compacted
+    assert "Loading" not in compacted
+    assert "funding" not in compacted
+
+
+def test_transducer_safe_inventory_bypass():
+    from System.neuroanatomy.sensory.somatosensory import SensoryTransducer
+
+    transducer = SensoryTransducer()
+
+    code_payload = "import os\nprint(os.getenv('PATH'))"
+    compacted = transducer.compact_terminal_output(["cat", "safe.py"], code_payload)
+
+    # Safe-inventory check means data code reads remain completely raw and pristine
+    assert compacted == code_payload
+
+
+def test_transducer_head_tail_slicing():
+    from System.neuroanatomy.sensory.somatosensory import SensoryTransducer
+
+    transducer = SensoryTransducer(max_lines=10, head_slice=2, tail_slice=2)
+
+    long_log = "\n".join(f"Line item {i}" for i in range(100))
+    compacted = transducer.compact_terminal_output(["pytest"], long_log)
+
+    assert "Line item 0" in compacted
+    assert "Line item 1" in compacted
+    assert "SENSORY COMPACTOR: Truncated" in compacted
+    assert "Line item 98" in compacted
+    assert "Line item 99" in compacted

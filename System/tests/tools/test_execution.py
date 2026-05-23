@@ -806,3 +806,32 @@ def test_phase10_windows_local_binary_hijacking_blocked(
     result = execute_command(["python", "safe_script.py"], "Studio")
     assert result.success is False
     assert "Local binary hijacking detected" in result.output
+
+
+def test_sensory_compactor_integration(mocker, tmp_path, bypass_immune_system):
+    """Zero-Debt: Proves noisy terminal execution blocks get compacted down cleanly."""
+    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch.dict(
+        os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
+    )
+
+    mock_process = mocker.AsyncMock()
+    mock_process.pid = 9999
+    mock_process.returncode = 0
+
+    # Simulate a noisy output trace containing ANSI strings and loading spinners
+    # Simulate a clean trace block with high-volume logging data
+    noisy_stream = (
+        b"\x1b[32m[INFO]\x1b[0m Initializing package maps...\n"
+        + b"Log frame line item\n" * 100
+    )
+    mock_process.stdout.read = mocker.AsyncMock(side_effect=[noisy_stream, b""])
+    mocker.patch(
+        "System.tools.execution.asyncio.create_subprocess_exec",
+        return_value=mock_process,
+    )
+
+    result = execute_command(["python", "build.py"], "Studio")
+    assert result.success is True
+    assert "Initializing" in result.output
+    assert "SENSORY COMPACTOR" in result.output

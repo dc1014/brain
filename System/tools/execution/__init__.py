@@ -2,7 +2,6 @@
 import os
 import sys
 import stat
-import shlex
 import socket
 import asyncio
 import threading
@@ -303,7 +302,7 @@ async def deploy_project_async(
         from System.tools.sandbox import execute_in_sandbox
 
         return await execute_in_sandbox(
-            shlex.join(cmd_args),
+            cmd_args,
             normalize_path(ROOT_DIR / directory_path),
             env_secrets={"DEPLOYMENT_TOKEN": token},
             route=route,

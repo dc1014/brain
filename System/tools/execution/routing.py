@@ -161,7 +161,7 @@ async def execute_command_async(
 
     if route in REQUIRES_CONTAINMENT:
         return await execute_in_sandbox(
-            shlex.join(parsed_args),
+            parsed_args,
             normalize_path(ROOT_DIR / directory_path),
             env_secrets={},
             route=route,
@@ -270,22 +270,33 @@ async def execute_command_async(
             healed, heal_msg = await trigger_immune_response_async(
                 command_str, full_output, path_result
             )
-            return (
-                ExecutionResult(
+            if healed:
+                return ExecutionResult(
                     success=True,
                     output=f"<shell_output>\n<stdout>\n{heal_msg}\n</stdout>\n</shell_output>",
                 )
-                if healed
-                else ExecutionResult(
+            else:
+                # ⚡ SHIFT-LEFT TOKEN ECONOMICS: Compact failed native output trace blocks
+                from System.neuroanatomy.sensory.somatosensory import SensoryTransducer
+
+                compacted_err = SensoryTransducer().compact_terminal_output(
+                    parsed_args, full_output
+                )
+                return ExecutionResult(
                     success=False,
-                    output=f"<shell_output>\n<stderr>\n{full_output}\n\nMicroglia Antibody Failed:\\n{heal_msg}\n</stderr>\n</shell_output>",
+                    output=f"<shell_output>\n<stderr>\n{compacted_err}\n\nMicroglia Antibody Failed:\\n{heal_msg}\n</stderr>\n</shell_output>",
                     block_reason=f"Failed with exit code {process.returncode}",
                 )
-            )
 
+        # ⚡ SHIFT-LEFT TOKEN ECONOMICS: Compact successful native command trace blocks
+        from System.neuroanatomy.sensory.somatosensory import SensoryTransducer
+
+        compacted_output = SensoryTransducer().compact_terminal_output(
+            parsed_args, full_output
+        )
         return ExecutionResult(
             success=True,
-            output=f"<shell_output>\n<stdout>\n{full_output}\n</stdout>\n</shell_output>",
+            output=f"<shell_output>\n<stdout>\n{compacted_output}\n</stdout>\n</shell_output>",
         )
     except Exception as e:
         sys.modules["System.tools.execution"]._set_system_volume_mask(read_only=False)
