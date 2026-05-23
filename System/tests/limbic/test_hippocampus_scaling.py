@@ -138,3 +138,36 @@ def test_native_ripgrep_search_missing_binary(mocker):
 
     result = native_ripgrep_search("query")
     assert "Ripgrep binary ('rg') not found" in result
+
+
+def test_native_ripgrep_injects_semantic_sidecar(mocker, tmp_path):
+    """DEFCON PROOF: Verifies the Hybrid Sidecar seamlessly injects summaries to protect LLM context windows."""
+    mocker.patch("System.neuroanatomy.limbic.hippocampus.ROOT_DIR", tmp_path)
+    (tmp_path / "Studio").mkdir()
+
+    mocker.patch(
+        "System.neuroanatomy.limbic.hippocampus.shutil.which",
+        return_value="/usr/bin/rg",
+    )
+    mock_run = mocker.patch("System.neuroanatomy.limbic.hippocampus.subprocess.run")
+    mock_run.return_value.returncode = 0
+    mock_run.return_value.stdout = "Studio/heavy_file.md\n10: Match here\n"
+
+    # Seed the semantic sidecar manually
+    conn = _get_conn()
+    conn.execute(
+        "INSERT INTO semantic_cache (filepath, summary, last_summarized) VALUES (?, ?, ?)",
+        ("Studio/heavy_file.md", "This is a dense, low-entropy abstract.", 12345),
+    )
+    conn.commit()
+    conn.close()
+
+    # Trigger the search
+    result = native_ripgrep_search("Match")
+
+    # Assert the illusion was stitched correctly
+    assert "SEMANTIC FILE CONTEXT" in result
+    assert (
+        "[Studio/heavy_file.md SUMMARY]: This is a dense, low-entropy abstract."
+        in result
+    )

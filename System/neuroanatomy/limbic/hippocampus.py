@@ -42,18 +42,25 @@ GRAPH_LEDGER_PATH = ROOT_DIR / ".brain" / "graph_state.json"
 
 
 def _get_conn() -> sqlite3.Connection:
-    """Initializes the FTS5 virtual table and the CAS tracking registry."""
+    """Initializes the FTS5 virtual table, CAS tracking registry, and Semantic Sidecar."""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""
         CREATE VIRTUAL TABLE IF NOT EXISTS memories
         USING fts5(filepath, content, timestamp UNINDEXED);
     """)
-    # ⚡ NEW: Create the Content Addressable Storage (CAS) tracking registry
     conn.execute("""
         CREATE TABLE IF NOT EXISTS file_hashes (
             filepath TEXT PRIMARY KEY,
             content_hash TEXT
+        );
+    """)
+    # ⚡ NEW: The Hybrid Semantic Sidecar to protect the Agent's context window
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS semantic_cache (
+            filepath TEXT PRIMARY KEY,
+            summary TEXT,
+            last_summarized INTEGER
         );
     """)
     return conn
@@ -347,6 +354,64 @@ class SupervisedGraphBackplane(GraphBackplane):
 # =====================================================================
 
 
+async def _compact_heavy_memory(filepath: str, content: str) -> bool:
+    """
+    Tier 1 Hybrid Semantic Compactor: Generates a low-entropy abstract of heavy files
+    and stores it in the Sidecar Registry to protect LLM context windows.
+    Returns True if successfully compacted, False otherwise.
+    """
+    model = (
+        "gemini/gemini-2.5-flash"
+        if vault.get_api_key_for_model("gemini/")
+        else "openai/gpt-4o-mini"
+    )
+    api_key = vault.get_api_key_for_model(model)
+
+    if not api_key:
+        console.print(
+            "[dim yellow]⚠️ Semantic Compactor: No API key found. Skipping compression.[/dim yellow]"
+        )
+        return False
+
+    console.print(f"[dim blue]🧠 Compacting heavy memory: {filepath}...[/dim blue]")
+
+    prompt = (
+        "You are the internal Semantic Compactor for Brain OS. "
+        "Your job is to protect the execution agent's context window. "
+        "Read the following file content and generate a highly compressed, 2-3 sentence technical summary. "
+        "Focus purely on architectural purpose, core functions, and state. Do not use filler words.\n\n"
+        f"FILE ({filepath}):\n{content[:15000]}"  # Cap at 15k chars to prevent massive context blows here
+    )
+
+    try:
+        response = await acompletion(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+            api_key=api_key,
+        )
+        summary = str(response.choices[0].message.content).strip()
+
+        # Save to the Semantic Sidecar
+        conn = _get_conn()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT OR REPLACE INTO semantic_cache (filepath, summary, last_summarized) VALUES (?, ?, ?)",
+            (filepath, summary, int(time.time())),
+        )
+        conn.commit()
+        conn.close()
+
+        console.print(
+            f"[dim green]✅ Compacted and safely stored sidecar for {filepath}[/dim green]"
+        )
+        return True
+
+    except Exception as e:
+        console.print(f"[dim red]⚠️ Compaction failed for {filepath}: {e}[/dim red]")
+        return False
+
+
 async def _encode_short_term_memory() -> None:
     """Summarizes active JSONL ledgers into dense, long-term markdown memories by DOMAIN."""
     ledgers = list(ROOT_DIR.rglob("agent_interactions.jsonl"))
@@ -452,6 +517,46 @@ def consolidate_short_term_memory() -> None:
         console.print(f"[dim red]Hippocampus async error: {e}[/dim red]")
 
 
+def run_semantic_compaction_sweep() -> None:
+    """Scans the working memory for heavy files and asynchronously compacts them."""
+    console.print("[dim]🧠 Initiating Sleep Cycle: Semantic Compaction Sweep...[/dim]")
+
+    conn = _get_conn()
+    cursor = conn.cursor()
+
+    # Find files larger than ~3000 chars that either aren't in the semantic cache,
+    # or where the index timestamp is newer than the last_summarized timestamp.
+    cursor.execute("""
+        SELECT m.filepath, m.content
+        FROM memories m
+        LEFT JOIN semantic_cache s ON m.filepath = s.filepath
+        WHERE length(m.content) > 3000
+        AND (s.summary IS NULL OR m.timestamp > s.last_summarized)
+        LIMIT 5  -- Only do 5 per sleep cycle to keep background processing light
+    """)
+    heavy_files = cursor.fetchall()
+    conn.close()
+
+    if not heavy_files:
+        console.print(
+            "[dim]🧠 Semantic Compaction: All heavy files are currently optimized.[/dim]"
+        )
+        return
+
+    # Run the compaction tasks concurrently
+    async def compact_all():
+        tasks = [
+            _compact_heavy_memory(filepath, content)
+            for filepath, content in heavy_files
+        ]
+        await asyncio.gather(*tasks)
+
+    try:
+        asyncio.run(compact_all())
+    except Exception as e:
+        console.print(f"[dim red]Semantic sweep async error: {e}[/dim red]")
+
+
 def persist_pipeline_state(
     description: str,
     route_type: str,
@@ -528,8 +633,29 @@ def native_ripgrep_search(query: str) -> str:
         elif result.returncode > 1:
             return f"Ripgrep execution error: {result.stderr}"
 
-        # We inject a small header so the LLM understands the output format
-        return f"--- RIPGREP NATIVE SEARCH RESULTS ---\n{result.stdout.strip()}"
+        rg_output = result.stdout.strip()
+
+        # ⚡ TIER 2 ILLUSION: Seamlessly stitch sidecar summaries into the ripgrep output
+        # This protects the LLM's context window by giving it the abstract BEFORE it tries to read the file.
+        conn = _get_conn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT filepath, summary FROM semantic_cache")
+        summaries = cursor.fetchall()
+        conn.close()
+
+        stitched_context = []
+        for fp, summ in summaries:
+            if fp in rg_output:
+                stitched_context.append(f"[{fp} SUMMARY]: {summ}")
+
+        final_output = "--- RIPGREP NATIVE SEARCH RESULTS ---\n"
+        if stitched_context:
+            final_output += (
+                "--- SEMANTIC FILE CONTEXT ---\n" + "\n".join(stitched_context) + "\n\n"
+            )
+
+        final_output += rg_output
+        return final_output
 
     except Exception as e:
         return f"Ripgrep subprocess failure: {str(e)}"

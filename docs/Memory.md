@@ -168,3 +168,25 @@ During low-load phases, idle intervals, or system shutdown sequences, the engine
 
 
 Concurrently, the **Default Mode Network (DMN)** triggers background reflection cycles via `trigger_daydreams()`. It crawls through historic system errors in `medulla.log` alongside randomized files across user markdown vaults to identify non-obvious optimizations. These optimizations are recorded as insights within `daydreams.md`, and the system can automatically schedule execution code changes under isolated git branches to evaluate them safely.
+
+---
+
+## 🧬 Memory Encoding & Retrieval Flow
+
+### 1. The CAS Gatekeeper & Event-Driven Indexing
+Instead of running an expensive $O(N)$ full-directory crawl across the vault, the Hippocampus utilizes incremental event-driven indexing hooked into the Somatosensory watcher daemon. Before a file is parsed or analyzed, its content is hashed (`sha256`). If the hash matches the SQLite `file_hashes` tracking registry, the system immediately aborts the parsing pipeline, skipping regex checks and saving massive CPU cycles.
+
+### 2. The Ripgrep Engine & Context Window Protection
+When an agent executes a global search (`global_text_search`), Brain OS completely bypasses Python's internal memory allocation limits by dropping into a native `ripgrep` (`rg`) subprocess.
+
+To protect the LLM from token degradation when retrieving massive files, the Hippocampus employs a **Hybrid Illusion**. If the Ripgrep search hits a massive file, Python silently intercepts the output and stitches the pre-computed Semantic Sidecar summary directly to the top of the search result. The agent gains total technical omniscience without ever flooding its context window.
+
+### 3. Sleep Cycle Synaptic Consolidation
+During inactive idle intervals, or system shutdown sequences, the engine initiates long-term memory consolidation via `consolidate_short_term_memory()`. The subcortex processes these memories through a structured routine:
+
+* **Semantic Compaction Sweep:** The daemon scans the FTS5 index for any "heavy" files (>3,000 characters) that have been modified. It uses a low-cost, high-speed model (like `gemini-2.5-flash` or `gpt-4o-mini`) to compress the file into a dense, 2-3 sentence technical abstract, storing it safely in the `semantic_cache` sidecar without corrupting the user's local Obsidian files.
+* **Log Foraging & Sorting:** It walks directory paths to locate all `agent_interactions.jsonl` files, grabs the last 50 transactions, and classifies them into explicit functional domains (e.g., `STUDIO`, `META`, `PERSONAL`).
+* **Low-Entropy Text Distillation:** It strips out transient tool error histories, temporary variables, and intermediate text filler, condensing the logs into a technical bulleted summary highlighting architecture updates and project changes.
+* **Vault Archiving:** This long-term memory summary is appended directly into targeted Markdown files across specific workspace subfolders (`Meta/global-memory.md`).
+
+Concurrently, the **Default Mode Network (DMN)** triggers background reflection cycles via `trigger_daydreams()`. It crawls through historic system errors in `medulla.log` alongside randomized files across user markdown vaults to identify non-obvious optimizations, recording them safely in `daydreams.md`.

@@ -101,6 +101,17 @@ def sleep():
             f"[dim red]❌ Stylistic baseline consolidation skipped: {e}[/dim red]"
         )
 
+    # ⚡ NEW: Trigger the Semantic Compactor daemon
+    console.print(
+        "[dim cyan]📚 Limbic Compression: Compacting heavy memories into semantic sidecars...[/dim cyan]"
+    )
+    try:
+        from System.neuroanatomy.limbic.hippocampus import run_semantic_compaction_sweep
+
+        run_semantic_compaction_sweep()
+    except Exception as e:
+        console.print(f"[dim red]❌ Semantic compaction skipped: {e}[/dim red]")
+
     trigger_daydreams()
 
     try:
