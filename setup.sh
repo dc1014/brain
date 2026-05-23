@@ -16,4 +16,4 @@ uv sync
 
 # 3. Hand off execution to the Interactive Setup Wizard
 echo -e "\033[1;32m[🧠] Awakening...\033[0m"
-exec uv run python -m System.core.onboarding.cli
+exec uv run python -m System.core.onboarding.genesis

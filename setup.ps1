@@ -15,4 +15,4 @@ uv sync
 
 # 3. Hand off execution to the Interactive Setup Wizard
 Write-Host "[🧠] Awakening..." -ForegroundColor Green
-uv run python -m System.core.onboarding.cli
+uv run python -m System.core.onboarding.genesis

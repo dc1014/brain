@@ -30,39 +30,42 @@ FEATURES_PATH = ROOT_DIR / "System" / "config" / "features.json"
 
 
 # --- 1. THE AWAKENING ---
+# --- Inside System/core/onboarding/cli.py ---
 def draw_brain():
     console.clear()
+    # Crisp, symmetrical, high-fidelity ASCII block representation for BRAIN
     brain_art = """[bold cyan]
-      🧠  B R A I N  ::  S Y N A P T I C   G E N E S I S  🧠
-      ──────────────────────────────────────────────────────────
-               [ Cortical / Autonomic / Limbic Control Plane ]
+██████╗ ██████╗  █████╗ ██╗███╗   ██╗
+██╔══██╗██╔══██╗██╔══██╗██║████╗  ██║
+██████╔╝██████╔╝███████║██║██╔██╗ ██║
+██╔══██╗██╔══██╗██╔══██║██║██║╚██╗██║
+██████╔╝██║  ██║██║  ██║██║██║ ╚████║
+╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
     [/bold cyan]"""
     console.print(brain_art)
+    console.print(
+        "       [dim]Biomimetic AI Control Plane And Obsidian Vault // Synaptic Genesis[/dim]\n"
+    )
 
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("Component Path")
-    table.add_column("System Target")
-    table.add_column("Native Footprint")
-    table.add_column("Operational Status")
+    table = Table(show_header=True, header_style="bold cyan", box=None)
+    table.add_column("Neural Pathway")
+    table.add_column("Subsystem Target")
+    table.add_column("Status", justify="right")
 
     table.add_row(
-        "System/core/",
-        "Core Executive NLP Matrix",
-        "Ultra-Lightweight",
-        "[bold green][ READY ][/bold green]",
+        "System/core/", "Executive NLP Routing Matrix", "[bold green]READY[/bold green]"
     )
     table.add_row(
         "System/neuroanatomy/",
-        "SQLite FTS5 Indexing Layer",
-        "Local Memory",
-        "[bold green][ READY ][/bold green]",
+        "Structural Ledger & Indexing",
+        "[bold green]READY[/bold green]",
     )
     table.add_row(
         "Sense/receptors/",
-        "Optional Sensory Organs",
-        "Progressive Enhancement",
-        "[dim yellow][ DORMANT ][/dim yellow]",
+        "Progressive Sensory Organs",
+        "[dim yellow]DORMANT[/dim yellow]",
     )
+
     console.print(table)
     console.print("\n")
 
@@ -70,34 +73,33 @@ def draw_brain():
 # --- 2. SECURITY GATE ---
 def configure_security_gate() -> bool:
     gate_text = (
-        "Brain operates as a [bold green]SAFE, READ-ONLY[/bold green] Second Brain by default.\n\n"
-        "To allow the AI to unlock its Motor Cortex—granting it autonomy to execute terminal "
-        "commands and write code—you must explicitly opt in.\n\n"
-        "[bold red]RISK WARNING:[/bold red] Autonomous mode allows an LLM to invoke subprocesses. "
-        "Enabling this requires trust in your provider's alignment guards."
+        "Brain operates as a [bold green]Cognitive Assistant[/bold green] by default. "
+        "It can freely read, organize, and write Markdown files to your Obsidian vault, "
+        "but its Motor Cortex is physically disconnected—it cannot execute terminal commands or run scripts.\n\n"
+        "To allow Brain to autonomously execute code and run terminal commands, you must enable Agentic Mode.\n\n"
+        "[bold red]RISK WARNING:[/bold red] Agentic mode grants the LLM permission to invoke OS-level subprocesses. "
+        "Only enable this if you trust your API provider's alignment."
     )
     console.print(
-        Panel(
-            gate_text, title="🔐 [ SHIFT-LEFT SECURITY GATEWAY ] 🔐", border_style="red"
-        )
+        Panel(gate_text, title="🔐 [ EXECUTION BOUNDARIES ] 🔐", border_style="cyan")
     )
 
-    console.print("🎛️  [bold]Select your Cognitive Agency Profile:[/bold]")
+    console.print("🎛️  [bold]Select your target Operating Profile:[/bold]")
     console.print(
-        "  [bold cyan][1][/bold cyan] Advisory Mode (Read-Only, Safe-by-Default) [dim][RECOMMENDED][/dim]"
+        "  [bold cyan][1][/bold cyan] Cognitive Mode (Read & Write Files, No Code Execution) [dim][RECOMMENDED][/dim]"
     )
     console.print(
-        "  [bold cyan][2][/bold cyan] Autonomous Mode (Read/Write, Container Sandboxed Execution)"
+        "  [bold cyan][2][/bold cyan] Agentic Mode (Unrestricted Terminal & Subprocess Execution)"
     )
 
     choice = Prompt.ask("\nSelect Profile", choices=["1", "2"], default="1")
     if choice == "1":
         console.print(
-            "[dim green]Advisory Mode selected. System remains fully read-only.[/dim green]\n"
+            "[dim green]Cognitive Mode locked. System execution tier restricted to File I/O.[/dim green]\n"
         )
         return False
 
-    console.print("\n[bold yellow]⚠️ INTENTIONAL OVERRIDE DETECTED.[/bold yellow]")
+    console.print("\n[bold yellow]⚠️ AGENTIC OVERRIDE DETECTED.[/bold yellow]")
     override = Prompt.ask(
         "To release motor inhibition filters, type [bold]ENABLE[/bold] (or press Enter to abort)"
     )
@@ -111,21 +113,21 @@ def configure_security_gate() -> bool:
             progress.add_task("", total=None)
             if verify_deno_sandbox():
                 console.print(
-                    "[bold green]✅ Secure WASM Sandbox verified: Deno Runtime detected.[/bold green]\n"
+                    "[bold green]✅ Sandbox verified. Agentic code execution unlocked.[/bold green]\n"
                 )
                 return True
             else:
                 fail_msg = (
                     "[bold red]❌ CONTAINER ENGINE MISSING:[/bold red] Sandboxed code execution requires the Deno runtime.\n\n"
-                    "To preserve maximum stability, Brain has safely forced your profile back to [bold green][ Advisory Mode ][/bold green].\n\n"
-                    "To unlock full autonomy later, install Deno and rerun setup:\n"
+                    "Brain has safely forced your profile back to [bold green][ Cognitive Mode ][/bold green].\n\n"
+                    "To unlock Agentic mode later, install Deno and rerun setup:\n"
                     "👉 macOS/Linux: [cyan]curl -fsSL https://deno.land/install.sh | sh[/cyan]\n"
                     "👉 Windows:     [cyan]irm https://deno.land/install.ps1 | iex[/cyan]"
                 )
                 console.print(Panel(fail_msg, border_style="red"))
                 return False
 
-    console.print("[dim green]Override aborted. Advisory Mode enforced.[/dim green]\n")
+    console.print("[dim green]Override aborted. Cognitive Mode enforced.[/dim green]\n")
     return False
 
 

@@ -112,7 +112,7 @@ def approve():
 def setup() -> None:
     """Initializes Brain OS using the interactive, high-fidelity Synaptic Genesis onboarding wizard."""
     import asyncio
-    from System.core.onboarding.cli import main as run_onboarding
+    from System.core.onboarding.genesis import main as run_onboarding
 
     asyncio.run(run_onboarding())
 
