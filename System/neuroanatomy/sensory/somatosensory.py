@@ -181,6 +181,11 @@ class SensoryTransducer:
         if not raw_output or not command_array:
             return raw_output
 
+        # 🛡️ SECURITY INTERCEPT: Scrub leaked vault secrets from the output stream BEFORE line truncation splits them
+        from System.neuroanatomy.systemic.immune_system import vault
+
+        raw_output = vault.mask_secrets(raw_output)
+
         binary = str(command_array[0]).lower().strip()
 
         # 🛡️ SAFE-INVENTORY POLICY: Data-view commands must remain 100% raw
@@ -199,7 +204,6 @@ class SensoryTransducer:
             stripped = line.strip()
             if not stripped:
                 continue
-            # ⚡ ZERO-DEBT: Drop the entire transient line if a progress bar or spinner is found
             if self.progress_pattern.search(line) or self.package_noise.match(stripped):
                 continue
             filtered_lines.append(line)

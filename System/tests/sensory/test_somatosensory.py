@@ -112,3 +112,30 @@ def test_transducer_head_tail_slicing():
     assert "SENSORY COMPACTOR: Truncated" in compacted
     assert "Line item 98" in compacted
     assert "Line item 99" in compacted
+
+
+def test_transducer_masks_vault_secrets_before_truncation(mocker):
+    """Secure by Default: Proves credentials are masked cleanly before head/tail slicing executes."""
+    from System.neuroanatomy.sensory.somatosensory import SensoryTransducer
+    from System.neuroanatomy.systemic.immune_system import vault
+
+    # Inject a known biological target secret key signature into the active memory bank
+    mocker.patch.dict(
+        vault._secrets, {"MOCK_DEPLOYMENT_TOKEN": "super_secret_token_string_xyz_12345"}
+    )
+
+    # Enforce strict low margins to test interception around a truncation boundary line drop
+    transducer = SensoryTransducer(max_lines=4, head_slice=1, tail_slice=1)
+
+    leaked_output = (
+        "Deployment initiating...\n"
+        "Active session token value: super_secret_token_string_xyz_12345\n"
+        "Connecting to clusters...\n"
+        "Process complete."
+    )
+
+    compacted = transducer.compact_terminal_output(["pytest"], leaked_output)
+
+    # Confirm plaintext credential signatures are completely non-existent
+    assert "super_secret_token_string_xyz_12345" not in compacted
+    assert "[MOCK_DEPLOYMENT_TOKEN_REDACTED]" in compacted
