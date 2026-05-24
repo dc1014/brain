@@ -1,16 +1,14 @@
 import os
 from rich.console import Console
 from System.core.paths import ROOT_DIR, normalize_path
-from System.neuroanatomy.cortical.working_memory import clear_pipeline_state
 from System.neuroanatomy.autonomic.vestibular import restore_balance
+from System.core.file_transaction import write_state_sync_atomic
 
 console = Console()
 
 
 def trigger_halt() -> None:
     """Vagus Nerve (Parasympathetic): Forces an immediate, safe system-wide halt."""
-
-    # 🔊 THE VERBOSE CHECK
     if os.environ.get("BRAIN_VERBOSE") == "1":
         console.print(
             "[dim magenta][VERBOSE] Vagus Nerve: Polling interrupt signal... Halt triggered![/dim magenta]"
@@ -20,15 +18,17 @@ def trigger_halt() -> None:
         "[bold red]🚨 VAGUS NERVE ACTIVATED: Initiating Emergency Halt...[/bold red]"
     )
 
-    # 1. Flush the Hippocampus Queue
-    clear_pipeline_state()
+    # 1. Flush the Hippocampus Queue atomically with zero state corruption risk
+    queue_file = ROOT_DIR / "System" / "execution_queue.json"
+    write_state_sync_atomic(queue_file, [])
     console.print(
-        "[dim yellow]- Execution queue flushed. No new agents will spawn.[/dim yellow]"
+        "[dim yellow]- Execution queue flushed atomically. No new agents will spawn.[/dim yellow]"
     )
 
-    # 2. Plant the Apoptosis Flag (Tells active prefrontal loops to terminate safely)
+    # 2. Plant the Apoptosis Flag atomically
     abort_flag = normalize_path(ROOT_DIR / "System" / ".vagus_abort_signal")
-    abort_flag.write_text("HALT", encoding="utf-8")
+    write_state_sync_atomic(abort_flag, "HALT")
+
     console.print(
         "[dim yellow]- Abort signal broadcast to all active cortical loops.[/dim yellow]"
     )

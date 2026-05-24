@@ -59,6 +59,7 @@ def sample_file(filepath: Union[str, Path]) -> Dict[str, Any]:
         if file_name_lower in {"openapi.json", "swagger.json"} or (
             extension == ".json" and "openapi" in file_name_lower
         ):
+            # Clamped strictly with encoding declaration to withstand the Windows Trap
             with open(target, "r", encoding="utf-8") as f:
                 data = json.load(f)
             if isinstance(data, dict) and ("openapi" in data or "swagger" in data):

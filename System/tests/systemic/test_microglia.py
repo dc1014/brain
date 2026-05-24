@@ -21,7 +21,7 @@ async def test_microglia_successful_heal(monkeypatch, tmp_path):
                                 "Msg",
                                 (),
                                 {
-                                    "content": f"python -c \"open('{tmp_path.as_posix()}/missing_file.txt', 'w').close()\""
+                                    "content": f"python -c \"open('{tmp_path.as_posix()}/missing_file.txt', 'w', encoding='utf-8').close()\""
                                 },
                             )()
                         },
@@ -39,9 +39,7 @@ async def test_microglia_successful_heal(monkeypatch, tmp_path):
     )
 
     # 2. Trigger an intentional failure (reading a file that doesn't exist using python)
-    failed_cmd = (
-        f"python -c \"open('{tmp_path.as_posix()}/missing_file.txt', 'r').read()\""
-    )
+    failed_cmd = f"python -c \"open('{tmp_path.as_posix()}/missing_file.txt', 'r', encoding='utf-8').read()\""
     initial_stderr = "FileNotFoundError: No such file or directory: 'missing_file.txt'"
 
     # 3. Activate Microglia Asynchronously

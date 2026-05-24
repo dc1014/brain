@@ -44,12 +44,18 @@ async def test_biological_lock_timeout(tmp_path: Path):
     lock1 = BiologicalLock(target_file, timeout=0.1)
     lock2 = BiologicalLock(target_file, timeout=0.1)
 
+    # Deterministically simulate a cross-process lock contention block
+    def mock_acquire_timeout(*args, **kwargs):
+        raise Timeout(str(lock2.lock_path))
+
+    lock2.file_lock.acquire = mock_acquire_timeout  # type: ignore[method-assign]
+
     async def hold_lock_forever():
         async with lock1.acquire():
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.1)
 
     async def try_to_steal_lock():
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.02)
         with pytest.raises(Timeout):
             async with lock2.acquire():
                 pass

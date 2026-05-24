@@ -51,7 +51,7 @@ def load_config_routes():
     global CONFIG_ROUTES
     config_path = ROOT_DIR / "System" / "config" / "webhooks.yaml"
     if config_path.exists():
-        with open(config_path, "r") as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
             CONFIG_ROUTES = data.get("webhooks", {})
 

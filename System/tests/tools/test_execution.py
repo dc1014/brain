@@ -328,7 +328,7 @@ def test_ast_secondary_payload_smuggling_blocked(
 
     # ⚡ THE FIX: Inspect the atomic snapshot file content instead of its path name
     def mock_ast_scan(filepath):
-        with open(filepath, "r") as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             if "bad" in f.read():
                 return False, "AST Violation in secondary payload"
         return True, "Safe"
@@ -712,7 +712,7 @@ def test_phase7_flag_parameter_desync_blocked(mocker, tmp_path, bypass_immune_sy
 
     # ⚡ THE FIX: Align lookahead parser test with the snapshot file payload mechanics
     def mock_ast_scan(filepath):
-        with open(filepath, "r") as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             if "real execution target" in f.read():
                 return False, "AST Guard caught real execution target"
         return True, "Safe"

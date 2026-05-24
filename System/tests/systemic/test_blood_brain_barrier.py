@@ -193,7 +193,9 @@ def test_apoptosis_blocks_unsafe_file_writes(tmp_path, monkeypatch):
     malicious_script = tmp_path / "malicious.py"
     # ⚡ ENFORCE POSIX COMPLIANCE: Convert the target string format path to avoid escape anomalies
     core_file_posix = core_file.as_posix()
-    malicious_script.write_text(f"open('{core_file_posix}', 'w').write('hacked')")
+    malicious_script.write_text(
+        f"open('{core_file_posix}', 'w', encoding='utf-8').write('hacked')"
+    )
 
     # 4. Generate the apoptosis membrane around the malicious script
     monkeypatch.setattr(
@@ -220,7 +222,9 @@ def test_apoptosis_blocks_unsafe_file_writes(tmp_path, monkeypatch):
     safe_script = tmp_path / "safe.py"
     safe_target = safe_zone / "output.txt"
     safe_target_posix = safe_target.as_posix()
-    safe_script.write_text(f"open('{safe_target_posix}', 'w').write('safe data')")
+    safe_script.write_text(
+        f"open('{safe_target_posix}', 'w', encoding='utf-8').write('safe data')"
+    )
 
     safe_membrane_path = wrap_with_apoptosis(str(safe_script))
     res_safe = subprocess.run(

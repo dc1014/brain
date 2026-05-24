@@ -1,10 +1,11 @@
-# --- System/cli.py ---
 import sys
 from pathlib import Path
 import os
 import io
 import typer
+import traceback
 from rich.prompt import Confirm
+from rich.panel import Panel
 import shutil
 
 # Import Biological Modules
@@ -21,6 +22,7 @@ from System.cli_somatic import (
     watch,
 )
 from rich.console import Console
+from System.core.file_transaction import read_state_sync
 
 # Force Universal UTF-8 Output on Windows
 if sys.platform.startswith("win") and "pytest" not in sys.modules:
@@ -38,6 +40,33 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
 console = Console()
+
+
+def graceful_brain_excepthook(exc_type, exc_value, exc_traceback):
+    """Intercepts fatal crashes and formats them for the terminal without leaking tracebacks."""
+    # Allow Typer/Sys normal exits to pass through silently
+    if exc_type.__name__ == "Exit" or exc_type is SystemExit:
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    error_msg = "".join(traceback.format_exception_only(exc_type, exc_value)).strip()
+
+    console.print()
+    console.print(
+        Panel(
+            f"[bold white]{error_msg}[/bold white]\n\n[dim]The Vagus Nerve has safely preserved your environment state.[/dim]",
+            title="[bold red]🛑 CORTICAL INTERRUPT[/bold red]",
+            border_style="red",
+            expand=False,
+        )
+    )
+    sys.exit(1)
+
+
+# Override default Python crash behavior
+sys.excepthook = graceful_brain_excepthook
+
+
 app = typer.Typer(
     help="🦾 Brain OS: Biomimetic Agentic Operating System", no_args_is_help=True
 )
@@ -60,7 +89,10 @@ def main(
         )
 
     queue_file = ROOT_DIR / "System" / "execution_queue.json"
-    if queue_file.exists():
+
+    # Hardened concurrency-safe file check using our transactional system
+    queue_data = read_state_sync(queue_file, default_factory=list)
+    if queue_data:  # If tasks exist in the array sequence
         if os.environ.get("BRAIN_OS_HEADLESS") == "1":
             raise typer.Exit()
 

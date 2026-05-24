@@ -16,7 +16,7 @@ class BiologicalLock:
     # Class-level dictionaries and a Master Lock to protect them!
     _async_locks: Dict[str, asyncio.Lock] = {}
     _sync_locks: Dict[str, threading.Lock] = {}
-    _master_dict_lock = threading.Lock()  # ⚡ THE FIX
+    _master_dict_lock = threading.Lock()
 
     def __init__(self, filepath: str | Path, timeout: float = 15.0):
         self.filepath = Path(filepath).resolve()
@@ -26,19 +26,18 @@ class BiologicalLock:
 
     @property
     def _local_async(self) -> asyncio.Lock:
-        with BiologicalLock._master_dict_lock:  # ⚡ Guarded!
+        with BiologicalLock._master_dict_lock:
             if self.lock_key not in BiologicalLock._async_locks:
                 BiologicalLock._async_locks[self.lock_key] = asyncio.Lock()
             return BiologicalLock._async_locks[self.lock_key]
 
     @property
     def _local_sync(self) -> threading.Lock:
-        with BiologicalLock._master_dict_lock:  # ⚡ Guarded!
+        with BiologicalLock._master_dict_lock:
             if self.lock_key not in BiologicalLock._sync_locks:
                 BiologicalLock._sync_locks[self.lock_key] = threading.Lock()
             return BiologicalLock._sync_locks[self.lock_key]
 
-    # --- LEGACY SUPPORT: `with BiologicalLock():` ---
     def __enter__(self) -> "BiologicalLock":
         self._local_sync.acquire()
         self.file_lock.acquire()
@@ -48,22 +47,22 @@ class BiologicalLock:
         self.file_lock.release()
         self._local_sync.release()
 
-    # --- LEGACY SUPPORT: `async with BiologicalLock():` ---
     async def __aenter__(self) -> "BiologicalLock":
         await self._local_async.acquire()
-        await asyncio.to_thread(self.file_lock.acquire)
+        # ⚡ FIX: Execute synchronously to prevent Windows thread-ownership deadlocks
+        self.file_lock.acquire()
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.file_lock.release()
         self._local_async.release()
 
-    # --- NEW SUPPORT (Hippocampus/Tests) ---
     @asynccontextmanager
     async def acquire(self):
         """Asynchronously acquires the local lock, then the IPC lock."""
         async with self._local_async:
-            await asyncio.to_thread(self.file_lock.acquire)
+            # ⚡ FIX: Execute synchronously to keep lock tracking on the same thread
+            self.file_lock.acquire()
             try:
                 yield self
             finally:
