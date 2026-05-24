@@ -1,0 +1,5 @@
+# Exclude known testing fixtures and mock keys from local/remote scanning
+*.py:.*mock_valid_hash.*
+*.py:.*sk-or-v1-.*
+System/tests/
+Sense/tests/

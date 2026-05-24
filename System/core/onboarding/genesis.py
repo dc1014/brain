@@ -2,7 +2,9 @@
 import sys
 import json
 import asyncio
+import os
 import secrets
+import shutil
 from pathlib import Path
 
 from rich.console import Console
@@ -398,6 +400,13 @@ async def main():
         # 2. Write physical sensory capabilities payload
         FEATURES_PATH.parent.mkdir(parents=True, exist_ok=True)
         _atomic_write_text(FEATURES_PATH, json.dumps(features, indent=4))
+
+    # 🛡️ SHIFT-LEFT SECRET GATE: Auto-install local pre-commit secret shields
+    if shutil.which("pre-commit"):
+        console.print(
+            "[bold cyan]🛡️ Arming local TruffleHog secret shields...[/bold cyan]"
+        )
+        os.system("pre-commit install")
 
     # --- 3. Inject global shell profile alias ---
     console.print("\n")

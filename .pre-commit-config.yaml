@@ -1,6 +1,13 @@
 repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.2 # Pin a stable, deterministic version
+    hooks:
+      - id: gitleaks
+        name: GitLeaks Local Secret Shield
+        description: Protects API keys and credentials from entering git history automatically.
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         exclude: ^Studio/
@@ -25,7 +32,6 @@ repos:
 
       - id: mypy
         name: mypy
-        # Explicitly check only the System folder to stay fast and focused
         entry: uv run mypy System/ Sense/
         language: system
         pass_filenames: false
