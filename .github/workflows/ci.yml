@@ -1,15 +1,12 @@
-name: Brain CI
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
 jobs:
 
   security-and-tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # 🛡️ ZERO-DEBT: If 3.14 fails, let 3.12 finish so we can isolate the break
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,10 +28,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true # Safely pull the latest 3.14 engine drops
 
       - name: Install Dependencies
         run: uv sync --all-extras --dev
