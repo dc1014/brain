@@ -48,11 +48,11 @@ async def log_interaction(
     usage: dict[str, int],
     route: str = "UNKNOWN",
     domain: str = "NONE",
-    origin: str = "HUMAN",  # Track the execution origin
+    origin: str = "HUMAN",
 ) -> None:
     log_entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "origin": origin,  # ⚡ Inject it into the JSON payload
+        "origin": origin,
         "route": route,
         "domain": domain,
         "agent": role_name,
@@ -63,13 +63,11 @@ async def log_interaction(
         "tokens": usage,
     }
 
-    # Secure the Motor Cortex lock for the shared log file
     from System.neuroanatomy.cortical.motor_cortex import MotorCortex
 
     async with MotorCortex.get_lock(LOG_FILE):
 
         def _write():
-            # 🛡️ IMMUNE SYSTEM: Final Outbound Efferent Scrubbing for JSON logs
             raw_json = json.dumps(log_entry, default=str)
             safe_json = vault.mask_secrets(raw_json)
             with open(LOG_FILE, "a", encoding="utf-8") as f:
@@ -81,11 +79,10 @@ async def log_interaction(
 def get_system_context(
     role_name: str | list[str], system_prompt: str = "", prompt: str = "", **kwargs
 ) -> str:
-    """Generates the absolute biological reality for the active Swarm agent(s)."""
+    """Generates the context parameters for the active agent node workflows."""
     from System.core.dna import get_dna_config
 
     roles = role_name if isinstance(role_name, list) else [role_name]
-
     base_prompt = system_prompt + "\n" if system_prompt else ""
 
     for r in roles:
@@ -97,7 +94,6 @@ def get_system_context(
     if prompt:
         base_prompt += f"\n{prompt}\n"
 
-    # ⚡ SHIFT-LEFT: Retrieve dynamically learned life lessons and inject them into the AI's DNA
     try:
         from System.neuroanatomy.limbic.nucleus_accumbens import get_plasticity_rules
 
@@ -107,9 +103,8 @@ def get_system_context(
                 f"\n\nCRITICAL LEARNED BEHAVIORS (From Past Failures):\n{plasticity}\n"
             )
     except ImportError:
-        pass  # Failsafe in case the Limbic system is temporarily offline
+        pass
 
-    # 🔐 SAFE-BY-DEFAULT COGNITIVE ALIGNMENT: Tell the AI exactly why its tools are missing
     code_execution_enabled = os.environ.get(
         "BRAIN_ENABLE_CODE_EXECUTION", "false"
     ).lower() in ("true", "1", "yes")
@@ -125,24 +120,17 @@ def get_system_context(
 
 
 def apply_humoral_modulation(base_model: str) -> tuple[str, float, int]:
-    """
-    Applies the continuous float vector from the Endocrine System to bias
-    temperature, model routing, and token limits dynamically.
-    """
+    """Applies continuous metric float adjustments to bias temperature and resource quotas dynamically."""
     endocrine = EndocrineSystem()
     vector = endocrine.get_humoral_vector()
 
-    # 1. Temperature Modulation (Creativity vs. Determinism)
-    # Base is 0.5. Dopamine raises it. Cortisol makes it cold and calculating.
     temp = 0.5 + (vector["dopamine"] * 0.4) - (vector["cortisol"] * 0.4)
     final_temp = max(0.0, min(1.0, temp))
 
-    # 2. Cortisol Resource Conservation (Model Fallback)
     final_model = base_model
     if vector["cortisol"] > 0.7:
         from System.core.dna import get_dna_config
 
-        # Force fallback to the cheap/fast model to survive resource exhaustion
         fast_model = get_dna_config().get("models", {}).get("fast", base_model)
         if fast_model != base_model:
             final_model = fast_model
@@ -150,8 +138,6 @@ def apply_humoral_modulation(base_model: str) -> tuple[str, float, int]:
                 "[dim magenta]🩸 Cortisol Overload: Routing to efficiency matrix.[/dim magenta]"
             )
 
-    # 3. Hardened Dynamic Token Throttling Tiers (Cost & Stress Protection)
-    # Bridge directly to EndocrineSystem to calculate tier-based token caps
     max_tokens = endocrine.calculate_token_limit(final_model)
 
     return final_model, final_temp, max_tokens
@@ -166,15 +152,11 @@ async def run_agent_async(
     domain: str = "NONE",
     step: int = 1,
     tools: list[dict[str, Any]] | None = None,
-    origin: str = "HUMAN",  # Accept the 'origin' baton from the PFC
+    origin: str = "HUMAN",
 ) -> AgentResponse:
-    """Invokes the active Swarm node natively asynchronously using litellm."""
-
-    # ⚡ SHIFT-LEFT: Apply Humoral State Tuning before computation
+    """Invokes the target node context natively asynchronously using the litellm layer."""
     mod_model, mod_temp, mod_tokens = apply_humoral_modulation(model_string)
 
-    # ⚡ SHIFT-LEFT TOKEN ECONOMICS: Ephemeral Prompt Caching
-    # Anthropic allows us to cache the massive System Prompt and Tool Registry in memory.
     messages: list[dict[str, Any]] = []
 
     if "claude" in model_string.lower() or "anthropic" in model_string.lower():
@@ -198,8 +180,6 @@ async def run_agent_async(
         ]
 
     total_prompt = 0
-
-    total_prompt = 0
     total_comp = 0
     final_text = ""
     action_manifest: list[str] = []
@@ -210,18 +190,17 @@ async def run_agent_async(
         from System.neuroanatomy.cortical.working_memory import compress_message_array
 
         model_string = route_hemisphere(route, model_string)
+        current_target_model = mod_model
 
         for iteration in range(5):
-            # Dynamically compress bloated history arrays
             messages = await compress_message_array(messages, model_string)
             pruned_messages = messages
 
-            # 🛡️ IMMUNE SYSTEM: Check the Vault
             _has_anthropic = bool(vault.get_secret("ANTHROPIC_API_KEY"))
             _has_openai = bool(vault.get_secret("OPENAI_API_KEY"))
 
             if (
-                "anthropic" in model_string.lower()
+                "anthropic" in current_target_model.lower()
                 and not _has_anthropic
                 and _has_openai
             ):
@@ -229,17 +208,14 @@ async def run_agent_async(
                     console.print(
                         "[yellow]⚠️ Anthropic key missing. Falling back to configured heavy model.[/yellow]"
                     )
-                # ⚡ P1 FIX: Respect the user's heavy fallback preference from their DNA
                 from System.core.dna import get_dna_config
 
-                model_string = (
+                current_target_model = (
                     get_dna_config().get("models", {}).get("heavy", "openai/gpt-4o")
                 )
 
-            # 🧠 THALAMIC ROUTING: Mutate model strings and resolve auto-discovered keys
-            routed_model, api_key = vault.resolve_routing(mod_model)
+            routed_model, api_key = vault.resolve_routing(current_target_model)
 
-            # ⚡ NATIVE ASYNC API CALL
             response = await acompletion(
                 model=routed_model,
                 messages=pruned_messages,
@@ -262,31 +238,21 @@ async def run_agent_async(
                 total_comp += int(getattr(response.usage, "completion_tokens", 0))
 
             message_dict: dict[str, Any] = {"role": "assistant"}
-
-            # If the LLM returns our new Pydantic Schema, parse it and translate to Markdown.
-            # Native Structured Outputs
-            # We explicitly trust LiteLLM's response_format enforcement. No brittle regex.
             clean_json = clean_json_output(message.content or "")
 
             if clean_json and clean_json.startswith(("{", "[")):
                 try:
-                    # Natively validate via Pydantic. If the LLM hallucinated, it fails loudly.
                     parsed_schema = AgentResponseSchema.model_validate_json(clean_json)
 
-                    # 1. Translate pure JSON back into beautiful Markdown for Obsidian logs
                     human_readable_log = MarkdownTranslator.render_agent_log(
                         parsed_schema
                     )
                     final_text += human_readable_log + "\n"
 
-                    # 2. Store the raw JSON in the context window
                     message_dict["content"] = clean_json
                     messages.append(message_dict)
 
-                    # 3. Synthesize the JSON tool schemas back into the format the Motor Cortex expects
                     if parsed_schema.tool_calls:
-                        # --- ⚡ DELEGATE TO MOTOR CORTEX ---
-                        # We pass the pure Pydantic ToolCallSchema objects natively. No adapter mocks.
                         tool_messages, new_actions, halt_text = await execute_tools(
                             parsed_schema.tool_calls,
                             role_name,
@@ -294,15 +260,13 @@ async def run_agent_async(
                             route=route,
                         )
 
-                        # Flatten synthetic tool results into a standard user message
                         flat_results = "Tool Execution Results:\n"
                         for tm in tool_messages:
                             content_str = tm.get("content", "")
-                            # ⚡ SHIFT-LEFT TOKEN ECONOMICS: Hard Environment Ceiling
                             if len(content_str) > 15000:
                                 content_str = (
                                     content_str[:15000]
-                                    + "\n\n... [ ✂️ TRUNCATED: OUTPUT EXCEEDED 15,000 CHARACTERS. USE `grep`, `head`, OR `tail` ]"
+                                    + "\n\n... [ TRUNCATED: OUTPUT EXCEEDED 15,000 CHARACTERS. USE `grep`, `head`, OR `tail` ]"
                                 )
                             flat_results += f"{content_str}\n"
 
@@ -320,9 +284,7 @@ async def run_agent_async(
 
                 except Exception as e:
                     console.print(f"[dim red]JSON Schema Parse Error: {e}[/dim red]")
-                    # If it fails completely, it falls through to the legacy fallback block below!
             else:
-                # 🛡️ BACKWARD COMPATIBILITY (Protects Pytest Mocks & Legacy Routes)
                 if message.content:
                     message_dict["content"] = message.content
                     final_text += str(message.content) + "\n"
@@ -341,7 +303,6 @@ async def run_agent_async(
                         message.tool_calls, role_name, step_index=iteration, route=route
                     )
 
-                    # ⚡ SHIFT-LEFT TOKEN ECONOMICS: Hard Environment Ceiling
                     for tm in tool_messages:
                         if (
                             isinstance(tm.get("content"), str)
@@ -349,7 +310,7 @@ async def run_agent_async(
                         ):
                             tm["content"] = (
                                 tm["content"][:15000]
-                                + "\n\n... [ ✂️ TRUNCATED: OUTPUT EXCEEDED 15,000 CHARACTERS. USE `grep`, `head`, OR `tail` ]"
+                                + "\n\n... [ TRUNCATED: OUTPUT EXCEEDED 15,000 CHARACTERS. USE `grep`, `head`, OR `tail` ]"
                             )
 
                     messages.extend(tool_messages)
@@ -368,7 +329,6 @@ async def run_agent_async(
             "total_tokens": total_prompt + total_comp,
         }
 
-        # 🛡️ IMMUNE SYSTEM: Scrub the LLM payload before it reaches the OS or Console
         safe_final_text = vault.mask_secrets(final_text.strip())
         safe_action_manifest = [vault.mask_secrets(a) for a in action_manifest]
 
@@ -381,14 +341,13 @@ async def run_agent_async(
             usage_data,
             route,
             domain,
-            origin,  # Pass the baton to the logger!
+            origin,
         )
         return AgentResponse(
             text=safe_final_text, actions=safe_action_manifest, usage=usage_data
         )
 
     except Exception as e:
-        # 🛡️ IMMUNE SYSTEM: Scrub Python exception traces
         error_msg = vault.mask_secrets(f"API/Execution Error: {str(e)}")
         usage_data = {
             "prompt_tokens": total_prompt,
@@ -404,6 +363,33 @@ async def run_agent_async(
             usage_data,
             route,
             domain,
-            origin,  # Pass the baton to the logger!
+            origin,
         )
         return AgentResponse(text=error_msg, actions=action_manifest, usage=usage_data)
+
+
+async def compress_memory_buffer(current_text: str) -> str | None:
+    """MemoryCompressor Service: Offloads working memory summarization to an LLM."""
+    safe_current_text = vault.mask_secrets(current_text)
+    prompt = (
+        "You are the Prefrontal Cortex. Synthesize the following pipeline activity into a highly "
+        "concise, bulleted list of 'Established Facts' and 'Current State' wrapped in <summary_update> tags.\n"
+        "Discard all conversational filler and preserve ONLY technical facts, code paths, and outcomes.\n\n"
+        f"ACTIVITY LOG:\n{safe_current_text}"
+    )
+    try:
+        from System.core.dna import get_dna_config
+
+        model = (
+            get_dna_config().get("models", {}).get("fast", "gemini/gemini-2.5-flash")
+        )
+        response = await acompletion(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+            api_key=vault.get_api_key_for_model(model),
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        console.print(f"[dim red]PFC Compression Failed: {e}[/dim red]")
+        return None

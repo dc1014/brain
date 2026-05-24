@@ -6,7 +6,7 @@ from typing import Set, Dict
 from pathlib import Path
 from rich.console import Console
 from System.core.paths import ROOT_DIR
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 
 console = Console()
 VESTIBULAR_STATE_FILE = ROOT_DIR / "Meta" / "vestibular_state.json"
@@ -73,7 +73,7 @@ class VestibularSystem:
         files_state, dirs_state = self._get_workspace_snapshot()
         state = {"files": files_state, "dirs": list(dirs_state)}
 
-        with BiologicalLock(str(VESTIBULAR_STATE_FILE)):
+        with StateLock(str(VESTIBULAR_STATE_FILE)):
             with open(VESTIBULAR_STATE_FILE, "w", encoding="utf-8") as f:
                 json.dump(state, f)
 
@@ -102,7 +102,7 @@ class VestibularSystem:
             return
 
         try:
-            with BiologicalLock(str(VESTIBULAR_STATE_FILE)):
+            with StateLock(str(VESTIBULAR_STATE_FILE)):
                 with open(VESTIBULAR_STATE_FILE, "r", encoding="utf-8") as f:
                     state = json.load(f)
 

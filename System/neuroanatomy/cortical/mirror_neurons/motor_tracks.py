@@ -4,7 +4,7 @@ import time
 import os
 from pathlib import Path
 from typing import List, Optional
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 
 
 class MotorTrackInterception:
@@ -28,7 +28,7 @@ class MotorTrackInterception:
         found_existing = False
 
         if self.log_path.exists():
-            with BiologicalLock(str(self.log_path)):
+            with StateLock(str(self.log_path)):
                 try:
                     with open(self.log_path, "r", encoding="utf-8") as f:
                         for line in f:
@@ -58,7 +58,7 @@ class MotorTrackInterception:
             records.append(observation_payload)
 
         tmp_log_path = self.log_path.with_suffix(".tmp")
-        with BiologicalLock(str(self.log_path)):
+        with StateLock(str(self.log_path)):
             try:
                 with open(tmp_log_path, "w", encoding="utf-8") as f:
                     for r in records:
@@ -80,7 +80,7 @@ class MotorTrackInterception:
         normalized_prompt = prompt.strip().lower().replace("\\", "/")
         result_chain: Optional[List[str]] = None
 
-        with BiologicalLock(str(self.log_path)):
+        with StateLock(str(self.log_path)):
             try:
                 with open(self.log_path, "r", encoding="utf-8") as f:
                     for line in f:

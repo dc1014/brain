@@ -3,7 +3,7 @@ import hashlib
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 
 console = Console()
 
@@ -26,7 +26,7 @@ class Exocortex:
             return False
 
         try:
-            with BiologicalLock(str(self.secure_nodes_file)):
+            with StateLock(str(self.secure_nodes_file)):
                 with open(self.secure_nodes_file, "r", encoding="utf-8") as f:
                     for line in f:
                         node = json.loads(line)
@@ -113,7 +113,7 @@ class Exocortex:
 
         node_info = None
         try:
-            with BiologicalLock(str(self.secure_nodes_file)):
+            with StateLock(str(self.secure_nodes_file)):
                 with open(self.secure_nodes_file, "r", encoding="utf-8") as f:
                     for line in f:
                         node = json.loads(line)

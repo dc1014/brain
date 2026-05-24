@@ -1,6 +1,6 @@
 import pytest
 import asyncio
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 from System.neuroanatomy.autonomic.motor_inhibition import (
     apply_motor_inhibition,
     release_motor_inhibition,
@@ -22,7 +22,7 @@ def isolated_motor_cortex(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(
         "System.neuroanatomy.autonomic.motor_inhibition.QUEUE_LOCK",
-        BiologicalLock(tmp_path / "Meta" / "hitl_queue"),
+        StateLock(tmp_path / "Meta" / "hitl_queue"),
     )
     return tmp_path
 

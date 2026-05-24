@@ -23,35 +23,30 @@ def test_working_memory_add_event_xml_structure():
     assert '<activity_node agent="PM">' in context
 
 
-@pytest.mark.asyncio
-async def test_compress_if_bloated_under_threshold(mocker):
+def test_prune_and_get_overflow_under_threshold():
+    """Verify that short events do not trigger text overflow requests."""
     memory = WorkingMemory("Objective")
     memory.compression_threshold_chars = 1000
     memory.add_event("Agent", "Short telemetry", [])
-    mock_acompletion = mocker.patch(
-        "System.neuroanatomy.cortical.working_memory.acompletion"
-    )
-    await memory.compress_if_bloated()
-    mock_acompletion.assert_not_called()
+    overflow = memory.prune_and_get_overflow()
+    assert overflow is None
 
 
-@pytest.mark.asyncio
-async def test_compress_if_bloated_over_threshold_success(mocker):
+def test_prune_and_get_overflow_and_summary_ingestion():
+    """Verify overflow boundary detection and downstream summary ingestion."""
     memory = WorkingMemory("Objective")
     memory.compression_threshold_chars = 10
     memory.add_event("Agent", "Very long telemetry output...", [])
-    mock_response = mocker.AsyncMock()
-    mock_response.choices[0].message.content = "Synthesized fact list"
-    mocker.patch(
-        "System.neuroanatomy.cortical.working_memory.acompletion",
-        return_value=mock_response,
-    )
-    mocker.patch(
-        "System.neuroanatomy.systemic.immune_system.vault.get_api_key_for_model",
-        return_value="sk-fake-key",
-    )
-    await memory.compress_if_bloated()
+
+    # 1. Verify data structure properly yields overflow string for service layers
+    overflow = memory.prune_and_get_overflow()
+    assert overflow is not None
+    assert "Very long telemetry output..." in overflow
+
+    # 2. Verify state tracking updates cleanly upon summary integration
+    memory.add_summary("Synthesized fact list")
     assert "Synthesized fact list" in memory.established_facts
+    assert len(memory.recent_activity) == 0
 
 
 @pytest.mark.asyncio

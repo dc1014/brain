@@ -12,7 +12,7 @@ from pathlib import Path
 from rich.console import Console
 
 # Import our native dual-protocol lock
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 
 console = Console()
 STATE_FILE = (
@@ -40,7 +40,7 @@ def mutate_state() -> Generator[dict, None, None]:
     """
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-    with BiologicalLock(str(STATE_FILE)):
+    with StateLock(str(STATE_FILE)):
         # 1. Read the baseline state while holding the lock
         state = _load_state()
 

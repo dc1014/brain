@@ -13,7 +13,7 @@ from rich.console import Console
 from System.core.paths import ROOT_DIR
 from System.llm import acompletion
 from System.neuroanatomy.systemic.immune_system import vault
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 from System.neuroanatomy.autonomic.acc import AnteriorCingulateCortex
 
 # Lazy local import to break top-level circular dependency chains cleanly
@@ -26,7 +26,7 @@ console = Console()
 
 DB_PATH = ROOT_DIR / "System" / "config" / "hippocampus.db"
 QUEUE_FILE_PATH = ROOT_DIR / "System" / "execution_queue.json"
-QUEUE_LOCK = BiologicalLock(QUEUE_FILE_PATH)
+QUEUE_LOCK = StateLock(QUEUE_FILE_PATH)
 GRAPH_LEDGER_PATH = ROOT_DIR / ".brain" / "graph_state.json"
 BELIEFS_FILE_PATH = ROOT_DIR / "Meta" / "Core_Beliefs.md"
 

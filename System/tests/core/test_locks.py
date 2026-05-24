@@ -1,14 +1,14 @@
 import pytest
 import asyncio
 from pathlib import Path
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 
 
 @pytest.mark.asyncio
 async def test_biological_lock_mutual_exclusion(tmp_path: Path):
     """Proves that multiple async workers cannot write to the same file simultaneously."""
     target_file = tmp_path / "shared_memory.txt"
-    lock = BiologicalLock(target_file)
+    lock = StateLock(target_file)
 
     writes = []
 
@@ -41,8 +41,8 @@ async def test_biological_lock_timeout(tmp_path: Path):
     from filelock import Timeout
 
     target_file = tmp_path / "deadlock.txt"
-    lock1 = BiologicalLock(target_file, timeout=0.1)
-    lock2 = BiologicalLock(target_file, timeout=0.1)
+    lock1 = StateLock(target_file, timeout=0.1)
+    lock2 = StateLock(target_file, timeout=0.1)
 
     # Deterministically simulate a cross-process lock contention block
     def mock_acquire_timeout(*args, **kwargs):

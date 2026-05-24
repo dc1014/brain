@@ -4,7 +4,7 @@ from typing import Any
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 from System.core.dna import get_dna_config
 
 console = Console()
@@ -36,7 +36,7 @@ class EndocrineSystem:
 
     def _read_state(self) -> dict[str, Any]:
         try:
-            with BiologicalLock(str(ENDOCRINE_FILE)):
+            with StateLock(str(ENDOCRINE_FILE)):
                 with open(ENDOCRINE_FILE, "r", encoding="utf-8") as f:
                     return json.load(f)
         except Exception:
@@ -55,7 +55,7 @@ class EndocrineSystem:
             if k in state:
                 state[k] = max(0.0, min(1.0, float(state[k])))
         try:
-            with BiologicalLock(str(ENDOCRINE_FILE)):
+            with StateLock(str(ENDOCRINE_FILE)):
                 with open(ENDOCRINE_FILE, "w", encoding="utf-8") as f:
                     json.dump(state, f, indent=2)
         except Exception as e:

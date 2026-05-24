@@ -4,7 +4,7 @@ import time
 from typing import List
 from rich.console import Console
 from System.core.paths import ROOT_DIR
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 
 console = Console()
 MEMORY_FILE = ROOT_DIR / "Meta" / "autobiography.jsonl"
@@ -22,7 +22,7 @@ def encode_episode(objective: str, tasks: List[str], outcome: str) -> None:
     }
 
     # Protect the flat-file JSONL appending sequence across concurrent agent threads
-    with BiologicalLock(str(MEMORY_FILE)):
+    with StateLock(str(MEMORY_FILE)):
         with open(MEMORY_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(episode) + "\n")
 
@@ -38,7 +38,7 @@ def recall_recent_episodes(limit: int = 5) -> str:
         return "No previous life experiences recorded."
 
     episodes = []
-    with BiologicalLock(str(MEMORY_FILE)):
+    with StateLock(str(MEMORY_FILE)):
         with open(MEMORY_FILE, "r", encoding="utf-8") as f:
             for line in f:
                 try:

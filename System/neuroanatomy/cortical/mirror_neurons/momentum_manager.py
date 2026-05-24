@@ -5,7 +5,7 @@ import os
 import threading
 from pathlib import Path
 from typing import Dict, Any, cast
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 from System.neuroanatomy.cortical.mirror_neurons.style_parser import CorticalStyleParser
 
 _STYLE_MUTEX = threading.Lock()
@@ -154,7 +154,7 @@ class AllostaticMomentumManager:
 
         tmp_style_path = self.style_path.with_suffix(".tmp")
         with mutex:
-            with BiologicalLock(str(self.style_path)):
+            with StateLock(str(self.style_path)):
                 try:
                     with open(tmp_style_path, "w", encoding="utf-8") as f:
                         json.dump(fingerprint, f, indent=2)
@@ -282,7 +282,7 @@ class AllostaticMomentumManager:
         self.style_path.parent.mkdir(parents=True, exist_ok=True)
         tmp_style_path = self.style_path.with_suffix(".tmp")
         with mutex:
-            with BiologicalLock(str(self.style_path)):
+            with StateLock(str(self.style_path)):
                 try:
                     with open(tmp_style_path, "w", encoding="utf-8") as f:
                         json.dump(fingerprint, f, indent=2)
@@ -298,7 +298,7 @@ class AllostaticMomentumManager:
         self.engram_path.parent.mkdir(parents=True, exist_ok=True)
         tmp_engram_path = self.engram_path.with_suffix(".tmp")
         with mutex:
-            with BiologicalLock(str(self.engram_path)):
+            with StateLock(str(self.engram_path)):
                 try:
                     with open(tmp_engram_path, "w", encoding="utf-8") as f:
                         json.dump(long_term_payload, f, indent=2)

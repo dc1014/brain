@@ -9,7 +9,7 @@ from rich.panel import Panel
 from System.core.paths import ROOT_DIR, normalize_path
 from System.core.dna import get_dna_config
 from System.neuroanatomy.systemic.endocrine import get_resolved_model
-from System.llm import run_agent_async, get_system_context
+from System.llm import run_agent_async, get_system_context, compress_memory_buffer
 from System.neuroanatomy.autonomic.interoception import (
     check_energy_levels,
     log_metabolism,
@@ -222,7 +222,18 @@ async def execute_pipeline(
                 session_metabolism[m_id]["comp"] += counts["comp"]
 
             agents_invoked.extend(swarm_agents)
-            await pfc_memory.compress_if_bloated()
+            # Call the algorithmic check locally
+            overflow_text = pfc_memory.prune_and_get_overflow()
+            if overflow_text:
+                console.print(
+                    "[dim magenta]🧠 PFC Buffer Full: Compressing working memory via fallback summary model...[/dim magenta]"
+                )
+                summary = await compress_memory_buffer(overflow_text)
+                if summary:
+                    pfc_memory.add_summary(summary)
+                    console.print(
+                        "[dim green]✅ Working memory successfully compressed.[/dim green]"
+                    )
             commit_transaction()
             console.print(
                 "\n[bold green]💾 Synaptic Consolidation: Swarm milestone committed to disk.[/bold green]"
@@ -303,7 +314,18 @@ async def execute_pipeline(
             )
 
         pfc_memory.add_event(agent_cfg["name"], step_result.text, step_result.actions)
-        await pfc_memory.compress_if_bloated()
+        # Call the algorithmic check locally
+        overflow_text = pfc_memory.prune_and_get_overflow()
+        if overflow_text:
+            console.print(
+                "[dim magenta]🧠 PFC Buffer Full: Compressing working memory via fallback summary model...[/dim magenta]"
+            )
+            summary = await compress_memory_buffer(overflow_text)
+            if summary:
+                pfc_memory.add_summary(summary)
+                console.print(
+                    "[dim green]✅ Working memory successfully compressed.[/dim green]"
+                )
 
         # 3. Broca's Area (Data Contract Validation & RETRY LOOP)
         if step["agent"] == "qa_auditor":

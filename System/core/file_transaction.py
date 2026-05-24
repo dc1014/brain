@@ -3,7 +3,7 @@ import json
 import asyncio
 from pathlib import Path
 from typing import Any
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 
 
 def read_state_sync(filepath: str | Path, default_factory: Any = dict) -> Any:
@@ -12,7 +12,7 @@ def read_state_sync(filepath: str | Path, default_factory: Any = dict) -> Any:
     if not target.exists():
         return default_factory()
 
-    lock = BiologicalLock(target)
+    lock = StateLock(target)
     with lock.acquire_sync():
         try:
             with open(target, "r", encoding="utf-8") as f:
@@ -32,7 +32,7 @@ async def read_state_async(filepath: str | Path, default_factory: Any = dict) ->
     if not target.exists():
         return default_factory()
 
-    lock = BiologicalLock(target)
+    lock = StateLock(target)
     async with lock.acquire():
         try:
             # Shift blocking I/O off the main event loop cleanly
@@ -63,7 +63,7 @@ def write_state_sync_atomic(filepath: str | Path, data: Any) -> None:
         json.dumps(data, indent=2) if isinstance(data, (dict, list)) else str(data)
     )
 
-    lock = BiologicalLock(target)
+    lock = StateLock(target)
     with lock.acquire_sync():
         try:
             with open(temp_file, "w", encoding="utf-8") as f:
@@ -93,7 +93,7 @@ async def write_state_async_atomic(filepath: str | Path, data: Any) -> None:
         json.dumps(data, indent=2) if isinstance(data, (dict, list)) else str(data)
     )
 
-    lock = BiologicalLock(target)
+    lock = StateLock(target)
     async with lock.acquire():
         try:
 

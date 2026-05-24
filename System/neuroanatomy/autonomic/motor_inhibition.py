@@ -4,13 +4,13 @@ import asyncio
 import hashlib
 from rich.console import Console
 from System.core.paths import ROOT_DIR, normalize_path
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 
 console = Console()
 
 MD_QUEUE = normalize_path(ROOT_DIR / "Meta" / "Pending_Actions.md")
 JSONL_QUEUE = normalize_path(ROOT_DIR / "Meta" / "queue.jsonl")
-QUEUE_LOCK = BiologicalLock(normalize_path(ROOT_DIR / "Meta" / "hitl_queue"))
+QUEUE_LOCK = StateLock(normalize_path(ROOT_DIR / "Meta" / "hitl_queue"))
 
 
 async def apply_motor_inhibition(

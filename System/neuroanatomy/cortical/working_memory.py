@@ -8,14 +8,14 @@ from litellm import acompletion  # type: ignore
 from System.core.dna import get_dna_config
 from System.neuroanatomy.systemic.immune_system import vault
 from System.core.paths import ROOT_DIR
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock  # Renamed import
 
 
 console = Console()
 
 
 QUEUE_FILE_PATH = ROOT_DIR / "System" / "execution_queue.json"
-QUEUE_LOCK = BiologicalLock(QUEUE_FILE_PATH)
+QUEUE_LOCK = StateLock(QUEUE_FILE_PATH)  # Renamed implementation
 
 
 class WorkingMemory:
@@ -28,7 +28,6 @@ class WorkingMemory:
         self.compression_threshold_chars = 12000
 
     def add_event(self, agent_name: str, raw_output: str, actions: list[str]) -> None:
-        # Wrap events in clean, structured semantic tags for Gemini context attention
         event_log = (
             f'<activity_node agent="{agent_name}">\n'
             f"<raw_telemetry>\n{raw_output}\n</raw_telemetry>\n"
@@ -49,17 +48,18 @@ class WorkingMemory:
             context += "\n\n".join(self.recent_activity)
             context += "\n</recent_pipeline_activity>"
 
-        # ⚡ UNIX PHILOSOPHY: Centralize canonical string layout compaction inside the memory subsystem
+        # Centralize canonical string layout compaction inside the memory subsystem
         context = re.sub(r"\n{3,}", "\n\n", context)
         context = re.sub(r"[ \t]{2,}", " ", context)
         return context.strip()
 
-    async def compress_if_bloated(self) -> None:
+    def prune_and_get_overflow(self) -> str | None:
+        """Applies local algorithmic deduplication. Returns overflow string if a network compression is required."""
         raw_text = "\n".join(self.recent_activity)
         if len(raw_text) < self.compression_threshold_chars:
-            return
+            return None
 
-        # ⚡ STRUCTURAL FIX: Deduplicate repetitive text lines while preserving independent XML nodes
+        # Deduplicate repetitive text lines while preserving independent XML nodes
         seen_lines = set()
         optimized_activity = []
 
@@ -69,7 +69,6 @@ class WorkingMemory:
                 trimmed = line.strip()
                 if trimmed and len(trimmed) > 50 and trimmed in seen_lines:
                     continue
-                # Shield structural system XML boundaries from being accidentally ingested by the duplicate tracker
                 if (
                     trimmed
                     and len(trimmed) > 50
@@ -88,46 +87,19 @@ class WorkingMemory:
 
         current_text = "\n".join(optimized_activity)
 
-        # Check if the algorithmic pass successfully cleared space without invoking cloud resources
         if len(current_text) < self.compression_threshold_chars:
             self.recent_activity = optimized_activity
             console.print(
-                "[dim green]⚡ Token Optimization: Algorithmic pruning cleared memory bloat while preserving XML nodes.[/dim green]"
+                "[dim green]Token Optimization: Algorithmic pruning cleared memory bloat while preserving XML nodes.[/dim green]"
             )
-            return
+            return None
 
-        console.print(
-            "[dim magenta]🧠 PFC Buffer Full: Compressing working memory via fallback summary model...[/dim magenta]"
-        )
-        # 🛡️ SHIFT-LEFT SECURITY: Scrub secrets from internal cognitive loops before background LLM dispatch
-        safe_current_text = vault.mask_secrets(current_text)
+        return current_text
 
-        prompt = (
-            "You are the Prefrontal Cortex. Synthesize the following pipeline activity into a highly "
-            "concise, bulleted list of 'Established Facts' and 'Current State' wrapped in <summary_update> tags.\n"
-            "Discard all conversational filler and preserve ONLY technical facts, code paths, and outcomes.\n\n"
-            f"ACTIVITY LOG:\n{safe_current_text}"
-        )
-        try:
-            model = (
-                get_dna_config()
-                .get("models", {})
-                .get("fast", "gemini/gemini-2.5-flash")
-            )
-            response = await acompletion(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.0,
-                api_key=vault.get_api_key_for_model(model),
-            )
-            compressed_summary = response.choices[0].message.content.strip()
-            self.established_facts.append(compressed_summary)
-            self.recent_activity.clear()
-            console.print(
-                "[dim green]✅ Working memory successfully compressed.[/dim green]"
-            )
-        except Exception as e:
-            console.print(f"[dim red]PFC Compression Failed: {e}[/dim red]")
+    def add_summary(self, summary: str) -> None:
+        """Ingests an external LLM summary and clears the local queue."""
+        self.established_facts.append(summary)
+        self.recent_activity.clear()
 
 
 async def compress_message_array(
@@ -138,7 +110,7 @@ async def compress_message_array(
     spawns a fast background model to compress the historical middle into a dense Working Memory block.
     """
     try:
-        # ⚡ ZERO-DEBT FIXED: Reconstruct array via shallow copies to eliminate in-place mutation side-effects
+        # Reconstruct array via shallow copies to eliminate in-place mutation side-effects
         optimized_messages = []
         for msg in messages:
             msg_copy = dict(msg)
@@ -155,7 +127,7 @@ async def compress_message_array(
 
         text_content = json.dumps(optimized_messages, default=str)
         if len(text_content) < 12000 and len(messages) <= 6:
-            # ⚡ FIXED: Return the optimized messages array to preserve individual payload slicing passes
+            # Return the optimized messages array to preserve individual payload slicing passes
             return optimized_messages
 
         console.print(
@@ -169,7 +141,6 @@ async def compress_message_array(
         if not middle:
             return messages
 
-        # Extract previous working memory from the User prompt so the compressor can carry it forward
         user_content = head[1].get("content", "")
         old_summary = ""
         if "--- COMPRESSED WORKING MEMORY ---" in user_content:
@@ -177,7 +148,6 @@ async def compress_message_array(
             user_content = parts[0].strip()
             old_summary = parts[1].strip()
 
-        # Format the history
         history_text = ""
         if old_summary:
             history_text += f"[PREVIOUS WORKING MEMORY]: {old_summary}\n\n"
@@ -190,7 +160,7 @@ async def compress_message_array(
             else:
                 history_text += f"[{role.upper()}]: {json.dumps(content)}\n\n"
 
-        # 🛡️ SHIFT-LEFT SECURITY: Scrub secrets from conversation history before background LLM dispatch
+        # Scrub secrets from conversation history before background LLM dispatch
         safe_history_text = vault.mask_secrets(history_text)
 
         prompt = (
@@ -205,7 +175,6 @@ async def compress_message_array(
             get_dna_config().get("models", {}).get("fast", "gemini/gemini-2.5-flash")
         )
 
-        # Spawn the background compression pulse
         response = await acompletion(
             model=fast_model,
             messages=[{"role": "user", "content": prompt}],
@@ -215,7 +184,6 @@ async def compress_message_array(
 
         summary = response.choices[0].message.content.strip()
 
-        # Inject the new compressed memory directly into the original User prompt
         new_user_content = (
             user_content + f"\n\n--- COMPRESSED WORKING MEMORY ---\n{summary}"
         )

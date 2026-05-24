@@ -3,7 +3,7 @@ from rich.console import Console
 from litellm import completion  # type: ignore
 
 from System.core.paths import ROOT_DIR
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 from System.core.dna import get_dna_config
 
 console = Console()
@@ -15,7 +15,7 @@ def get_plasticity_rules() -> str:
     if not PLASTICITY_FILE.exists():
         return ""
 
-    with BiologicalLock(str(PLASTICITY_FILE)):
+    with StateLock(str(PLASTICITY_FILE)):
         try:
             with open(PLASTICITY_FILE, "r", encoding="utf-8") as f:
                 rules = json.load(f)
@@ -71,7 +71,7 @@ def process_dopaminergic_reward(objective: str, outcome: str) -> None:
         PLASTICITY_FILE.parent.mkdir(parents=True, exist_ok=True)
         rules = []
 
-        with BiologicalLock(str(PLASTICITY_FILE)):
+        with StateLock(str(PLASTICITY_FILE)):
             if PLASTICITY_FILE.exists():
                 try:
                     with open(PLASTICITY_FILE, "r", encoding="utf-8") as f:

@@ -9,7 +9,7 @@ from litellm import completion  # type: ignore
 
 from System.tools import execute_command
 from System.core.paths import ROOT_DIR
-from System.core.locks import BiologicalLock
+from System.core.locks import StateLock
 from System.core.dna import get_dna_config
 from System.neuroanatomy.systemic.immune_system import vault
 
@@ -83,7 +83,7 @@ class CerebellarCompiler:
 
             engram_path = ENGRAM_DIR / f"{engram_name}.py"
 
-            with BiologicalLock(str(engram_path)):
+            with StateLock(str(engram_path)):
                 with open(engram_path, "w", encoding="utf-8") as f:
                     f.write(code)
 
@@ -122,7 +122,7 @@ class CerebellarCompiler:
 
         quarantine_path = QUARANTINE_DIR / f"{safe_name}.py"
 
-        with BiologicalLock(str(quarantine_path)):
+        with StateLock(str(quarantine_path)):
             with open(quarantine_path, "w", encoding="utf-8") as f:
                 f.write(code_content)
 

@@ -6,14 +6,13 @@ from contextlib import asynccontextmanager, contextmanager
 from filelock import FileLock
 
 
-class BiologicalLock:
+class StateLock:
     """
-    Biological File Lock (IPC + Async) - The Synaptic Cleft.
+    State File Lock (IPC + Async).
     Combines robust cross-platform file locking (IPC) with native asyncio/threading locks.
     Prevents both cross-process AND cross-task race conditions on the same memory queues.
     """
 
-    # Class-level dictionaries and a Master Lock to protect them!
     _async_locks: Dict[str, asyncio.Lock] = {}
     _sync_locks: Dict[str, threading.Lock] = {}
     _master_dict_lock = threading.Lock()
@@ -26,19 +25,19 @@ class BiologicalLock:
 
     @property
     def _local_async(self) -> asyncio.Lock:
-        with BiologicalLock._master_dict_lock:
-            if self.lock_key not in BiologicalLock._async_locks:
-                BiologicalLock._async_locks[self.lock_key] = asyncio.Lock()
-            return BiologicalLock._async_locks[self.lock_key]
+        with StateLock._master_dict_lock:
+            if self.lock_key not in StateLock._async_locks:
+                StateLock._async_locks[self.lock_key] = asyncio.Lock()
+            return StateLock._async_locks[self.lock_key]
 
     @property
     def _local_sync(self) -> threading.Lock:
-        with BiologicalLock._master_dict_lock:
-            if self.lock_key not in BiologicalLock._sync_locks:
-                BiologicalLock._sync_locks[self.lock_key] = threading.Lock()
-            return BiologicalLock._sync_locks[self.lock_key]
+        with StateLock._master_dict_lock:
+            if self.lock_key not in StateLock._sync_locks:
+                StateLock._sync_locks[self.lock_key] = threading.Lock()
+            return StateLock._sync_locks[self.lock_key]
 
-    def __enter__(self) -> "BiologicalLock":
+    def __enter__(self) -> "StateLock":
         self._local_sync.acquire()
         self.file_lock.acquire()
         return self
@@ -47,9 +46,8 @@ class BiologicalLock:
         self.file_lock.release()
         self._local_sync.release()
 
-    async def __aenter__(self) -> "BiologicalLock":
+    async def __aenter__(self) -> "StateLock":
         await self._local_async.acquire()
-        # ⚡ FIX: Execute synchronously to prevent Windows thread-ownership deadlocks
         self.file_lock.acquire()
         return self
 
@@ -59,9 +57,7 @@ class BiologicalLock:
 
     @asynccontextmanager
     async def acquire(self):
-        """Asynchronously acquires the local lock, then the IPC lock."""
         async with self._local_async:
-            # ⚡ FIX: Execute synchronously to keep lock tracking on the same thread
             self.file_lock.acquire()
             try:
                 yield self
@@ -70,7 +66,6 @@ class BiologicalLock:
 
     @contextmanager
     def acquire_sync(self):
-        """Synchronously acquires the local lock, then the IPC lock."""
         with self._local_sync:
             self.file_lock.acquire()
             try:
