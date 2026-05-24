@@ -31,17 +31,28 @@ async def test_executive_state_machine_qa_fallback(
         {"agent": "qa_auditor", "tools": []},
     ]
 
-    with patch(
-        "System.neuroanatomy.cortical.executive_loop.get_dna_config",
-        return_value={
-            "routes": {"TEST": mock_pipeline},
-            "agents": {
-                "engineer": {"name": "Engineer", "model": "test", "system_prompt": ""},
-                "product_manager": {"name": "PM", "model": "test", "system_prompt": ""},
-                "qa_auditor": {"name": "QA", "model": "test", "system_prompt": ""},
+    with (
+        patch(
+            "System.neuroanatomy.cortical.executive_loop.get_dna_config",
+            return_value={
+                "routes": {"TEST": mock_pipeline},
+                "agents": {
+                    "engineer": {
+                        "name": "Engineer",
+                        "model": "test",
+                        "system_prompt": "",
+                    },
+                    "product_manager": {
+                        "name": "PM",
+                        "model": "test",
+                        "system_prompt": "",
+                    },
+                    "qa_auditor": {"name": "QA", "model": "test", "system_prompt": ""},
+                },
             },
-        },
-    ):
+        ),
+        patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state"),
+    ):  # ⚡ ADDED HERE
         # Run it with 1 retry max to prove it transitions state without infinite looping
         await execute_pipeline("Test task", "TEST", "GENERAL")
 

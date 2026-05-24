@@ -10,7 +10,7 @@ async def test_execution_failure_triggers_rollback(mocker, tmp_path):
     studio_dir = tmp_path / "Studio"
     studio_dir.mkdir()
 
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_OS_HEADLESS": "1", "BRAIN_EXECUTION_TIER": "0"}
     )
@@ -44,7 +44,7 @@ async def test_execution_failure_triggers_rollback(mocker, tmp_path):
         side_effect=[b"SyntaxError: Crash\n", b""]
     )
     mocker.patch(
-        "System.tools.execution.asyncio.create_subprocess_exec",
+        "System.tools.execution.routing.asyncio.create_subprocess_exec",
         return_value=mock_process,
     )
 

@@ -52,7 +52,6 @@ def mock_shutil_which(mocker):
             )
         return original_which(cmd, *args, **kwargs)
 
-    mocker.patch("System.tools.execution.shutil.which", side_effect=side_effect)
     mocker.patch(
         "System.tools.execution.validation.shutil.which", side_effect=side_effect
     )
@@ -64,11 +63,11 @@ def mock_shutil_which(mocker):
 
 
 def test_tier_0_hitl_denial(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "0"}
     )
-    mocker.patch("System.tools.execution.asyncio.to_thread", return_value="n")
+    mocker.patch("System.tools.execution.__init__.asyncio.to_thread", return_value="n")
     result = execute_command(["npm", "run", "build"], "Studio")
     assert result.success is False
     # ⚡ ZERO-DEBT: Updated to match the new, concise security block return text
@@ -76,7 +75,7 @@ def test_tier_0_hitl_denial(mocker, tmp_path, bypass_immune_system):
 
 
 def test_tier_0_timeout_orphan_pruning(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -85,7 +84,7 @@ def test_tier_0_timeout_orphan_pruning(mocker, tmp_path, bypass_immune_system):
     mock_process.pid = 9999
     mock_process.stdout = None
     mocker.patch(
-        "System.tools.execution.asyncio.create_subprocess_exec",
+        "System.tools.execution.routing.asyncio.create_subprocess_exec",
         return_value=mock_process,
     )
 
@@ -94,7 +93,8 @@ def test_tier_0_timeout_orphan_pruning(mocker, tmp_path, bypass_immune_system):
         raise asyncio.TimeoutError()
 
     mocker.patch(
-        "System.tools.execution.asyncio.wait_for", side_effect=mock_wait_for_side_effect
+        "System.tools.execution.execution_utils.asyncio.wait_for",
+        side_effect=mock_wait_for_side_effect,
     )
 
     if sys.platform == "win32":
@@ -114,7 +114,7 @@ def test_tier_0_timeout_orphan_pruning(mocker, tmp_path, bypass_immune_system):
 
 
 def test_env_scrubber_allowlist(mocker):
-    from System.tools.execution import _get_scrubbed_env
+    from System.tools.execution.execution_utils import get_scrubbed_env
 
     mocker.patch.dict(
         os.environ,
@@ -125,7 +125,7 @@ def test_env_scrubber_allowlist(mocker):
             "USER": "admin",
         },
     )
-    safe_env = _get_scrubbed_env()
+    safe_env = get_scrubbed_env()
     assert "PATH" in safe_env
     assert "USER" in safe_env
     assert "AWS_SECRET_ACCESS_KEY" not in safe_env
@@ -134,9 +134,10 @@ def test_env_scrubber_allowlist(mocker):
 
 @pytest.mark.asyncio
 async def test_tier_0_oom_shield(mocker, tmp_path, bypass_immune_system):
-    from System.tools.execution import execute_command_async, MAX_OUTPUT_CHUNKS
+    from System.tools.execution.routing import execute_command_async
+    from System.tools.execution.execution_utils import MAX_OUTPUT_CHUNKS
 
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -149,7 +150,7 @@ async def test_tier_0_oom_shield(mocker, tmp_path, bypass_immune_system):
     mock_process.stdout.read = mocker.AsyncMock(side_effect=mock_payloads)
 
     mocker.patch(
-        "System.tools.execution.asyncio.create_subprocess_exec",
+        "System.tools.execution.routing.asyncio.create_subprocess_exec",
         return_value=mock_process,
     )
 
@@ -175,7 +176,7 @@ async def test_tier_0_oom_shield(mocker, tmp_path, bypass_immune_system):
 
 
 def test_binary_allowlist_blocks_node(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -185,7 +186,7 @@ def test_binary_allowlist_blocks_node(mocker, tmp_path, bypass_immune_system):
 
 
 def test_python_interactive_i_flag_blocked(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -196,7 +197,7 @@ def test_python_interactive_i_flag_blocked(mocker, tmp_path, bypass_immune_syste
 
 def test_defensive_flag_injection_npm(mocker, tmp_path, bypass_immune_system):
     """Zero-Debt: Proves untrusted node lifecycles are automatically neutralized."""
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     from System.tools.execution.validation import parse_and_validate_args
 
     args, bins, err = parse_and_validate_args(["npm", "run", "build"])
@@ -206,7 +207,7 @@ def test_defensive_flag_injection_npm(mocker, tmp_path, bypass_immune_system):
 
 def test_defensive_flag_injection_uv(mocker, tmp_path, bypass_immune_system):
     """Zero-Debt: Proves arbitrary internet package downloads are explicitly blocked."""
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     from System.tools.execution.validation import parse_and_validate_args
 
     args, bins, err = parse_and_validate_args(["uv", "run", "pytest"])
@@ -215,7 +216,7 @@ def test_defensive_flag_injection_uv(mocker, tmp_path, bypass_immune_system):
 
 
 def test_nested_sandbox_escape_path_smuggling(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -226,7 +227,7 @@ def test_nested_sandbox_escape_path_smuggling(mocker, tmp_path, bypass_immune_sy
 
 
 def test_pytest_ast_evasion_blocked(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -242,7 +243,7 @@ def test_pytest_ast_evasion_blocked(mocker, tmp_path, bypass_immune_system):
 
 
 def test_phantom_extension_ast_bypass_blocked(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -258,7 +259,7 @@ def test_phantom_extension_ast_bypass_blocked(mocker, tmp_path, bypass_immune_sy
 
 
 def test_pytest_trojan_horse_traversal_blocked(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -271,7 +272,7 @@ def test_pytest_trojan_horse_traversal_blocked(mocker, tmp_path, bypass_immune_s
 
 
 def test_uv_run_strict_nested_allowlist(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -285,7 +286,7 @@ def test_uv_run_strict_nested_allowlist(mocker, tmp_path, bypass_immune_system):
 
 
 def test_phase5_flag_merging_evasion_blocked(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -298,7 +299,7 @@ def test_phase5_flag_merging_evasion_blocked(mocker, tmp_path, bypass_immune_sys
 
 
 def test_phase5_directory_main_payload_blocked(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -318,7 +319,7 @@ def test_phase5_directory_main_payload_blocked(mocker, tmp_path, bypass_immune_s
 def test_ast_secondary_payload_smuggling_blocked(
     mocker, tmp_path, bypass_immune_system
 ):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -349,7 +350,7 @@ def test_ast_secondary_payload_smuggling_blocked(
 
 
 def test_phase6_pytest_m_flag_allowed(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -358,7 +359,7 @@ def test_phase6_pytest_m_flag_allowed(mocker, tmp_path, bypass_immune_system):
     mock_process.returncode = 0
     mock_process.stdout.read = mocker.AsyncMock(side_effect=[b"Tests passed", b""])
     mocker.patch(
-        "System.tools.execution.asyncio.create_subprocess_exec",
+        "System.tools.execution.routing.asyncio.create_subprocess_exec",
         return_value=mock_process,
     )
 
@@ -375,7 +376,7 @@ def test_phase6_pytest_m_flag_allowed(mocker, tmp_path, bypass_immune_system):
 def test_option_b_tier_0_deployment_blocked(mocker, tmp_path, bypass_immune_system):
     from System.tools.execution import deploy_project
 
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -397,7 +398,7 @@ async def test_option_b_tier_1_deployment_routed(
     from System.tools.execution import deploy_project_async
     from System.core.schemas import ExecutionResult
 
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "1", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -461,7 +462,7 @@ def test_execute_command_malformed_syntax(
 
 
 def test_execute_command_empty(mocker, tmp_path, bypass_immune_system):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     result = execute_command([], "Studio")
     assert result.success is False
     assert "Empty command" in result.output
@@ -471,7 +472,7 @@ def test_execute_command_empty(mocker, tmp_path, bypass_immune_system):
 async def test_execute_command_immune_healing(mocker, tmp_path, bypass_immune_system):
     from System.tools.execution import execute_command_async
 
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -481,7 +482,7 @@ async def test_execute_command_immune_healing(mocker, tmp_path, bypass_immune_sy
     mock_process.returncode = 1  # Fails!
     mock_process.stdout.read = mocker.AsyncMock(side_effect=[b"error", b""])
     mocker.patch(
-        "System.tools.execution.asyncio.create_subprocess_exec",
+        "System.tools.execution.routing.asyncio.create_subprocess_exec",
         return_value=mock_process,
     )
 
@@ -497,7 +498,7 @@ async def test_execute_command_immune_healing(mocker, tmp_path, bypass_immune_sy
 
 
 def test_analyze_safe_syntax_success(mocker, tmp_path):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.execution.is_safe_path", return_value=True)
 
     test_file = tmp_path / "valid.py"
@@ -512,7 +513,7 @@ def test_analyze_safe_syntax_success(mocker, tmp_path):
 
 
 def test_analyze_safe_syntax_path_traversal(mocker, tmp_path):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.execution.is_safe_path", return_value=False)
 
     res = analyze_safe_syntax("../outside.py")
@@ -521,7 +522,7 @@ def test_analyze_safe_syntax_path_traversal(mocker, tmp_path):
 
 
 def test_analyze_safe_syntax_file_not_found(mocker, tmp_path):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.execution.is_safe_path", return_value=True)
     res = analyze_safe_syntax("missing.py")
     assert res.success is False
@@ -529,7 +530,7 @@ def test_analyze_safe_syntax_file_not_found(mocker, tmp_path):
 
 
 def test_analyze_safe_syntax_unsupported_extension(mocker, tmp_path):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.execution.is_safe_path", return_value=True)
     test_file = tmp_path / "data.txt"
     test_file.write_text("hello")
@@ -539,7 +540,7 @@ def test_analyze_safe_syntax_unsupported_extension(mocker, tmp_path):
 
 
 def test_analyze_safe_syntax_linter_fails(mocker, tmp_path):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.execution.is_safe_path", return_value=True)
     test_file = tmp_path / "bad.py"
     test_file.write_text("bad syntax")
@@ -557,7 +558,7 @@ def test_analyze_safe_syntax_linter_fails(mocker, tmp_path):
 def test_analyze_safe_syntax_timeout(mocker, tmp_path):
     import subprocess
 
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.execution.is_safe_path", return_value=True)
     test_file = tmp_path / "hang.py"
     test_file.write_text("print('hang')")
@@ -573,7 +574,7 @@ def test_analyze_safe_syntax_timeout(mocker, tmp_path):
 
 
 def test_analyze_safe_syntax_exception(mocker, tmp_path):
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.execution.is_safe_path", return_value=True)
     test_file = tmp_path / "crash.py"
     test_file.write_text("print('crash')")
@@ -629,7 +630,7 @@ def test_deploy_project_hitl_denial(mocker, tmp_path):
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "1", "BRAIN_OS_HEADLESS": "0"}
     )
-    mocker.patch("System.tools.execution.asyncio.to_thread", return_value="n")
+    mocker.patch("System.tools.execution.__init__.asyncio.to_thread", return_value="n")
     res = deploy_project("Studio", "custom")
     assert res.success is False
     assert "User explicitly denied deployment" in res.output
@@ -637,7 +638,7 @@ def test_deploy_project_hitl_denial(mocker, tmp_path):
 
 def test_sync_wrapper_running_loop(mocker, tmp_path, bypass_immune_system):
     """Proves the synchronous execution wrapper spawns a thread safely if an event loop is already running."""
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -647,7 +648,7 @@ def test_sync_wrapper_running_loop(mocker, tmp_path, bypass_immune_system):
     mock_process.returncode = 0
     mock_process.stdout.read = mocker.AsyncMock(side_effect=[b"sync success", b""])
     mocker.patch(
-        "System.tools.execution.asyncio.create_subprocess_exec",
+        "System.tools.execution.routing.asyncio.create_subprocess_exec",
         return_value=mock_process,
     )
 
@@ -700,7 +701,7 @@ def test_manage_background_process_routing(mocker):
 
 def test_phase7_flag_parameter_desync_blocked(mocker, tmp_path, bypass_immune_system):
     """Zero-Debt: Proves an agent cannot use parameter-taking flags to desync the AST wrapper using a decoy file."""
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -737,7 +738,7 @@ def test_phase8_npx_package_assignment_bypass_blocked(
     mocker, tmp_path, bypass_immune_system
 ):
     """Zero-Debt: Proves an agent cannot bypass the nested allowlist using npx --package= assignment syntax."""
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -753,7 +754,7 @@ def test_phase8_npx_package_assignment_bypass_blocked(
 
 def test_phase9_toctou_atomic_snapshot_enforced(mocker, tmp_path, bypass_immune_system):
     """Zero-Debt: Proves the engine completely mitigates TOCTOU race conditions by executing an isolated snapshot."""
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -782,7 +783,8 @@ def test_phase9_toctou_atomic_snapshot_enforced(mocker, tmp_path, bypass_immune_
     mock_exec.returncode = 0
     mock_exec.stdout.read = mocker.AsyncMock(side_effect=[b"success", b""])
     mocker.patch(
-        "System.tools.execution.asyncio.create_subprocess_exec", return_value=mock_exec
+        "System.tools.execution.routing.asyncio.create_subprocess_exec",
+        return_value=mock_exec,
     )
 
     result = execute_command(["python", "race_condition.py"], "Studio")
@@ -798,7 +800,7 @@ def test_phase10_windows_local_binary_hijacking_blocked(
     mocker, tmp_path, bypass_immune_system
 ):
     """Zero-Debt: Proves an agent cannot hijack execution by dropping a fake binary into the local workspace."""
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -818,7 +820,7 @@ def test_phase10_windows_local_binary_hijacking_blocked(
 
 def test_sensory_compactor_integration(mocker, tmp_path, bypass_immune_system):
     """Zero-Debt: Proves noisy terminal execution blocks get compacted down cleanly."""
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_EXECUTION_TIER": "0", "BRAIN_OS_HEADLESS": "1"}
     )
@@ -835,7 +837,7 @@ def test_sensory_compactor_integration(mocker, tmp_path, bypass_immune_system):
     )
     mock_process.stdout.read = mocker.AsyncMock(side_effect=[noisy_stream, b""])
     mocker.patch(
-        "System.tools.execution.asyncio.create_subprocess_exec",
+        "System.tools.execution.routing.asyncio.create_subprocess_exec",
         return_value=mock_process,
     )
 
@@ -851,7 +853,9 @@ async def test_execute_native_isolated_bypasses_shell_interpolation(
 ) -> None:
     """Proves that native isolated routes use create_subprocess_exec to prevent shell injection payloads."""
     # We strictly mock create_subprocess_exec to ensure it is the function called
-    mock_exec = mocker.patch("System.tools.execution.asyncio.create_subprocess_exec")
+    mock_exec = mocker.patch(
+        "System.tools.execution.routing.asyncio.create_subprocess_exec"
+    )
 
     mock_proc = mocker.AsyncMock()
     mock_proc.returncode = 0

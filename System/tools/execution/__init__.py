@@ -1,167 +1,90 @@
 # --- System/tools/execution/__init__.py ---
 import os
-import sys
-import stat
 import socket
 import asyncio
 import threading
 import subprocess
-import signal
-import shutil as shutil
+import shlex
 from pathlib import Path
 
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict
 
 from rich.console import Console
 from System.core.paths import ROOT_DIR, normalize_path
 from System.core.schemas import ExecutionResult
 from System.tools.sandbox import is_safe_path
+from System.ui.telemetry import render_command_cockpit
 
-# Internal Decoupled Submodule Imports with Explicit Re-exports to satisfy F401
 from .validation import parse_and_validate_args as parse_and_validate_args
 from .staging import stage_ast_snapshots as stage_ast_snapshots
 from .routing import execute_command_async as execute_command_async
+from .execution_utils import get_scrubbed_env, get_subprocess_kwargs
 
 console = Console()
-MAX_OUTPUT_CHUNKS = 2000
-CHUNK_SIZE = 4096
 
 
-def _set_system_volume_mask(read_only: bool) -> None:
-    """🛡️ VOLUME MASKING: Toggles strict kernel-level file protections on the protected System/ directory."""
-    try:
-        import System.tools.execution
+async def _execute_with_auth_async(
+    command: list[str] | str, directory_path: str, route: str
+) -> ExecutionResult:
+    """Internal wrapper that handles UI, Auth, and Timeouts before invoking pure execution."""
+    command_str = command if isinstance(command, str) else shlex.join(command)
+    execution_tier = os.environ.get("BRAIN_EXECUTION_TIER", "0")
 
-        root_dir = getattr(System.tools.execution, "ROOT_DIR", ROOT_DIR)
-        system_core_dir = Path(root_dir / "System").resolve()
-        if not system_core_dir.exists():
-            return
-        for item in system_core_dir.rglob("*"):
-            try:
-                rel_path_str = str(item.relative_to(system_core_dir))
-            except ValueError:
-                rel_path_str = str(item)
-            if (
-                "Temp" in rel_path_str
-                or "pytest-" in rel_path_str
-                or "apoptosis" in rel_path_str
-            ):
-                continue
-            if item.is_file():
-                try:
-                    current_mode = os.stat(item).st_mode
-                    if read_only:
-                        os.chmod(
-                            item,
-                            current_mode
-                            & ~stat.S_IWRITE
-                            & ~stat.S_IWGRP
-                            & ~stat.S_IWOTH,
-                        )
-                    else:
-                        os.chmod(item, current_mode | stat.S_IWRITE)
-                except Exception:
-                    pass
-    except Exception:
-        pass
+    if os.environ.get("BRAIN_OS_HEADLESS") != "1":
+        parsed_args, effective_binaries, parse_err = parse_and_validate_args(command)
+        if parse_err is not None:
+            return parse_err
 
+        from System.neuroanatomy.systemic.blood_brain_barrier import (
+            validate_execution_path,
+        )
 
-def _get_scrubbed_env() -> Dict[str, str]:
-    safe_env: Dict[str, str] = {}
-    allowlist = {
-        "PATH",
-        "SYSTEMROOT",
-        "USERPROFILE",
-        "APPDATA",
-        "LOCALAPPDATA",
-        "HOME",
-        "USER",
-        "SHELL",
-        "TERM",
-        "LANG",
-        "TMP",
-        "TEMP",
-        "VIRTUAL_ENV",
-        "UV_PYTHON",
-        "UV_PROJECT_ENVIRONMENT",
-    }
-    for k, v in os.environ.items():
-        if k.upper() in allowlist:
-            safe_env[k] = v
-    return safe_env
+        is_safe_path_res, path_result = validate_execution_path(directory_path)
+        if not is_safe_path_res:
+            return ExecutionResult(
+                success=False,
+                output=f"<shell_output>\n<stderr>\n{path_result}\n</stderr>\n</shell_output>",
+                block_reason=path_result,
+            )
 
+        panel = render_command_cockpit(
+            command_str,
+            path_result,
+            effective_binaries or set(),
+            [],
+            execution_tier,
+            ROOT_DIR,
+        )
+        console.print("\n")
+        console.print(panel)
 
-def _rollback_workspace_transaction(path_result: str) -> None:
-    """⚡ TRANSACTION RECOVERY: Automatically purges modifications on execution failure."""
-    try:
-        target_dir = Path(path_result).resolve()
-        if not target_dir.exists() or not target_dir.is_dir():
-            return
-        for item in list(target_dir.rglob("*")):
-            try:
-                if item.is_file() and (
-                    ".immutable_snapshot_" in item.name
-                    or ".wrapped_" in item.name
-                    or "apoptosis_membrane" in item.name
-                ):
-                    os.chmod(str(item), stat.S_IWRITE)
-                    os.remove(str(item))
-            except Exception:
-                pass
-    except Exception:
-        pass
-
-
-def _get_subprocess_kwargs() -> Dict[str, Any]:
-    kwargs: Dict[str, Any] = {}
-    if sys.platform == "win32":
-        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-    return kwargs
-
-
-async def _stream_and_prune_process(
-    process: asyncio.subprocess.Process, timeout: float
-) -> Tuple[bool, str]:
-    async def _stream() -> str:
-        output_chunks, chunk_count = [], 0
-        if process.stdout:
-            while True:
-                chunk = await process.stdout.read(CHUNK_SIZE)
-                if not chunk:
-                    break
-                decoded_chunk = chunk.decode(errors="replace")
-                console.print(decoded_chunk, end="")
-                output_chunks.append(decoded_chunk)
-                chunk_count += 1
-                if chunk_count > MAX_OUTPUT_CHUNKS:
-                    output_chunks.append(
-                        "\nSECURITY BLOCK: Execution halted due to excessive output"
-                    )
-                    try:
-                        if sys.platform == "win32":
-                            os.kill(process.pid, signal.CTRL_BREAK_EVENT)
-                        else:
-                            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-                    except Exception:
-                        process.kill()
-                    break
-        await process.wait()
-        return "".join(output_chunks)
-
-    try:
-        return False, await asyncio.wait_for(_stream(), timeout=timeout)
-    except asyncio.TimeoutError:
         try:
-            if sys.platform == "win32":
-                os.kill(process.pid, signal.CTRL_BREAK_EVENT)
-            else:
-                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-        except Exception:
-            process.kill()
-        return True, ""
+            auth = await asyncio.to_thread(
+                input, "↳ Synaptic Authorization Handle [y/N]: "
+            )
+            auth = auth.strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            auth = "n"
+
+        if auth not in ["y", "yes"]:
+            console.print(
+                "\n[bold red]❌ TRANSMISSION ABORTED: Security boundary held.[/bold red]\n"
+            )
+            return ExecutionResult(
+                success=False,
+                output="<shell_output>\n<stderr>\nSECURITY BLOCK: User denied execution.\n</stderr>\n</shell_output>",
+                block_reason="Denied",
+            )
+        else:
+            console.print(
+                "\n[bold green]⚡ TRANSMISSION AUTHORIZED: Firing synaptic process tree...[/bold green]\n"
+            )
+
+    # ⚡ ZERO-DEBT: Timeouts belong to the orchestrator layer, not the routing layer
+    timeout = 300.0 if "pytest" in command_str else 60.0
+    return await execute_command_async(command, directory_path, route, timeout=timeout)
 
 
-# ⚡ FIX: Adjusted entry point typing to natively accept lists from the LLM core
 def execute_command(
     command: list[str] | str, directory_path: str, route: str = "UNKNOWN"
 ) -> ExecutionResult:
@@ -174,13 +97,15 @@ def execute_command(
 
         def run_in_thread():
             nonlocal result
-            result = asyncio.run(execute_command_async(command, directory_path, route))
+            result = asyncio.run(
+                _execute_with_auth_async(command, directory_path, route)
+            )
 
         t = threading.Thread(target=run_in_thread)
         t.start()
         t.join()
         return result
-    return asyncio.run(execute_command_async(command, directory_path, route))
+    return asyncio.run(_execute_with_auth_async(command, directory_path, route))
 
 
 def analyze_safe_syntax(filepath: str) -> ExecutionResult:
@@ -204,8 +129,8 @@ def analyze_safe_syntax(filepath: str) -> ExecutionResult:
                 capture_output=True,
                 text=True,
                 timeout=30,
-                env=_get_scrubbed_env(),
-                **_get_subprocess_kwargs(),
+                env=get_scrubbed_env(),
+                **get_subprocess_kwargs(),
             )
             return (
                 ExecutionResult(
@@ -340,7 +265,7 @@ async def execute_native_isolated(
     command: list[str], workspace_path: Path, env_secrets: Dict[str, str]
 ) -> ExecutionResult:
     # 🔐 SHIFT-LEFT SECURITY: Accept strictly parsed array lists to prevent shell injection payloads
-    env = _get_scrubbed_env()
+    env = get_scrubbed_env()
     for key, value in env_secrets.items():
         env[key] = value
     try:

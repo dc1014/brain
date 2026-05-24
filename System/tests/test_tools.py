@@ -19,7 +19,7 @@ from unittest.mock import patch
 def test_write_safe_file_allowed(mock_log, tmp_path: Path, mocker) -> None:  # type: ignore
 
     mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
@@ -37,7 +37,7 @@ def test_security_blocks(mock_log, tmp_path: Path, mocker) -> None:  # type: ign
     """Test that writing, reading, and listing outside boundaries are all blocked."""
 
     mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
@@ -67,7 +67,7 @@ def test_bootstrap_security_block(tmp_path: Path, mocker) -> None:  # type: igno
     """Ensure archetypes cannot be cloned outside safe boundaries."""
 
     mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
@@ -82,7 +82,7 @@ def test_execute_command_security_and_hitl(tmp_path: Path, mocker) -> None:  # t
     """Test that command execution is sandboxed and respects strict HITL."""
 
     mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
@@ -176,7 +176,7 @@ def test_copy_safe_file_security(tmp_path: Path, mocker) -> None:  # type: ignor
     from System.tools import copy_safe_file
 
     mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
@@ -216,7 +216,7 @@ def test_search_safe_directory_security_and_metrics(tmp_path: Path, mocker) -> N
     from System.tools import search_safe_directory
 
     mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
@@ -254,7 +254,7 @@ def test_analyze_safe_syntax(tmp_path: Path, mocker) -> None:  # type: ignore
     from System.tools import analyze_safe_syntax
 
     mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
@@ -296,7 +296,7 @@ def test_read_file_signatures_tool(tmp_path, mocker) -> None:  # type: ignore
     # 1. Setup our mock sandbox
 
     mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
@@ -453,7 +453,7 @@ def test_analyze_audio(tmp_path, mocker):
     from System.tools import analyze_audio
 
     mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.sensory.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.cognitive.ROOT_DIR", tmp_path)
     mocker.patch("System.tools.forge.ROOT_DIR", tmp_path)
@@ -483,7 +483,7 @@ def test_deploy_project(tmp_path: Path, mocker) -> None:  # type: ignore
     from System.core.schemas import ExecutionResult
 
     mocker.patch("System.tools.file_system.ROOT_DIR", tmp_path)
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch("System.neuroanatomy.systemic.blood_brain_barrier.ROOT_DIR", tmp_path)
 
     studio_dir = tmp_path / "Studio" / "WebProject"

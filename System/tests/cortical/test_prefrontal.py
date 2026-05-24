@@ -28,7 +28,6 @@ async def test_analyze_task_deterministic_blocks() -> None:
 @pytest.mark.asyncio
 async def test_auditor_headless_retry_bypass(mocker, tmp_path: Path) -> None:
     """Proves headless mode automatically triggers loops on QA failure without host pollution."""
-    from System.llm import AgentResponse
     from System.neuroanatomy.cortical.executive_loop import execute_pipeline
 
     # SHIFT-LEFT ISOLATION: Bind the prefrontal execution path to our isolated temp space
@@ -85,19 +84,22 @@ async def test_auditor_headless_retry_bypass(mocker, tmp_path: Path) -> None:
 
     call_count = {"qa_auditor": 0}
 
+    call_count = {"qa_auditor": 0}
+
     async def mock_run_agent_side_effect(*args, **kwargs):
+        class MockResp:
+            def __init__(self, t):
+                self.text = t
+                self.actions = []
+                self.usage = {}
+
         role_name = kwargs.get("role_name", args[0] if len(args) > 0 else "")
         if "QA" in role_name:
             call_count["qa_auditor"] += 1
             if call_count["qa_auditor"] == 1:
-                return AgentResponse(
-                    text='{"audit_result": "FAIL", "reasoning": "Missing code"}',
-                    usage={},
-                )
-            return AgentResponse(
-                text='{"audit_result": "PASS", "reasoning": "Looks good"}', usage={}
-            )
-        return AgentResponse(text="Here is code.", usage={})
+                return MockResp('{"audit_result": "FAIL", "reasoning": "Missing code"}')
+            return MockResp('{"audit_result": "PASS", "reasoning": "Looks good"}')
+        return MockResp("Here is code.")
 
     mocker.patch(
         "System.neuroanatomy.cortical.executive_loop.run_agent_async",
@@ -133,6 +135,7 @@ async def test_synaptic_consolidation_commits_mid_pipeline(
     (config_dir / "tools.yaml").write_text("{}")
 
     mocker.patch("System.neuroanatomy.cortical.executive_loop.ROOT_DIR", tmp_path)
+    mocker.patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state")
 
     mocker.patch(
         "System.neuroanatomy.cortical.executive_loop.get_dna_config",
@@ -282,6 +285,7 @@ async def test_cognitive_tool_pruning_hides_execution_tools(
     from System.neuroanatomy.cortical.executive_loop import execute_pipeline
 
     mocker.patch("System.neuroanatomy.cortical.executive_loop.ROOT_DIR", tmp_path)
+    mocker.patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state")
 
     # Bootstrap an isolated temporary tools configuration file structure with dangerous tools
     tools_dir = tmp_path / "System" / "config"

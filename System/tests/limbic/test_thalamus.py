@@ -83,6 +83,7 @@ async def test_thalamus_pydantic_fallback(mocker, monkeypatch):
     )
 
     # 3. Assert the Pydantic ValidationError was caught and handled gracefully
+    assert is_valid is True
     assert route == "UNKNOWN"
     assert domain == "NONE"
 

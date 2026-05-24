@@ -15,7 +15,7 @@ async def test_native_execution_enforces_read_only_volume_mask(mocker, tmp_path)
     fake_core_file = fake_system_dir / "paths.py"
     fake_core_file.write_text("ROOT_DIR = '.'")
 
-    mocker.patch("System.tools.execution.ROOT_DIR", tmp_path)
+    mocker.patch("System.core.paths.ROOT_DIR", tmp_path)
     mocker.patch.dict(
         os.environ, {"BRAIN_OS_HEADLESS": "1", "BRAIN_EXECUTION_TIER": "0"}
     )
@@ -33,7 +33,7 @@ async def test_native_execution_enforces_read_only_volume_mask(mocker, tmp_path)
     mock_process.returncode = 0
     mock_process.stdout.read = mocker.AsyncMock(side_effect=[b"Success", b""])
     mocker.patch(
-        "System.tools.execution.asyncio.create_subprocess_exec",
+        "System.tools.execution.routing.asyncio.create_subprocess_exec",
         return_value=mock_process,
     )
 

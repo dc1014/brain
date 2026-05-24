@@ -7,9 +7,8 @@ import asyncio
 
 from System.core.paths import ROOT_DIR, normalize_path
 from System.core.schemas import ExecutionResult
-from System.ui.telemetry import render_command_cockpit
 
-# ⚡ GLOBAL MODULE IMPORTS: Flattened dependency tree with zero hidden inline imports
+# ⚡ ZERO-DEBT: Flattened dependency tree and clean utility imports (No sys.modules hacks)
 import System.neuroanatomy.systemic.blood_brain_barrier as bbb
 import System.neuroanatomy.limbic.amygdala as amygdala
 import System.tools.sandbox as sandbox_module
@@ -18,14 +17,23 @@ import System.neuroanatomy.systemic.microglia as microglia
 from System.neuroanatomy.sensory.somatosensory import SensoryTransducer
 import System.tools.execution.validation as validation
 import System.tools.execution.staging as staging
+from System.tools.execution.execution_utils import (
+    set_system_volume_mask,
+    rollback_workspace_transaction,
+    get_scrubbed_env,
+    stream_and_prune_process,
+)
 
 
+# ⚡ ZERO-DEBT: Pure execution. Auth and timeouts are handled upstream.
 async def execute_command_async(
-    command: list[str] | str, directory_path: str, route: str = "UNKNOWN"
+    command: list[str] | str,
+    directory_path: str,
+    route: str = "UNKNOWN",
+    timeout: float = 60.0,
 ) -> ExecutionResult:
     command_str = command if isinstance(command, str) else shlex.join(command)
 
-    # ⚡ ZERO-DEBT: Direct module prefixing guarantees Pytest can dynamically intercept the mock targets
     parsed_args, effective_binaries, parse_err = validation.parse_and_validate_args(
         command
     )
@@ -38,7 +46,6 @@ async def execute_command_async(
             block_reason="Parse Error",
         )
 
-    execution_tier = os.environ.get("BRAIN_EXECUTION_TIER", "0")
     if route in sandbox_module.REQUIRES_CONTAINMENT:
         return await sandbox_module.execute_in_sandbox(
             parsed_args,
@@ -47,7 +54,6 @@ async def execute_command_async(
             route=route,
         )
 
-    # ⚡ NATIVE VALIDATION: No context manager, no aliases. Pure idiomatic python.
     is_safe_path, path_result = bbb.validate_execution_path(directory_path)
     if not is_safe_path:
         return ExecutionResult(
@@ -77,47 +83,10 @@ async def execute_command_async(
         )
 
     vestibular.create_snapshot(directory_path)
-    exec_mod = sys.modules["System.tools.execution"]
+    set_system_volume_mask(read_only=True)
 
-    # ⚡ ZERO-DEBT: Lock the volume mask, then guarantee cleanup via try/finally
-    exec_mod._set_system_volume_mask(read_only=True)
     try:
-        if os.environ.get("BRAIN_OS_HEADLESS") != "1":
-            panel = render_command_cockpit(
-                command_str,
-                path_result,
-                effective_binaries,
-                created_snapshots,
-                execution_tier,
-                ROOT_DIR,
-            )
-            exec_mod.console.print("\n")
-            exec_mod.console.print(panel)
-
-            try:
-                auth = await asyncio.to_thread(
-                    input, "↳ Synaptic Authorization Handle [y/N]: "
-                )
-                auth = auth.strip().lower()
-            except (EOFError, KeyboardInterrupt):
-                auth = "n"
-
-            if auth not in ["y", "yes"]:
-                exec_mod.console.print(
-                    "\n[bold red]❌ TRANSMISSION ABORTED: Security boundary held.[/bold red]\n"
-                )
-                return ExecutionResult(
-                    success=False,
-                    output="<shell_output>\n<stderr>\nSECURITY BLOCK: User denied execution.\n</stderr>\n</shell_output>",
-                    block_reason="Denied",
-                )
-            else:
-                exec_mod.console.print(
-                    "\n[bold green]⚡ TRANSMISSION AUTHORIZED: Firing synaptic process tree...[/bold green]\n"
-                )
-
-        env_vars = exec_mod._get_scrubbed_env()
-
+        env_vars = get_scrubbed_env()
         if sys.platform == "win32":
             process = await asyncio.create_subprocess_exec(
                 args[0],
@@ -140,13 +109,12 @@ async def execute_command_async(
                 stderr=asyncio.subprocess.STDOUT,
             )
 
-        timeout = 300.0 if "pytest" in command_str else 60.0
-        timed_out, full_output = await exec_mod._stream_and_prune_process(
+        timed_out, full_output = await stream_and_prune_process(
             process, timeout=timeout
         )
 
         if timed_out:
-            exec_mod._rollback_workspace_transaction(path_result)
+            rollback_workspace_transaction(path_result)
             return ExecutionResult(
                 success=False,
                 output="<shell_output>\n<stderr>\nERROR: Command timed out.\n</stderr>\n</shell_output>",
@@ -154,7 +122,7 @@ async def execute_command_async(
             )
 
         if process.returncode != 0:
-            exec_mod._rollback_workspace_transaction(path_result)
+            rollback_workspace_transaction(path_result)
             healed, heal_msg = await microglia.trigger_immune_response_async(
                 command_str, full_output, path_result
             )
@@ -182,15 +150,14 @@ async def execute_command_async(
         )
 
     except Exception as e:
-        exec_mod._rollback_workspace_transaction(path_result)
+        rollback_workspace_transaction(path_result)
         return ExecutionResult(
             success=False,
             output=f"<shell_output>\n<stderr>\nEXECUTION ERROR: {str(e)}\n</stderr>\n</shell_output>",
             block_reason="Crash",
         )
     finally:
-        # ⚡ ZERO-DEBT: Guaranteed cleanup executes regardless of return or crash states
-        exec_mod._set_system_volume_mask(read_only=False)
+        set_system_volume_mask(read_only=False)
         for snapshot in created_snapshots:
             try:
                 if os.path.exists(snapshot):
