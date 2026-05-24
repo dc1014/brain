@@ -7,6 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
+
   security-and-tests:
     runs-on: ubuntu-latest
     steps:
@@ -38,16 +39,12 @@ jobs:
       - name: Install Dependencies
         run: uv sync --all-extras --dev
 
+      - name: Vendor Offline WASM Sandbox
+        run: |
+          uv run python -c "from System.core.paths import ROOT_DIR; from System.core.onboarding.vendor_sandbox import vendor_offline_sandbox; vendor_offline_sandbox(ROOT_DIR)"
+
       - name: Run Ruff (Formatting & Linting)
         run: uv run ruff check .
-
-      - name: Run Mypy (Type Checking)
-        run: uv run mypy System/ --ignore-missing-imports
-
-      - name: Run Pytest with Strict Coverage (Gate Enforcement)
-        # 🛡️ CI COMPLIANCE PROTECTION: Drops parallel workers to ensure line-tracing metrics
-        # accurately validate the strict >80% code coverage requirement before merge.
-        run: uv run pytest --cov -n 0
 
       - name: Run Mypy (Type Checking)
         run: uv run mypy System/ Sense/ --ignore-missing-imports

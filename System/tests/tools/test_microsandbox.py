@@ -31,7 +31,7 @@ async def test_wasm_kernel_flags_are_immutable(tmp_path: Path, mocker) -> None:
 
     # 2. Verify read/write access explicitly contains the workspace
     assert "--allow-read=" in args_str
-    assert str(workspace.resolve()) in args_str
+    assert workspace.resolve().as_posix() in args_str
 
     # 3. Verify the Host OS Environment override is injected
     env = kwargs.get("env", {})

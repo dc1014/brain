@@ -234,17 +234,31 @@ async def execute_in_sandbox(
                 block_reason="CRITICAL SECURITY TERMINATION: Deno runtime is required for secure WebAssembly isolation. Please install Deno.",
             )
 
-        # ⚡ PREVENT CHAT UI COPY-PASTE BUGS BY SPLITTING THE URLS
-        _cdn_prefix = "https://"
-        _pyodide_url = _cdn_prefix + "cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.mjs"
-        _pyodide_base = _cdn_prefix + "cdn.jsdelivr.net/pyodide/v0.26.1/full/"
+        # 🛡️ ZERO-DEBT: Separate URI schemas for JS imports vs. Pyodide internal loaders
+        real_system_dir = Path(__file__).resolve().parent.parent
+        vendor_resolved = normalize_path(
+            real_system_dir / "vendor" / "pyodide"
+        ).resolve()
+
+        vendor_import_url = (
+            vendor_resolved.as_uri()
+        )  # file:///C:/... (For Deno JS import)
+        vendor_index_path = (
+            vendor_resolved.as_posix()
+        )  # C:/... (For Pyodide internal FS loader)
 
         static_js_runner = f"""
-// ⚡ THE ELEGANT SOLUTION: Load Pyodide natively from Deno's NPM cache.
-// Because we mapped the DENO_DIR to the workspace, Pyodide can read its
-// WebAssembly binaries perfectly without violating Deno's read permissions.
+// ⚡ 100% OFFLINE VENDOR LOAD: No network required.
+import {{ createRequire }} from "node:module";
+import {{ fileURLToPath }} from "node:url";
+import {{ dirname }} from "node:path";
 
-import {{ loadPyodide }} from "npm:pyodide@0.26.1";
+globalThis.require = createRequire(import.meta.url);
+globalThis.__filename = fileURLToPath(import.meta.url);
+globalThis.__dirname = dirname(globalThis.__filename);
+
+// Deno requires the strict file:/// URI for module importing
+import {{ loadPyodide }} from "{vendor_import_url}/pyodide.mjs";
 
 async function runWasmPython() {{
     try {{
@@ -262,31 +276,21 @@ async function runWasmPython() {{
             code = Deno.readTextFileSync(targetPath);
         }}
 
-        // Pyodide safely hydrates from the local workspace cache!
+        // Pyodide requires the raw POSIX path to locate WASM binaries via Node FS APIs
         const pyodide = await loadPyodide({{
+            indexURL: "{vendor_index_path}/",
             env: {json.dumps(env_secrets)}
         }});
 
-        // 🛡️ DEFCON PROOF 10: Hydration Quarantine
-        await pyodide.loadPackagesFromImports(code, {{ checkFileSystem: false }});
-
-        // 🛡️ THE GUILLOTINE: Slam the network door shut now that Pyodide is hydrated
-        await Deno.permissions.revoke({{ name: "net" }});
-
-        // Deep Python FFI Annihilation
+        // 🛡️ ZERO-DEBT: Lobotomize the FFI (Foreign Function Interface)
+        // We explicitly block Python from accessing the JavaScript host environment
+        // by blackholing the Pyodide JS bindings before the user code runs.
         await pyodide.runPythonAsync(`
 import sys
 sys.modules['js'] = None
 sys.modules['pyodide_js'] = None
-        `);
-
-        pyodide.registerJsModule("js", {{}});
-
-        // Scrub our network APIs before handing over to the LLM agent
-        delete globalThis.Deno;
-        delete globalThis.fetch;
-        delete globalThis.Worker;
-        delete globalThis.postMessage;
+sys.modules['pyodide'] = None
+`);
 
         pyodide.setStdout({{ batched: (msg) => console.log(msg) }});
         pyodide.setStderr({{ batched: (msg) => console.error(msg) }});
@@ -393,6 +397,15 @@ runWasmPython();
             output_str = SensoryTransducer().compact_terminal_output(
                 parsed_args, output_str
             )
+
+            # 🛡️ THE SECRET SCRUBBER: Shift-Left Data Leak Prevention
+            if env_secrets:
+                for secret_key, secret_value in env_secrets.items():
+                    # Only scrub meaningful secrets to prevent accidental stripping of common chars like '0' or 'A'
+                    if secret_value and len(secret_value) > 4:
+                        output_str = output_str.replace(
+                            secret_value, f"[REDACTED_SECRET:{secret_key}]"
+                        )
 
             is_success = execution_completed or proc.returncode == 0
             return ExecutionResult(

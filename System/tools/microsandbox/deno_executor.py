@@ -22,14 +22,15 @@ def execute_sandboxed_js(
     command = [
         "deno",
         "run",
+        "--allow-net=none",
         "--quiet",
         "--no-prompt",
         "--no-config",
         "--no-lock",
         "--v8-flags=--max-old-space-size=256",
-        "--allow-net=none",  # ⚡ STRICTLY OFFLINE FOR RAW JS
-        f"--allow-read={staging_dir.resolve()}",
-        f"--allow-write={staging_dir.resolve()}",
+        # ⚡ FIXED: Native OS paths
+        f"--allow-read={str(staging_dir.resolve())}",
+        f"--allow-write={str(staging_dir.resolve())}",
         str(script_path.resolve()),
     ]
 

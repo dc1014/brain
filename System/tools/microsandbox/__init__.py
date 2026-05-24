@@ -29,7 +29,16 @@ async def _spawn_worker(workspace_path: Path) -> asyncio.subprocess.Process:
     deno_cache_dir.mkdir(exist_ok=True)
     safe_env["DENO_DIR"] = str(deno_cache_dir.resolve())
 
-    proc = await asyncio.create_subprocess_exec(
+    # 🛡️ ZERO-DEBT: Bypass Pytest ROOT_DIR mocks by resolving the actual physical file path
+    real_system_dir = Path(__file__).resolve().parent.parent.parent
+    vendor_dir = real_system_dir / "vendor" / "pyodide"
+
+    # 🛡️ SHIFT-LEFT KERNEL ECONOMICS: Prevent the sandbox from locking the host CPU
+    base_command: list[str] = []
+    if sys.platform != "win32" and shutil.which("nice"):
+        base_command.extend(["nice", "-n", "10"])
+
+    command = base_command + [
         deno_path,
         "run",
         "--quiet",
@@ -37,18 +46,27 @@ async def _spawn_worker(workspace_path: Path) -> asyncio.subprocess.Process:
         "--no-config",
         "--no-lock",
         "--v8-flags=--max-old-space-size=256,--wasm-max-mem-pages=4096",
-        "--allow-net",
+        "--allow-net=none",
         "--allow-import",
-        # ⚡ Whitelist the shared cache folder alongside the workspace
-        f"--allow-read={workspace_path.resolve()},{deno_cache_dir.resolve()}",
-        f"--allow-write={workspace_path.resolve()},{deno_cache_dir.resolve()}",
+        # 🛡️ ZERO-DEBT: Strict POSIX paths to prevent the Windows \U escape bug
+        f"--allow-read={workspace_path.resolve().as_posix()}",
+        f"--allow-read={deno_cache_dir.resolve().as_posix()}",
+        f"--allow-read={vendor_dir.resolve().as_posix()}",
+        f"--allow-write={workspace_path.resolve().as_posix()}",
+        f"--allow-write={deno_cache_dir.resolve().as_posix()}",
         "-",
+    ]
+
+    proc = await asyncio.create_subprocess_exec(
+        *command,
         env=safe_env,
-        cwd=str(workspace_path.resolve()),
+        cwd=str(workspace_path.resolve()),  # ⚡ FIXED: Reverted to native path
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )
+
+    # ⚡ FIXED: Return the spawned process to satisfy Mypy and the worker pool!
     _ALL_SPAWNED_PROCESSES.append(proc)
     return proc
 

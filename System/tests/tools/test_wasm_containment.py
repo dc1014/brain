@@ -71,3 +71,49 @@ async def test_sandbox_fails_closed_without_deno(tmp_path: Path, monkeypatch) ->
     assert "CRITICAL SECURITY TERMINATION: Deno runtime is required" in str(
         res.block_reason
     )
+
+
+@pytest.mark.asyncio
+async def test_os_level_network_guillotine(tmp_path: Path):
+    """
+    🛡️ ZERO-DEBT TEST: Proves that the Deno --allow-net=none flag physically
+    prevents the WebAssembly environment from opening network sockets.
+    """
+    # ⚡ FIXED: Create an allowed "Studio" directory so the containment matrix allows execution
+    workspace = tmp_path / "Studio"
+    workspace.mkdir(parents=True, exist_ok=True)
+
+    malicious_script = """
+import urllib.request
+try:
+    urllib.request.urlopen("https://google.com", timeout=2)
+    print("[FATAL_BREACH] Network was reached!")
+except Exception as e:
+    print(f"[SECURE] Network blocked at OS level: {e}")
+"""
+
+    import os
+
+    os.environ["BRAIN_ENABLE_CODE_EXECUTION"] = "true"
+
+    command = ["-c", malicious_script]
+
+    result = await execute_in_sandbox(
+        command=command,
+        workspace_path=workspace,  # ⚡ Pass the safe workspace here
+        env_secrets={},
+        route="CODE_GENERATION",
+    )
+
+    # 1. Verify the container did not crash completely
+    assert result.success is True, (
+        f"Sandbox crashed unexpectedly. Reason: {result.block_reason}"
+    )
+
+    # 2. Verify the OS flag successfully blocked the socket
+    assert "[FATAL_BREACH]" not in result.output, (
+        "CRITICAL: The sandbox reached the internet!"
+    )
+    assert "[SECURE]" in result.output, (
+        "The OS did not block the network call as expected."
+    )

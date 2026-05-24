@@ -23,6 +23,8 @@ from System.core.onboarding.vault import (
     setup_obsidian_shell_commands,
 )
 from System.core.onboarding.path_binding import bind_global_alias
+from System.core.onboarding.vendor_sandbox import vendor_offline_sandbox
+
 
 console = Console()
 ENV_PATH = ROOT_DIR / ".env"
@@ -368,6 +370,12 @@ async def main():
 
     workspace_path = bind_workspace()
 
+    # 🛡️ SHIFT-LEFT: Vendor the offline WASM sandbox before the user ever runs a task
+    console.print(
+        "[bold cyan]📦 Securing offline WASM sandbox environment...[/bold cyan]"
+    )
+    vendor_offline_sandbox(ROOT_DIR)
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[green]Serializing system state...[/green]"),
@@ -391,7 +399,6 @@ async def main():
         FEATURES_PATH.parent.mkdir(parents=True, exist_ok=True)
         _atomic_write_text(FEATURES_PATH, json.dumps(features, indent=4))
 
-    # 3. Inject global shell profile alias
     # --- 3. Inject global shell profile alias ---
     console.print("\n")
     if Confirm.ask(
