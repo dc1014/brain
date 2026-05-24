@@ -1,41 +1,13 @@
 #!/bin/bash
-set -e
-
-# ⚡ ZERO-DEBT: Dynamically discover absolute paths to prevent environment traps
+# ⚡ ZERO-DEBT: Unix Spinal Cord
+# Automatically calculates its own absolute path to bypass environment traps
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DIR"
 
-# Self-bootstrapping mechanism: trigger initialization if the environment is missing
-if [ ! -d ".venv" ]; then
-    echo "🧠 Brain OS: Virtual environment missing. Initiating automatic synaptic bootstrapping..."
-
-    # Check for uv package manager
-    if ! command -v uv &> /dev/null; then
-        echo "📦 Installing uv (Python's ultra-fast package manager)..."
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        export PATH="$HOME/.cargo/bin:$PATH"
-    fi
-
-    # Hydrate Linux audio drivers if matching environment architecture
-    if [[ "$OSTYPE" == "linux-gnu"* ]] && ! dpkg -s portaudio19-dev &> /dev/null; then
-        echo "📦 Checking for Biological Ear hardware drivers (PortAudio)..."
-        sudo apt-get update && sudo apt-get install -y portaudio19-dev
-    fi
-
-    echo "⚡ Syncing OS dependencies and configuring workspace..."
-    uv sync
-
-    echo "👁️  Installing browser subsystems for raw transduction (Playwright)..."
-    uv run playwright install chromium
-
-    echo "✅ Workspace hydrated successfully!"
-    echo ""
-
-    # If no arguments were supplied, automatically redirect into the setup wizard
-    if [ $# -eq 0 ]; then
-        set -- "setup"
-    fi
+# 1. If the user explicitly built the Docker sandbox, route through containment
+if command -v docker &> /dev/null && docker image inspect brain-os &> /dev/null; then
+    exec docker compose run --rm brain "$@"
 fi
 
-# Pass execution tokens cleanly to the virtual environment binary
+# 2. Otherwise, route directly to the lightning-fast local virtual environment
 exec ./.venv/bin/python -m System.cli "$@"

@@ -238,10 +238,6 @@ dependencies = [
     { name = "pyyaml" },
     { name = "rich" },
     { name = "sense" },
-    { name = "tree-sitter" },
-    { name = "tree-sitter-javascript" },
-    { name = "tree-sitter-python" },
-    { name = "tree-sitter-typescript" },
     { name = "typer" },
     { name = "uvicorn" },
 ]
@@ -250,6 +246,12 @@ dependencies = [
 audio = [
     { name = "sounddevice" },
     { name = "soundfile" },
+]
+syntax = [
+    { name = "tree-sitter" },
+    { name = "tree-sitter-javascript" },
+    { name = "tree-sitter-python" },
+    { name = "tree-sitter-typescript" },
 ]
 vision = [
     { name = "numpy" },
@@ -288,14 +290,14 @@ requires-dist = [
     { name = "sense", editable = "Sense" },
     { name = "sounddevice", marker = "extra == 'audio'", specifier = ">=0.5.5" },
     { name = "soundfile", marker = "extra == 'audio'", specifier = ">=0.13.1" },
-    { name = "tree-sitter", specifier = ">=0.25.2" },
-    { name = "tree-sitter-javascript", specifier = ">=0.25.0" },
-    { name = "tree-sitter-python", specifier = ">=0.25.0" },
-    { name = "tree-sitter-typescript", specifier = ">=0.23.2" },
+    { name = "tree-sitter", marker = "extra == 'syntax'", specifier = ">=0.25.2" },
+    { name = "tree-sitter-javascript", marker = "extra == 'syntax'", specifier = ">=0.25.0" },
+    { name = "tree-sitter-python", marker = "extra == 'syntax'", specifier = ">=0.25.0" },
+    { name = "tree-sitter-typescript", marker = "extra == 'syntax'", specifier = ">=0.23.2" },
     { name = "typer", specifier = ">=0.23.1" },
     { name = "uvicorn", specifier = ">=0.47.0" },
 ]
-provides-extras = ["vision", "audio"]
+provides-extras = ["syntax", "vision", "audio"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -4,9 +4,14 @@ from pathlib import Path
 from rich.console import Console
 
 try:
-    import cv2  # type: ignore
+    import cv2
+    import numpy as np
+
+    VISION_AVAILABLE = True
 except ImportError:
-    cv2 = None
+    cv2 = None  # type: ignore[assignment]
+    np = None  # type: ignore[assignment]
+    VISION_AVAILABLE = False
 
 console = Console()
 

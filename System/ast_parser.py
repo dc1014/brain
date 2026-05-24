@@ -1,35 +1,59 @@
 import os
-from tree_sitter import Language, Parser
-import tree_sitter_python as tspython
-import tree_sitter_javascript as tsjavascript
-import tree_sitter_typescript as tstypescript
+from typing import Any
 
-# 1. Initialize the Language Grammars
-LANG_PY = Language(tspython.language())
-LANG_JS = Language(tsjavascript.language())
-LANG_TS = Language(tstypescript.language_typescript())
-LANG_TSX = Language(tstypescript.language_tsx())
+# ⚡ SHIFT-LEFT: Safely check for optional parsing binaries and gracefully fallback
+try:
+    from tree_sitter import Language, Parser
+    import tree_sitter_python as tspython
+    import tree_sitter_javascript as tsjavascript
+    import tree_sitter_typescript as tstypescript
+
+    TREE_SITTER_AVAILABLE = True
+
+    # ⚡ THE FIX: Explicitly type-annotate as Any to allow safe fallback assignment without triggering Mypy errors
+    LANG_PY: Any = Language(tspython.language())
+    LANG_JS: Any = Language(tsjavascript.language())
+    LANG_TS: Any = Language(tstypescript.language_typescript())
+    LANG_TSX: Any = Language(tstypescript.language_tsx())
+
+except Exception:
+    TREE_SITTER_AVAILABLE = False
+    LANG_PY = LANG_JS = LANG_TS = LANG_TSX = None
 
 
-def get_parser(extension: str):
+def get_parser(extension: str) -> Any:
     """Returns the correct Tree-Sitter parser based on file extension."""
-    parser = Parser(LANG_PY)  # Default fallback
+    if not TREE_SITTER_AVAILABLE:
+        return None
+
+    lang = None
     if extension == ".py":
-        parser = Parser(LANG_PY)
+        lang = LANG_PY
     elif extension in [".js", ".jsx"]:
-        parser = Parser(LANG_JS)
+        lang = LANG_JS
     elif extension == ".ts":
-        parser = Parser(LANG_TS)
+        lang = LANG_TS
     elif extension == ".tsx":
-        parser = Parser(LANG_TSX)
+        lang = LANG_TSX
     else:
         return None
+
+    # Safely handles both Tree-sitter v0.21 and v0.22+ API changes for all setups
+    try:
+        parser = Parser(lang)  # type: ignore
+    except TypeError:
+        parser = Parser()  # type: ignore
+        try:
+            parser.set_language(lang)  # type: ignore
+        except AttributeError:
+            parser.language = lang  # type: ignore
+
     return parser
 
 
 def extract_signatures(file_path: str) -> str:
     """Parses a file and extracts only structural signatures (classes, functions)."""
-    ext = os.path.splitext(file_path)[1].lower()
+    ext = os.path.splitext(file_path)[1]
     parser = get_parser(ext)
 
     if not parser:
@@ -37,53 +61,50 @@ def extract_signatures(file_path: str) -> str:
 
     try:
         with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
+            source_code = f.read()
     except Exception:
         return ""
 
-    raw_bytes = bytes(content, "utf-8")
-    tree = parser.parse(raw_bytes)
-    stubs = []
+    tree = parser.parse(bytes(source_code, "utf8"))
 
-    target_nodes = {
-        "class_definition",
-        "function_definition",  # Python
-        "class_declaration",
-        "function_declaration",
-        "method_definition",  # JS/TS
-        "lexical_declaration",  # JS/TS Const arrow functions
-    }
-    body_nodes = {"block", "statement_block", "class_body"}
+    # Explicitly type annotate stubs list to avoid LiteralString type inference constraints
+    stubs: list[str] = []
 
-    def walk(node, depth=0):
-        indent = "    " * depth
+    def walk(node: Any, depth: int = 0) -> None:
+        indent = "  " * depth
 
-        if node.type in target_nodes:
-            # Helper to dig into variable declarators for arrow functions
-            def find_body(n):
-                for c in n.children:
-                    if c.type in body_nodes:
-                        return c
-                    if c.type in ["variable_declarator", "arrow_function"]:
-                        res = find_body(c)
-                        if res:
-                            return res
-                return None
+        if node.type in [
+            "class_definition",  # Python class
+            "function_definition",  # Python def
+            "class_declaration",  # TS/JS class
+            "method_definition",  # TS/JS class method
+            "function_declaration",  # TS/JS function
+            "lexical_declaration",  # TS/JS let/const (arrow functions)
+            "variable_declaration",  # TS/JS var (arrow functions)
+        ]:
+            block_node = None
 
-            block_node = find_body(node)
+            # Breadth-First Search to find the body block (handles deeply nested TS/JS arrow functions)
+            queue = list(node.children)
+            while queue:
+                child = queue.pop(0)
+                if child.type in ["block", "statement_block", "class_body"]:
+                    block_node = child
+                    break
+                if child.type in ["variable_declarator", "arrow_function"]:
+                    queue.extend(child.children)
 
             if block_node:
-                # AST BYTE SLICE: Grab the signature, ignore the body!
-                sig_bytes = raw_bytes[node.start_byte : block_node.start_byte]
+                sig_bytes = bytes(source_code, "utf8")[
+                    node.start_byte : block_node.start_byte
+                ]
                 signature = sig_bytes.decode("utf-8").strip()
 
-                # Clean up trailing braces
                 if signature.endswith("{"):
                     signature = signature[:-1].strip()
 
                 stubs.append(f"{indent}{signature} ...")
 
-                # If it's a class, walk inside to get its methods
                 if node.type in ["class_definition", "class_declaration"]:
                     for child in block_node.children:
                         walk(child, depth + 1)
@@ -98,7 +119,10 @@ def extract_signatures(file_path: str) -> str:
 
 def generate_project_stub(directory: str) -> str:
     """Walks a directory and returns a concatenated map of all file signatures."""
-    project_stub = []
+    if not TREE_SITTER_AVAILABLE:
+        return "Project parsing unavailable. Tree-sitter syntax module not installed."
+
+    project_stub: list[str] = []
     ignored_dirs = {".git", "node_modules", ".venv", "__pycache__", "dist", "build"}
 
     for root, dirs, files in os.walk(directory):

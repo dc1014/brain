@@ -4,5 +4,10 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DIR"
 
-# Bypass 'uv' completely. Use the absolute virtual environment!
-./.venv/bin/python -m System.cli "$@"
+# 1. If the user explicitly built the Docker sandbox, route through containment
+if command -v docker &> /dev/null && docker image inspect brain-os &> /dev/null; then
+    exec docker compose run --rm brain "$@"
+fi
+
+# 2. Otherwise, route directly to the lightning-fast local virtual environment
+exec ./.venv/bin/python -m System.cli "$@"

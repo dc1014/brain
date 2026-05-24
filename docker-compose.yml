@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  brain:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: brain-os
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount the configuration and memory state securely
+      - ./System/config:/opt/brain/System/config
+      - ./Meta:/opt/brain/Meta
+      - ./.env:/opt/brain/.env
+      # Dynamic mount point for the target workspace
+      - ${BRAIN_WORKSPACE_MOUNT:-./Workspace}:/workspace
+    network_mode: host # Allows Brain to talk to localhost:11434 (Ollama) seamlessly
+    tty: true
+    stdin_open: true
