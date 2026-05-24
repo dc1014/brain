@@ -213,7 +213,7 @@ class MedullaOblongata:
             ]
             modulation_chemistry = acc.inspect_context_buffer(mock_history)
 
-            # ⚡ ZERO-DEBT: Explicitly cast to float to pacify Mypy
+            # Explicitly cast to float to pacify Mypy
             target_temp = float(modulation_chemistry.get("temperature", 0.0))
 
             # ⚡ P1 FIX: Inherit the fast fallback model from the user's DNA identity
@@ -223,7 +223,7 @@ class MedullaOblongata:
                 get_dna_config().get("models", {}).get("fast", "openai/gpt-4o-mini")
             )
 
-            # ⚡ ZERO-DEBT: Force strict string evaluation and eliminate 'None' ambiguity
+            # Force strict string evaluation and eliminate 'None' ambiguity
             target_engine = str(
                 modulation_chemistry.get("engine_override")
                 or fallback

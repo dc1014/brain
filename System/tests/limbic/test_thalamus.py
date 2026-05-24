@@ -23,7 +23,7 @@ def test_thalamus_filtering(monkeypatch):
 
     # Mock the LLM to return a specific filtered string
     monkeypatch.setattr(
-        "System.neuroanatomy.limbic.thalamus.completion",  # ⚡ ZERO-DEBT: Patch the local module reference!
+        "System.neuroanatomy.limbic.thalamus.completion",  # Patch the local module reference!
         lambda *args, **kwargs: type(
             "Mock",
             (),
@@ -74,7 +74,7 @@ async def test_thalamus_pydantic_fallback(mocker, monkeypatch):
 
         return MockResponse()
 
-    # ⚡ ZERO-DEBT: Patch the LLM call inside the new Thalamus module
+    # Patch the LLM call inside the new Thalamus module
     monkeypatch.setattr("System.llm.acompletion", mock_acompletion)
 
     # 2. Execute the Thalamus using the new function name
@@ -117,7 +117,7 @@ async def test_thalamus_rejection_logic(mocker, monkeypatch):
     is_valid, reason, route, domain, usage = await route_sensory_input("Order a pizza")
 
     assert is_valid is False
-    # ⚡ ZERO-DEBT: Match the Thalamus's .upper() capitalization shift
+    # Match the Thalamus's .upper() capitalization shift
     assert "I CANNOT ORDER A PHYSICAL PIZZA FOR YOU." in reason
 
 

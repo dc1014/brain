@@ -22,7 +22,7 @@ def execute_sandboxed_js(
     command = [
         "deno",
         "run",
-        "--deny-net",  # ⚡ ZERO-DEBT: Explicitly revoke all network interfaces natively
+        "--deny-net",  # Explicitly revoke all network interfaces natively
         "--quiet",
         "--no-prompt",
         "--no-config",

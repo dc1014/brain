@@ -13,7 +13,7 @@ def parse_and_validate_args(command_input: list[str] | str) -> tuple:
     Enforces array-based execution parameters, eliminating shell string parsing.
     Injects defensive flags natively to shift-left security.
     """
-    # ⚡ ZERO-DEBT: Backwards compatibility during array migration
+    # Backwards compatibility during array migration
     if isinstance(command_input, str):
         warnings.warn(
             "Passing raw strings to execution layer is deprecated. Use structured arrays.",

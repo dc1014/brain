@@ -32,7 +32,7 @@ def test_thymus_escalation(mocker):
     """Zero-Debt: Proves the escalation chain cascades correctly (Halt -> Kill -> Rollback)."""
     thymus = ThymusGland()
 
-    # ⚡ THE FIX: Target the TRUE origin paths for locally-imported functions!
+    # Target the TRUE origin paths for locally-imported functions!
     mock_halt = mocker.patch("System.neuroanatomy.autonomic.vagus_nerve.trigger_halt")
     mock_restore = mocker.patch(
         "System.neuroanatomy.autonomic.vestibular.restore_balance"
@@ -58,7 +58,7 @@ def test_medulla_child_boot(mocker):
     """Zero-Debt: Proves the Medulla child-boot sequence links the IPC socket properly."""
     from System.neuroanatomy.autonomic.medulla import child_boot
 
-    # ⚡ THE FIX: Target the true multiprocessing library origin for the Client mock
+    # Target the true multiprocessing library origin for the Client mock
     mock_client = mocker.patch("multiprocessing.connection.Client")
     mock_medulla = mocker.patch(
         "System.neuroanatomy.autonomic.medulla.MedullaOblongata"

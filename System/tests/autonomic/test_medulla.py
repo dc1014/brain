@@ -173,7 +173,7 @@ def test_medulla_boot_sequence_respects_startup_grace_window(mocker) -> None:
 
     without false-positive cardiac arrest logs on initial boot.
     """
-    # 🔐 SHIFT-LEFT ISOLATION: Intercept the time.sleep calls inside the supervisor loop
+    # Intercept the time.sleep calls inside the supervisor loop
     mocker.patch("System.neuroanatomy.autonomic.medulla.time.sleep")
 
     # Mock out the internal component blueprints and logger metrics

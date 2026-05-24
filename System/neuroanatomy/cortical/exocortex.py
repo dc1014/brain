@@ -67,7 +67,7 @@ class Exocortex:
                 return self._handle_read(str(data.get("target", "")))
             elif action == "EXECUTE_ENGRAM":
                 return self._handle_engram(str(data.get("engram_name", "")))
-            # ⚡ ZERO-DEBT: Adding the external sharing endpoint
+            # Adding the external sharing endpoint
             elif action == "SHARE_ENGRAM":
                 return self._handle_share(
                     str(data.get("engram_name", "")), str(data.get("code", ""))
@@ -172,7 +172,7 @@ class Exocortex:
             try:
                 import aiohttp
 
-                # ⚡ ZERO-DEBT: Strict ClientTimeout object to satisfy MyPy and prevent hanging
+                # Strict ClientTimeout object to satisfy MyPy and prevent hanging
                 timeout = aiohttp.ClientTimeout(total=10)
                 async with aiohttp.ClientSession() as session:
                     async with session.post(url, json=packet, timeout=timeout) as resp:

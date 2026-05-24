@@ -14,7 +14,7 @@ def test_token_truncator_protects_context(mocker) -> None:
     )
     mocker.patch("System.llm.log_interaction")  # Silence the log writer for tests
 
-    # ⚡ ZERO-DEBT FIX: Prevent the memory compressor from mutating the message array
+    # Prevent the memory compressor from mutating the message array
     async def bypass_compressor(msgs, model):
         return msgs
 
@@ -78,7 +78,7 @@ def test_token_truncator_protects_context(mocker) -> None:
     # (including the final text_msg assistant response appended after the tool run).
     messages_sent_to_llm = mock_completion.call_args_list[1][1]["messages"]
 
-    # ⚡ ZERO-DEBT FIX: The truncated tool output is the second-to-last item [-2],
+    # The truncated tool output is the second-to-last item [-2],
     # because the final text_msg is appended to the very end [-1].
     tool_response_msg = messages_sent_to_llm[-2]
 
@@ -342,7 +342,7 @@ async def test_run_agent_async_json_structured_output_bridge(mocker):
     assert len(synthetic_tools) == 1
     assert synthetic_tools[0].tool_name == "read_safe_file"
 
-    # ⚡ ZERO-DEBT FIX: Parameters are natively parsed dictionaries inside ToolCallSchema.
+    # Parameters are natively parsed dictionaries inside ToolCallSchema.
     # No more legacy inner class properties or redundant json.loads deserialization!
     parsed_args = synthetic_tools[0].parameters
     assert parsed_args["filepath"] == "defcon_test.txt"
@@ -400,7 +400,7 @@ def test_get_system_context_skips_advisory_mode_when_execution_enabled(mocker) -
 async def test_ephemeral_prompt_caching_injection(
     mock_vector, mock_log, mock_acompletion
 ):
-    """🛡️ ZERO-DEBT PROOF: Verifies Anthropic models receive explicit cache_control headers for system prompts."""
+    """Verifies Anthropic models receive explicit cache_control headers for system prompts."""
     # Mock LiteLLM response structure
     mock_response = MagicMock()
     mock_response.choices = [MagicMock()]
@@ -434,7 +434,7 @@ async def test_ephemeral_prompt_caching_injection(
 
 
 def test_environmental_stream_guillotine_math():
-    """🛡️ ZERO-DEBT PROOF: Verifies massive terminal outputs bounds math behaves perfectly."""
+    """Verifies massive terminal outputs bounds math behaves perfectly."""
     # Simulate a massive tool output from the OS
     content_str = "A" * 20000
 
@@ -449,7 +449,7 @@ def test_environmental_stream_guillotine_math():
 
 
 def test_amnesia_sliding_window_logic():
-    """🛡️ ZERO-DEBT PROOF: Verifies context memory is securely pruned to prevent token inflation."""
+    """Verifies context memory is securely pruned to prevent token inflation."""
     # Generate a massive 50,000 character context payload
     massive_context = ("START_" * 1000) + ("MIDDLE_" * 4000) + ("END_" * 4000)
 

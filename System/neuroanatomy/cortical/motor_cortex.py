@@ -46,8 +46,8 @@ async def execute_tools(
         console.print(f"\n[dim]⚡ {role_name} is thinking and acting...[/dim]")
 
     for tool_call in tool_calls:
-        # ⚡ ZERO-DEBT: Idiomatic instance checks (No more mock-evasion strings)
-        # ⚡ ZERO-DEBT: UUID generation (No more hash collisions for parallel tools)
+        # Idiomatic instance checks (No more mock-evasion strings)
+        # UUID generation (No more hash collisions for parallel tools)
         if isinstance(tool_call, dict):
             if "tool_name" in tool_call:
                 args = tool_call.get("parameters", {})
@@ -99,7 +99,7 @@ async def execute_tools(
                 if func_name in EXECUTION_TOOLS:
                     args["route"] = route
 
-                # ⚡ ZERO-DEBT: Dynamic event loop inspection to safely support future native-async tools
+                # Dynamic event loop inspection to safely support future native-async tools
                 async def _run_tool():
                     if inspect.iscoroutinefunction(tool_func):
                         return await tool_func(**args)

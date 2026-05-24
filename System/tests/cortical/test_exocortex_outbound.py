@@ -48,7 +48,7 @@ async def test_exocortex_outbound_mcp(tmp_path, monkeypatch, mocker):
         encoding="utf-8",
     )
 
-    # ⚡ ZERO-DEBT: Accurately mock standard asyncio.StreamWriter
+    # Accurately mock standard asyncio.StreamWriter
     mock_writer = mocker.Mock()
     mock_writer.write = mocker.Mock()  # Sync
     mock_writer.close = mocker.Mock()  # Sync

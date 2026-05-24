@@ -10,7 +10,7 @@ try:
 
     TREE_SITTER_AVAILABLE = True
 
-    # ⚡ THE FIX: Explicitly type-annotate as Any to allow safe fallback assignment without triggering Mypy errors
+    # Explicitly type-annotate as Any to allow safe fallback assignment without triggering Mypy errors
     LANG_PY: Any = Language(tspython.language())
     LANG_JS: Any = Language(tsjavascript.language())
     LANG_TS: Any = Language(tstypescript.language_typescript())

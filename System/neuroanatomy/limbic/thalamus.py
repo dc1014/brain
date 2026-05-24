@@ -29,7 +29,7 @@ def filter_attention(prompt: str, raw_memory: str) -> str:
         # Use the cheapest possible model for the subconscious filter
         model = config.get("models", {}).get("gpt_mini", "gpt-4o-mini")
 
-        # ⚡ THE FIX: Use the secure vault to check for keys!
+        # Use the secure vault to check for keys!
         if vault.get_api_key_for_model(
             "anthropic/claude-3-haiku"
         ) and not vault.get_api_key_for_model("openai/gpt-4o-mini"):

@@ -53,7 +53,7 @@ def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:  # type: ign
         return_value=(True, "Approved", "FORGE", "STUDIO", {"total_tokens": 10}),
     )
 
-    # ⚡ ZERO-DEBT: Inject the missing DNA config!
+    # Inject the missing DNA config!
     mocker.patch(
         "System.neuroanatomy.cortical.executive_loop.get_dna_config",
         return_value={
@@ -128,7 +128,7 @@ def test_interrupted_queue_interception(monkeypatch, tmp_path, mocker):
     queue_file.write_text(json.dumps(mock_queue), encoding="utf-8")
     monkeypatch.setenv("BRAIN_OS_HEADLESS", "1")
 
-    # ⚡ ZERO-DEBT: Target the function at its anatomical source since it's locally imported
+    # Target the function at its anatomical source since it's locally imported
     mocker.patch(
         "System.neuroanatomy.cortical.executive_loop.execute_pipeline",
         new_callable=mocker.AsyncMock,
@@ -153,7 +153,7 @@ def test_destroy_aborts_on_no(mocker, monkeypatch) -> None:
 
 def test_destroy_executes_on_yes(mocker, monkeypatch, tmp_path) -> None:
     """Proves the uninstaller accurately targets and deletes core OS files."""
-    # ⚡ THE FIX: Prevent the global callback from short-circuiting on the queue file
+    # Prevent the global callback from short-circuiting on the queue file
     monkeypatch.delenv("BRAIN_OS_HEADLESS", raising=False)
 
     # Isolate the CLI to a temporary directory

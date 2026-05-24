@@ -8,7 +8,7 @@ import asyncio
 from System.core.paths import ROOT_DIR, normalize_path
 from System.core.schemas import ExecutionResult
 
-# ⚡ ZERO-DEBT: Flattened dependency tree and clean utility imports (No sys.modules hacks)
+# Flattened dependency tree and clean utility imports (No sys.modules hacks)
 import System.neuroanatomy.systemic.blood_brain_barrier as bbb
 import System.neuroanatomy.limbic.amygdala as amygdala
 import System.tools.sandbox as sandbox_module
@@ -25,7 +25,7 @@ from System.tools.execution.execution_utils import (
 )
 
 
-# ⚡ ZERO-DEBT: Pure execution. Auth and timeouts are handled upstream.
+# Pure execution. Auth and timeouts are handled upstream.
 async def execute_command_async(
     command: list[str] | str,
     directory_path: str,

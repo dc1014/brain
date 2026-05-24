@@ -30,7 +30,7 @@ class ThymusGland:
 
         self.listener = Listener(self.address)
 
-        # ⚡ THE FIX: Explicitly type the process so Mypy stops guessing!
+        # Explicitly type the process so Mypy stops guessing!
         self.medulla_process: subprocess.Popen[Any] | None = None
 
         self.destructive_velocity_window: list[float] = []
@@ -60,7 +60,7 @@ class ThymusGland:
             return
 
         while True:
-            # ⚡ THE FIX: Defensive checking protects against Pytest returning a NoneType mock
+            # Defensive checking protects against Pytest returning a NoneType mock
             if self.medulla_process and self.medulla_process.poll() is not None:
                 console.print(
                     "[dim yellow]🛡️ Thymus: Medulla process terminated naturally.[/dim yellow]"

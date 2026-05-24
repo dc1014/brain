@@ -12,7 +12,7 @@ from System.neuroanatomy.cortical.executive_loop import execute_pipeline
 async def test_executive_state_machine_qa_fallback(
     mock_commit, mock_validate, mock_add_event, mock_run_agent
 ):
-    """🛡️ ZERO-DEBT PROOF: Verifies the State Machine cursor safely jumps to Product Manager upon QA rejection without mutating the array."""
+    """Verifies the State Machine cursor safely jumps to Product Manager upon QA rejection without mutating the array."""
 
     # Mock the LLM to return standard text and usage stats
     mock_agent_response = MagicMock()
@@ -73,11 +73,11 @@ async def test_executive_state_machine_qa_fallback(
 async def test_executive_state_machine_vagus_abort(
     mock_energy, mock_persist, mock_run_agent, tmp_path
 ):
-    """🛡️ ZERO-DEBT PROOF: Verifies that a dropped .vagus_abort_signal file mid-flight trips the state cursor."""
+    """Verifies that a dropped .vagus_abort_signal file mid-flight trips the state cursor."""
 
     mock_energy.return_value = (False, 0)
 
-    # ⚡ ZERO-DEBT FIX: Hydrate the virtual workspace layout so lookups for tools.yaml do not crash
+    # Hydrate the virtual workspace layout so lookups for tools.yaml do not crash
     tools_dir = tmp_path / "System" / "config"
     tools_dir.mkdir(parents=True, exist_ok=True)
     (tools_dir / "tools.yaml").write_text("{}", encoding="utf-8")

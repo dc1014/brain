@@ -70,7 +70,7 @@ def test_tier_0_hitl_denial(mocker, tmp_path, bypass_immune_system):
     mocker.patch("System.tools.execution.__init__.asyncio.to_thread", return_value="n")
     result = execute_command(["npm", "run", "build"], "Studio")
     assert result.success is False
-    # ⚡ ZERO-DEBT: Updated to match the new, concise security block return text
+    # Updated to match the new, concise security block return text
     assert "User denied execution" in result.output
 
 
@@ -294,7 +294,7 @@ def test_phase5_flag_merging_evasion_blocked(mocker, tmp_path, bypass_immune_sys
         ["python", "-Oic", "import os; os.system('rm -rf /')"], "Studio"
     )
     assert result.success is False
-    # ⚡ THE FIX: Adjusted assertion string to validate our pristine Level 1 Lookahead block!
+    # Adjusted assertion string to validate our pristine Level 1 Lookahead block!
     assert "strictly forbidden" in result.output
 
 
@@ -328,7 +328,7 @@ def test_ast_secondary_payload_smuggling_blocked(
     evil_script = bypass_immune_system / "evil.py"
     evil_script.write_text("import os; os.system('bad')")
 
-    # ⚡ THE FIX: Inspect the atomic snapshot file content instead of its path name
+    # Inspect the atomic snapshot file content instead of its path name
     def mock_ast_scan(filepath):
         with open(filepath, "r", encoding="utf-8") as f:
             if "bad" in f.read():
@@ -394,7 +394,7 @@ async def test_option_b_tier_1_deployment_routed(
     mocker, tmp_path, bypass_immune_system
 ):
     """Proves deployments route correctly to the hardware sandbox when Tier 1 is active."""
-    # ⚡ THE FIX: Explicitly import the async variant to test cleanly inside the loop
+    # Explicitly import the async variant to test cleanly inside the loop
     from System.tools.execution import deploy_project_async
     from System.core.schemas import ExecutionResult
 
@@ -407,7 +407,7 @@ async def test_option_b_tier_1_deployment_routed(
         return_value="fake_token",
     )
 
-    # ⚡ THE FIX: Target the sandbox module directly!
+    # Target the sandbox module directly!
     mocker.patch(
         "System.tools.sandbox.execute_in_sandbox",
         return_value=ExecutionResult(
@@ -416,7 +416,7 @@ async def test_option_b_tier_1_deployment_routed(
         ),
     )
 
-    # ⚡ THE FIX: Await the async function directly to avoid cross-thread loop creation
+    # Await the async function directly to avoid cross-thread loop creation
     result = await deploy_project_async("Studio", provider="custom")
     assert result.success is True
     assert "Simulated deploy" in result.output
@@ -712,7 +712,7 @@ def test_phase7_flag_parameter_desync_blocked(mocker, tmp_path, bypass_immune_sy
     real_target = bypass_immune_system / "target.py"
     real_target.write_text("print('I am the real execution target')")
 
-    # ⚡ THE FIX: Align lookahead parser test with the snapshot file payload mechanics
+    # Align lookahead parser test with the snapshot file payload mechanics
     def mock_ast_scan(filepath):
         with open(filepath, "r", encoding="utf-8") as f:
             if "real execution target" in f.read():
@@ -808,7 +808,7 @@ def test_phase10_windows_local_binary_hijacking_blocked(
     fake_python = bypass_immune_system / "python.exe"
     fake_python.touch()
 
-    # ⚡ THE FIX: Patch shutil.which inside the validation sub-module where it's called
+    # Patch shutil.which inside the validation sub-module where it's called
     mocker.patch(
         "System.tools.execution.validation.shutil.which", return_value=str(fake_python)
     )

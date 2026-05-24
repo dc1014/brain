@@ -48,7 +48,7 @@ async def log_interaction(
     usage: dict[str, int],
     route: str = "UNKNOWN",
     domain: str = "NONE",
-    origin: str = "HUMAN",  # ⚡ THE FIX: Track the execution origin
+    origin: str = "HUMAN",  # Track the execution origin
 ) -> None:
     log_entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -151,7 +151,7 @@ def apply_humoral_modulation(base_model: str) -> tuple[str, float, int]:
             )
 
     # 3. Hardened Dynamic Token Throttling Tiers (Cost & Stress Protection)
-    # ⚡ THE FIX: Bridge directly to EndocrineSystem to calculate tier-based token caps
+    # Bridge directly to EndocrineSystem to calculate tier-based token caps
     max_tokens = endocrine.calculate_token_limit(final_model)
 
     return final_model, final_temp, max_tokens
@@ -166,7 +166,7 @@ async def run_agent_async(
     domain: str = "NONE",
     step: int = 1,
     tools: list[dict[str, Any]] | None = None,
-    origin: str = "HUMAN",  # ⚡ THE FIX: Accept the 'origin' baton from the PFC
+    origin: str = "HUMAN",  # Accept the 'origin' baton from the PFC
 ) -> AgentResponse:
     """Invokes the active Swarm node natively asynchronously using litellm."""
 
@@ -212,7 +212,7 @@ async def run_agent_async(
         model_string = route_hemisphere(route, model_string)
 
         for iteration in range(5):
-            # ⚡ ZERO-DEBT: Dynamically compress bloated history arrays
+            # Dynamically compress bloated history arrays
             messages = await compress_message_array(messages, model_string)
             pruned_messages = messages
 
@@ -264,7 +264,7 @@ async def run_agent_async(
             message_dict: dict[str, Any] = {"role": "assistant"}
 
             # If the LLM returns our new Pydantic Schema, parse it and translate to Markdown.
-            # ⚡ ZERO-DEBT: Native Structured Outputs
+            # Native Structured Outputs
             # We explicitly trust LiteLLM's response_format enforcement. No brittle regex.
             clean_json = clean_json_output(message.content or "")
 
@@ -294,7 +294,7 @@ async def run_agent_async(
                             route=route,
                         )
 
-                        # ⚡ ZERO-DEBT FIX: Flatten synthetic tool results into a standard user message
+                        # Flatten synthetic tool results into a standard user message
                         flat_results = "Tool Execution Results:\n"
                         for tm in tool_messages:
                             content_str = tm.get("content", "")
@@ -381,7 +381,7 @@ async def run_agent_async(
             usage_data,
             route,
             domain,
-            origin,  # ⚡ THE FIX: Pass the baton to the logger!
+            origin,  # Pass the baton to the logger!
         )
         return AgentResponse(
             text=safe_final_text, actions=safe_action_manifest, usage=usage_data
@@ -404,6 +404,6 @@ async def run_agent_async(
             usage_data,
             route,
             domain,
-            origin,  # ⚡ THE FIX: Pass the baton to the logger!
+            origin,  # Pass the baton to the logger!
         )
         return AgentResponse(text=error_msg, actions=action_manifest, usage=usage_data)

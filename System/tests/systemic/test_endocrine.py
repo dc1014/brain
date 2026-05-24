@@ -46,7 +46,7 @@ def test_endocrine_model_downgrade_under_stress(monkeypatch, tmp_path, mocker):
         tmp_path / "humoral.json",
     )
 
-    # ⚡ THE FIX: Patch the true local import target to ensure deterministic resolution
+    # Patch the true local import target to ensure deterministic resolution
     mocker.patch(
         "System.neuroanatomy.systemic.endocrine.get_dna_config",
         return_value={

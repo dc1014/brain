@@ -11,7 +11,7 @@ def test_watch_daemon_normalizes_typer_option_regression(
     """
     from System.cli_somatic import watch
 
-    # 🔐 SHIFT-LEFT ISOLATION: Bind the file scanner to an empty temporary path
+    # Bind the file scanner to an empty temporary path
     mocker.patch("System.cli_somatic.ROOT_DIR", tmp_path)
 
     # Patch MirrorNeurons to prevent destructive background disk writes during tests

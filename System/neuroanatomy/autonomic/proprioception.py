@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from rich.console import Console
 
-# ⚡ ZERO-DEBT: Import our native dual-protocol lock
+# Import our native dual-protocol lock
 from System.core.locks import BiologicalLock
 
 console = Console()
@@ -62,7 +62,7 @@ def sweep_zombies() -> None:
     """Kills tracked processes tied to this session, or orphaned by an OS hard crash."""
     import psutil
 
-    # ⚡ ZERO-DEBT: Use atomic context manager to ensure safe deletions
+    # Use atomic context manager to ensure safe deletions
     with mutate_state() as state:
         if not state:
             return
@@ -137,7 +137,7 @@ def start_process(
 
     sweep_zombies()
 
-    # ⚡ ZERO-DEBT: Wrap process assignment inside atomic state mutations
+    # Wrap process assignment inside atomic state mutations
     with mutate_state() as state:
         if name in state:
             if psutil.pid_exists(state[name]["pid"]):
@@ -182,7 +182,7 @@ def start_process(
         stop_process(name)
         return f"ERROR: Process '{name}' started but failed to bind to port {port} within 15 seconds. It crashed."
 
-    # ⚡ ZERO-DEBT: Safe dynamic property extraction on native Popen instance
+    # Safe dynamic property extraction on native Popen instance
     return f"SUCCESS: Process '{name}' started with PID {process.pid if 'process' in locals() else 'unknown'} in {safe_cwd}."
 
 
@@ -190,7 +190,7 @@ def stop_process(name: str) -> str:
     """Stops a background process safely."""
     import psutil
 
-    # ⚡ ZERO-DEBT: Wrap deletion inside atomic context
+    # Wrap deletion inside atomic context
     with mutate_state() as state:
         if name not in state:
             return f"ERROR: Process '{name}' not found in state."
@@ -214,7 +214,7 @@ def list_processes() -> str:
     """Lists running background processes safely."""
     import psutil
 
-    # ⚡ ZERO-DEBT: Safe isolated state read
+    # Safe isolated state read
     state = _load_state()
     if not state:
         return "No background processes running."

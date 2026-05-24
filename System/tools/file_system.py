@@ -15,7 +15,7 @@ def write_safe_file(filepath: str, content: str) -> ExecutionResult:
     try:
         target_path: Path = normalize_path(ROOT_DIR / filepath)
 
-        # ⚡ THE FIX: Fall back to single-argument signature style if a test suite mock triggers a TypeError
+        # Fall back to single-argument signature style if a test suite mock triggers a TypeError
         try:
             is_safe = is_safe_path(target_path, require_write=True)
         except TypeError:
@@ -81,7 +81,7 @@ def list_safe_directory(directory_path: str) -> ExecutionResult:
         target_path: Path = normalize_path(ROOT_DIR / directory_path)
 
         if target_path == normalize_path(ROOT_DIR):
-            # ⚡ THE FIX: ALLOWED_DIRECTORIES are strings. Wrap them in (ROOT_DIR / d) to use Path methods!
+            # ALLOWED_DIRECTORIES are strings. Wrap them in (ROOT_DIR / d) to use Path methods!
             items = [
                 f"[DIR] {Path(ROOT_DIR / d).name}"
                 for d in ALLOWED_DIRECTORIES

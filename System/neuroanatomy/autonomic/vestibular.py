@@ -22,14 +22,14 @@ class VestibularSystem:
 
     def __init__(self) -> None:
         VESTIBULAR_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        # ⚡ ZERO-DEBT: Ignore critical OS directories
+        # Ignore critical OS directories
         self.protected_dirs = {
             ROOT_DIR / ".git",
             ROOT_DIR / "System",
             ROOT_DIR / "Meta",
             ROOT_DIR / ".venv",
         }
-        # ⚡ ZERO-DEBT: Ignore critical root-level OS files (T-Cell Self-Recognition)
+        # Ignore critical root-level OS files (T-Cell Self-Recognition)
         self.protected_files = {
             "brain.bat",
             ".env",

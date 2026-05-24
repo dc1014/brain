@@ -118,7 +118,7 @@ def test_medulla_wal_closed_loop_recovery_orchestration(tmp_path: Path, mocker) 
     mocker.patch("System.neuroanatomy.autonomic.medulla.LOG_PATH", tmp_path)
     morphic_medulla = MedullaOblongata()
 
-    # ⚡ ZERO-DEBT FIX: Override the ProcessPoolExecutor with a ThreadPoolExecutor
+    # Override the ProcessPoolExecutor with a ThreadPoolExecutor
     # so our Pytest mocks can successfully intercept calls across the concurrent execution boundary!
     from concurrent.futures import ThreadPoolExecutor
 

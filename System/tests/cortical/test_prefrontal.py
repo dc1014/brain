@@ -33,6 +33,10 @@ async def test_auditor_headless_retry_bypass(mocker, tmp_path: Path) -> None:
     # SHIFT-LEFT ISOLATION: Bind the prefrontal execution path to our isolated temp space
     mocker.patch("System.neuroanatomy.cortical.executive_loop.ROOT_DIR", tmp_path)
 
+    # ⚡ ZERO-DEBT FIX: Belt-and-suspenders patching to guarantee the OS doesn't touch the real disk
+    mocker.patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state")
+    mocker.patch("System.neuroanatomy.cortical.working_memory.persist_pipeline_state")
+
     # Bootstrap an isolated temporary tools configuration file structure
     tools_dir = tmp_path / "System" / "config"
     tools_dir.mkdir(parents=True, exist_ok=True)
@@ -84,8 +88,6 @@ async def test_auditor_headless_retry_bypass(mocker, tmp_path: Path) -> None:
 
     call_count = {"qa_auditor": 0}
 
-    call_count = {"qa_auditor": 0}
-
     async def mock_run_agent_side_effect(*args, **kwargs):
         class MockResp:
             def __init__(self, t):
@@ -113,7 +115,7 @@ async def test_auditor_headless_retry_bypass(mocker, tmp_path: Path) -> None:
     # Execute the isolated pipeline path
     await execute_pipeline("Test retry", "FORGE", "STUDIO")
 
-    # Assert that headless mode correctly bypassed input lines and re-invoked the loop
+    # ⚡ The state machine cursor handles transitions natively without mutating the array
     assert call_count["qa_auditor"] == 2
 
 
@@ -129,7 +131,7 @@ async def test_synaptic_consolidation_commits_mid_pipeline(
 ):
     """Proves intermediate milestones are written directly to safe storage layers."""
 
-    # ⚡ THE FIX: Provide the structural files the OS expects to read in the temp dir!
+    # Provide the structural files the OS expects to read in the temp dir!
     config_dir = tmp_path / "System" / "config"
     config_dir.mkdir(parents=True)
     (config_dir / "tools.yaml").write_text("{}")

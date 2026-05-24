@@ -60,7 +60,7 @@ async def apply_motor_inhibition(
         f"\n[bold magenta]⏸️ Motor Inhibition:[/bold magenta] Task paused. Awaiting human authorization in Obsidian -> [dim]{MD_QUEUE.relative_to(ROOT_DIR)}[/dim]"
     )
 
-    # ⚡ ZERO-DEBT: The Swarm sleeps here. All memory and context is perfectly preserved!
+    # The Swarm sleeps here. All memory and context is perfectly preserved!
     while True:
         if release_flag.exists():
             try:
@@ -104,7 +104,7 @@ def release_motor_inhibition() -> int:
                 except json.JSONDecodeError:
                     continue
 
-        # ⚡ THE FIX: We DO NOT delete the queue file here anymore!
+        # We DO NOT delete the queue file here anymore!
         # We leave it for the Medulla daemon to consume.
         if MD_QUEUE.exists():
             with open(MD_QUEUE, "w", encoding="utf-8") as f:

@@ -164,7 +164,7 @@ async def test_sandbox_allows_execution_when_opted_in(mocker, tmp_path: Path) ->
         side_effect=[b"Executed cleanly.[__EXECUTION_COMPLETE__]", b""]
     )
 
-    # ⚡ ZERO-DEBT FIX: Explicitly mock these as synchronous to prevent "never awaited" warnings
+    # Explicitly mock these as synchronous to prevent "never awaited" warnings
     mock_proc.stdin.write = mocker.MagicMock()
     mock_proc.stdin.close = mocker.MagicMock()
     mock_proc.kill = mocker.MagicMock()

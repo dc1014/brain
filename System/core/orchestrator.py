@@ -39,7 +39,7 @@ async def dispatch_task(
     final_route = route_type if route_type != "WORKSPACE" else predefined_route
     final_domain = domain if domain != "GENERAL" else predefined_domain
 
-    # ⚡ THE FIX: Identify background queue tasks as AUTONOMIC so they don't wake the sleep cycle
+    # Identify background queue tasks as AUTONOMIC so they don't wake the sleep cycle
     target_origin = "AUTONOMIC" if obsidian else "HUMAN"
 
     await execute_pipeline(description, final_route, final_domain, origin=target_origin)
@@ -54,7 +54,7 @@ def run_pending_queue() -> None:
     queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
     pending_file = ROOT_DIR / "Meta" / "Pending_Actions.md"
     approved_flag = ROOT_DIR / "Meta" / ".approved"
-    lock_file = ROOT_DIR / "Meta" / "queue.lock"  # ⚡ ZERO-DEBT: State lock
+    lock_file = ROOT_DIR / "Meta" / "queue.lock"  # State lock
 
     # Fast-fail check before waiting for locks
     if not queue_file.exists() or not approved_flag.exists():
@@ -62,7 +62,7 @@ def run_pending_queue() -> None:
 
     tasks_to_run = []
 
-    # ⚡ ZERO-DEBT: Wrap the state mutations in a strict thread-safe file lock
+    # Wrap the state mutations in a strict thread-safe file lock
     # This completely eliminates TOCTOU (Time-Of-Check to Time-Of-Use) race conditions
     with FileLock(str(lock_file), timeout=5):
         # Double-check inside the lock to ensure another thread didn't steal it
@@ -104,7 +104,7 @@ def run_pending_queue() -> None:
                 f"[bold blue]--- Processing Approved Queue Item {idx}/{len(tasks_to_run)} ---[/bold blue]"
             )
             try:
-                # ⚡ THE FIX: Route the queue task through the Thalamus instead of skipping straight to the PFC
+                # Route the queue task through the Thalamus instead of skipping straight to the PFC
                 asyncio.run(
                     dispatch_task(
                         task_desc,

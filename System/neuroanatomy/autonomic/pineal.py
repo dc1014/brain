@@ -23,7 +23,7 @@ def is_host_asleep(idle_hours_threshold: float = 4.0) -> bool:
             if not lines:
                 return True
 
-            # ⚡ THE FIX: Read backwards to find the last explicit human interaction
+            # Read backwards to find the last explicit human interaction
             last_human_time_str = None
             for line in reversed(lines):
                 if not line.strip():

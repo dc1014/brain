@@ -41,12 +41,12 @@ def task(
             "[dim cyan]🧠 Thalamus is analyzing the pending task...[/dim cyan]"
         )
         try:
-            # ⚡ THE FIX: Use _ to explicitly discard the unused first tuple element
+            # Use _ to explicitly discard the unused first tuple element
             _, reason, calc_route, calc_domain, _ = asyncio.run(
                 route_sensory_input(description)
             )
         except Exception as e:
-            # ⚡ THE FIX: Removed is_valid entirely from the fallback assignment
+            # Removed is_valid entirely from the fallback assignment
             reason, calc_route, calc_domain = (
                 f"Analysis bypassed: {e}",
                 route,
@@ -128,7 +128,7 @@ def evolve():
     asyncio.run(
         execute_pipeline(
             "Analyze the codebase and suggest evolutionary structural improvements.",
-            "CODE_GENERATION",  # ⚡ THE FIX: Converted from FORGE
+            "CODE_GENERATION",  # Converted from FORGE
             "STUDIO",
         )
     )

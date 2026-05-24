@@ -8,7 +8,7 @@ def _dummy_tool_function(param_a: int, param_b: Optional[str]) -> List[int]:
 
 
 def test_get_safe_annotations_resolves_correctly() -> None:
-    """🛡️ ZERO-DEBT PROOF: Verifies the 3.14 polyfill accurately resolves complex types."""
+    """Verifies the 3.14 polyfill accurately resolves complex types."""
     annotations = get_safe_annotations(_dummy_tool_function)
 
     # 1. Verify standard types

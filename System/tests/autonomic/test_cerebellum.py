@@ -59,7 +59,7 @@ def test_cerebellum_parametric_engrams(monkeypatch, tmp_path):
 
 def test_cerebellum_compiler_success(mocker, tmp_path, monkeypatch):
     """Proves the Cerebellum can extract Python code and detect Exocortex manifests."""
-    # ⚡ ZERO-DEBT: Mock BOTH paths so relative_to() mathematically aligns in the isolated test environment
+    # Mock BOTH paths so relative_to() mathematically aligns in the isolated test environment
     monkeypatch.setattr("System.neuroanatomy.autonomic.cerebellum.ENGRAM_DIR", tmp_path)
     monkeypatch.setattr("System.neuroanatomy.autonomic.cerebellum.ROOT_DIR", tmp_path)
 
@@ -99,7 +99,7 @@ def test_cerebellum_compiler_success(mocker, tmp_path, monkeypatch):
 
 def test_cerebellum_fallback_name(mocker, tmp_path, monkeypatch):
     """Proves the compiler falls back to a safe name if the LLM forgets the manifest."""
-    # ⚡ ZERO-DEBT: Mock BOTH paths so relative_to() mathematically aligns in the isolated test environment
+    # Mock BOTH paths so relative_to() mathematically aligns in the isolated test environment
     monkeypatch.setattr("System.neuroanatomy.autonomic.cerebellum.ENGRAM_DIR", tmp_path)
     monkeypatch.setattr("System.neuroanatomy.autonomic.cerebellum.ROOT_DIR", tmp_path)
 

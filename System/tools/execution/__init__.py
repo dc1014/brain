@@ -80,7 +80,7 @@ async def _execute_with_auth_async(
                 "\n[bold green]⚡ TRANSMISSION AUTHORIZED: Firing synaptic process tree...[/bold green]\n"
             )
 
-    # ⚡ ZERO-DEBT: Timeouts belong to the orchestrator layer, not the routing layer
+    # Timeouts belong to the orchestrator layer, not the routing layer
     timeout = 300.0 if "pytest" in command_str else 60.0
     return await execute_command_async(command, directory_path, route, timeout=timeout)
 
@@ -264,7 +264,7 @@ def deploy_project(
 async def execute_native_isolated(
     command: list[str], workspace_path: Path, env_secrets: Dict[str, str]
 ) -> ExecutionResult:
-    # 🔐 SHIFT-LEFT SECURITY: Accept strictly parsed array lists to prevent shell injection payloads
+    # Accept strictly parsed array lists to prevent shell injection payloads
     env = get_scrubbed_env()
     for key, value in env_secrets.items():
         env[key] = value

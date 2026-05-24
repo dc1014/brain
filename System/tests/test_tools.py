@@ -363,7 +363,7 @@ def test_operate_forge_headless_bypass(monkeypatch, tmp_path):
         "System.tools.sandbox.ALLOWED_DIRECTORIES", {tmp_path / "Studio"}
     )
 
-    # ⚡ THE FIX: Explicitly mock the subprocess.run return object schema cleanly
+    # Explicitly mock the subprocess.run return object schema cleanly
     class MockResult:
         returncode = 0
         stdout = "FORGE EXECUTION COMPLETE"
