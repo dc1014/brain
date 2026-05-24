@@ -29,23 +29,23 @@ def scrape(
     Outputs errors to stderr.
     """
     try:
-        # Generate the biological Action Potential
         result = transduce_web_page(url)
 
         # UNIX PHILOSOPHY: Raw print to stdout.
-        # Do not use Rich here, or it will inject ANSI color codes into the piped output!
         print(result)
 
-        # If it was an error payload, exit with a non-zero code so downstream pipes know it failed
         if "<sensory_error" in result:
+            # ⚡ THE FIX: Use sys.stderr instead of rich console for strict UNIX piping
+            import sys
+
+            sys.stderr.write(result + "\n")
             sys.exit(1)
 
     except Exception as e:
-        # UNIX PHILOSOPHY: Print catastrophic errors to stderr
-        console.print(
-            f"[bold red]Fatal Sensory Failure:[/bold red] {str(e)}",
-            style="red",
-            err=True,
+        import sys
+
+        sys.stderr.write(
+            f'<sensory_error source="{url}">\n{str(e)}\n</sensory_error>\n'
         )
         sys.exit(1)
 

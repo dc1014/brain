@@ -136,7 +136,7 @@ async def handle_webhook(route_name: str, request: Request):
             f"Payload boundary block: {int(content_length)} bytes from {client_ip}"
         )
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=413,
             detail="Payload exceeds safe limits.",
         )
 
@@ -146,7 +146,7 @@ async def handle_webhook(route_name: str, request: Request):
         raw_body += chunk
         if len(raw_body) > MAX_PAYLOAD_SIZE:
             raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                status_code=413,
                 detail="Payload ceiling breached during stream translation.",
             )
 

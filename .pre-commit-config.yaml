@@ -26,13 +26,13 @@ repos:
       - id: mypy
         name: mypy
         # Explicitly check only the System folder to stay fast and focused
-        entry: uv run mypy System/
+        entry: uv run mypy System/ Sense/
         language: system
         pass_filenames: false
 
       - id: pytest
         name: Run Pytest (Zero Debt)
-        entry: uv run pytest
+        entry: uv run pytest System/tests Sense/tests
         language: system
         types: [python]
         pass_filenames: false

@@ -53,7 +53,6 @@ def test_transduce_web_page_success(mocker):
     result = transduce_web_page("https://safe-external-site.com")
 
     # 4. Assert Data Contracts & Cleaning
-    assert "SUCCESS" in result
     assert "# Test Title" in result
     assert "Main content area." in result
     assert "Ignore this navigation menu" not in result

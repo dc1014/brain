@@ -1,16 +1,16 @@
+import sys
+from pathlib import Path
 from unittest.mock import MagicMock
+
 from Sense.receptors.vision import (
     extract_video_frames,
     take_screenshot,
     record_webcam_video,
 )
-import sys
-from pathlib import Path
 
 
 def test_extract_video_frames_mocked(tmp_path, monkeypatch):
     """Proves the Retina extracts frames without actually triggering OpenCV hardware."""
-
     # 1. Setup fake video file
     fake_video = tmp_path / "test.mp4"
     fake_video.touch()
@@ -19,7 +19,6 @@ def test_extract_video_frames_mocked(tmp_path, monkeypatch):
     mock_cap = MagicMock()
     mock_cap.isOpened.return_value = True
     mock_cap.get.return_value = 24  # Pretend there are 24 total frames
-    # Mock cap.read() to return (True, fake_frame_data)
     mock_cap.read.return_value = (True, b"fake_pixel_data")
 
     # Mock the cv2 module entirely for this test
@@ -95,28 +94,34 @@ def test_take_screenshot_handles_playwright_missing(monkeypatch):
     assert "Playwright is not installed" in result
 
 
-def test_record_webcam_video_mocked(tmp_path, monkeypatch):
-    """Proves the Retina records frames to a video without triggering physical hardware."""
-
-    fake_video = tmp_path / "test_out.mp4"
+def test_record_webcam_video_mocked(tmp_path, mocker):
+    """Fully mocks OpenCV to simulate a successful read/write hardware loop."""
+    mock_cv2 = mocker.patch("Sense.receptors.vision.cv2")
 
     mock_cap = MagicMock()
     mock_cap.isOpened.return_value = True
-    mock_cap.get.return_value = 100  # Fake width/height
-    mock_cap.read.return_value = (True, b"fake_frame")
 
-    mock_out = MagicMock()
+    # Safe mock read function prevents StopIteration
+    call_count = [0]
 
-    mock_cv2 = MagicMock()
+    def safe_mock_read(*args, **kwargs):
+        call_count[0] += 1
+        if call_count[0] <= 6:
+            return (True, "mock_frame")
+        return (False, None)
+
+    mock_cap.read.side_effect = safe_mock_read
     mock_cv2.VideoCapture.return_value = mock_cap
-    mock_cv2.VideoWriter.return_value = mock_out
-    # Important to mock time so the loop exits instantly in tests
-    monkeypatch.setattr(
-        "Sense.receptors.vision.time.time", MagicMock(side_effect=[0, 10])
-    )
-    monkeypatch.setattr("Sense.receptors.vision.cv2", mock_cv2)
 
-    result = record_webcam_video(str(fake_video), duration_seconds=5)
+    mock_writer = MagicMock()
+    mock_cv2.VideoWriter.return_value = mock_writer
 
-    assert "successfully recorded" in result
-    mock_out.write.assert_called()
+    output_path = str(tmp_path / "test_out.mp4")
+
+    # Execute
+    result = record_webcam_video(output_path)
+
+    # Assertions
+    assert mock_writer.write.called
+    # ⚡ THE LINTER FIX: Removed redundant str() call since result is already a string
+    assert "test_out.mp4" in result

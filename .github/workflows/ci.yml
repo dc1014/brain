@@ -48,3 +48,9 @@ jobs:
         # 🛡️ CI COMPLIANCE PROTECTION: Drops parallel workers to ensure line-tracing metrics
         # accurately validate the strict >80% code coverage requirement before merge.
         run: uv run pytest --cov -n 0
+
+      - name: Run Mypy (Type Checking)
+        run: uv run mypy System/ Sense/ --ignore-missing-imports
+
+      - name: Run Pytest with Strict Coverage (Gate Enforcement)
+        run: uv run pytest System/tests Sense/tests --cov -n 0
