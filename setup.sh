@@ -164,4 +164,4 @@ if [ -n "$SHELL_PROFILE" ]; then
     echo -e "\033[1;33m🛑 IMPORTANT: Run 'source $SHELL_PROFILE' or restart your terminal to activate PATH layers.\033[0m\n"
 fi
 echo "Booting Synaptic Genesis...\n"
-uv run python -m System.cli setup
+uv run python main.py setup

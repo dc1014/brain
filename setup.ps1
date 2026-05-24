@@ -78,4 +78,4 @@ uv pip install -e ./Sense
 Write-Host "`n✅ Local environment synchronized." -ForegroundColor Green
 Write-Host "🛑 IMPORTANT: Restart your PowerShell console window to reload updated environment variables." -ForegroundColor Yellow
 Write-Host "Booting Synaptic Genesis...`n"
-uv run python -m System.cli setup
+uv run python main.py setup
