@@ -29,7 +29,7 @@ RUN uv pip install --system -e ./Sense
 # Copy the rest of the OS framework
 COPY . .
 
-# Ensure the executable has permissions
-RUN chmod +x /opt/brain/brain.sh
+# ⚡ FIXED: Eradicated divergent script execution references, pointing directly to the `brain` file
+RUN chmod +x /opt/brain/brain
 
 ENTRYPOINT ["python", "-m", "System.cli"]

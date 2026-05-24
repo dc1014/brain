@@ -5,7 +5,11 @@ cd "$DIR"
 
 # Check if the user built the Docker sandbox containment loop
 if command -v docker &> /dev/null && docker image inspect brain-os &> /dev/null; then
-    # Default fallback mount context if no directory parameters are provided
+    # 🛡️ HARDENING: Explicitly calculate and export runtime environment variables.
+    export UID=$(id -u)
+    export GID=$(id -g)
+
+    # ⚡ FIXED: Natively build fallback directory to preserve host user ownership boundaries
     export BRAIN_WORKSPACE_MOUNT="$(pwd)/Workspace"
     mkdir -p "$BRAIN_WORKSPACE_MOUNT"
 

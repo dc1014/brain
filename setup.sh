@@ -49,7 +49,7 @@ fi
 # 4. Pure Local Setup
 echo -e "\n⚡ \033[1;36mInitializing Pure Local Environment...\033[0m"
 
-# 🛡️ Fix Blocker 4: Enforce persistent PATH updates across shell files
+# Enforce persistent PATH updates across profile files
 SHELL_PROFILE=""
 if [[ "$SHELL" == */zsh ]]; then
     SHELL_PROFILE="$HOME/.zshrc"
@@ -62,10 +62,11 @@ if ! command -v uv &> /dev/null; then
     INSTALL_UV=${INSTALL_UV:-y}
     if [[ "$INSTALL_UV" =~ ^[Yy]$ ]]; then
         curl -LsSf https://astral.sh/uv/install.sh | sh
-        export PATH="$HOME/.cargo/bin:$PATH"
+        # ⚡ REALIGNMENT: Standard standalone uv installs map directly to .local/bin
+        export PATH="$HOME/.local/bin:$PATH"
         if [ -n "$SHELL_PROFILE" ] && [ -f "$SHELL_PROFILE" ]; then
-            if ! grep -q ".cargo/bin" "$SHELL_PROFILE"; then
-                echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> "$SHELL_PROFILE"
+            if ! grep -q ".local/bin" "$SHELL_PROFILE"; then
+                echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_PROFILE"
             fi
         fi
     else
@@ -74,7 +75,7 @@ if ! command -v uv &> /dev/null; then
     fi
 fi
 
-# 🛡️ Fix Blocker 3: Auto-install Deno locally to satisfy marketed Agentic features
+# Auto-install Deno locally to satisfy marketed Agentic features
 if ! command -v deno &> /dev/null; then
     echo -e "\n🦕 \033[1;34mInstalling Deno WASM Sandbox locally...\033[0m"
     curl -fsSL https://deno.land/install.sh | sh

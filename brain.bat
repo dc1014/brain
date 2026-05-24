@@ -13,20 +13,20 @@ if %errorlevel% neq 0 (
     goto :eof
 )
 
-:: Initialize default workspace parameters safely
+:: ⚡ FIXED: Natively build fallback directory to preserve host user ownership boundaries
 set "BRAIN_WORKSPACE_MOUNT=%CD%\Workspace"
 if not exist "!BRAIN_WORKSPACE_MOUNT!" mkdir "!BRAIN_WORKSPACE_MOUNT!"
 
-:: Process path conversions across arguments
+:: ⚡ FIXED: Process path conversions across arguments with rigid space escaping
 set "NEW_ARGS="
 for %%A in (%*) do (
     set "CURRENT_ARG=%%~A"
     if exist "%%~A" (
         :: Extract absolute windows host path reference
         set "BRAIN_WORKSPACE_MOUNT=%%~fA"
-        set "NEW_ARGS=!NEW_ARGS! /workspace"
+        set "NEW_ARGS=!NEW_ARGS! "/workspace""
     ) else (
-        set "NEW_ARGS=!NEW_ARGS! %%A"
+        set "NEW_ARGS=!NEW_ARGS! "%%~A""
     )
 )
 

@@ -15,6 +15,8 @@ services:
       - ./System/config:/opt/brain/System/config
       - ./Meta:/opt/brain/Meta
       - ./.env:/opt/brain/.env
+      # ⚡ UNIFIED PERMISSIONS: Mount logs directly to avoid container permission crashes
+      - ./logs:/opt/brain/logs
       # Dynamic mount point for the target workspace resolved via wrapper scripts
       - ${BRAIN_WORKSPACE_MOUNT:-./Workspace}:/workspace
     network_mode: host # Allows Brain to talk to localhost:11434 (Ollama) seamlessly
