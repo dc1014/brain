@@ -19,7 +19,7 @@ dependencies = [
     "filelock>=3.29.0",
     "fastapi>=0.136.1",
     "uvicorn>=0.47.0",
-    "sense",
+    "brain-sense",
 ]
 
 [project.optional-dependencies]
@@ -89,7 +89,7 @@ markers = [
 members = ["Sense"]
 
 [tool.uv.sources]
-sense = { workspace = true }
+brain-sense = { workspace = true }
 
 [tool.coverage.run]
 # Tells coverage exactly what module path directory to monitor

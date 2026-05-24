@@ -1,21 +1,26 @@
 [project]
-name = "sense"
+name = "brain-sense"
 version = "0.1.0"
 description = "The Sensory Nervous System for AI Agents. Transduces web/git stimuli into safe LLM context."
 readme = "README.md"
 requires-python = ">=3.12"
+authors = [{ name = "Brain OS Contributors" }]
+license = { text = "Apache-2.0" }
 dependencies = [
     "httpx>=0.27.0",
     "beautifulsoup4>=4.12.0",
     "markdownify>=0.11.6",
 ]
 
+[project.urls]
+Homepage = "https://github.com/mrdanielcasper/brain"
+Repository = "https://github.com/mrdanielcasper/brain"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.scripts]
-# Exposes the command cleanly: sense scrape <url>
 sense = "cli:app"
 
 [tool.hatch.build.targets.wheel]

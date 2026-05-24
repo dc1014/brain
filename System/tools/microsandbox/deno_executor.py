@@ -22,13 +22,12 @@ def execute_sandboxed_js(
     command = [
         "deno",
         "run",
-        "--allow-net=none",
+        "--deny-net",  # ⚡ ZERO-DEBT: Explicitly revoke all network interfaces natively
         "--quiet",
         "--no-prompt",
         "--no-config",
         "--no-lock",
         "--v8-flags=--max-old-space-size=256",
-        # ⚡ FIXED: Native OS paths
         f"--allow-read={str(staging_dir.resolve())}",
         f"--allow-write={str(staging_dir.resolve())}",
         str(script_path.resolve()),
