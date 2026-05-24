@@ -132,7 +132,7 @@ def recover():
 
 @app.command()
 def approve():
-    """✅ Dopaminergic Release: Approves pending tasks waiting in Obsidian."""
+    """✅ Dopaminergic Release: Approves pending agentic tasks waiting in the workspace."""
     queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
     md_queue = ROOT_DIR / "Meta" / "Pending_Actions.md"
     approved_flag = ROOT_DIR / "Meta" / ".approved"

@@ -296,13 +296,13 @@ def configure_neural_cryptography() -> str:
     return ""
 
 
-# --- 6. VAULT BINDING ---
-# --- Update in System/core/onboarding/cli.py ---
-def bind_vault() -> str:
+# --- 6. WORKSPACE BINDING ---
+def bind_workspace() -> str:
     console.print(
         Panel(
-            "Brain integrates natively with Obsidian markdown vaults.",
-            title="📁 [ SPATIAL BINDING ] 📁",
+            "Brain OS operates on plain text. You can bind it to [bold]any local folder[/bold].\n"
+            "If you happen to use Obsidian, Brain will auto-install native hotkeys.",
+            title="📁 [ WORKSPACE BINDING ] 📁",
             border_style="cyan",
         )
     )
@@ -314,38 +314,48 @@ def bind_vault() -> str:
         vault_paths = list(vaults.values())
         if len(vault_paths) == 1:
             if Confirm.ask(
-                f"Found Obsidian vault at [bold cyan]{vault_paths[0]}[/bold cyan]. Bind to this directory?",
+                f"Found an Obsidian vault at [bold cyan]{vault_paths[0]}[/bold cyan]. Bind Brain OS to this directory?",
                 default=True,
             ):
                 final_path = vault_paths[0]
         else:
-            console.print("[bold cyan]Multiple Obsidian Vaults detected:[/bold cyan]")
+            console.print(
+                "[bold cyan]Multiple Obsidian Vaults detected. Select one, or skip to use a standard folder:[/bold cyan]"
+            )
             for i, p in enumerate(vault_paths):
                 console.print(f"  [{i}] {p}")
             choice = Prompt.ask(
-                "Select vault index to bind",
-                choices=[str(i) for i in range(len(vault_paths))],
-                default="0",
+                "Select vault index (or press Enter to skip)",
+                default="-1",
             )
-            final_path = vault_paths[int(choice)]
+            if choice != "-1" and choice.isdigit() and int(choice) < len(vault_paths):
+                final_path = vault_paths[int(choice)]
 
     if not final_path:
         final_path = Prompt.ask(
-            "Drag-and-drop your Vault folder into this terminal and press Enter"
+            "Drag-and-drop [bold]any folder[/bold] into this terminal to act as Brain's memory space, and press Enter"
         ).strip("'\" ")
 
-    if final_path and setup_obsidian_shell_commands(Path(final_path)):
+    if not final_path:
+        final_path = str(Path.home() / "Brain_Workspace")
+        console.print(f"[dim]No path provided. Defaulting to: {final_path}[/dim]")
+
+    workspace_path = Path(final_path)
+    workspace_path.mkdir(parents=True, exist_ok=True)
+
+    if setup_obsidian_shell_commands(workspace_path):
         console.print(
-            "[bold green]✅ Brain OS controls & hotkeys (Ctrl+Alt+S) auto-enabled in Obsidian![/bold green]\n"
+            "[bold green]✅ Obsidian Vault detected! Native hotkeys (Ctrl+Alt+S) injected.[/bold green]\n"
         )
     else:
         console.print(
-            "[bold yellow]⚠️ Could not automatically inject hotkeys. Proceeding with binding...[/bold yellow]\n"
+            "[bold green]✅ Standard Workspace bound! Brain OS will operate via terminal commands.[/bold green]\n"
         )
 
-    return final_path
+    return str(workspace_path)
 
 
+# --- MASTER EXECUTION ORCHESTRATOR ---
 # --- MASTER EXECUTION ORCHESTRATOR ---
 async def main():
     draw_brain()
@@ -355,7 +365,8 @@ async def main():
     features = innervate_senses()
     valid_keys = await harvest_credentials()
     crypto_key = configure_neural_cryptography()
-    vault_path = bind_vault()
+
+    workspace_path = bind_workspace()
 
     with Progress(
         SpinnerColumn(),
@@ -368,7 +379,7 @@ async def main():
         env_content = (
             f"BRAIN_ENABLE_CODE_EXECUTION={str(code_execution_enabled).lower()}\n"
         )
-        env_content += f"BRAIN_VAULT_PATH={vault_path}\n"
+        env_content += f"BRAIN_VAULT_PATH={workspace_path}\n"
         if crypto_key:
             env_content += f"BRAIN_CRYPTO_KEY={crypto_key}\n"
         for k, v in valid_keys.items():

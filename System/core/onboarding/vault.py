@@ -40,10 +40,16 @@ def setup_obsidian_shell_commands(vault_path: Path) -> bool:
     """
     Injects Brain terminal execution commands and hotkeys (Ctrl+Alt+S)
     safely into the Obsidian vault's plugin configuration matrix.
+
+    UNIX PHILOSOPHY FIX: If the directory is not a pre-existing Obsidian vault,
+    this gracefully aborts to avoid polluting standard text workspaces.
     """
     try:
         obsidian_dir = vault_path / ".obsidian"
-        obsidian_dir.mkdir(parents=True, exist_ok=True)
+
+        # ⚡ Do not force-create an Obsidian context in a generic workspace
+        if not obsidian_dir.exists():
+            return False
 
         # 1. Safely Configure Hotkeys
         hotkeys_path = obsidian_dir / "hotkeys.json"
@@ -59,7 +65,6 @@ def setup_obsidian_shell_commands(vault_path: Path) -> bool:
             {"modifiers": ["Mod", "Alt"], "key": "S"}
         ]
 
-        # SHIFT-LEFT: Use our safe atomic writer
         _atomic_write_text(hotkeys_path, json.dumps(hotkeys_data, indent=2))
 
         # 2. Configure Shell Commands Plugin Data
@@ -74,7 +79,6 @@ def setup_obsidian_shell_commands(vault_path: Path) -> bool:
             except Exception:
                 pass
 
-        # Ensure the plugin data saves properly
         _atomic_write_text(sc_data_path, json.dumps(sc_data, indent=2))
 
         return True
