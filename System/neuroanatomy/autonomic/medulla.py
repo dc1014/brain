@@ -13,6 +13,7 @@ from typing import Any, List, Dict, Optional
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR
+from System.core.concurrency import get_isolated_executor
 
 console = Console()
 
@@ -130,6 +131,9 @@ class MedullaOblongata:
         self.ipc_client: Optional[Any] = None
         self.task_log = DurableTaskLog(str(LOG_PATH))
 
+        # ⚡ P0 PERFORMANCE: Initialize the dynamic multi-core allocation pool
+        self.recovery_pool = get_isolated_executor(max_workers=3)
+
         _ACTIVE_MEDULLA_INSTANCES.append(self)
 
     def _load_blueprint(self) -> dict[str, Any]:
@@ -209,14 +213,22 @@ class MedullaOblongata:
             ]
             modulation_chemistry = acc.inspect_context_buffer(mock_history)
 
-            target_temp = modulation_chemistry.get("temperature", 0.0)
+            # ⚡ ZERO-DEBT: Explicitly cast to float to pacify Mypy
+            target_temp = float(modulation_chemistry.get("temperature", 0.0))
+
             # ⚡ P1 FIX: Inherit the fast fallback model from the user's DNA identity
             from System.core.dna import get_dna_config
 
             fallback = (
                 get_dna_config().get("models", {}).get("fast", "openai/gpt-4o-mini")
             )
-            target_engine = modulation_chemistry.get("engine_override", fallback)
+
+            # ⚡ ZERO-DEBT: Force strict string evaluation and eliminate 'None' ambiguity
+            target_engine = str(
+                modulation_chemistry.get("engine_override")
+                or fallback
+                or "openai/gpt-4o-mini"
+            )
 
             score = self.calculate_specificity_score(cmd_str)
             target_tier = self.allocate_orchestration_tier(score)
@@ -226,11 +238,14 @@ class MedullaOblongata:
             except OrchestrationMismatchException:
                 self.cognitive_state = target_tier
 
-            threading.Thread(
-                target=self._execute_recovered_task_safely,
-                args=(task_id, cmd_str, target_temp, target_engine),
-                daemon=True,
-            ).start()
+            # ⚡ Routinely dispatch to the isolated PEP 734 / Process pool
+            self.recovery_pool.submit(
+                self._execute_recovered_task_safely,
+                task_id,
+                cmd_str,
+                target_temp,
+                target_engine,
+            )
 
     def _execute_recovered_task_safely(
         self, task_id: str, command: str, temperature: float, engine: str
@@ -238,7 +253,7 @@ class MedullaOblongata:
         try:
             env_override = os.environ.copy()
             env_override["BRAIN_RECOVERY_TEMPERATURE"] = str(temperature)
-            env_override["BRAIN_RECOVERY_ENGINE"] = str(engine)
+            env_override["BRAIN_RECOVERY_ENGINE"] = engine
 
             # ⚡ P0 FIX: Safely split the command string to completely eliminate
             # the shell=True command injection vulnerability.
@@ -512,6 +527,9 @@ class MedullaOblongata:
 
         self.is_alive = False
         self.cognitive_state = "SLEEP"
+
+        # ⚡ Cleanly sever the multi-core executor pool
+        self.recovery_pool.shutdown(wait=False, cancel_futures=True)
 
         # ⚡ SYSTEM PROTECTION GATE: Avoid recursively terminating the pytest runner's entire infrastructure process tree
         if os.environ.get("BRAIN_OS_TESTING") == "1":

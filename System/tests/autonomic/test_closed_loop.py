@@ -118,6 +118,14 @@ def test_medulla_wal_closed_loop_recovery_orchestration(tmp_path: Path, mocker) 
     mocker.patch("System.neuroanatomy.autonomic.medulla.LOG_PATH", tmp_path)
     morphic_medulla = MedullaOblongata()
 
+    # ⚡ ZERO-DEBT FIX: Override the ProcessPoolExecutor with a ThreadPoolExecutor
+    # so our Pytest mocks can successfully intercept calls across the concurrent execution boundary!
+    from concurrent.futures import ThreadPoolExecutor
+
+    morphic_medulla.recovery_pool = ThreadPoolExecutor(max_workers=1)
+
+    # Seed an interrupted PENDING task command record straight into the Write-Ahead Log ledger
+
     # Seed an interrupted PENDING task command record straight into the Write-Ahead Log ledger
     _task_id = morphic_medulla.task_log.register_intent(
         "echo 'Resuscitating system...'"

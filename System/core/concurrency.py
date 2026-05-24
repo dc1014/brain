@@ -1,5 +1,6 @@
 import sys
 import multiprocessing
+from concurrent.futures import Executor
 
 
 def lock_concurrency_defaults() -> None:
@@ -15,3 +16,21 @@ def lock_concurrency_defaults() -> None:
         except RuntimeError:
             # This safely catches the error if the context was already set (e.g., during Pytest runs)
             pass
+
+
+def get_isolated_executor(max_workers: int = 4) -> Executor:
+    """
+    ⚡ SHIFT-LEFT PERFORMANCE: Dynamically routes parallel workloads.
+    On Python 3.14+, leverages PEP 734 Subinterpreters for true multi-core
+    thread concurrency. On <3.14, falls back to the rigid ProcessPoolExecutor.
+    """
+    if sys.version_info >= (3, 14):
+        # Python 3.14+ True Multi-Core Threads (Subinterpreters bypassing the GIL)
+        from concurrent.futures import InterpreterPoolExecutor  # type: ignore[attr-defined]
+
+        return InterpreterPoolExecutor(max_workers=max_workers)
+    else:
+        # Python 3.12/3.13 OS-level Process Allocation (Standard Fallback)
+        from concurrent.futures import ProcessPoolExecutor
+
+        return ProcessPoolExecutor(max_workers=max_workers)
