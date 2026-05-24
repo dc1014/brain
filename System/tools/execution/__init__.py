@@ -1,12 +1,11 @@
-# --- System/tools/execution/__init__.py ---
 import os
+import sys
 import socket
 import asyncio
 import threading
 import subprocess
 import shlex
 from pathlib import Path
-
 from typing import Optional, Dict
 
 from rich.console import Console
@@ -18,7 +17,7 @@ from System.ui.telemetry import render_command_cockpit
 from .validation import parse_and_validate_args as parse_and_validate_args
 from .staging import stage_ast_snapshots as stage_ast_snapshots
 from .routing import execute_command_async as execute_command_async
-from .execution_utils import get_scrubbed_env, get_subprocess_kwargs
+from .execution_utils import get_scrubbed_env
 
 console = Console()
 
@@ -80,7 +79,6 @@ async def _execute_with_auth_async(
                 "\n[bold green]⚡ TRANSMISSION AUTHORIZED: Firing synaptic process tree...[/bold green]\n"
             )
 
-    # Timeouts belong to the orchestrator layer, not the routing layer
     timeout = 300.0 if "pytest" in command_str else 60.0
     return await execute_command_async(command, directory_path, route, timeout=timeout)
 
@@ -124,13 +122,17 @@ def analyze_safe_syntax(filepath: str) -> ExecutionResult:
         )
     if target_path.suffix == ".py":
         try:
+            creationflags = (
+                subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
+            )
+
             res = subprocess.run(
                 ["uv", "run", "ruff", "check", "--no-cache", str(target_path)],
                 capture_output=True,
                 text=True,
                 timeout=30,
                 env=get_scrubbed_env(),
-                **get_subprocess_kwargs(),
+                creationflags=creationflags,
             )
             return (
                 ExecutionResult(
@@ -264,12 +266,10 @@ def deploy_project(
 async def execute_native_isolated(
     command: list[str], workspace_path: Path, env_secrets: Dict[str, str]
 ) -> ExecutionResult:
-    # Accept strictly parsed array lists to prevent shell injection payloads
     env = get_scrubbed_env()
     for key, value in env_secrets.items():
         env[key] = value
     try:
-        # 🛡️ THE FIX: Use create_subprocess_exec to bypass OS shell evaluation entirely
         proc = await asyncio.create_subprocess_exec(
             *command,
             cwd=str(workspace_path.resolve()),

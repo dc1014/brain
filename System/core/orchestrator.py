@@ -1,7 +1,6 @@
 import asyncio
 import json
-import os
-from filelock import FileLock
+from filelock import FileLock, Timeout
 from rich.console import Console
 from rich.panel import Panel
 from System.neuroanatomy.limbic.thalamus import route_sensory_input
@@ -47,35 +46,40 @@ def run_pending_queue() -> None:
     Reads pending tasks, checks for dopamine release flags, and executes them
     through the secure Thalamic routing pipeline.
     """
-    queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
-    approved_flag = ROOT_DIR / "Meta" / ".approved"
-    lock_file = ROOT_DIR / "Meta" / "queue.lock"
+    # Define anchors inside function scope to respond to late-binding test hooks
+    QUEUE_FILE = ROOT_DIR / "Meta" / "queue.jsonl"
+    APPROVED_FLAG = ROOT_DIR / "Meta" / ".approved"
+    LOCK_FILE = ROOT_DIR / "Meta" / "queue.lock"
 
-    if not queue_file.exists() or not approved_flag.exists():
+    if not QUEUE_FILE.exists() or not APPROVED_FLAG.exists():
         return
 
     tasks_to_run = []
 
-    with FileLock(str(lock_file), timeout=5):
-        if not queue_file.exists() or not approved_flag.exists():
-            return
+    try:
+        with FileLock(str(LOCK_FILE), timeout=5):
+            if not QUEUE_FILE.exists() or not APPROVED_FLAG.exists():
+                return
 
-        with open(queue_file, "r", encoding="utf-8") as f:
-            for line in f:
-                if not line.strip():
-                    continue
-                try:
-                    tasks_to_run.append(json.loads(line))
-                except json.JSONDecodeError:
-                    continue
+            with open(QUEUE_FILE, "r", encoding="utf-8") as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    try:
+                        tasks_to_run.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
 
-        try:
-            os.remove(approved_flag)
-        except OSError:
-            pass
+            # Clean pathlib deletion without manual try/except boilerplate
+            APPROVED_FLAG.unlink(missing_ok=True)
 
-        with open(queue_file, "w", encoding="utf-8") as f:
-            f.write("")
+            with open(QUEUE_FILE, "w", encoding="utf-8") as f:
+                f.write("")
+    except Timeout:
+        console.print(
+            "[dim yellow]Queue is currently locked by another process. Skipping.[/dim yellow]"
+        )
+        return
 
     if not tasks_to_run:
         return

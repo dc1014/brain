@@ -3,9 +3,8 @@ import sys
 import stat
 import asyncio
 import signal
-import subprocess
 from pathlib import Path
-from typing import Dict, Any, Tuple
+from typing import Dict, Tuple
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR
@@ -16,7 +15,7 @@ CHUNK_SIZE = 4096
 
 
 def set_system_volume_mask(read_only: bool) -> None:
-    """🛡️ VOLUME MASKING: Toggles strict kernel-level file protections."""
+    """VOLUME MASKING: Toggles strict kernel-level file protections."""
     try:
         system_core_dir = Path(ROOT_DIR / "System").resolve()
         if not system_core_dir.exists():
@@ -45,9 +44,9 @@ def set_system_volume_mask(read_only: bool) -> None:
                         )
                     else:
                         os.chmod(item, current_mode | stat.S_IWRITE)
-                except Exception:
+                except (PermissionError, OSError):
                     pass
-    except Exception:
+    except (PermissionError, OSError):
         pass
 
 
@@ -77,7 +76,7 @@ def get_scrubbed_env() -> Dict[str, str]:
 
 
 def rollback_workspace_transaction(path_result: str) -> None:
-    """⚡ TRANSACTION RECOVERY: Automatically purges modifications on execution failure."""
+    """TRANSACTION RECOVERY: Automatically purges modifications on execution failure."""
     try:
         target_dir = Path(path_result).resolve()
         if not target_dir.exists() or not target_dir.is_dir():
@@ -89,19 +88,15 @@ def rollback_workspace_transaction(path_result: str) -> None:
                     or ".wrapped_" in item.name
                     or "apoptosis_membrane" in item.name
                 ):
-                    os.chmod(str(item), stat.S_IWRITE)
-                    os.remove(str(item))
-            except Exception:
+                    os.chmod(item, stat.S_IWRITE)
+                    item.unlink(missing_ok=True)
+            except (PermissionError, OSError):
                 pass
-    except Exception:
+    except (PermissionError, OSError):
         pass
 
 
-def get_subprocess_kwargs() -> Dict[str, Any]:
-    kwargs: Dict[str, Any] = {}
-    if sys.platform == "win32":
-        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-    return kwargs
+# get_subprocess_kwargs() has been entirely removed to eliminate dead code.
 
 
 async def stream_and_prune_process(
