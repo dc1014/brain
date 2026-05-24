@@ -24,6 +24,11 @@ from System.cli_somatic import (
 from rich.console import Console
 from System.core.file_transaction import read_state_sync
 
+# 🛡️ SHIFT-LEFT: Lock OS process allocation rules before any parallel modules load
+from System.core.concurrency import lock_concurrency_defaults
+
+lock_concurrency_defaults()
+
 # Force Universal UTF-8 Output on Windows
 if sys.platform.startswith("win") and "pytest" not in sys.modules:
     try:

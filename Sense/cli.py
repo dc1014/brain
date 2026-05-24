@@ -6,15 +6,18 @@ from rich.console import Console
 from receptors.web import transduce_web_page
 from pathlib import Path
 
+# 🛡️ SHIFT-LEFT: Lock OS process allocation rules before any parallel modules load
+from System.core.concurrency import lock_concurrency_defaults
+
+lock_concurrency_defaults()
+
 sys.path.append(str(Path(__file__).parent.parent))
 
 app = typer.Typer(help="Sense: The Sensory Nervous System for Brain OS")
 console = Console()
 
-# --- SHIFT-LEFT: CROSS-PLATFORM ENCODING FIX ---
 if sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore
-# ---------------------------------------------
 
 
 @app.command()
