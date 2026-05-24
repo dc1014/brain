@@ -32,9 +32,13 @@ def test_secret_vault_secure_environment(mocker):
     vault = SecretVault()
     vault.secure_environment()
 
-    assert "OPENAI_API_KEY" not in os.environ
-    assert "DEPLOYMENT_TOKEN" not in os.environ
-    assert os.environ.get("OTHER_VAR") == "keep-me"
+    # The vault should ingest the keys safely into internal memory storage
+    assert vault.get_secret("OPENAI_API_KEY") == "sk-12345"
+    assert vault.get_secret("DEPLOYMENT_TOKEN") == "deploy-token-xyz"
+
+    # Thread Safety Check: Confirm host environment state remains unmutated at runtime
+    assert "OPENAI_API_KEY" in os.environ
+    assert os.environ["OTHER_VAR"] == "keep-me"
 
     assert vault.get_secret("OPENAI_API_KEY") == "sk-12345"
 

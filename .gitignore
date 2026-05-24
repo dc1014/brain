@@ -111,3 +111,7 @@ Meta/mirror_observations.jsonl
 # Deno / Pyodide WASM Local Cache
 .deno_cache/
 System/vendor/
+
+# SQLite runtime write-ahead logging artifacts
+*.db-wal
+*.db-shm

@@ -50,15 +50,11 @@ class SecretVault:
         ]
 
     def secure_environment(self) -> None:
-        """
-        The Nuclear Option: Scrubs API keys from the OS environment at boot.
-        This guarantees that sub-processes executed by the Swarm cannot access LLM credentials.
-        """
+        """Ingests secrets securely without mutating the global host environment."""
         for key in self._keys_to_protect:
             val = os.environ.get(key)
             if val:
                 self._secrets[key] = val
-                del os.environ[key]  # Erase from the environment
 
     def resolve_routing(self, model: str) -> Tuple[str, Optional[str]]:
         """

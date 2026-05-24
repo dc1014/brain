@@ -1,24 +1,22 @@
-import os
 import sys
+from dotenv import load_dotenv
 from System.core.paths import ROOT_DIR
 
 
 def bootstrap() -> bool:
-    """⚡ THE GATEKEEPER: Hyper-fast loading hook executed on every single CLI interaction loop."""
+    """Core initialization hook executed on startup to load configurations and prepare workspace directories."""
     try:
+        # Load environment variables using standard ecosystem tools to safely handle quotes and comments
         env_file = ROOT_DIR / ".env"
         if env_file.exists():
-            for line in env_file.read_text(encoding="utf-8").splitlines():
-                if "=" in line and not line.startswith("#"):
-                    k, v = line.split("=", 1)
-                    os.environ[k.strip()] = v.strip()
+            load_dotenv(dotenv_path=env_file)
 
-        # Synchronize and inoculate parameters inside the secure singleton memory Vault
+        # Initialize parameter state inside the secure memory vault
         from System.neuroanatomy.systemic.immune_system import vault
 
         vault.secure_environment()
 
-        # ⚡ SHIFT-LEFT PERFORMANCE: Reduce 7 filesystem stat calls to 1 by checking a primary anchor
+        # Batch check structural workspace directories using a primary anchor to reduce filesystem operations
         target_dirs = [
             "Studio",
             "Personal",
@@ -34,7 +32,5 @@ def bootstrap() -> bool:
 
         return True
     except Exception as e:
-        print(
-            f"Catastrophic Operating System Bootstrap Rejection: {e}", file=sys.stderr
-        )
+        print(f"Bootstrap failure: {e}", file=sys.stderr)
         return False
