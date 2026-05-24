@@ -1,9 +1,8 @@
-from System.core.schemas import AgentResponseSchema, MarkdownTranslator, ToolCallSchema
+from System.core.schemas import AgentResponseSchema, MarkdownTranslator
 import asyncio
 import json
 import litellm  # type: ignore
 import os
-import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,24 +25,11 @@ LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE: Path = LOG_DIR / "agent_interactions.jsonl"
 
 
-def extract_json_from_text(text: str) -> str:
-    """Robustly extracts a JSON block from LLM output, bypassing Markdown UI bugs."""
+def clean_json_output(text: str) -> str:
+    """Strips rogue markdown backticks from native structured outputs."""
     if not text:
-        return ""
-
-    # Generate backticks dynamically so Markdown parsers don't crash
-    bt = chr(96) * 3
-    pattern = bt + r"(?:json)?\s*(\{.*?\})\s*" + bt
-
-    match = re.search(pattern, text, re.DOTALL)
-    if match:
-        return match.group(1)
-
-    start = text.find("{")
-    end = text.rfind("}")
-    if start != -1 and end != -1:
-        return text[start : end + 1]
-    return text
+        return "{}"
+    return text.strip("`").removeprefix("json").strip()
 
 
 @dataclass
@@ -278,94 +264,14 @@ async def run_agent_async(
             message_dict: dict[str, Any] = {"role": "assistant"}
 
             # If the LLM returns our new Pydantic Schema, parse it and translate to Markdown.
-            # ⚡ ZERO-DEBT: HYBRID PARSING BRIDGE (WITH SELF-HEALING)
-            extracted_json = extract_json_from_text(message.content or "")
+            # ⚡ ZERO-DEBT: Native Structured Outputs
+            # We explicitly trust LiteLLM's response_format enforcement. No brittle regex.
+            clean_json = clean_json_output(message.content or "")
 
-            # Check if it extracted ANY valid JSON dictionary or list
-            # Check if it extracted ANY valid JSON dictionary or list
-            if extracted_json and extracted_json.strip().startswith(("{", "[")):
+            if clean_json and clean_json.startswith(("{", "[")):
                 try:
-                    parsed_data = json.loads(extracted_json)
-
-                    # ⚡ SELF-HEALING 1: The LLM hallucinated just the tool object
-                    if (
-                        isinstance(parsed_data, dict)
-                        and "tool_name" in parsed_data
-                        and "thought_process" not in parsed_data
-                    ):
-                        # Actively repair the mangled parameters
-                        params = parsed_data.get("parameters", {})
-                        if isinstance(params, str):
-                            try:
-                                params = json.loads(params)
-                            except Exception:
-                                params = {"raw_params": params}
-                        if not isinstance(params, dict):
-                            # If it flattened the arguments into the root, scoop them up
-                            params = {
-                                k: v
-                                for k, v in parsed_data.items()
-                                if k
-                                not in ["tool_name", "reasoning", "thought_process"]
-                            }
-
-                        reasoning = parsed_data.get(
-                            "reasoning", "Executing requested tool autonomously."
-                        )
-
-                        parsed_schema = AgentResponseSchema(
-                            thought_process=reasoning,
-                            tool_calls=[
-                                ToolCallSchema(
-                                    tool_name=parsed_data["tool_name"],
-                                    parameters=params,
-                                    reasoning=reasoning,
-                                )
-                            ],
-                            final_response=None,
-                        )
-
-                    # ⚡ SELF-HEALING 2: The LLM hallucinated an array of tool objects
-                    elif (
-                        isinstance(parsed_data, list)
-                        and len(parsed_data) > 0
-                        and "tool_name" in parsed_data[0]
-                    ):
-                        healed_tools = []
-                        for t in parsed_data:
-                            params = t.get("parameters", {})
-                            if isinstance(params, str):
-                                try:
-                                    params = json.loads(params)
-                                except Exception:
-                                    params = {"raw_params": params}
-                            if not isinstance(params, dict):
-                                params = {
-                                    k: v
-                                    for k, v in t.items()
-                                    if k
-                                    not in ["tool_name", "reasoning", "thought_process"]
-                                }
-
-                            healed_tools.append(
-                                ToolCallSchema(
-                                    tool_name=t["tool_name"],
-                                    parameters=params,
-                                    reasoning=t.get(
-                                        "reasoning", "Executing tool autonomously."
-                                    ),
-                                )
-                            )
-
-                        parsed_schema = AgentResponseSchema(
-                            thought_process="Executing multiple tools simultaneously.",
-                            tool_calls=healed_tools,
-                            final_response=None,
-                        )
-
-                    # PERFECT COMPLIANCE: The LLM followed the root schema perfectly
-                    else:
-                        parsed_schema = AgentResponseSchema.model_validate(parsed_data)
+                    # Natively validate via Pydantic. If the LLM hallucinated, it fails loudly.
+                    parsed_schema = AgentResponseSchema.model_validate_json(clean_json)
 
                     # 1. Translate pure JSON back into beautiful Markdown for Obsidian logs
                     human_readable_log = MarkdownTranslator.render_agent_log(
@@ -374,7 +280,7 @@ async def run_agent_async(
                     final_text += human_readable_log + "\n"
 
                     # 2. Store the raw JSON in the context window
-                    message_dict["content"] = extracted_json
+                    message_dict["content"] = clean_json
                     messages.append(message_dict)
 
                     # 3. Synthesize the JSON tool schemas back into the format the Motor Cortex expects
@@ -435,9 +341,7 @@ async def run_agent_async(
                         break
 
                 except Exception as e:
-                    console.print(
-                        f"[dim red]JSON Schema Parse/Heal Error: {e}[/dim red]"
-                    )
+                    console.print(f"[dim red]JSON Schema Parse Error: {e}[/dim red]")
                     # If it fails completely, it falls through to the legacy fallback block below!
             else:
                 # 🛡️ BACKWARD COMPATIBILITY (Protects Pytest Mocks & Legacy Routes)

@@ -4,121 +4,13 @@ import sys
 import shlex
 import stat
 import asyncio
-from pathlib import Path
-from typing import List, Set
 from System.core.paths import ROOT_DIR, normalize_path
 from System.core.schemas import ExecutionResult
 
-# Pull Rich components for structural command UI assembly
-from rich.panel import Panel
-from rich.table import Table
-from rich.text import Text
-
+from System.ui.telemetry import render_command_cockpit
 from .validation import parse_and_validate_args
 
 
-def _render_command_cockpit(
-    command: str,
-    path_result: str,
-    effective_binaries: Set[str],
-    created_snapshots: List[str],
-    execution_tier: str,
-) -> Panel:
-    """Renders a comprehensive, high-fidelity terminal user dashboard split into a clean tactical grid layout."""
-    layout_grid = Table.grid(padding=(0, 2))
-    layout_grid.add_column()
-    layout_grid.add_column()
-
-    vector_table = Table.grid(padding=(0, 1))
-    vector_table.add_column(style="bold cyan")
-    vector_table.add_column(style="white")
-
-    try:
-        display_path = Path(path_result).relative_to(ROOT_DIR.resolve())
-    except Exception:
-        display_path = Path(path_result)
-
-    vector_table.add_row(
-        "Intended Vector : ",
-        f"[bold green]{shlex.join(shlex.split(command))}[/bold green]",
-    )
-    vector_table.add_row("Target Location : ", f"[yellow]📂 {display_path}[/yellow]")
-    vector_table.add_row(
-        "Active Binary   : ",
-        f"[magenta]⚔️ {', '.join(effective_binaries).upper()}[/magenta]",
-    )
-
-    firewall_table = Table.grid(padding=(0, 1))
-    firewall_table.add_column(style="bold blue")
-    firewall_table.add_column(style="dim white")
-
-    tier_desc = "Hardware Sandbox" if execution_tier == "1" else "Native Host Isolated"
-    firewall_table.add_row("✓ BBB Guard  :", " Path cleared safety checks.")
-    firewall_table.add_row("✓ Amygdala  :", " Heuristic screening passed.")
-    firewall_table.add_row("✓ Isolation :", f" Tier {execution_tier} ({tier_desc})")
-
-    layout_grid.add_row(
-        Panel(
-            vector_table,
-            title="[bold cyan]📡 TRANSACTION TELEMETRY[/bold cyan]",
-            border_style="cyan",
-        ),
-        Panel(
-            firewall_table,
-            title="[bold blue]🛡️ NEURAL FIREWALL PANEL[/bold blue]",
-            border_style="blue",
-        ),
-    )
-
-    staging_table = Table.grid(padding=(0, 1))
-    staging_table.add_column(style="bold magenta", width=18)
-    staging_table.add_column(style="white")
-
-    if created_snapshots:
-        snapshots_tracked = [
-            Path(p).name for p in created_snapshots if ".immutable_snapshot_" in p
-        ]
-        if snapshots_tracked:
-            staging_table.add_row(
-                "🧬 Atomic Staging :",
-                f"[green]Copy-On-Write engaged safely. Generated {len(snapshots_tracked)} snapshot file stubs to prevent TOCTOU race conditions.[/green]",
-            )
-
-    staging_table.add_row(
-        "🔒 Core Integrity  :",
-        "[bold red]Recursive Kernel Protection Mask Activated. Application files set to read-only (IMMUTABLE).[/bold red]",
-    )
-
-    master_frame = Table.grid(padding=(0, 0))
-    master_frame.add_column()
-    master_frame.add_row(
-        Text(
-            "An autonomous agent is requesting transmission authorization to execute a host terminal process:\n",
-            style="italic white",
-        )
-    )
-    master_frame.add_row(layout_grid)
-    master_frame.add_row(
-        Panel(
-            staging_table,
-            title="[bold magenta]🧬 COPY-ON-WRITE MEMORY LIFECYCLE[/bold magenta]",
-            border_style="magenta",
-        )
-    )
-    master_frame.add_row(
-        Text(
-            "\nPress [bold green][Y][/bold green] to authorize synaptic transmission, or any other key to discard execution...",
-            style="blink yellow",
-        )
-    )
-
-    title_text = Text(
-        "🧠 BRAIN OS — SYNAPTIC COMMAND COCKPIT v2.0", style="bold magenta"
-    )
-    return Panel(master_frame, title=title_text, border_style="magenta", expand=True)
-
-
-# ⚡ FIX: Gracefully accepts either format and normalizes for downward compatibility
 async def execute_command_async(
     command: list[str] | str, directory_path: str, route: str = "UNKNOWN"
 ) -> ExecutionResult:
@@ -190,12 +82,13 @@ async def execute_command_async(
         create_snapshot(directory_path)
 
         if os.environ.get("BRAIN_OS_HEADLESS") != "1":
-            panel = _render_command_cockpit(
+            panel = render_command_cockpit(
                 command_str,
                 path_result,
                 effective_binaries,
                 created_snapshots,
                 execution_tier,
+                ROOT_DIR,
             )
             exec_mod.console.print("\n")
             exec_mod.console.print(panel)

@@ -6,26 +6,48 @@ from unittest.mock import patch, MagicMock
 from System.llm import run_agent_async, get_system_context
 
 
-def test_token_truncator_protects_context(mocker) -> None:  # type: ignore
-    """Ensure that massive tool outputs are truncated to exactly 8000 chars + a warning."""
+def test_token_truncator_protects_context(mocker) -> None:
+    """Ensure that massive tool outputs are truncated to exactly 15000 chars + a warning."""
 
     mock_completion = mocker.patch(
         "System.llm.acompletion", new_callable=mocker.AsyncMock
     )
     mocker.patch("System.llm.log_interaction")  # Silence the log writer for tests
 
-    # 1. Properly Setup the mock (Avoiding the MagicMock name trap)
-    func_mock = MagicMock()
-    func_mock.name = "read_safe_file"
-    func_mock.arguments = '{"filepath": "huge.log"}'
+    # ⚡ ZERO-DEBT FIX: Prevent the memory compressor from mutating the message array
+    async def bypass_compressor(msgs, model):
+        return msgs
+
+    mocker.patch(
+        "System.neuroanatomy.cortical.working_memory.compress_message_array",
+        side_effect=bypass_compressor,
+    )
+
+    # 1. Simulate modern AgentResponseSchema JSON structured output
+    json_payload = {
+        "thought_process": "I need to read a massive file.",
+        "tool_calls": [
+            {
+                "tool_name": "read_safe_file",
+                "parameters": {"filepath": "huge.log"},
+                "reasoning": "Inspecting data to verify environment.",
+            }
+        ],
+        "final_response": None,
+    }
 
     tool_call_msg = MagicMock()
-    tool_call_msg.content = None
-    tool_call_msg.tool_calls = [MagicMock(id="call_123", function=func_mock)]
+    tool_call_msg.content = json.dumps(json_payload)
+    tool_call_msg.tool_calls = None
 
-    # 2. The AI receives the tool output and finishes
     text_msg = MagicMock()
-    text_msg.content = "I read the file."
+    text_msg.content = json.dumps(
+        {
+            "thought_process": "Done reading.",
+            "tool_calls": [],
+            "final_response": "I read the file.",
+        }
+    )
     text_msg.tool_calls = None
 
     mock_completion.side_effect = [
@@ -33,29 +55,36 @@ def test_token_truncator_protects_context(mocker) -> None:  # type: ignore
         MagicMock(choices=[MagicMock(message=text_msg)]),
     ]
 
-    # Mock the tool to return a 15,000 character string
-    massive_string = "A" * 15000
-    mocker.patch(
-        "System.tools.read_safe_file", return_value=massive_string
-    )  # <--- Changed llm to tools
+    # 2. Mock the tool execution to return a 20,000 character string (must be > 15000 to trigger truncation)
+    massive_string = "A" * 20000
+    mock_execute = mocker.patch(
+        "System.neuroanatomy.cortical.motor_cortex.execute_tools",
+        new_callable=mocker.AsyncMock,
+    )
+    mock_execute.return_value = (
+        [{"role": "tool", "content": massive_string}],
+        ["Mock Action Executed"],
+        None,
+    )
+
+    from System.llm import run_agent_async
 
     asyncio.run(
         run_agent_async("Test_Agent", "model", "sys_prompt", "user_prompt", tools=[])
     )
 
     # Intercept the exact messages array.
+    # Python passes lists by reference, so this array contains the FINAL mutated state
+    # (including the final text_msg assistant response appended after the tool run).
     messages_sent_to_llm = mock_completion.call_args_list[1][1]["messages"]
 
-    # Because lists are passed by reference and the final "assistant" message is appended,
-    # the tool response is now the second-to-last item in the array.
+    # ⚡ ZERO-DEBT FIX: The truncated tool output is the second-to-last item [-2],
+    # because the final text_msg is appended to the very end [-1].
     tool_response_msg = messages_sent_to_llm[-2]
 
-    assert tool_response_msg["role"] == "tool"
-    assert len(tool_response_msg["content"]) < 15000, (
-        "The massive string was not truncated!"
-    )
-    # FIX: Assert the exact new, shortened warning string
-    assert "SYSTEM WARNING: Truncated at 8000 chars" in tool_response_msg["content"]
+    assert tool_response_msg["role"] == "user"
+    assert "TRUNCATED: OUTPUT EXCEEDED" in tool_response_msg["content"]
+    assert len(tool_response_msg["content"]) < 16000
 
 
 def test_context_sliding_window_preserves_anchors(mocker) -> None:  # type: ignore
@@ -316,111 +345,6 @@ async def test_run_agent_async_json_structured_output_bridge(mocker):
     # Prove the parameters survived the JSON -> Synthetic Object translation
     parsed_args = json.loads(synthetic_tools[0].function.arguments)
     assert parsed_args["filepath"] == "defcon_test.txt"
-
-
-def test_extract_json_from_text():
-    """Zero-Debt Test: Proves the regex extractor perfectly isolates JSON from LLM markdown hallucinations."""
-    from System.llm import extract_json_from_text
-
-    # UI-Safe backtick generation to prevent parsing crashes
-    bt = chr(96) * 3
-
-    # 1. Pure JSON
-    assert extract_json_from_text('{"a": 1}') == '{"a": 1}'
-
-    # 2. Standard Markdown code block
-    assert extract_json_from_text(f'{bt}json\n{{"b": 2}}\n{bt}') == '{"b": 2}'
-
-    # 3. Sloppy formatting
-    assert extract_json_from_text(f'{bt}\n  {{"c": 3}}  \n{bt}') == '{"c": 3}'
-
-    # 4. Conversational wrapping (Classic LLM hallucination)
-    assert (
-        extract_json_from_text(
-            f'Here is the json:\n{bt}json\n{{"d": 4}}\n{bt}\nHope it helps!'
-        )
-        == '{"d": 4}'
-    )
-
-    # 5. Naked JSON with conversational garbage
-    assert extract_json_from_text('Here is the json: {"e": 5} Have fun.') == '{"e": 5}'
-
-
-@pytest.mark.asyncio
-async def test_run_agent_async_json_self_healing_bridge(mocker):
-    """
-    Zero-Debt Test: Proves that if an LLM suffers from context collapse and
-    spits out a naked array of tool calls instead of the root schema,
-    the engine intercepts it, heals the schema, and executes the tools.
-    """
-    from System.llm import run_agent_async
-
-    # Simulate LLM hallucinating a naked array of tools (bypassing the root schema)
-    naked_tools_payload = [
-        {
-            "tool_name": "write_safe_file",
-            "parameters": {"filepath": "healed.txt"},
-            "reasoning": "Forgot the root wrapper.",
-        }
-    ]
-
-    mock_acompletion = mocker.patch("System.llm.acompletion")
-
-    mock_message_1 = mocker.MagicMock()
-    mock_message_1.content = json.dumps(naked_tools_payload)
-    mock_message_1.tool_calls = None
-    mock_response_1 = mocker.MagicMock()
-    mock_response_1.choices = [mocker.MagicMock(message=mock_message_1)]
-    mock_response_1.usage = mocker.MagicMock(prompt_tokens=5, completion_tokens=5)
-
-    mock_halt = {
-        "thought_process": "Task done.",
-        "tool_calls": [],
-        "final_response": "Done.",
-    }
-    mock_message_2 = mocker.MagicMock()
-    mock_message_2.content = json.dumps(mock_halt)
-    mock_message_2.tool_calls = None
-    mock_response_2 = mocker.MagicMock()
-    mock_response_2.choices = [mocker.MagicMock(message=mock_message_2)]
-    mock_response_2.usage = mocker.MagicMock(prompt_tokens=5, completion_tokens=5)
-
-    mock_acompletion.side_effect = [mock_response_1, mock_response_2]
-
-    mock_execute_tools = mocker.patch(
-        "System.neuroanatomy.cortical.motor_cortex.execute_tools",
-        return_value=(
-            [{"role": "tool", "content": "File written."}],
-            ["Mock Tool Executed"],
-            None,
-        ),
-    )
-
-    # Block external side effects
-    mocker.patch("System.llm.log_interaction")
-    mocker.patch("System.llm.vault.get_secret", return_value="dummy_key")
-    mocker.patch(
-        "System.llm.EndocrineSystem.get_humoral_vector",
-        return_value={"dopamine": 0.5, "cortisol": 0.0, "adrenaline": 0.0},
-    )
-
-    res = await run_agent_async(
-        role_name="test_agent",
-        model_string="gpt-4o-mini",
-        system_prompt="sys",
-        user_prompt="usr",
-    )
-
-    # 1. Assert the schema was healed and the Markdown Translator was triggered with default text
-    assert "> **Thought:** Forgot the root wrapper." in res.text
-    assert "`[ write_safe_file ]`" in res.text
-
-    # 2. Assert the synthetic tool was generated correctly and sent to the Motor Cortex
-    mock_execute_tools.assert_called_once()
-    synthetic_tools = mock_execute_tools.call_args[0][0]
-
-    assert len(synthetic_tools) == 1
-    assert synthetic_tools[0].function.name == "write_safe_file"
 
 
 def test_get_system_context_injects_advisory_mode_when_execution_disabled(

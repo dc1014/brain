@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+from filelock import FileLock
 from rich.console import Console
 from rich.panel import Panel
 from System.neuroanatomy.limbic.thalamus import route_sensory_input
@@ -53,30 +54,38 @@ def run_pending_queue() -> None:
     queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
     pending_file = ROOT_DIR / "Meta" / "Pending_Actions.md"
     approved_flag = ROOT_DIR / "Meta" / ".approved"
+    lock_file = ROOT_DIR / "Meta" / "queue.lock"  # ⚡ ZERO-DEBT: State lock
 
-    # If there is no explicit .approved flag, the system continues resting.
+    # Fast-fail check before waiting for locks
     if not queue_file.exists() or not approved_flag.exists():
         return
 
     tasks_to_run = []
-    with open(queue_file, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            try:
-                tasks_to_run.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
 
-    # Consume the flag and wipe the queue atomically so it can't double-fire
-    if approved_flag.exists():
+    # ⚡ ZERO-DEBT: Wrap the state mutations in a strict thread-safe file lock
+    # This completely eliminates TOCTOU (Time-Of-Check to Time-Of-Use) race conditions
+    with FileLock(str(lock_file), timeout=5):
+        # Double-check inside the lock to ensure another thread didn't steal it
+        if not queue_file.exists() or not approved_flag.exists():
+            return
+
+        with open(queue_file, "r", encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    tasks_to_run.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+
+        # Consume the flag and wipe the queue atomically so it can't double-fire
         try:
             os.remove(approved_flag)
         except OSError:
             pass
 
-    with open(queue_file, "w", encoding="utf-8") as f:
-        f.write("")
+        with open(queue_file, "w", encoding="utf-8") as f:
+            f.write("")
 
     if not tasks_to_run:
         return
