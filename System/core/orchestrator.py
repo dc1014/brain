@@ -73,8 +73,8 @@ def run_pending_queue() -> None:
             # Clean pathlib deletion without manual try/except boilerplate
             APPROVED_FLAG.unlink(missing_ok=True)
 
-            with open(QUEUE_FILE, "w", encoding="utf-8") as f:
-                f.write("")
+            # Modern pathlib write
+            QUEUE_FILE.write_text("", encoding="utf-8")
     except Timeout:
         console.print(
             "[dim yellow]Queue is currently locked by another process. Skipping.[/dim yellow]"
@@ -119,7 +119,7 @@ async def _process_all_tasks(tasks: list[dict]) -> None:
 
     pending_file = ROOT_DIR / "Meta" / "Pending_Actions.md"
     if pending_file.exists():
-        with open(pending_file, "w", encoding="utf-8") as f:
-            f.write(
-                "# 🛑 Pending Swarm Actions\n*No pending actions. The OS is resting.*\n\n"
-            )
+        pending_file.write_text(
+            "# 🛑 Pending Swarm Actions\n*No pending actions. The OS is resting.*\n\n",
+            encoding="utf-8",
+        )
