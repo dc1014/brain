@@ -10,6 +10,17 @@ from System.tools.execution import (
 )
 
 
+@pytest.fixture(autouse=True)
+def align_windows_sandbox_paths(mocker, tmp_path):
+    """Zero-Debt Fix: Aligns execution path validators with Pytest's Windows Temp directory."""
+    safe_root = tmp_path.resolve()
+    mocker.patch("System.tools.sandbox.ROOT_DIR", safe_root)
+    mocker.patch(
+        "System.tools.sandbox.ALLOWED_DIRECTORIES", {safe_root, safe_root / "Studio"}
+    )
+    mocker.patch("System.tools.execution.ROOT_DIR", safe_root, create=True)
+
+
 @pytest.fixture
 def bypass_immune_system(mocker, tmp_path):
     """Test Fixture: Bypasses the AST, Amygdala, and Path validation."""
@@ -438,6 +449,8 @@ def test_execute_command_path_traversal_blocked(mocker, tmp_path):
 
 
 def test_execute_command_amygdala_blocked(mocker, tmp_path):
+    mocker.patch.dict("os.environ", {"BRAIN_OS_HEADLESS": "1"})
+
     mocker.patch(
         "System.neuroanatomy.systemic.blood_brain_barrier.validate_execution_path",
         return_value=(True, "Studio"),
@@ -452,9 +465,7 @@ def test_execute_command_amygdala_blocked(mocker, tmp_path):
 
 
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")
-def test_execute_command_malformed_syntax(
-    mocker, tmp_path, bypass_immune_system
-):  # ⚡ ADDED HERE
+def test_execute_command_malformed_syntax(mocker, tmp_path, bypass_immune_system):
     # Using an unclosed quote to trigger ValueError in shlex
     result = execute_command("echo 'unclosed quote", "Studio")
     assert result.success is False

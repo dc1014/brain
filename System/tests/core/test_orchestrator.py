@@ -1,53 +1,62 @@
-import json
-from System.core.orchestrator import run_pending_queue
+# --- System/tests/core/test_orchestrator.py ---
+import pytest
+from unittest.mock import AsyncMock, patch
+from System.core.orchestrator import (
+    dispatch_task,
+    run_pending_queue,
+    _process_all_tasks,
+)
 
 
-def test_run_pending_queue_thalamic_routing_sync(mocker, tmp_path, monkeypatch):
-    """
-    Zero-Debt Test: Proves that background Obsidian tasks correctly route through
-    the Thalamic `dispatch_task` matrix instead of bypassing directly to the PFC.
-    """
-    # 1. Setup isolated memory space
+@pytest.mark.asyncio
+@patch("System.core.orchestrator.route_sensory_input", new_callable=AsyncMock)
+@patch("System.core.orchestrator.execute_pipeline", new_callable=AsyncMock)
+async def test_dispatch_task_success(mock_exec, mock_route):
+    mock_route.return_value = (True, "OK", "FORGE", "STUDIO", {})
+    await dispatch_task("Build app")
+    mock_exec.assert_called_once_with("Build app", "FORGE", "STUDIO")
+
+
+@pytest.mark.asyncio
+@patch("System.core.orchestrator.route_sensory_input", new_callable=AsyncMock)
+async def test_dispatch_task_rejected(mock_route):
+    mock_route.return_value = (False, "Blocked by amygdala", "NONE", "NONE", {})
+    with pytest.raises(ValueError, match="Pulse rejected by pre-flight validation"):
+        await dispatch_task("Hack mainframe")
+
+
+@pytest.mark.asyncio
+@patch("System.core.orchestrator.read_and_clear_queue")
+@patch("System.core.orchestrator._process_all_tasks", new_callable=AsyncMock)
+async def test_run_pending_queue(mock_process, mock_read):
+    mock_read.return_value = [{"prompt": "Task 1"}]
+    await run_pending_queue()
+    mock_process.assert_called_once_with([{"prompt": "Task 1"}])
+
+
+@pytest.mark.asyncio
+@patch("System.core.orchestrator.read_and_clear_queue")
+@patch("System.core.orchestrator._process_all_tasks", new_callable=AsyncMock)
+async def test_run_pending_queue_empty(mock_process, mock_read):
+    mock_read.return_value = []
+    await run_pending_queue()
+    mock_process.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch("System.core.orchestrator.dispatch_task", new_callable=AsyncMock)
+async def test_process_all_tasks(mock_dispatch, tmp_path, monkeypatch):
     monkeypatch.setattr("System.core.orchestrator.ROOT_DIR", tmp_path)
-
     meta_dir = tmp_path / "Meta"
-    meta_dir.mkdir()
+    meta_dir.mkdir(parents=True)
+    pending_file = meta_dir / "Pending_Actions.md"
+    pending_file.touch()
 
-    queue_file = meta_dir / "queue.jsonl"
-    approved_flag = meta_dir / ".approved"
+    tasks = [
+        {"prompt": "Task 1", "route": "R1", "domain": "D1"},
+        {"prompt": "Task 2", "route": "R2", "domain": "D2"},
+    ]
+    await _process_all_tasks(tasks)
 
-    # 2. Mock a pending user task waiting in the Obsidian background queue
-    payload = {
-        "prompt": "Analyze the systemic logs",
-        "route": "TERMINAL",
-        "domain": "STUDIO",
-    }
-    queue_file.write_text(json.dumps(payload) + "\n", encoding="utf-8")
-
-    # Drop the dopamine approval flag to trigger execution
-    approved_flag.touch()
-
-    # 3. Mock dispatch_task so we don't accidentally fire up live LLM inference threads
-    mock_dispatch = mocker.patch("System.core.orchestrator.dispatch_task")
-
-    # 4. Execute the background queue consumer
-    run_pending_queue()
-
-    # 5. Strict Validation
-    # Ensure the dopamine approval flag was safely consumed
-    assert not approved_flag.exists(), (
-        "Bug: The approval flag was not consumed, causing an infinite execution loop!"
-    )
-
-    # Ensure the queue file was wiped clean
-    assert queue_file.read_text(encoding="utf-8") == "", (
-        "Bug: The queue file was not cleared after reading!"
-    )
-
-    # Ensure Thalamic routing bypass was successfully hit with the correct parameters
-    mock_dispatch.assert_called_once_with(
-        "Analyze the systemic logs",
-        obsidian=True,
-        predefined_route="TERMINAL",
-        predefined_domain="STUDIO",
-    )
+    assert mock_dispatch.call_count == 2
+    assert not pending_file.exists()

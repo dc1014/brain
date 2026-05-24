@@ -1,104 +1,75 @@
 # --- System/tests/core/test_file_transaction.py ---
-import pytest
-import os
-from pathlib import Path
 from System.core.file_transaction import (
+    atomic_write,
+    atomic_clear,
+    read_and_clear_queue,
     read_state_sync,
-    read_state_async,
-    write_state_sync_atomic,
-    write_state_async_atomic,
 )
 
 
-def test_read_state_sync_nonexistent_fallback(tmp_path: Path) -> None:
-    """Proves reading a missing file safely returns the provided factory default structure."""
-    target_file = tmp_path / "missing_queue.json"
+def test_atomic_write(tmp_path):
+    """Proves writes operate safely via temporary shadow overlays."""
+    test_file = tmp_path / "data.txt"
+    atomic_write(test_file, "atomic content")
 
-    # Test dictionary factory default
-    dict_data = read_state_sync(target_file, default_factory=dict)
-    assert dict_data == {}
-    assert isinstance(dict_data, dict)
-
-    # Test list factory default
-    list_data = read_state_sync(target_file, default_factory=list)
-    assert list_data == []
-    assert isinstance(list_data, list)
+    assert test_file.exists()
+    assert test_file.read_text(encoding="utf-8") == "atomic content"
+    # Verify the temporary shadow file was cleanly purged
+    assert not test_file.with_suffix(test_file.suffix + ".tmp").exists()
 
 
-@pytest.mark.asyncio
-async def test_read_state_async_nonexistent_fallback(tmp_path: Path) -> None:
-    """Proves asynchronous reading of a missing file safely returns factory defaults."""
-    target_file = tmp_path / "missing_async.json"
+def test_atomic_clear(tmp_path):
+    """Proves file blanking occurs cleanly."""
+    test_file = tmp_path / "data.txt"
+    test_file.write_text("lots of data", encoding="utf-8")
 
-    data = await read_state_async(target_file, default_factory=dict)
-    assert data == {}
-
-
-def test_write_and_read_state_sync_atomic_json(tmp_path: Path) -> None:
-    """Validates full synchronous serialization, atomic replacement, and lock-guarded read cycles."""
-    target_file = tmp_path / "system_state.json"
-    sample_payload = {
-        "status": "RUNNING",
-        "active_nodes": ["prefrontal", "thalamus"],
-        "metadata": {"cycle_count": 42},
-    }
-
-    # Execute atomic sync write
-    write_state_sync_atomic(target_file, sample_payload)
-    assert target_file.exists()
-
-    # Execute sync transaction read
-    loaded_payload = read_state_sync(target_file, default_factory=dict)
-    assert loaded_payload == sample_payload
-    assert loaded_payload["metadata"]["cycle_count"] == 42
+    atomic_clear(test_file)
+    assert test_file.read_text(encoding="utf-8") == ""
 
 
-@pytest.mark.asyncio
-async def test_write_and_read_state_async_atomic_json(tmp_path: Path) -> None:
-    """Validates full asynchronous serialization, atomic replacement, and lock-guarded read cycles."""
-    target_file = tmp_path / "system_state_async.json"
-    sample_payload = [{"task_id": "tx_99", "priority": "high"}]
+def test_read_and_clear_queue(tmp_path):
+    """Proves JSONL queues can be extracted and blanked simultaneously."""
+    queue_file = tmp_path / "queue.jsonl"
+    queue_file.write_text('{"task": 1}\n{"task": 2}\n', encoding="utf-8")
 
-    # Execute atomic async write
-    await write_state_async_atomic(target_file, sample_payload)
-    assert target_file.exists()
+    tasks = read_and_clear_queue(queue_file)
 
-    # Execute async transaction read
-    loaded_payload = await read_state_async(target_file, default_factory=list)
-    assert loaded_payload == sample_payload
+    # Verify accurate memory extraction
+    assert len(tasks) == 2
+    assert tasks[0]["task"] == 1
 
-
-def test_strict_utf8_unicode_preservation_windows_trap(tmp_path: Path) -> None:
-    """Guarantees multi-byte characters and complex symbols survive write/read boundaries cleanly."""
-    target_file = tmp_path / "autobiography.md"
-
-    # Inject multi-byte glyphs, symbols, and mathematical constants (The ultimate Windows Trap test vector)
-    unicode_stimulus = (
-        "🧠 Biomimetic Agentic OS Core Loop Active 🚀 ∑(Tokens) = Metabolism 🧬"
-    )
-
-    write_state_sync_atomic(target_file, unicode_stimulus)
-
-    # Read back to ensure no fallback code-page corruption occurred
-    loaded_string = read_state_sync(target_file, default_factory=str)
-    assert loaded_string == unicode_stimulus
+    # Verify the disk was atomically cleared to prevent double-execution
+    assert queue_file.read_text(encoding="utf-8") == ""
 
 
-def test_atomic_file_swap_lifecycle_cleanliness(tmp_path: Path, mocker) -> None:
-    """Proves temporary sibling `.tmp` working files are completely scrubbed from disk post-swap."""
-    target_file = tmp_path / "execution_queue.json"
-    payload = {"queue": "clear"}
+def test_read_and_clear_queue_missing_or_corrupted(tmp_path):
+    """Ensures queue runners do not crash on invalid JSON lines or missing files."""
+    queue_file = tmp_path / "missing.jsonl"
+    assert read_and_clear_queue(queue_file) == []
 
-    # Spy on os.replace to verify the swap mechanics
-    spy_replace = mocker.spy(os, "replace")
+    # Corrupt a single line in the JSONL!
+    queue_file.write_text('{"task": 1}\nINVALID_JSON\n{"task": 3}', encoding="utf-8")
+    tasks = read_and_clear_queue(queue_file)
 
-    write_state_sync_atomic(target_file, payload)
+    assert len(tasks) == 2  # The corrupted line is safely skipped without crashing
+    assert tasks[1]["task"] == 3
 
-    # Ensure os.replace was invoked to process the update atomically
-    assert spy_replace.call_count == 1
 
-    # Ensure no leftover temporary garbage or residue artifacts pollute the working folder block
-    sibling_files = list(tmp_path.glob(".*.tmp"))
-    assert len(sibling_files) == 0, (
-        "Atomic temporary swap residue leaked to persistent storage layer."
-    )
+def test_read_state_sync(tmp_path):
+    """Ensures sync state tracking supports dynamic fallbacks."""
+    state_file = tmp_path / "state.json"
+
+    # 1. Missing File
+    assert read_state_sync(state_file, dict) == {}
+
+    # 2. Empty Content
+    state_file.write_text("   ", encoding="utf-8")
+    assert read_state_sync(state_file, list) == []
+
+    # 3. Valid Content
+    state_file.write_text('{"key": "value"}', encoding="utf-8")
+    assert read_state_sync(state_file, dict) == {"key": "value"}
+
+    # 4. Corrupted Syntax
+    state_file.write_text("{{{", encoding="utf-8")
+    assert read_state_sync(state_file, list) == []

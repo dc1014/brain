@@ -1,11 +1,11 @@
 import asyncio
-import json
-from filelock import FileLock, Timeout
 from rich.console import Console
 from rich.panel import Panel
+
 from System.neuroanatomy.limbic.thalamus import route_sensory_input
 from System.core.paths import ROOT_DIR
 from System.neuroanatomy.cortical.executive_loop import execute_pipeline
+from System.core.file_transaction import read_and_clear_queue
 
 console = Console()
 
@@ -34,52 +34,25 @@ async def dispatch_task(
         raise ValueError(f"Pulse rejected by pre-flight validation: {reason}")
 
     final_route = route_type if route_type != "WORKSPACE" else predefined_route
-    final_domain = domain if domain != "GENERAL" else predefined_domain
-    target_origin = "AUTONOMIC" if obsidian else "HUMAN"
+    final_domain = domain if domain != "NONE" else predefined_domain
 
-    await execute_pipeline(description, final_route, final_domain, origin=target_origin)
+    console.print(
+        f"[bold magenta]🧠 Prefrontal Cortex: Executing task natively...[/bold magenta]\n"
+        f"[dim]Goal: {description}\nRoute: {final_route} | Domain: {final_domain}[/dim]"
+    )
+
+    await execute_pipeline(description, final_route, final_domain)
 
 
-def run_pending_queue() -> None:
+async def run_pending_queue() -> None:
     """
-    Cognitive Queue Processor:
-    Reads pending tasks, checks for dopamine release flags, and executes them
-    through the secure Thalamic routing pipeline.
+    Checks the Meta/queue.jsonl ledger for approved Swarm instructions.
+    Uses lock-free atomic file swapping to read and clear the queue safely.
     """
-    # Define anchors inside function scope to respond to late-binding test hooks
-    QUEUE_FILE = ROOT_DIR / "Meta" / "queue.jsonl"
-    APPROVED_FLAG = ROOT_DIR / "Meta" / ".approved"
-    LOCK_FILE = ROOT_DIR / "Meta" / "queue.lock"
+    queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
 
-    if not QUEUE_FILE.exists() or not APPROVED_FLAG.exists():
-        return
-
-    tasks_to_run = []
-
-    try:
-        with FileLock(str(LOCK_FILE), timeout=5):
-            if not QUEUE_FILE.exists() or not APPROVED_FLAG.exists():
-                return
-
-            with open(QUEUE_FILE, "r", encoding="utf-8") as f:
-                for line in f:
-                    if not line.strip():
-                        continue
-                    try:
-                        tasks_to_run.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        continue
-
-            # Clean pathlib deletion without manual try/except boilerplate
-            APPROVED_FLAG.unlink(missing_ok=True)
-
-            # Modern pathlib write
-            QUEUE_FILE.write_text("", encoding="utf-8")
-    except Timeout:
-        console.print(
-            "[dim yellow]Queue is currently locked by another process. Skipping.[/dim yellow]"
-        )
-        return
+    # Safely pop the queue off the disk in one atomic pass
+    tasks_to_run = read_and_clear_queue(queue_file)
 
     if not tasks_to_run:
         return
@@ -88,7 +61,7 @@ def run_pending_queue() -> None:
         f"\n[bold green]🚀 Found {len(tasks_to_run)} approved tasks. Waking Prefrontal Cortex...[/bold green]"
     )
 
-    asyncio.run(_process_all_tasks(tasks_to_run))
+    await _process_all_tasks(tasks_to_run)
 
 
 async def _process_all_tasks(tasks: list[dict]) -> None:
@@ -119,7 +92,5 @@ async def _process_all_tasks(tasks: list[dict]) -> None:
 
     pending_file = ROOT_DIR / "Meta" / "Pending_Actions.md"
     if pending_file.exists():
-        pending_file.write_text(
-            "# 🛑 Pending Swarm Actions\n*No pending actions. The OS is resting.*\n\n",
-            encoding="utf-8",
-        )
+        pending_file.unlink(missing_ok=True)
+        console.print("[dim]🧹 Cleared Pending_Actions.md from workspace.[/dim]")

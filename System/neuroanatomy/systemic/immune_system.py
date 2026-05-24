@@ -150,7 +150,7 @@ class SecretVault:
         if not text:
             return text
 
-        scrubbed_text = str(text)
+        scrubbed_text = text
         for key, secret in self._secrets.items():
             if secret and len(secret) > 4:
                 scrubbed_text = scrubbed_text.replace(secret, f"[{key}_REDACTED]")

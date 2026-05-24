@@ -1,30 +1,29 @@
+# --- System/tests/autonomic/test_vagus_nerve.py ---
+import pytest
+import System.neuroanatomy.autonomic.vagus_nerve as vagus_mod
 from System.neuroanatomy.autonomic.vagus_nerve import trigger_halt, trigger_recover
 
 
-def test_trigger_halt(mocker):
-    """Proves the Vagus Nerve flushes the queue and plants the Apoptosis flag atomically."""
-    # ⚡ FIX: Patch the new atomic write handler instead of the old clear_pipeline_state
-    mock_write = mocker.patch(
-        "System.neuroanatomy.autonomic.vagus_nerve.write_state_sync_atomic"
-    )
+@pytest.fixture(autouse=True)
+def isolate_vagus_signal(tmp_path, monkeypatch):
+    """Isolates the halt signal file to a temporary directory for safe testing."""
+    monkeypatch.setattr(vagus_mod, "SIGNAL_FILE", tmp_path / ".vagus_abort_signal")
 
+
+def test_trigger_halt(tmp_path):
+    """Proves the vagus nerve can safely drop an atomic halt flag."""
     trigger_halt()
+    signal_file = tmp_path / ".vagus_abort_signal"
 
-    # It should have written the empty queue array AND the HALT file flag
-    assert mock_write.call_count == 2
+    assert signal_file.exists()
+    assert signal_file.read_text(encoding="utf-8") == "HALT_SIGNAL"
 
 
-def test_trigger_recover(mocker):
-    """Proves the Vagus Nerve recover function safely restores the Vestibular state."""
-    mock_halt = mocker.patch("System.neuroanatomy.autonomic.vagus_nerve.trigger_halt")
-    mock_restore = mocker.patch(
-        "System.neuroanatomy.autonomic.vagus_nerve.restore_balance"
-    )
-
-    # Mock both path unlinking and os removal to be completely implementation-agnostic
-    mocker.patch("pathlib.Path.exists", return_value=True)
+def test_trigger_recover(tmp_path):
+    """Proves the vagus nerve clears the atomic halt flag."""
+    signal_file = tmp_path / ".vagus_abort_signal"
+    signal_file.write_text("HALT_SIGNAL", encoding="utf-8")
 
     trigger_recover()
 
-    mock_halt.assert_called_once()
-    mock_restore.assert_called_once()
+    assert not signal_file.exists()

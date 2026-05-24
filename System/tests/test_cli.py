@@ -1,3 +1,4 @@
+# --- System/tests/test_cli.py ---
 from unittest.mock import MagicMock
 from System.llm import run_agent_async
 import asyncio
@@ -11,7 +12,7 @@ from System.cli import app
 runner = CliRunner()
 
 
-def test_run_agent_success(mocker) -> None:  # type: ignore
+def test_run_agent_success(mocker) -> None:
     mock_completion = mocker.patch("System.llm.acompletion")
     mock_response = MagicMock()
     mock_response.choices = [MagicMock()]
@@ -29,7 +30,7 @@ def test_run_agent_success(mocker) -> None:  # type: ignore
     assert result.actions == []
 
 
-def test_run_agent_error_handling(mocker) -> None:  # type: ignore
+def test_run_agent_error_handling(mocker) -> None:
     mock_completion = mocker.patch("System.llm.acompletion")
 
     async def mock_acompletion_error(*args, **kwargs):
@@ -42,9 +43,7 @@ def test_run_agent_error_handling(mocker) -> None:  # type: ignore
     assert "API/Execution Error" in result.text
 
 
-def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:  # type: ignore
-    """Test that the pipeline immediately aborts if user denies autonomous retry."""
-
+def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:
     monkeypatch.delenv("BRAIN_OS_HEADLESS", raising=False)
     monkeypatch.setenv("BRAIN_OS_BYPASS_PFC", "1")
 
@@ -53,7 +52,6 @@ def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:  # type: ign
         return_value=(True, "Approved", "FORGE", "STUDIO", {"total_tokens": 10}),
     )
 
-    # Inject the missing DNA config!
     mocker.patch(
         "System.neuroanatomy.cortical.executive_loop.get_dna_config",
         return_value={
@@ -98,20 +96,12 @@ def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:  # type: ign
         "System.neuroanatomy.cortical.executive_loop.run_agent_async",
         side_effect=mock_run_agent_side_effect,
     )
-
     mocker.patch("builtins.input", side_effect=["y", "n", "n", "n"])
-
-    try:
-        mocker.patch("rich.prompt.Prompt.ask", return_value="n")
-        mocker.patch("rich.prompt.Confirm.ask", return_value=False)
-    except Exception:
-        pass
 
     from System.cli import task
 
     task("FORGE TASK: Test retry circuit breaker", obsidian=False)
-
-    assert any("qa" in agent for agent in agent_calls), "QA Auditor was never reached."
+    assert any("qa" in agent for agent in agent_calls)
 
 
 def test_interrupted_queue_interception(monkeypatch, tmp_path, mocker):
@@ -128,7 +118,6 @@ def test_interrupted_queue_interception(monkeypatch, tmp_path, mocker):
     queue_file.write_text(json.dumps(mock_queue), encoding="utf-8")
     monkeypatch.setenv("BRAIN_OS_HEADLESS", "1")
 
-    # Target the function at its anatomical source since it's locally imported
     mocker.patch(
         "System.neuroanatomy.cortical.executive_loop.execute_pipeline",
         new_callable=mocker.AsyncMock,
@@ -142,7 +131,6 @@ def test_interrupted_queue_interception(monkeypatch, tmp_path, mocker):
 
 
 def test_destroy_aborts_on_no(mocker, monkeypatch) -> None:
-    """Proves the uninstaller aborts if the user declines."""
     monkeypatch.delenv("BRAIN_OS_HEADLESS", raising=False)
     mocker.patch("System.cli.Confirm.ask", return_value=False)
 
@@ -152,15 +140,10 @@ def test_destroy_aborts_on_no(mocker, monkeypatch) -> None:
 
 
 def test_destroy_executes_on_yes(mocker, monkeypatch, tmp_path) -> None:
-    """Proves the uninstaller accurately targets and deletes core OS files."""
-    # Prevent the global callback from short-circuiting on the queue file
     monkeypatch.delenv("BRAIN_OS_HEADLESS", raising=False)
-
-    # Isolate the CLI to a temporary directory
     mocker.patch.object(cli_module, "ROOT_DIR", tmp_path)
     mocker.patch("System.cli.Confirm.ask", return_value=True)
 
-    # Create the dummy files to simulate a live OS
     log_dir = tmp_path / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     (log_dir / "agent_interactions.jsonl").touch()
@@ -173,10 +156,7 @@ def test_destroy_executes_on_yes(mocker, monkeypatch, tmp_path) -> None:
     queue_file = sys_dir / "execution_queue.json"
     queue_file.touch()
 
-    # Simulate running the command
     result = runner.invoke(app, ["destroy"])
-
-    # Assert all files were cleanly purged
     assert "Systemic Apoptosis complete" in result.stdout
     assert not log_dir.exists()
     assert not env_file.exists()

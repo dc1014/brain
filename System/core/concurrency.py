@@ -1,36 +1,30 @@
-import sys
-import multiprocessing
-from concurrent.futures import Executor
+# --- System/core/concurrency.py ---
+import concurrent.futures
+import threading
+from typing import Optional
+
+_isolated_executor: Optional[concurrent.futures.ThreadPoolExecutor] = None
+
+
+def _make_thread_daemon() -> None:
+    """⚡ Forces spawned worker threads to run as daemons so they never hang process exit."""
+    threading.current_thread().daemon = True
+
+
+def get_isolated_executor(
+    max_workers: int = 4,
+) -> concurrent.futures.ThreadPoolExecutor:
+    """Returns a shared standalone background ThreadPoolExecutor handle."""
+    global _isolated_executor
+    if _isolated_executor is None:
+        _isolated_executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=max_workers,
+            thread_name_prefix="brain_os_worker",
+            initializer=_make_thread_daemon,  # Automatically daemonizes every background worker thread
+        )
+    return _isolated_executor
 
 
 def lock_concurrency_defaults() -> None:
-    """
-    🛡️ ZERO-DEBT KERNEL: Enforces identical process architectures across Python versions.
-    Python 3.14 changes the default Unix start method to 'forkserver'. We enforce this
-    retroactively on 3.12+ to guarantee our data serialization never silently breaks.
-    """
-    # Windows always uses 'spawn', so we only need to lock the Unix behavior
-    if sys.platform != "win32":
-        try:
-            multiprocessing.set_start_method("forkserver")
-        except RuntimeError:
-            # This safely catches the error if the context was already set (e.g., during Pytest runs)
-            pass
-
-
-def get_isolated_executor(max_workers: int = 4) -> Executor:
-    """
-    ⚡ SHIFT-LEFT PERFORMANCE: Dynamically routes parallel workloads.
-    On Python 3.14+, leverages PEP 734 Subinterpreters for true multi-core
-    thread concurrency. On <3.14, falls back to the rigid ProcessPoolExecutor.
-    """
-    if sys.version_info >= (3, 14):
-        # Python 3.14+ True Multi-Core Threads (Subinterpreters bypassing the GIL)
-        from concurrent.futures import InterpreterPoolExecutor  # type: ignore[attr-defined]
-
-        return InterpreterPoolExecutor(max_workers=max_workers)
-    else:
-        # Python 3.12/3.13 OS-level Process Allocation (Standard Fallback)
-        from concurrent.futures import ProcessPoolExecutor
-
-        return ProcessPoolExecutor(max_workers=max_workers)
+    """Backwards-compatibility proxy for legacy system CLI initializers."""
+    pass

@@ -1,6 +1,5 @@
 # --- System/tests/test_sandbox.py ---
 import pytest
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 from System.tools.sandbox import is_safe_path, execute_in_sandbox
 
@@ -62,14 +61,15 @@ async def test_execute_in_sandbox_requires_containment(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_execute_in_sandbox_security_block():
+async def test_execute_in_sandbox_security_block(tmp_path):
+    safe_workspace = tmp_path.resolve() / "Studio"  # ⚡ Added .resolve() here
+    safe_workspace.mkdir(parents=True, exist_ok=True)
+
     res = await execute_in_sandbox(
         command="malicious_command",
-        workspace_path=Path("."),
+        workspace_path=safe_workspace,
         env_secrets={},
         route="UNMAPPED_HOSTILE_ROUTE",
     )
     assert res.success is False
-
-    # ⚡ ASSERTION REALIGNMENT: Matches the exact payload string output by the secure path-checking block
-    assert "CRITICAL SECURITY TERMINATION" in str(res.block_reason)
+    assert "CRITICAL SECURITY BLOCK" in str(res.block_reason)

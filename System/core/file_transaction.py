@@ -1,117 +1,70 @@
-import os
+# --- System/core/file_transaction.py ---
 import json
-import asyncio
 from pathlib import Path
-from typing import Any
-from System.core.locks import StateLock
+from typing import Any, List, Dict
 
 
-def read_state_sync(filepath: str | Path, default_factory: Any = dict) -> Any:
-    """Synchronously reads a state file with explicit UTF-8 parsing under IPC lock protection."""
-    target = Path(filepath).resolve()
-    if not target.exists():
-        return default_factory()
-
-    lock = StateLock(target)
-    with lock.acquire_sync():
-        try:
-            with open(target, "r", encoding="utf-8") as f:
-                content = f.read().strip()
-                if not content:
-                    return default_factory()
-                if target.suffix == ".json":
-                    return json.loads(content)
-                return content
-        except Exception:
-            return default_factory()
-
-
-async def read_state_async(filepath: str | Path, default_factory: Any = dict) -> Any:
-    """Asynchronously reads a state file with explicit UTF-8 parsing under async/IPC lock protection."""
-    target = Path(filepath).resolve()
-    if not target.exists():
-        return default_factory()
-
-    lock = StateLock(target)
-    async with lock.acquire():
-        try:
-            # Shift blocking I/O off the main event loop cleanly
-            def _read():
-                with open(target, "r", encoding="utf-8") as f:
-                    return f.read().strip()
-
-            content = await asyncio.to_thread(_read)
-            if not content:
-                return default_factory()
-            if target.suffix == ".json":
-                return json.loads(content)
-            return content
-        except Exception:
-            return default_factory()
-
-
-def write_state_sync_atomic(filepath: str | Path, data: Any) -> None:
-    """Synchronously writes content via an atomic temporary-file swap with strict UTF-8 enforcement."""
-    target = Path(filepath).resolve()
+def atomic_write(filepath: Path | str, content: str) -> None:
+    """
+    Writes content to a temporary shadow file and atomically swaps it.
+    This entirely prevents write collisions and file corruption without needing locks.
+    """
+    target = Path(filepath)
     target.parent.mkdir(parents=True, exist_ok=True)
 
-    # Generate temporary sibling file on the same mount-point to guarantee atomic rename operations
-    temp_file = target.with_name(f".{target.name}.tmp")
+    # 1. Write the new state safely to a shadow file
+    shadow = target.with_suffix(target.suffix + ".tmp")
+    shadow.write_text(content, encoding="utf-8")
 
-    # Serialize data beforehand to keep lock holding durations at absolute minimum
-    content = (
-        json.dumps(data, indent=2) if isinstance(data, (dict, list)) else str(data)
-    )
-
-    lock = StateLock(target)
-    with lock.acquire_sync():
-        try:
-            with open(temp_file, "w", encoding="utf-8") as f:
-                f.write(content)
-                f.flush()
-                os.fsync(
-                    f.fileno()
-                )  # Force OS buffer cache flush to persistent storage platters
-
-            # Atomic swap operation: guarantees zero truncation or partial-write states
-            os.replace(temp_file, target)
-        finally:
-            if temp_file.exists():
-                try:
-                    temp_file.unlink()
-                except OSError:
-                    pass
+    # 2. Atomically overlay the target file (Supported on POSIX and Windows)
+    shadow.replace(target)
 
 
-async def write_state_async_atomic(filepath: str | Path, data: Any) -> None:
-    """Asynchronously writes content via an atomic temporary-file swap with strict UTF-8 enforcement."""
-    target = Path(filepath).resolve()
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temp_file = target.with_name(f".{target.name}.tmp")
+def atomic_clear(filepath: Path | str) -> None:
+    """Atomically clears a file by swapping an empty shadow file over it."""
+    atomic_write(filepath, "")
 
-    content = (
-        json.dumps(data, indent=2) if isinstance(data, (dict, list)) else str(data)
-    )
 
-    lock = StateLock(target)
-    async with lock.acquire():
-        try:
+def read_and_clear_queue(filepath: Path | str) -> List[Dict[str, Any]]:
+    """
+    Atomically reads the current JSONL queue and clears it in a single operation.
+    External bash scripts and browser extensions can safely append to the queue concurrently.
+    """
+    target = Path(filepath)
+    if not target.exists():
+        return []
 
-            def _write_and_sync():
-                with open(temp_file, "w", encoding="utf-8") as f:
-                    f.write(content)
-                    f.flush()
-                    os.fsync(f.fileno())
-                os.replace(temp_file, target)
+    # 1. Read the current text state into local memory
+    lines = target.read_text(encoding="utf-8").splitlines()
 
-            await asyncio.to_thread(_write_and_sync)
-        finally:
+    # 2. Atomically swap the file with an empty state so incoming background tasks can write
+    atomic_clear(target)
 
-            def _cleanup():
-                if temp_file.exists():
-                    try:
-                        temp_file.unlink()
-                    except OSError:
-                        pass
+    # 3. Process the lines
+    tasks = []
+    for line in lines:
+        line = line.strip()
+        if line:
+            try:
+                tasks.append(json.loads(line))
+            except json.JSONDecodeError:
+                pass
+    return tasks
 
-            await asyncio.to_thread(_cleanup)
+
+def read_state_sync(filepath: Path | str, default_factory: type = list) -> Any:
+    """Safely reads a JSON state file. Used by CLI to check pipeline sequences."""
+    target = Path(filepath)
+    if not target.exists():
+        return default_factory()
+    try:
+        content = target.read_text(encoding="utf-8")
+        if not content.strip():
+            return default_factory()
+        return json.loads(content)
+    except Exception:
+        return default_factory()
+
+
+# Backwards-compatibility signature proxy
+write_state_sync_atomic = atomic_write

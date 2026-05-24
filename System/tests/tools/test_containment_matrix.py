@@ -43,14 +43,17 @@ async def test_containment_matrix_forces_sandbox_for_lethal_routes(
 @pytest.mark.asyncio
 async def test_containment_matrix_allows_native_execution_for_safe_routes(tmp_path):
     """Zero-Debt Test: Proves that safe routes (like WORKSPACE) bypass containment and hit native execution."""
-    safe_workspace = tmp_path / "Personal"
-    safe_workspace.mkdir(parents=True)
+    # ⚡ FIX: Use "Studio" so it complies with the strict ALLOWED_DIRECTORIES in conftest
+    safe_workspace = tmp_path.resolve() / "Studio"
+    safe_workspace.mkdir(parents=True, exist_ok=True)
 
     with (
-        patch("System.tools.sandbox.ROOT_DIR", tmp_path),
+        patch("System.tools.sandbox.ROOT_DIR", tmp_path.resolve()),
+        # ⚡ FIX: Patch the correct module path here!
         patch("System.tools.execution.execute_native_isolated") as mock_native,
     ):
         mock_native.return_value = AsyncMock()
+        mock_native.return_value.success = True
 
         await execute_in_sandbox(
             command="ls",

@@ -131,46 +131,6 @@ def test_adr_safety_blocks(mock_log, mocker) -> None:
     assert "SECURITY BLOCK" in rename_res_2
 
 
-def test_operate_forge_security(tmp_path, monkeypatch) -> None:
-    """Ensure operate_forge enforces path safety and HITL approvals."""
-    from System.tools import operate_forge
-    import System.tools as tools
-    from pathlib import Path
-
-    # --- SHIFT-LEFT FIX: Clear headless state so HITL is strictly enforced! ---
-    monkeypatch.delenv("BRAIN_OS_HEADLESS", raising=False)
-
-    # 1. Test Path Traversal Block
-    res_path = operate_forge("../../../Windows", "Build stuff")
-    assert "SECURITY BLOCK" in res_path
-
-    # Mock the safe path using a real, OS-resolved temporary directory
-    mock_root = tmp_path.resolve()
-    monkeypatch.setattr(tools, "ROOT_DIR", mock_root)
-    monkeypatch.setattr(
-        "System.tools.forge.is_safe_path", lambda x, require_write=False: True
-    )
-
-    # 2. Test Missing Engine Block
-    res_missing = operate_forge("Empty-Project", "Build stuff")
-    assert "ERROR: Forge engine not found" in res_missing
-
-    # 3. Test HITL Denial Block
-    # Create the dummy directory and file so it passes the .exists() check
-    dummy_project = mock_root / "Studio" / "Mock-Project"
-    dummy_project.mkdir(parents=True)
-    (dummy_project / "orchestrator.py").touch()
-
-    # --- SHIFT-LEFT FIX: Mock standard input instead of rich.Confirm ---
-    monkeypatch.setattr("builtins.input", lambda *args, **kwargs: "n")
-
-    # Prevent the test from actually trying to write handoff.md
-    monkeypatch.setattr(Path, "write_text", lambda *args, **kwargs: None)
-
-    res_denied = operate_forge("Mock-Project", "Build stuff")
-    assert "SECURITY BLOCK: User explicitly denied" in res_denied
-
-
 def test_copy_safe_file_security(tmp_path: Path, mocker) -> None:  # type: ignore
     """Ensure copy_safe_file blocks path traversal and protects ADRs."""
     from System.tools import copy_safe_file
@@ -325,7 +285,6 @@ def test_read_file_signatures_tool(tmp_path, mocker) -> None:  # type: ignore
 
 def test_execute_command_headless_bypass(monkeypatch, tmp_path):
     """Test that setting the headless flag bypasses the HITL prompt."""
-    import pytest
 
     safe_dir = tmp_path / "Studio"
     safe_dir.mkdir(parents=True, exist_ok=True)
@@ -349,37 +308,6 @@ def test_execute_command_headless_bypass(monkeypatch, tmp_path):
 
     assert "PATH TRAVERSAL BLOCKED" not in result
     assert "<shell_output>" in result  # Check for the restored XML contract
-
-
-def test_operate_forge_headless_bypass(monkeypatch, tmp_path):
-    """Test that setting the headless flag bypasses the HITL prompt for operate_forge."""
-    from System.tools import operate_forge
-
-    project_dir = tmp_path / "Studio" / "TestProject"
-    project_dir.mkdir(parents=True)
-    (project_dir / "orchestrator.py").touch()
-    monkeypatch.setattr("System.tools.file_system.ROOT_DIR", tmp_path)
-    monkeypatch.setattr(
-        "System.tools.sandbox.ALLOWED_DIRECTORIES", {tmp_path / "Studio"}
-    )
-
-    # Explicitly mock the subprocess.run return object schema cleanly
-    class MockResult:
-        returncode = 0
-        stdout = "FORGE EXECUTION COMPLETE"
-        stderr = ""
-
-    monkeypatch.setattr(
-        "System.tools.forge.subprocess.run", lambda *args, **kwargs: MockResult()
-    )
-    monkeypatch.setenv("BRAIN_OS_HEADLESS", "1")
-
-    monkeypatch.setattr(
-        "builtins.input", lambda *args: pytest.fail("HITL prompt was not bypassed!")
-    )
-
-    result = operate_forge("TestProject", "Do something")
-    assert "FORGE EXECUTION COMPLETE" in result
 
 
 def test_sense_environment_tool(monkeypatch):

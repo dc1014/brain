@@ -5,9 +5,21 @@ from pathlib import Path
 from System.tools.sandbox import execute_in_sandbox
 
 
+# Paste this near the top of the 3 files listed above!
+@pytest.fixture(autouse=True)
+def align_windows_sandbox_paths(mocker, tmp_path):
+    """Zero-Debt Fix: Aligns execution path validators with Pytest's Windows Temp directory."""
+    safe_root = tmp_path.resolve()
+    mocker.patch("System.tools.sandbox.ROOT_DIR", safe_root)
+    mocker.patch(
+        "System.tools.sandbox.ALLOWED_DIRECTORIES", {safe_root, safe_root / "Studio"}
+    )
+    mocker.patch("System.tools.execution.ROOT_DIR", safe_root, create=True)
+
+
 @pytest.fixture
 def secure_workspace(tmp_path: Path) -> Path:
-    workspace = tmp_path / "Studio"
+    workspace = tmp_path.resolve() / "Studio"
     workspace.mkdir(parents=True, exist_ok=True)
     return workspace
 
@@ -16,7 +28,6 @@ def secure_workspace(tmp_path: Path) -> Path:
 async def test_ffi_lobotomy_escape(secure_workspace: Path) -> None:
     """DEFCON PROOF: Verifies the Python-to-JS bridge is mathematically blackholed."""
 
-    # Mythos tries to import JS, Pyodide internals, and access the Deno global.
     malicious_script = secure_workspace / "escape.py"
     malicious_script.write_text(
         "import sys\n"
@@ -47,9 +58,6 @@ async def test_ffi_lobotomy_escape(secure_workspace: Path) -> None:
 async def test_pipe_bomb_stream_guillotine(secure_workspace: Path, mocker) -> None:
     """DEFCON PROOF: Verifies the 5MB output stream accumulator violently severs memory flood attacks."""
 
-    # Mythos tries to crash the host OS by printing 10 MB of continuous garbage
-    # ⚡ FIXED: Use a loop with newlines so Pyodide streams the data to Deno's stdout,
-    # instead of creating a 10MB string that OOM crashes the V8 engine silently!
     malicious_script = secure_workspace / "pipebomb.py"
     malicious_script.write_text(
         "import sys\n"
@@ -117,7 +125,6 @@ async def test_missing_deno_runtime_triggers_guillotine(
         route="CODE_GENERATION",
     )
 
-    # ⚡ SHIFT-LEFT SECURITY: Verify the sandbox refuses to execute without mathematical WASM isolation
     assert result.success is False
     assert "CRITICAL SECURITY TERMINATION" in str(result.block_reason)
     assert "Deno runtime is required for secure WebAssembly isolation" in str(

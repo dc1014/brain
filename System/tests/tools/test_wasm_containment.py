@@ -5,6 +5,17 @@ from pathlib import Path
 from System.tools.sandbox import execute_in_sandbox
 
 
+@pytest.fixture(autouse=True)
+def align_windows_sandbox_paths(mocker, tmp_path):
+    """Zero-Debt Fix: Aligns execution path validators with Pytest's Windows Temp directory."""
+    safe_root = tmp_path.resolve()
+    mocker.patch("System.tools.sandbox.ROOT_DIR", safe_root)
+    mocker.patch(
+        "System.tools.sandbox.ALLOWED_DIRECTORIES", {safe_root, safe_root / "Studio"}
+    )
+    mocker.patch("System.tools.execution.ROOT_DIR", safe_root, create=True)
+
+
 @pytest.mark.asyncio
 async def test_python_wasm_environment_is_isolated_from_host(tmp_path: Path) -> None:
     """

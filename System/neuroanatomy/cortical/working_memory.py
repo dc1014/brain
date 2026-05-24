@@ -7,14 +7,12 @@ from litellm import acompletion  # type: ignore
 from System.core.dna import get_dna_config
 from System.neuroanatomy.systemic.immune_system import vault
 from System.core.paths import ROOT_DIR
-from System.core.locks import StateLock  # Renamed import
-
+from System.core.file_transaction import atomic_write
 
 console = Console()
 
 
 QUEUE_FILE_PATH = ROOT_DIR / "System" / "execution_queue.json"
-QUEUE_LOCK = StateLock(QUEUE_FILE_PATH)  # Renamed implementation
 
 
 class WorkingMemory:
@@ -210,24 +208,20 @@ def persist_pipeline_state(
     domain: str,
     remaining_steps: List[Dict[str, Any]],
 ) -> None:
-    """Working Memory: Saves the current state of the execution pipeline to disk."""
-    QUEUE_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
-
-    with QUEUE_LOCK.acquire_sync():
-        with open(QUEUE_FILE_PATH, "w", encoding="utf-8") as f:
-            json.dump(
-                {
-                    "original_task": description,
-                    "route_type": route_type,
-                    "domain": domain,
-                    "remaining_steps": remaining_steps,
-                },
-                f,
-                indent=2,
-            )
+    """Working Memory: Saves the current state of the execution pipeline to disk atomically."""
+    payload = json.dumps(
+        {
+            "original_task": description,
+            "route_type": route_type,
+            "domain": domain,
+            "remaining_steps": remaining_steps,
+        },
+        indent=2,
+    )
+    # The atomic swap prevents pipeline corruption during heavy Swarm I/O
+    atomic_write(QUEUE_FILE_PATH, payload)
 
 
 def clear_pipeline_state() -> None:
     """Working Memory: Clears the execution queue upon graceful termination."""
-    with QUEUE_LOCK.acquire_sync():
-        QUEUE_FILE_PATH.unlink(missing_ok=True)
+    QUEUE_FILE_PATH.unlink(missing_ok=True)

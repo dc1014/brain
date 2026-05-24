@@ -63,7 +63,8 @@ exclude = [
     "^Personal/",
     "^Professional/",
     "^Meta/",
-    "^logs/"
+    "^logs/",
+    "System/snapshots/",
 ]
 # Ignore missing imports for third-party libraries that don't have type hints
 ignore_missing_imports = true
