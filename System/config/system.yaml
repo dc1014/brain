@@ -1,0 +1,108 @@
+# ==============================================================================
+#                      BRAIN OS SYSTEM CONFIGURATION MATRIX
+# ==============================================================================
+# Handles global infrastructure mechanics, local environment setups, runtime
+# limits, and endocrine baseline settings.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. CORE MECHANICS & SYSTEM RUNTIME (MEDULLA)
+# ------------------------------------------------------------------------------
+medulla:
+  state_parameters:
+    awake_port: 8080
+    max_daily_token_budget: 500000
+
+  circadian_rhythm:
+    sleep_trigger_time: 03:00
+    daydream_duration_minutes: 45
+    auto_purge_lymph_nodes: false
+
+  background_daemons:
+    file_watcher:
+      enabled: true
+      polling_throttle_ms: 1000
+      targets:
+        - Personal
+        - Professional
+        - Studio
+    dermis_receptor:
+      enabled: true
+      secure_port: 8080
+      auto_tunnel_on_wake: false
+
+# ------------------------------------------------------------------------------
+# 2. FILE INTERACTIVE DOMAINS
+# ------------------------------------------------------------------------------
+domains:
+  META: Meta/global-memory.md
+  PERSONAL: Personal/personal-memory.md
+  PROFESSIONAL: Professional/professional-memory.md
+  STUDIO: Studio/studio-memory.md
+
+# ------------------------------------------------------------------------------
+# 3. LLM ENGINE ROUTING MATRIX
+# ------------------------------------------------------------------------------
+models:
+  gemini_flash: gemini/gemini-2.5-flash
+  claude_haiku: anthropic/claude-haiku-4-5
+  gpt_mini: openai/gpt-4o-mini
+  claude_sonnet: anthropic/claude-sonnet-4-5
+  local_slm: ollama/llama3
+  default: openai/gpt-4o-mini
+  fast: openai/gpt-4o-mini
+  heavy: openai/gpt-4o
+
+# ------------------------------------------------------------------------------
+# 4. NEUROMODULATION STATES & TEMPERATURE BIASING
+# ------------------------------------------------------------------------------
+neuromodulation:
+  high_stress:
+    temperature: 0.0
+    engine_override: claude-3-5-sonnet
+  low_stress:
+    temperature: 0.7
+    engine_override: local-slm
+
+# ------------------------------------------------------------------------------
+# 5. ENVIRONMENT ALIGNMENT & GUARDRAILS
+# ------------------------------------------------------------------------------
+conflict_monitoring:
+  max_consecutive_tool_failures: 3
+  epistemic_drift_threshold: 0.75
+  sunk_cost_line_limit: 3
+
+fallacy_patterns:
+  - (?i)confirming without checking
+  - (?i)repeating identical execution
+
+# ------------------------------------------------------------------------------
+# 6. ENDOCRINE SYSTEM BASELINES (HUMORAL VECTOR)
+# ------------------------------------------------------------------------------
+cortisol: 0.2
+dopamine: 0.5
+serotonin: 0.7
+
+# ------------------------------------------------------------------------------
+# 7. EXTEROCEPTIVE WEBHOOK INGESTION
+# ------------------------------------------------------------------------------
+webhooks:
+  github:
+    route_name: github
+    secret_env_var: GITHUB_WEBHOOK_SECRET
+    signature_header: X-Hub-Signature-256
+    payload_mapping:
+      repo: repository.name
+      pusher: pusher.name
+    target_action: exteroceptive
+    template: 'Environment Shift: Repository {repo} received a push from {pusher}.'
+
+  sms_command:
+    route_name: sms
+    secret_env_var: TWILIO_WEBHOOK_SECRET
+    signature_header: X-Twilio-Signature
+    payload_mapping:
+      sender: From
+      message: Body
+    target_action: exteroceptive
+    template: 'Incoming SMS from {sender}: {message}'

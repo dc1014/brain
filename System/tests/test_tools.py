@@ -427,7 +427,9 @@ def test_tools_yaml_schema_validity():
 
     yaml_path = Path(__file__).parent.parent / "config" / "tools.yaml"
     with open(yaml_path, "r", encoding="utf-8") as f:
-        tools = yaml.safe_load(f)
+        config = yaml.safe_load(f)
+
+    tools = config.get("tools", {})
 
     # Ensure every tool has valid OpenAI schema fields
     for group_name, tool_list in tools.items():

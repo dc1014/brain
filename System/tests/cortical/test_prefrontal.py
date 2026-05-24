@@ -3,9 +3,7 @@ import pytest
 from unittest.mock import AsyncMock, patch
 from System.neuroanatomy.cortical.prefrontal import PrefrontalCortex
 from System.neuroanatomy.limbic.thalamus import route_sensory_input
-import yaml  # type: ignore
 from pathlib import Path
-from typing import Dict, List, Any
 from System.neuroanatomy.cortical.executive_loop import execute_pipeline
 
 
@@ -30,28 +28,10 @@ async def test_auditor_headless_retry_bypass(mocker, tmp_path: Path) -> None:
     """Proves headless mode automatically triggers loops on QA failure without host pollution."""
     from System.neuroanatomy.cortical.executive_loop import execute_pipeline
 
-    # SHIFT-LEFT ISOLATION: Bind the prefrontal execution path to our isolated temp space
     mocker.patch("System.neuroanatomy.cortical.executive_loop.ROOT_DIR", tmp_path)
-
-    # ⚡ ZERO-DEBT FIX: Belt-and-suspenders patching to guarantee the OS doesn't touch the real disk
     mocker.patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state")
     mocker.patch("System.neuroanatomy.cortical.working_memory.persist_pipeline_state")
 
-    # Bootstrap an isolated temporary tools configuration file structure
-    tools_dir = tmp_path / "System" / "config"
-    tools_dir.mkdir(parents=True, exist_ok=True)
-
-    # 🔐 TYPE SAFETY REALIGNMENT: Inject explicit types to satisfy strict mypy constraints
-    dummy_tools: Dict[str, List[Any]] = {
-        "base": [],
-        "write": [],
-        "execute": [],
-        "sense_environment": [],
-    }
-    with open(tools_dir / "tools.yaml", "w", encoding="utf-8") as f:
-        yaml.dump(dummy_tools, f)
-
-    # Establish sterile temporary log environments
     (tmp_path / "logs").mkdir(parents=True, exist_ok=True)
 
     mocker.patch(
@@ -61,7 +41,6 @@ async def test_auditor_headless_retry_bypass(mocker, tmp_path: Path) -> None:
     mocker.patch("System.neuroanatomy.cortical.executive_loop.commit_transaction")
     mocker.patch("System.neuroanatomy.cortical.executive_loop.restore_balance")
 
-    # Inject static DNA layout configuration variables safely into memory maps
     mocker.patch(
         "System.neuroanatomy.cortical.executive_loop.get_dna_config",
         return_value={
@@ -83,6 +62,7 @@ async def test_auditor_headless_retry_bypass(mocker, tmp_path: Path) -> None:
                 },
             },
             "models": {"mock": "mock"},
+            "tools": {},
         },
     )
 
@@ -112,10 +92,8 @@ async def test_auditor_headless_retry_bypass(mocker, tmp_path: Path) -> None:
         "builtins.input", side_effect=Exception("Test failed: HITL prompt triggered!")
     )
 
-    # Execute the isolated pipeline path
     await execute_pipeline("Test retry", "FORGE", "STUDIO")
 
-    # ⚡ The state machine cursor handles transitions natively without mutating the array
     assert call_count["qa_auditor"] == 2
 
 
@@ -130,12 +108,6 @@ async def test_synaptic_consolidation_commits_mid_pipeline(
     mock_energy, mock_run_agent, mock_commit, mocker, tmp_path
 ):
     """Proves intermediate milestones are written directly to safe storage layers."""
-
-    # Provide the structural files the OS expects to read in the temp dir!
-    config_dir = tmp_path / "System" / "config"
-    config_dir.mkdir(parents=True)
-    (config_dir / "tools.yaml").write_text("{}")
-
     mocker.patch("System.neuroanatomy.cortical.executive_loop.ROOT_DIR", tmp_path)
     mocker.patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state")
 
@@ -160,6 +132,7 @@ async def test_synaptic_consolidation_commits_mid_pipeline(
                 },
             },
             "models": {"mock": "mock"},
+            "tools": {},
         },
     )
 
@@ -184,13 +157,9 @@ async def test_pipeline_payload_canonical_compaction(tmp_path):
         patch.object(el, "ROOT_DIR", tmp_path),
         patch("System.neuroanatomy.cortical.executive_loop.get_dna_config") as mock_dna,
         patch(
-            "System.neuroanatomy.cortical.executive_loop.yaml.safe_load"
-        ) as mock_yaml,
-        patch(
             "System.neuroanatomy.cortical.executive_loop.run_agent_async"
         ) as mock_agent,
     ):
-        # ⚡ FIXED: Expanded the mock configuration mapping to supply required agent definitions
         mock_dna.return_value = {
             "routes": {"WORKSPACE": [{"agent": "test_agent"}]},
             "agents": {
@@ -202,22 +171,16 @@ async def test_pipeline_payload_canonical_compaction(tmp_path):
                 }
             },
             "models": {"fast": "gemini/gemini-2.5-flash"},
+            "tools": {},
         }
-        mock_yaml.return_value = {}
 
         mock_res = AsyncMock()
         mock_res.text = "Execution finished"
         mock_res.usage = {"total_tokens": 10}
         mock_agent.return_value = mock_res
 
-        # Write temporary mock configuration file structures
-        config_dir = tmp_path / "System" / "config"
-        config_dir.mkdir(parents=True)
-        (config_dir / "tools.yaml").touch()
-
         await execute_pipeline("Test compaction target", "WORKSPACE", "GENERAL")
 
-        # Confirm that the user prompt passed down to the active agent contains no bloated line breaks
         called_args, called_kwargs = mock_agent.call_args
         compiled_prompt = called_kwargs.get("user_prompt", "")
 
@@ -289,19 +252,8 @@ async def test_cognitive_tool_pruning_hides_execution_tools(
     mocker.patch("System.neuroanatomy.cortical.executive_loop.ROOT_DIR", tmp_path)
     mocker.patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state")
 
-    # Bootstrap an isolated temporary tools configuration file structure with dangerous tools
-    tools_dir = tmp_path / "System" / "config"
-    tools_dir.mkdir(parents=True, exist_ok=True)
-    dummy_tools = {
-        "base": ["read_file"],
-        "execute": ["execute_in_sandbox", "deno_executor", "safe_linter_tool"],
-    }
-    with open(tools_dir / "tools.yaml", "w", encoding="utf-8") as f:
-        yaml.dump(dummy_tools, f)
-
     (tmp_path / "logs").mkdir(parents=True, exist_ok=True)
 
-    # Mock peripheral systems
     mocker.patch(
         "System.core.orchestrator.route_sensory_input",
         return_value=(True, "Approved", "FORGE", "STUDIO", {"total_tokens": 10}),
@@ -309,7 +261,7 @@ async def test_cognitive_tool_pruning_hides_execution_tools(
     mocker.patch("System.neuroanatomy.cortical.executive_loop.commit_transaction")
     mocker.patch("System.neuroanatomy.cortical.executive_loop.restore_balance")
 
-    # Inject static DNA layout configuration variables
+    # Inject tools and agents natively into the mock configuration payload
     mocker.patch(
         "System.neuroanatomy.cortical.executive_loop.get_dna_config",
         return_value={
@@ -325,6 +277,10 @@ async def test_cognitive_tool_pruning_hides_execution_tools(
                 }
             },
             "models": {"mock": "mock"},
+            "tools": {
+                "base": ["read_file"],
+                "execute": ["execute_in_sandbox", "deno_executor", "safe_linter_tool"],
+            },
         },
     )
 
@@ -335,12 +291,11 @@ async def test_cognitive_tool_pruning_hides_execution_tools(
     mock_run_agent.return_value.text = "Executed safely."
     mock_run_agent.return_value.actions = []
 
-    # 1. 🔐 ENFORCEMENT TEST: Ensure tools are scrubbed when opt-in is false
     mocker.patch.dict(os.environ, {"BRAIN_ENABLE_CODE_EXECUTION": "false"}, clear=True)
     await execute_pipeline("Test pruning", "FORGE", "STUDIO")
 
-    # Extract the active_tools list passed to the agent kwargs
-    called_tools = mock_run_agent.call_args[1].get("tools", [])
+    # Safe evaluation syntax to handle explicitly pruned empty tool arrays gracefully
+    called_tools = mock_run_agent.call_args[1].get("tools") or []
 
     assert "execute_in_sandbox" not in called_tools
     assert "deno_executor" not in called_tools

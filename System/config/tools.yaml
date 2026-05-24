@@ -1,495 +1,687 @@
-# 🛠️ Brain OS: Tool Schemas
+# ==============================================================================
+#                      BRAIN OS ACTION BLUEPRINT REGISTRY
+# ==============================================================================
+# Defines the exact, schema-validated JSON schemas exposed to the active LLM
+# nodes. Categorized cleanly into structural subsystem boundaries.
+# ==============================================================================
+
+# ==============================================================================
+# GROUP 1: BASE SYSTEMIC SENSORY TOOLS (READING & SCOUTING)
+# ==============================================================================
 base:
-  - type: "function"
+  - type: function
     function:
-      name: "read_safe_file"
-      description: "Reads the complete contents of a file securely."
+      name: read_safe_file
+      description: Reads the complete contents of a file securely.
       parameters:
-        type: "object"
+        type: object
         properties:
-          filepath: { type: "string" }
-        required: ["filepath"]
+          filepath:
+            type: string
+        required:
+          - filepath
 
-  - type: "function"
+  - type: function
     function:
-      name: "list_safe_directory"
-      description: "Lists all files in a directory."
+      name: list_safe_directory
+      description: Lists all files in a directory.
       parameters:
-        type: "object"
-        properties:
-          directory_path: { type: "string" }
-        required: ["directory_path"]
-
-  - type: "function"
-    function:
-      name: "search_safe_directory"
-      description: "Recursively searches a directory for a specific string (e.g., a concept in notes, a variable name, or a markdown header). Returns exact file paths and performance metrics."
-      parameters:
-        type: "object"
-        properties:
-          query: { type: "string" }
-          directory_path: { type: "string" }
-        required: ["query", "directory_path"]
-
-  - type: "function"
-    function:
-      name: "semantic_search"
-      description: "WERNICKE'S AREA: Use this to find conceptual answers. It retrieves broad results and uses an LLM to filter out noise, returning exact semantic answers. Saves context tokens."
-      parameters:
-        type: "object"
-        properties:
-          directory: { type: "string" }
-          query: { type: "string" }
-        required: ["directory", "query"]
-
-  - type: "function"
-    function:
-      name: "analyze_safe_syntax"
-      description: "Runs a read-only local linter (like ruff for Python) to check for syntax errors or undefined variables without executing the code. Bypasses human-in-the-loop. Use this IMMEDIATELY after writing a script to verify it compiles."
-      parameters:
-        type: "object"
-        properties:
-          filepath: { type: "string" }
-        required: ["filepath"]
-
-  - type: "function"
-    function:
-      name: "speak"
-      description: "Outputs audio to the user. Use this for responses instead of just text."
-      parameters:
-        type: "object"
-        properties:
-          text: { type: "string", description: "The text to speak." }
-        required: ["text"]
-
-
-  - type: "function"
-    function:
-      name: "search_hippocampus"
-      description: "Instantly searches the codebase's long-term memory for a concept, variable, or function name. Returns tightly cropped text snippets. Highly token-efficient."
-      parameters:
-        type: "object"
-        properties:
-          query:
-            type: "string"
-            description: "The exact keyword or phrase to search for."
-        required: ["query"]
-
-  - type: "function"
-    function:
-      name: "map_spatial_dependencies"
-      description: "PARIETAL LOBE: Generates a 3D spatial map of the directory. Use 'map_type=code' to trace software imports and blast radius. Use 'map_type=notes' to map Obsidian [[Wikilinks]] between markdown files to understand thought topology."
-      parameters:
-        type: "object"
+        type: object
         properties:
           directory_path:
-            type: "string"
-            description: "The relative path to map (e.g., 'System' for code, or 'Personal' for notes)."
-          output_format:
-            type: "string"
-            enum: ["json", "mermaid", "vertigo_check"]
-            description: "Use 'mermaid' for visual code diagrams, 'vertigo_check' for circular dependencies, or 'json' for standard data."
-          map_type:
-            type: "string"
-            enum: ["code", "notes"]
-            description: "Whether to map software imports ('code') or Obsidian memory links ('notes')."
-        required: ["directory_path"]
+            type: string
+        required:
+          - directory_path
 
-  - type: "function"
+  - type: function
     function:
-      name: "configure_synaptic_routing"
-      description: "PATHWAY: Autonomously injects a CORS proxy into a Vite configuration file to link the frontend to a backend API (e.g., FastAPI, Express). Use this instead of manually rewriting vite.config.ts to save tokens and prevent syntax errors."
+      name: search_safe_directory
+      description: >-
+        Recursively searches a directory for a specific string (e.g., a concept
+        in notes, a variable name, or a markdown header). Returns exact file paths and
+        performance metrics.
       parameters:
-        type: "object"
+        type: object
         properties:
-          project_name: { type: "string", description: "The folder name inside Studio/ (e.g., 'My-App')" }
-          backend_port: { type: "integer", description: "The local port the backend runs on (e.g., 8000)" }
-          api_prefix: { type: "string", description: "The API route prefix to proxy (default: '/api')" }
-        required: ["project_name", "backend_port"]
+          query:
+            type: string
+          directory_path:
+            type: string
+        required:
+          - query
+          - directory_path
 
-  - type: "function"
+  - type: function
     function:
-      name: "map_system_topology"
-      description: "META: Generates a visual Mermaid diagram of the current Brain OS architecture and autonomic state, saving it to Meta/system_topology.md. Use this to document your own brain state."
+      name: semantic_search
+      description: >-
+        WERNICKE'S AREA: Use this to find conceptual answers. It retrieves
+        broad results and uses an LLM to filter out noise, returning exact semantic
+        answers. Saves context tokens.
       parameters:
-        type: "object"
+        type: object
+        properties:
+          directory:
+            type: string
+          query:
+            type: string
+        required:
+          - directory
+          - query
+
+  - type: function
+    function:
+      name: analyze_safe_syntax
+      description: >-
+        Runs a read-only local linter (like ruff for Python) to check for
+        syntax errors or undefined variables without executing the code. Bypasses human-in-the-loop.
+        Use this IMMEDIATELY after writing a script to verify it compiles.
+      parameters:
+        type: object
+        properties:
+          filepath:
+            type: string
+        required:
+          - filepath
+
+  - type: function
+    function:
+      name: speak
+      description: Outputs audio to the user. Use this for responses instead of just text.
+      parameters:
+        type: object
+        properties:
+          text:
+            type: string
+            description: The text to speak.
+        required:
+          - text
+
+  - type: function
+    function:
+      name: search_hippocampus
+      description: >-
+        Instantly searches the codebase's long-term memory for a concept,
+        variable, or function name. Returns tightly cropped text snippets. Highly token-efficient.
+      parameters:
+        type: object
+        properties:
+          query:
+            type: string
+            description: The exact keyword or phrase to search for.
+        required:
+          - query
+
+  - type: function
+    function:
+      name: map_spatial_dependencies
+      description: >-
+        PARIETAL LOBE: Generates a 3D spatial map of the directory. Use
+        'map_type=code' to trace software imports and blast radius. Use 'map_type=notes'
+        to map Obsidian [[Wikilinks]] between markdown files to understand thought topology.
+      parameters:
+        type: object
+        properties:
+          directory_path:
+            type: string
+            description: The relative path to map (e.g., 'System' for code, or 'Personal' for notes).
+          output_format:
+            type: object
+            enum:
+              - json
+              - mermaid
+              - vertigo_check
+            description: Use 'mermaid' for visual code diagrams, 'vertigo_check' for circular dependencies, or 'json' for standard data.
+          map_type:
+            type: string
+            enum:
+              - code
+              - notes
+            description: Whether to map software imports ('code') or Obsidian memory links ('notes').
+        required:
+          - directory_path
+
+  - type: function
+    function:
+      name: configure_synaptic_routing
+      description: >-
+        PATHWAY: Autonomously injects a CORS proxy into a Vite configuration
+        file to link the frontend to a backend API (e.g., FastAPI, Express). Use this
+        instead of manually rewriting vite.config.ts to save tokens and prevent syntax errors.
+      parameters:
+        type: object
+        properties:
+          project_name:
+            type: string
+            description: The folder name inside Studio/ (e.g., 'My-App')
+          backend_port:
+            type: integer
+            description: The local port the backend runs on (e.g., 8000)
+          api_prefix:
+            type: string
+            description: "The API route prefix to proxy (default: '/api')"
+        required:
+          - project_name
+          - backend_port
+
+  - type: function
+    function:
+      name: map_system_topology
+      description: >-
+        META: Generates a visual Mermaid diagram of the current Brain OS
+        architecture and autonomic state, saving it to Meta/system_topology.md. Use
+        this to document your own brain state.
+      parameters:
+        type: object
         properties:
           format_type:
-            type: "string"
-            description: "You MUST pass the string 'mermaid' here."
-        required: ["format_type"]
+            type: string
+            description: You MUST pass the string 'mermaid' here.
+        required:
+          - format_type
 
   - type: function
     function:
       name: transmit_telepathy
-      description: "Commands an external AI framework (OpenClaw/Hermes) or peer Brain OS node via the Exocortex. Use to delegate execution or read public resources from peers."
+      description: >-
+        Commands an external AI framework (OpenClaw/Hermes) or peer Brain
+        OS node via the Exocortex. Use to delegate execution or read public resources
+        from peers.
       parameters:
         type: object
         properties:
           target_node_id:
             type: string
-            description: "The secure ID of the external node (e.g., 'openclaw_local')."
+            description: The secure ID of the external node (e.g., 'openclaw_local').
           action:
             type: string
-            description: "The MCP action (e.g., 'EXECUTE_ENGRAM' or 'READ_RESOURCE')."
+            description: The MCP action (e.g., 'EXECUTE_ENGRAM' or 'READ_RESOURCE').
           target:
             type: string
-            description: "The name of the engram or resource to interact with."
-        required: [target_node_id, action]
+            description: The name of the engram or resource to interact with.
+        required:
+          - target_node_id
+          - action
 
+
+# ==============================================================================
+# GROUP 2: FILE SYSTEM MODIFICATION TOOLS (EFFERENT EFFERENCE)
+# ==============================================================================
 write:
-  - type: "function"
+  - type: function
     function:
-      name: "write_safe_file"
-      description: "Writes file."
+      name: write_safe_file
+      description: Writes file.
       parameters:
-        type: "object"
+        type: object
         properties:
-          filepath: { type: "string" }
-          content: { type: "string" }
-        required: ["filepath", "content"]
+          filepath:
+            type: string
+          content:
+            type: string
+        required:
+          - filepath
+          - content
 
-  - type: "function"
+  - type: function
     function:
-      name: "write_multiple_files"
-      description: "Writes multiple files to the disk in a single action. ALWAYS use this instead of write_safe_file when creating more than one file to save API tokens."
+      name: write_multiple_files
+      description: >-
+        Writes multiple files to the disk in a single action. ALWAYS use
+        this instead of write_safe_file when creating more than one file to save API tokens.
       parameters:
-        type: "object"
+        type: object
         properties:
           files:
-            type: "array"
+            type: array
             items:
-              type: "object"
+              type: object
               properties:
-                filepath: { type: "string", description: "Relative path, e.g., Studio/App/src/main.jsx" }
-                content: { type: "string", description: "Complete file content" }
-              required: ["filepath", "content"]
-        required: ["files"]
+                filepath:
+                  type: string
+                  description: Relative path, e.g., Studio/App/src/main.jsx
+                content:
+                  type: string
+                  description: Complete file content
+              required:
+                - filepath
+                - content
+        required:
+          - files
 
-  - type: "function"
+  - type: function
     function:
-      name: "rename_safe_file"
-      description: "Renames file."
+      name: rename_safe_file
+      description: Renames file.
       parameters:
-        type: "object"
+        type: object
         properties:
-          old_filepath: { type: "string" }
-          new_filepath: { type: "string" }
-        required: ["old_filepath", "new_filepath"]
+          old_filepath:
+            type: string
+          new_filepath:
+            type: string
+        required:
+          - old_filepath
+          - new_filepath
 
-  - type: "function"
+  - type: function
     function:
-      name: "append_safe_file"
-      description: "Appends to file."
+      name: append_safe_file
+      description: Appends to file.
       parameters:
-        type: "object"
+        type: object
         properties:
-          filepath: { type: "string" }
-          content: { type: "string" }
-        required: ["filepath", "content"]
+          filepath:
+            type: string
+          content:
+            type: string
+        required:
+          - filepath
+          - content
 
+
+# ==============================================================================
+# GROUP 3: AUTONOMIC SANDBOX & MOTOR COMMAND EXECUTION TOOLS
+# ==============================================================================
 execute:
-  - type: "function"
+  - type: function
     function:
-      name: "bootstrap_project"
-      description: "Clones a project archetype into Studio."
+      name: bootstrap_project
+      description: Clones a project archetype into Studio.
       parameters:
-        type: "object"
-        properties:
-          project_name: { type: "string" }
-          template_url:
-            type: "string"
-            description: "Optional Git URL, defaults to Forge"
-        required: ["project_name"]
-
-  - type: "function"
-    function:
-      name: "execute_command"
-      description: "Runs a terminal command. DO NOT EXPECT OUTPUT in the response. Check the file system after it runs to see side effects."
-      parameters:
-        type: "object"
-        properties:
-          command: { type: "string" }
-          directory_path: { type: "string" }
-        required: ["command", "directory_path"]
-
-  - type: "function"
-    function:
-      name: "operate_forge"
-      description: "Operates a Forge archetype project securely. Use this INSTEAD of execute_command to run Forge. Automatically handles handoff.md and retrieves telemetry."
-      parameters:
-        type: "object"
+        type: object
         properties:
           project_name:
-            type: "string"
-            description: "The exact name of the project folder in Studio/ (e.g., 'Brain-Website')."
-          instruction:
-            type: "string"
-            description: "The natural language instruction or pipeline command (e.g., '[START: Engineering] Build the React site')."
-        required: ["project_name", "instruction"]
+            type: string
+          template_url:
+            type: string
+            description: Optional Git URL, defaults to Forge
+        required:
+          - project_name
 
-  - type: "function"
+  - type: function
     function:
-      name: "copy_safe_file"
-      description: "Copies a file. Useful for moving images from Media/ into Studio/ projects."
+      name: execute_command
+      description: >-
+        Runs a terminal command. DO NOT EXPECT OUTPUT in the response. Check
+        the file system after it runs to see side effects.
       parameters:
-        type: "object"
+        type: object
         properties:
-          source_filepath: { type: "string" }
-          dest_filepath: { type: "string" }
-        required: ["source_filepath", "dest_filepath"]
+          command:
+            type: string
+          directory_path:
+            type: string
+        required:
+          - command
+          - directory_path
 
-  - type: "function"
+  - type: function
     function:
-      name: "sense_environment"
-      description: "Fetches and reads an external webpage, converting it to token-optimized Hybrid XML/MD. Use this to research competitors, read API docs, or fetch external context."
+      name: operate_forge
+      description: >-
+        Operates a Forge archetype project securely. Use this INSTEAD of
+        execute_command to run Forge. Automatically handles handoff.md and retrieves telemetry.
       parameters:
-        type: "object"
+        type: object
+        properties:
+          project_name:
+            type: string
+            description: The exact name of the project folder in Studio/ (e.g., 'Brain-Website').
+          instruction:
+            type: string
+            description: "The natural language instruction or pipeline command (e.g., '[START: Engineering] Build the React site')."
+        required:
+          - project_name
+          - instruction
+
+  - type: function
+    function:
+      name: copy_safe_file
+      description: Copies a file. Useful for moving images from Media/ into Studio/ projects.
+      parameters:
+        type: object
+        properties:
+          source_filepath:
+            type: string
+          dest_filepath:
+            type: string
+        required:
+          - source_filepath
+          - dest_filepath
+
+  - type: function
+    function:
+      name: sense_environment
+      description: >-
+        Fetches and reads an external webpage, converting it to token-optimized
+        Hybrid XML/MD. Use this to research competitors, read API docs, or fetch external context.
+      parameters:
+        type: object
         properties:
           url:
-            type: "string"
-            description: "The HTTP or HTTPS URL to read."
-        required: ["url"]
+            type: string
+            description: The HTTP or HTTPS URL to read.
+        required:
+          - url
 
-  - type: "function"
+  - type: function
     function:
-      name: "analyze_audio"
-      description: "Analyzes an audio file. Detects human speech, transcribes it, and identifies environmental sounds."
+      name: analyze_audio
+      description: Analyzes an audio file. Detects human speech, transcribes it, and identifies environmental sounds.
       parameters:
-        type: "object"
+        type: object
         properties:
-          filepath: { type: "string", description: "The path to the audio file." }
-        required: ["filepath"]
+          filepath:
+            type: string
+            description: The path to the audio file.
+        required:
+          - filepath
 
-  - type: "function"
+  - type: function
     function:
-      name: "create_engram_tool"
-      description: "Saves a sequence of bash/shell commands into procedural muscle memory. Use this when you successfully complete a complex, multi-step task that will likely be repeated in the future."
+      name: create_engram_tool
+      description: >-
+        Saves a sequence of bash/shell commands into procedural muscle memory.
+        Use this when you successfully complete a complex, multi-step task that will
+        likely be repeated in the future.
       parameters:
-        type: "object"
+        type: object
         properties:
           name:
-            type: "string"
-            description: "A short, snake_case name for the engram (e.g., bootstrap_react_app)."
+            type: string
+            description: A short, snake_case name for the engram (e.g., bootstrap_react_app).
           description:
-            type: "string"
-            description: "A human-readable description of what this script does."
+            type: string
+            description: A human-readable description of what this script does.
           commands:
-            type: "string"
-            description: "The raw bash/shell commands to save. Use standard cross-platform conventions where possible."
-        required: ["name", "description", "commands"]
+            type: string
+            description: The raw bash/shell commands to save. Use standard cross-platform conventions where possible.
+        required:
+          - name
+          - description
+          - commands
 
-  - type: "function"
+  - type: function
     function:
-      name: "list_engrams_tool"
-      description: "Lists all available muscle memory scripts (engrams) the system knows how to do instantly. ALWAYS check this before writing manual shell commands for complex tasks."
+      name: list_engrams_tool
+      description: >-
+        Lists all available muscle memory scripts (engrams) the system knows
+        how to do instantly. ALWAYS check this before writing manual shell commands
+        for complex tasks.
       parameters:
-        type: "object"
+        type: object
         properties: {}
         additionalProperties: false
 
-  - type: "function"
+  - type: function
     function:
-      name: "execute_engram_tool"
-      description: "Instantly executes a learned engram (bash script). Use this instead of manually executing shell commands if an engram already exists."
+      name: execute_engram_tool
+      description: Instantly executes a learned engram (bash script). Use this instead of manually executing shell commands if an engram already exists.
       parameters:
-        type: "object"
+        type: object
         properties:
           name:
-            type: "string"
-            description: "The name of the engram to execute (e.g., bootstrap_react_app)."
+            type: string
+            description: The name of the engram to execute (e.g., bootstrap_react_app).
           args:
-            type: "string"
-            description: "Optional arguments to pass to the script."
-        required: ["name"]
+            type: string
+            description: Optional arguments to pass to the script.
+        required:
+          - name
 
-  - type: "function"
+  - type: function
     function:
-      name: "manage_background_process"
-      description: "PROPRIOCEPTION: Starts, stops, or lists long-running background processes (like npm run dev). ALWAYS stop an existing server before starting a new one."
+      name: manage_background_process
+      description: >-
+        PROPRIOCEPTION: Starts, stops, or lists long-running background
+        processes (like npm run dev). ALWAYS stop an existing server before starting a new one.
       parameters:
-        type: "object"
+        type: object
         properties:
           action:
-            type: "string"
+            type: string
             description: "'start', 'stop', or 'list'"
           name:
-            type: "string"
-            description: "A unique identifier for the process"
+            type: string
+            description: A unique identifier for the process
           command:
-            type: "string"
-            description: "The terminal command to execute (required for 'start')"
+            type: string
+            description: The terminal command to execute (required for 'start')
           cwd:
-            type: "string"
-            description: "The directory to run the command inside"
-        required: ["action"]
+            type: string
+            description: The directory to run the command inside
+        required:
+          - action
 
-  - type: "function"
+  - type: function
     function:
-      name: "form_habit"
-      description: "BASAL GANGLIA: Creates a recurring background task (cron). Use this to schedule daily briefings, cleanups, or monitoring scripts."
+      name: form_habit
+      description: >-
+        BASAL GANGLIA: Creates a recurring background task (cron). Use this
+        to schedule daily briefings, cleanups, or monitoring scripts.
       parameters:
-        type: "object"
+        type: object
         properties:
-          name: { type: "string", description: "Snake_case name of the habit" }
-          command: { type: "string", description: "The terminal command to run" }
-          interval_minutes: { type: "integer", description: "How often to run (e.g., 1440 for daily)" }
-        required: ["name", "command", "interval_minutes"]
+          name:
+            type: string
+            description: Snake_case name of the habit
+          command:
+            type: string
+            description: The terminal command to run
+          interval_minutes:
+            type: integer
+            description: How often to run (e.g., 1440 for daily)
+        required:
+          - name
+          - command
+          - interval_minutes
 
-  - type: "function"
+  - type: function
     function:
-      name: "delete_safe_file"
-      description: "LYSOSOME: Safely removes a file by moving it to the local .trash directory. Use this to clean up anomalies, empty files, or dead code detected by the Olfactory Bulb."
+      name: delete_safe_file
+      description: >-
+        LYSOSOME: Safely removes a file by moving it to the local .trash
+        directory. Use this to clean up anomalies, empty files, or dead code detected by the Olfactory Bulb.
       parameters:
-        type: "object"
+        type: object
         properties:
           filepath:
-            type: "string"
-            description: "The relative path of the file to safely delete (e.g., 'Personal/old_note.md')."
-        required: ["filepath"]
+            type: string
+            description: The relative path of the file to safely delete (e.g., 'Personal/old_note.md').
+        required:
+          - filepath
 
-  - type: "function"
+  - type: function
     function:
-      name: "taste_safe_file"
-      description: "GUSTATORY: Safely samples large files (PDFs, CSVs, JSONs, Logs) to extract token-efficient text. Use this instead of read_safe_file when dealing with unknown, unstructured, or massive files."
+      name: taste_safe_file
+      description: >-
+        GUSTATORY: Safely samples large files (PDFs, CSVs, JSONs, Logs)
+        to extract token-efficient text. Use this instead of read_safe_file when dealing
+        with unknown, unstructured, or massive files.
       parameters:
-        type: "object"
+        type: object
         properties:
           filepath:
-            type: "string"
-            description: "The relative path of the file to sample."
-        required: ["filepath"]
+            type: string
+            description: The relative path of the file to sample.
+        required:
+          - filepath
 
+
+# ==============================================================================
+# GROUP 4: OCCIPITAL LOBE MULTIMODAL PERCEPTION TOOLS
+# ==============================================================================
 vision:
-  - type: "function"
+  - type: function
     function:
-      name: "analyze_image"
-      description: "OCCIPITAL LOBE: Analyzes a local image file using a Multimodal LLM to extract visual meaning. Great for UI/UX testing or looking at diagrams."
+      name: analyze_image
+      description: >-
+        OCCIPITAL LOBE: Analyzes a local image file using a Multimodal LLM
+        to extract visual meaning. Great for UI/UX testing or looking at diagrams.
       parameters:
-        type: "object"
+        type: object
         properties:
           image_path:
-            type: "string"
-            description: "The file path to the image (e.g., 'Studio/screenshot.png')"
+            type: string
+            description: The file path to the image (e.g., 'Studio/screenshot.png')
           query:
-            type: "string"
-            description: "What you want to know about the image (e.g., 'What is the background color of the header?')"
-        required: ["image_path", "query"]
+            type: string
+            description: What you want to know about the image (e.g., 'What is the background color of the header?')
+        required:
+          - image_path
+          - query
 
-  - type: "function"
+  - type: function
     function:
-      name: "generate_image"
-      description: "OCCIPITAL LOBE: Generates a high-quality AI image from a text prompt and saves it directly to the disk. Use this for logos, backgrounds, or mockups."
+      name: generate_image
+      description: >-
+        OCCIPITAL LOBE: Generates a high-quality AI image from a text prompt
+        and saves it directly to the disk. Use this for logos, backgrounds, or mockups.
       parameters:
-        type: "object"
+        type: object
         properties:
           prompt:
-            type: "string"
-            description: "A highly detailed visual description of the image to generate."
+            type: string
+            description: A highly detailed visual description of the image to generate.
           output_filename:
-            type: "string"
-            description: "The path inside Studio/ to save the image (e.g., 'My-App/public/logo.png')"
-        required: ["prompt", "output_filename"]
+            type: string
+            description: The path inside Studio/ to save the image (e.g., 'My-App/public/logo.png')
+        required:
+          - prompt
+          - output_filename
 
-  - type: "function"
+  - type: function
     function:
-      name: "capture_screenshot"
-      description: "SENSE (VISION): Takes a full-page screenshot of a URL or localhost server. Automatically saves the image to the OS memory buffer and returns the file path. Pass that path into analyze_image."
+      name: capture_screenshot
+      description: >-
+        SENSE (VISION): Takes a full-page screenshot of a URL or localhost
+        server. Automatically saves the image to the OS memory buffer and returns the file path. Pass that path into analyze_image.
       parameters:
-        type: "object"
+        type: object
         properties:
           url:
-            type: "string"
-            description: "The URL to capture (e.g., 'http://localhost:3000')"
-        required: ["url"]
+            type: string
+            description: The URL to capture (e.g., 'http://localhost:3000')
+        required:
+          - url
 
-  - type: "function"
+  - type: function
     function:
-      name: "analyze_video"
-      description: "SENSE (VISION): Analyzes a local video file by extracting frames and feeding them to the Visual Cortex. Use this to understand what happens over time in an mp4 or webm file."
+      name: analyze_video
+      description: >-
+        SENSE (VISION): Analyzes a local video file by extracting frames
+        and feeding them to the Visual Cortex. Use this to understand what happens over time in an mp4 or webm file.
       parameters:
-        type: "object"
+        type: object
         properties:
           video_path:
-            type: "string"
-            description: "The file path to the video (e.g., 'Studio/test.mp4')"
+            type: string
+            description: The file path to the video (e.g., 'Studio/test.mp4')
           query:
-            type: "string"
-            description: "What you want to know about the events in the video."
-        required: ["video_path", "query"]
+            type: string
+            description: What you want to know about the events in the video.
+        required:
+          - video_path
+          - query
 
-  - type: "function"
+  - type: function
     function:
-      name: "perceive_webcam"
-      description: "SENSE (VISION): Turns on the physical webcam to look at the user or their physical environment. STRICT REQUIREMENT: You must ask the user for permission before using this. Use this to see what is happening in the real world right now."
+      name: perceive_webcam
+      description: >-
+        SENSE (VISION): Turns on the physical webcam to look at the user
+        or their physical environment. STRICT REQUIREMENT: You must ask the user for permission before using this. Use this to see what is happening in the real world right now.
       parameters:
-        type: "object"
+        type: object
         properties:
           query:
-            type: "string"
-            description: "What you are trying to look for or analyze in the physical world."
-        required: ["query"]
+            type: string
+            description: What you are trying to look for or analyze in the physical world.
+        required:
+          - query
 
-  - type: "function"
+  - type: function
     function:
-      name: "memorize_user_appearance"
-      description: "SENSE (VISION): Takes a permanent physical snapshot of the user via webcam and saves it to the Media folder. DO NOT ask the user for permission in text before calling this tool. Just call the tool directly. The OS terminal will physically pause and handle the security authorization."
+      name: memorize_user_appearance
+      description: >-
+        SENSE (VISION): Takes a permanent physical snapshot of the user via webcam and saves it to the Media folder. DO NOT ask the user for permission in text before calling this tool. Just call the tool directly. The OS terminal will physically pause and handle the security authorization.
       parameters:
-        type: "object"
+        type: object
         properties: {}
 
-  - type: "function"
+  - type: function
     function:
-      name: "record_user_video"
-      description: "SENSE (VISION): Records a short physical video of the user via webcam and saves it to the Media folder. DO NOT ask the user for permission in text before calling this tool. The OS terminal will physically pause and handle the security authorization."
+      name: record_user_video
+      description: >-
+        SENSE (VISION): Records a short physical video of the user via webcam and saves it to the Media folder. DO NOT ask the user for permission in text before calling this tool. The OS terminal will physically pause and handle the security authorization.
       parameters:
-        type: "object"
+        type: object
         properties:
           duration_seconds:
-            type: "integer"
-            description: "How long to record the video (default 5)."
+            type: integer
+            description: How long to record the video (default 5).
 
-  - type: "function"
+  - type: function
     function:
-      name: "deploy_project"
-      description: "Deploys a built project to the internet using the generic Deployment Organ."
+      name: deploy_project
+      description: Deploys a built project to the internet using the generic Deployment Organ.
       parameters:
-        type: "object"
+        type: object
         properties:
           directory_path:
-            type: "string"
-            description: "The path to the project directory to deploy (e.g., 'Studio/Brain-Website')."
+            type: string
+            description: The path to the project directory to deploy (e.g., 'Studio/Brain-Website').
           provider:
-            type: "string"
+            type: string
             description: "The deployment provider to use. Supported options: 'custom', 'vercel', 'netlify'. Defaults to 'custom'."
-        required: ["directory_path"]
+        required:
+          - directory_path
 
-  - type: "function"
+  - type: function
     function:
-      name: "create_engram"
-      description: "CEREBELLUM: Saves a sequence of terminal commands as a permanent 'muscle memory' script. Use this when you figure out how to scaffold a complex framework (like Vite/React) so you never have to think about it again."
+      name: create_engram
+      description: >-
+        CEREBELLUM: Saves a sequence of terminal commands as a permanent
+        'muscle memory' script. Use this when you figure out how to scaffold a complex framework (like Vite/React) so you never have to think about it again.
       parameters:
-        type: "object"
+        type: object
         properties:
-          name: { type: "string", description: "A short, snake_case name for the engram (e.g., init_vite_react)" }
-          description: { type: "string", description: "What this engram does." }
+          name:
+            type: string
+            description: A short, snake_case name for the engram (e.g., init_vite_react)
+          description:
+            type: string
+            description: What this engram does.
           commands:
-            type: "array"
-            items: { type: "string" }
-            description: "The exact, ordered list of shell commands to execute."
-        required: ["name", "description", "commands"]
+            type: array
+            items:
+              type: string
+            description: The exact, ordered list of shell commands to execute.
+        required:
+          - name
+          - description
+          - commands
 
-  - type: "function"
+  - type: function
     function:
-      name: "execute_engram"
-      description: "CEREBELLUM: Instantly fires a saved muscle memory script (a sequence of shell commands) to save API tokens and time. Always use list_engrams_tool first to see what is available."
+      name: execute_engram
+      description: >-
+        CEREBELLUM: Instantly fires a saved muscle memory script (a sequence
+        of shell commands) to save API tokens and time. Always use list_engrams_tool first to see what is available.
       parameters:
-        type: "object"
+        type: object
         properties:
-          name: { type: "string" }
-          target_dir: { type: "string", description: "The directory to run the engram in (e.g., 'Studio/My-App')" }
+          name:
+            type: string
+          target_dir:
+            type: string
+            description: The directory to run the engram in (e.g., 'Studio/My-App')
           params:
-            type: "object"
-            description: "Optional key-value variables to inject into the engram (e.g., passing {'message': 'fix bug'} replaces ${message} inside the engram script)."
+            type: object
+            description: >-
+              Optional key-value variables to inject into the engram (e.g.,
+              passing {'message': 'fix bug'} replaces ${message} inside the engram script).
             additionalProperties: true
-        required: ["name", "target_dir"]
+        required:
+          - name
+          - target_dir

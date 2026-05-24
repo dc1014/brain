@@ -1,7 +1,6 @@
 # --- System/neuroanatomy/cortical/executive_loop.py ---
 import asyncio
 import os
-import yaml  # type: ignore
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -117,9 +116,8 @@ async def execute_pipeline(
     origin: str = "HUMAN",
 ) -> None:
     commit_transaction()
-    tools_path = ROOT_DIR / "System" / "config" / "tools.yaml"
-    with open(tools_path, "r", encoding="utf-8") as f:
-        available_tools = yaml.safe_load(f)
+    # Read natively from the new unified genetic cache
+    available_tools = get_dna_config().get("tools", {})
 
     code_execution_enabled = os.environ.get(
         "BRAIN_ENABLE_CODE_EXECUTION", "false"
