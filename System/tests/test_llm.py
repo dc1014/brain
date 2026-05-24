@@ -340,10 +340,11 @@ async def test_run_agent_async_json_structured_output_bridge(mocker):
     ]  # The first argument passed to execute_tools
 
     assert len(synthetic_tools) == 1
-    assert synthetic_tools[0].function.name == "read_safe_file"
+    assert synthetic_tools[0].tool_name == "read_safe_file"
 
-    # Prove the parameters survived the JSON -> Synthetic Object translation
-    parsed_args = json.loads(synthetic_tools[0].function.arguments)
+    # ⚡ ZERO-DEBT FIX: Parameters are natively parsed dictionaries inside ToolCallSchema.
+    # No more legacy inner class properties or redundant json.loads deserialization!
+    parsed_args = synthetic_tools[0].parameters
     assert parsed_args["filepath"] == "defcon_test.txt"
 
 

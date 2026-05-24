@@ -285,32 +285,10 @@ async def run_agent_async(
 
                     # 3. Synthesize the JSON tool schemas back into the format the Motor Cortex expects
                     if parsed_schema.tool_calls:
-
-                        class MockFunction:
-                            def __init__(self, name, arguments):
-                                self.name = name
-                                self.arguments = (
-                                    json.dumps(arguments)
-                                    if isinstance(arguments, dict)
-                                    else arguments
-                                )
-
-                        class MockToolCall:
-                            def __init__(self, id, function):
-                                self.id = id
-                                self.function = function
-
-                        synthetic_tool_calls = [
-                            MockToolCall(
-                                id=f"call_{abs(hash(t.tool_name))}",
-                                function=MockFunction(t.tool_name, t.parameters),
-                            )
-                            for t in parsed_schema.tool_calls
-                        ]
-
                         # --- ⚡ DELEGATE TO MOTOR CORTEX ---
+                        # We pass the pure Pydantic ToolCallSchema objects natively. No adapter mocks.
                         tool_messages, new_actions, halt_text = await execute_tools(
-                            synthetic_tool_calls,
+                            parsed_schema.tool_calls,
                             role_name,
                             step_index=iteration,
                             route=route,

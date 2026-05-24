@@ -165,8 +165,12 @@ async def execute_pipeline(
     pipeline_aborted = False
     pfc_memory = WorkingMemory(description)
 
-    while len(pipeline) > 0:
-        persist_pipeline_state(description, route_type, domain, pipeline)
+    current_state_idx = 0
+    while current_state_idx < len(pipeline):
+        # ⚡ ZERO DEBT: Save the remaining pipeline states deterministically
+        persist_pipeline_state(
+            description, route_type, domain, pipeline[current_state_idx:]
+        )
 
         abort_flag = normalize_path(ROOT_DIR / "System" / ".vagus_abort_signal")
         if abort_flag.exists():
@@ -180,7 +184,7 @@ async def execute_pipeline(
                 pass
             break
 
-        step = pipeline.pop(0)
+        step = pipeline[current_state_idx]
         current_payload = pfc_memory.get_current_context()
 
         # ⚡ SHIFT-LEFT TOKEN ECONOMICS: The Amnesia Sliding Window
@@ -337,22 +341,17 @@ async def execute_pipeline(
                         pipeline_aborted = True
                         break
 
-                    pipeline.insert(
+                    # ⚡ STATE MACHINE TRANSITION: Fall back to Product Manager instead of mutating array mid-flight
+                    pm_idx = next(
+                        (
+                            i
+                            for i, s in enumerate(pipeline)
+                            if s.get("agent") == "product_manager"
+                        ),
                         0,
-                        {
-                            "agent": "qa_auditor",
-                            "tools": ["base"],
-                            "context": ["Meta", "Domain", "Studio"],
-                        },
                     )
-                    pipeline.insert(
-                        0,
-                        {
-                            "agent": "product_manager",
-                            "tools": ["base", "write", "execute", "sense_environment"],
-                            "context": ["Meta", "Domain", "Studio"],
-                        },
-                    )
+                    current_state_idx = pm_idx
+
                     pfc_memory.add_event("QA System", critique_msg, [])
                     eval_retries += 1
                     continue
@@ -362,6 +361,9 @@ async def execute_pipeline(
                     )
                     pipeline_aborted = True
                     break
+
+        # Advance the state machine cursor to the next agent node
+        current_state_idx += 1
 
     render_pipeline_diagnostics(session_metabolism, eval_retries)
 

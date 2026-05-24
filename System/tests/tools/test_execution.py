@@ -71,7 +71,8 @@ def test_tier_0_hitl_denial(mocker, tmp_path, bypass_immune_system):
     mocker.patch("System.tools.execution.asyncio.to_thread", return_value="n")
     result = execute_command(["npm", "run", "build"], "Studio")
     assert result.success is False
-    assert "User explicitly denied command execution" in result.output
+    # ⚡ ZERO-DEBT: Updated to match the new, concise security block return text
+    assert "User denied execution" in result.output
 
 
 def test_tier_0_timeout_orphan_pruning(mocker, tmp_path, bypass_immune_system):
