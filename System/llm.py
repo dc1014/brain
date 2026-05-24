@@ -187,10 +187,31 @@ async def run_agent_async(
     # ⚡ SHIFT-LEFT: Apply Humoral State Tuning before computation
     mod_model, mod_temp, mod_tokens = apply_humoral_modulation(model_string)
 
-    messages: list[dict[str, Any]] = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
+    # ⚡ SHIFT-LEFT TOKEN ECONOMICS: Ephemeral Prompt Caching
+    # Anthropic allows us to cache the massive System Prompt and Tool Registry in memory.
+    messages: list[dict[str, Any]] = []
+
+    if "claude" in model_string.lower() or "anthropic" in model_string.lower():
+        messages = [
+            {
+                "role": "system",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": system_prompt,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ],
+            },
+            {"role": "user", "content": user_prompt},
+        ]
+    else:
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+    total_prompt = 0
 
     total_prompt = 0
     total_comp = 0
@@ -390,10 +411,16 @@ async def run_agent_async(
                         )
 
                         # ⚡ ZERO-DEBT FIX: Flatten synthetic tool results into a standard user message
-                        # so strict APIs (like Anthropic) don't crash expecting native tool_use_ids.
                         flat_results = "Tool Execution Results:\n"
                         for tm in tool_messages:
-                            flat_results += f"{tm.get('content', '')}\n"
+                            content_str = tm.get("content", "")
+                            # ⚡ SHIFT-LEFT TOKEN ECONOMICS: Hard Environment Ceiling
+                            if len(content_str) > 15000:
+                                content_str = (
+                                    content_str[:15000]
+                                    + "\n\n... [ ✂️ TRUNCATED: OUTPUT EXCEEDED 15,000 CHARACTERS. USE `grep`, `head`, OR `tail` ]"
+                                )
+                            flat_results += f"{content_str}\n"
 
                         messages.append(
                             {"role": "user", "content": flat_results.strip()}
@@ -431,6 +458,17 @@ async def run_agent_async(
                     tool_messages, new_actions, halt_text = await execute_tools(
                         message.tool_calls, role_name, step_index=iteration, route=route
                     )
+
+                    # ⚡ SHIFT-LEFT TOKEN ECONOMICS: Hard Environment Ceiling
+                    for tm in tool_messages:
+                        if (
+                            isinstance(tm.get("content"), str)
+                            and len(tm["content"]) > 15000
+                        ):
+                            tm["content"] = (
+                                tm["content"][:15000]
+                                + "\n\n... [ ✂️ TRUNCATED: OUTPUT EXCEEDED 15,000 CHARACTERS. USE `grep`, `head`, OR `tail` ]"
+                            )
 
                     messages.extend(tool_messages)
                     action_manifest.extend(new_actions)

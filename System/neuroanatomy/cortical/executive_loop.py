@@ -183,6 +183,22 @@ async def execute_pipeline(
         step = pipeline.pop(0)
         current_payload = pfc_memory.get_current_context()
 
+        # ⚡ SHIFT-LEFT TOKEN ECONOMICS: The Amnesia Sliding Window
+        # Keeps the context payload strictly under ~45,000 characters to preserve capital.
+        MAX_CONTEXT_LENGTH = 45000
+        if len(current_payload) > MAX_CONTEXT_LENGTH:
+            console.print(
+                f"[dim yellow]✂️ Token Economics: Context ceiling breached ({len(current_payload):,} chars). Pruning stale memories...[/dim yellow]"
+            )
+            # Preserve the initial goal constraints (first 4,000 chars) and recent execution history (last 40,000 chars)
+            current_payload = (
+                current_payload[:4000]
+                + "\n\n... [ ✂️ OLDER EXECUTIONS PRUNED TO PRESERVE COGNITIVE EFFICIENCY ] ...\n\n"
+                + current_payload[-40000:]
+            )
+
+        # 1. Swarm Execution
+
         # 1. Swarm Execution
         if "swarm" in step:
             swarm_metabolism, swarm_agents = await execute_swarm_cohort(
