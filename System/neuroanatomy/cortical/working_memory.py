@@ -1,4 +1,3 @@
-import os
 import json
 from typing import List, Dict, Any
 import re
@@ -231,8 +230,4 @@ def persist_pipeline_state(
 def clear_pipeline_state() -> None:
     """Working Memory: Clears the execution queue upon graceful termination."""
     with QUEUE_LOCK.acquire_sync():
-        if QUEUE_FILE_PATH.exists():
-            try:
-                os.remove(QUEUE_FILE_PATH)
-            except OSError:
-                pass
+        QUEUE_FILE_PATH.unlink(missing_ok=True)

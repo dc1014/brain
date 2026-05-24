@@ -1,5 +1,4 @@
 # --- System/tools/execution/routing.py ---
-import os
 import sys
 import shlex
 import stat
@@ -7,6 +6,7 @@ import asyncio
 
 from System.core.paths import ROOT_DIR, normalize_path
 from System.core.schemas import ExecutionResult
+from pathlib import Path
 
 # Flattened dependency tree and clean utility imports (No sys.modules hacks)
 import System.neuroanatomy.systemic.blood_brain_barrier as bbb
@@ -159,9 +159,10 @@ async def execute_command_async(
     finally:
         set_system_volume_mask(read_only=False)
         for snapshot in created_snapshots:
+            snap_path = Path(snapshot)
             try:
-                if os.path.exists(snapshot):
-                    os.chmod(snapshot, stat.S_IWRITE)
-                    os.remove(snapshot)
-            except Exception:
+                if snap_path.exists():
+                    snap_path.chmod(stat.S_IWRITE)
+                    snap_path.unlink(missing_ok=True)
+            except (PermissionError, OSError):
                 pass

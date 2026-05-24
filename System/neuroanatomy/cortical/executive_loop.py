@@ -167,7 +167,6 @@ async def execute_pipeline(
 
     current_state_idx = 0
     while current_state_idx < len(pipeline):
-        # ⚡ ZERO DEBT: Save the remaining pipeline states deterministically
         persist_pipeline_state(
             description, route_type, domain, pipeline[current_state_idx:]
         )
@@ -178,32 +177,24 @@ async def execute_pipeline(
                 "\n[bold red]🛑 Vagus Nerve Signal detected. Halting pipeline safely.[/bold red]"
             )
             pipeline_aborted = True
-            try:
-                os.remove(abort_flag)
-            except OSError:
-                pass
+            # Modern pathlib deletion handles missing file seamlessly
+            abort_flag.unlink(missing_ok=True)
             break
 
         step = pipeline[current_state_idx]
         current_payload = pfc_memory.get_current_context()
 
-        # ⚡ SHIFT-LEFT TOKEN ECONOMICS: The Amnesia Sliding Window
-        # Keeps the context payload strictly under ~45,000 characters to preserve capital.
         MAX_CONTEXT_LENGTH = 45000
         if len(current_payload) > MAX_CONTEXT_LENGTH:
             console.print(
                 f"[dim yellow]✂️ Token Economics: Context ceiling breached ({len(current_payload):,} chars). Pruning stale memories...[/dim yellow]"
             )
-            # Preserve the initial goal constraints (first 4,000 chars) and recent execution history (last 40,000 chars)
             current_payload = (
                 current_payload[:4000]
                 + "\n\n... [ ✂️ OLDER EXECUTIONS PRUNED TO PRESERVE COGNITIVE EFFICIENCY ] ...\n\n"
                 + current_payload[-40000:]
             )
 
-        # 1. Swarm Execution
-
-        # 1. Swarm Execution
         if "swarm" in step:
             swarm_metabolism, swarm_agents = await execute_swarm_cohort(
                 step["swarm"],
@@ -222,7 +213,8 @@ async def execute_pipeline(
                 session_metabolism[m_id]["comp"] += counts["comp"]
 
             agents_invoked.extend(swarm_agents)
-            # Call the algorithmic check locally
+
+            # Local Pruning + External Summarization service
             overflow_text = pfc_memory.prune_and_get_overflow()
             if overflow_text:
                 console.print(
@@ -234,13 +226,13 @@ async def execute_pipeline(
                     console.print(
                         "[dim green]✅ Working memory successfully compressed.[/dim green]"
                     )
+
             commit_transaction()
             console.print(
                 "\n[bold green]💾 Synaptic Consolidation: Swarm milestone committed to disk.[/bold green]"
             )
             continue
 
-        # 2. Linear Execution
         agent_cfg = get_dna_config()["agents"][step["agent"]]
         model_str = get_resolved_model(agent_cfg["model"], is_exhausted)
         active_tools = [
@@ -314,7 +306,8 @@ async def execute_pipeline(
             )
 
         pfc_memory.add_event(agent_cfg["name"], step_result.text, step_result.actions)
-        # Call the algorithmic check locally
+
+        # Local Pruning + External Summarization service
         overflow_text = pfc_memory.prune_and_get_overflow()
         if overflow_text:
             console.print(
@@ -327,7 +320,6 @@ async def execute_pipeline(
                     "[dim green]✅ Working memory successfully compressed.[/dim green]"
                 )
 
-        # 3. Broca's Area (Data Contract Validation & RETRY LOOP)
         if step["agent"] == "qa_auditor":
             from System.neuroanatomy.cortical.broca import validate_qa_audit
 
@@ -348,11 +340,11 @@ async def execute_pipeline(
                         retry_auth = "y"
                     else:
                         try:
-                            retry_auth = (
-                                input("Authorize autonomous retry? [Y/n]: ")
-                                .strip()
-                                .lower()
+                            # Let other async tasks run concurrently while waiting for human CLI input
+                            raw_auth = await asyncio.to_thread(
+                                input, "Authorize autonomous retry? [Y/n]: "
                             )
+                            retry_auth = raw_auth.strip().lower()
                         except (EOFError, KeyboardInterrupt):
                             retry_auth = "n"
 
@@ -363,7 +355,6 @@ async def execute_pipeline(
                         pipeline_aborted = True
                         break
 
-                    # ⚡ STATE MACHINE TRANSITION: Fall back to Product Manager instead of mutating array mid-flight
                     pm_idx = next(
                         (
                             i
@@ -384,7 +375,6 @@ async def execute_pipeline(
                     pipeline_aborted = True
                     break
 
-        # Advance the state machine cursor to the next agent node
         current_state_idx += 1
 
     render_pipeline_diagnostics(session_metabolism, eval_retries)
@@ -392,7 +382,8 @@ async def execute_pipeline(
     log_dir = normalize_path(ROOT_DIR / "System" / "logs")
     if not log_dir.exists():
         try:
-            os.makedirs(log_dir, exist_ok=True)
+            # Upgrade to pathlib native recursive directory creation
+            log_dir.mkdir(parents=True, exist_ok=True)
         except OSError:
             pass
 
@@ -404,16 +395,16 @@ async def execute_pipeline(
             "\n[bold red]🛑 Task Aborted. Environment safely rolled back.[/bold red]\n"
         )
         try:
-            with open(state_path, "w", encoding="utf-8") as f:
-                f.write("STATUS: ABORTED\n")
+            # Modern pathlib text writing
+            state_path.write_text("STATUS: ABORTED\n", encoding="utf-8")
         except OSError:
             pass
     else:
         commit_transaction()
         console.print("\n[bold green]✅ Task Complete. Files committed.[/bold green]\n")
         try:
-            with open(state_path, "w", encoding="utf-8") as f:
-                f.write("STATUS: COMPLETE\n")
+            # Modern pathlib text writing
+            state_path.write_text("STATUS: COMPLETE\n", encoding="utf-8")
         except OSError:
             pass
 
