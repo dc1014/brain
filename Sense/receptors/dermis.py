@@ -201,6 +201,8 @@ async def handle_webhook(route_name: str, request: Request):
     except KeyError:
         final_intent = str(extracted_values)
 
+    final_intent = f"<external_stimulus>\n{final_intent}\n</external_stimulus>"
+
     target_action = route_info.get("target_action", "exteroceptive").lower()
 
     success_msg = (
