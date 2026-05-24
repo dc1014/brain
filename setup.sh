@@ -77,6 +77,13 @@ fi
 
 # Auto-install Deno locally to satisfy marketed Agentic features
 if ! command -v deno &> /dev/null; then
+    # 🛡️ HARDENING: The Deno installer script silently requires 'unzip' to extract the payload.
+    if ! command -v unzip &> /dev/null; then
+        echo -e "\n🛑 \033[1;31mERROR: 'unzip' is required to install the Deno sandbox but is missing from your system.\033[0m"
+        echo -e "Please install it using your package manager (e.g., 'sudo apt install unzip', 'sudo pacman -S unzip', or 'brew install unzip') and run this setup again.\n"
+        exit 1
+    fi
+
     echo -e "\n🦕 \033[1;34mInstalling Deno WASM Sandbox locally...\033[0m"
     curl -fsSL https://deno.land/install.sh | sh
     export DENO_INSTALL="$HOME/.deno"

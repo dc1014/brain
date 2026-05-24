@@ -1,4 +1,9 @@
+import pytest
 from System.ast_parser import get_parser, extract_signatures, generate_project_stub
+
+pytest.importorskip(
+    "tree_sitter", reason="Optional 'syntax' extra (tree-sitter) is not installed."
+)
 
 
 def test_get_parser():
