@@ -3,7 +3,7 @@ name = "brain"
 version = "0.1.0"
 description = "Brain is the first biomimetic control plane for AI tooling - interoperable, safe, token efficient, self-healing, and self-improving."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12, <3.15"
 dependencies = [
     # ⚡ CORE FOOTPRINT: The absolute minimum required for cognition, routing, and memory.
     "litellm>=1.83.14",
