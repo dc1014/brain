@@ -42,21 +42,49 @@ if [ "$DEPLOY_CHOICE" == "2" ] && [ "$DOCKER_AVAILABLE" = true ]; then
     echo -e "\n🐳 \033[1;34mBuilding Isolated Docker Sandbox...\033[0m"
     docker compose build
     echo -e "\n✅ \033[1;32mBuild complete.\033[0m"
-    echo "To run Brain OS in the container, use the wrapper script: ./brain.sh"
+    echo "To run Brain OS in the container, use the wrapper script: ./brain"
     exit 0
 fi
 
-# 4. Pure Local Setup (Using uv)
+# 4. Pure Local Setup
 echo -e "\n⚡ \033[1;36mInitializing Pure Local Environment...\033[0m"
+
+# 🛡️ Fix Blocker 4: Enforce persistent PATH updates across shell files
+SHELL_PROFILE=""
+if [[ "$SHELL" == */zsh ]]; then
+    SHELL_PROFILE="$HOME/.zshrc"
+elif [[ "$SHELL" == */bash ]]; then
+    SHELL_PROFILE="$HOME/.bashrc"
+fi
+
 if ! command -v uv &> /dev/null; then
     read -p "The 'uv' package manager is missing. Install it? (y/n) [y]: " INSTALL_UV
     INSTALL_UV=${INSTALL_UV:-y}
     if [[ "$INSTALL_UV" =~ ^[Yy]$ ]]; then
         curl -LsSf https://astral.sh/uv/install.sh | sh
         export PATH="$HOME/.cargo/bin:$PATH"
+        if [ -n "$SHELL_PROFILE" ] && [ -f "$SHELL_PROFILE" ]; then
+            if ! grep -q ".cargo/bin" "$SHELL_PROFILE"; then
+                echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> "$SHELL_PROFILE"
+            fi
+        fi
     else
         echo -e "\033[1;31mAborting. 'uv' is required for local installation.\033[0m"
         exit 1
+    fi
+fi
+
+# 🛡️ Fix Blocker 3: Auto-install Deno locally to satisfy marketed Agentic features
+if ! command -v deno &> /dev/null; then
+    echo -e "\n🦕 \033[1;34mInstalling Deno WASM Sandbox locally...\033[0m"
+    curl -fsSL https://deno.land/install.sh | sh
+    export DENO_INSTALL="$HOME/.deno"
+    export PATH="$DENO_INSTALL/bin:$PATH"
+    if [ -n "$SHELL_PROFILE" ] && [ -f "$SHELL_PROFILE" ]; then
+        if ! grep -q ".deno/bin" "$SHELL_PROFILE"; then
+            echo 'export DENO_INSTALL="$HOME/.deno"' >> "$SHELL_PROFILE"
+            echo 'export PATH="$DENO_INSTALL/bin:$PATH"' >> "$SHELL_PROFILE"
+        fi
     fi
 fi
 
@@ -65,5 +93,8 @@ uv pip install -e .
 uv pip install -e ./Sense
 
 echo -e "\n✅ \033[1;32mLocal environment synchronized.\033[0m"
-echo -e "Booting Synaptic Genesis...\n"
+if [ -n "$SHELL_PROFILE" ]; then
+    echo -e "\033[1;33m🛑 IMPORTANT: Run 'source $SHELL_PROFILE' or restart your terminal to activate PATH layers.\033[0m\n"
+fi
+echo "Booting Synaptic Genesis...\n"
 uv run python -m System.cli setup

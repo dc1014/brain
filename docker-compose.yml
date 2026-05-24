@@ -6,6 +6,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: brain-os
+    # 🛡️ SHIFT-LEFT SECURITY: Map host user credentials dynamically to bypass root permission pollution
+    user: "${UID:-1000}:${GID:-1000}"
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
@@ -13,7 +15,7 @@ services:
       - ./System/config:/opt/brain/System/config
       - ./Meta:/opt/brain/Meta
       - ./.env:/opt/brain/.env
-      # Dynamic mount point for the target workspace
+      # Dynamic mount point for the target workspace resolved via wrapper scripts
       - ${BRAIN_WORKSPACE_MOUNT:-./Workspace}:/workspace
     network_mode: host # Allows Brain to talk to localhost:11434 (Ollama) seamlessly
     tty: true

@@ -56,10 +56,19 @@ if (-not (Get-Command "uv" -ErrorAction SilentlyContinue)) {
         powershell -ExecutionPolicy ByPass -File "install_uv.ps1"
         Remove-Item "install_uv.ps1"
         $env:Path += ";$HOME\.cargo\bin"
+        [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";$HOME\.cargo\bin", "User")
     } else {
         Write-Host "Aborting. 'uv' is required for local installation." -ForegroundColor Red
         exit
     }
+}
+
+# 🛡️ Fix Blocker 3: Auto-install Deno on Windows for local execution compliance
+if (-not (Get-Command "deno" -ErrorAction SilentlyContinue)) {
+    Write-Host "`n🦕 Installing Deno WASM Sandbox locally..." -ForegroundColor Cyan
+    irm https://deno.land/install.ps1 | iex
+    $env:Path += ";$HOME\.deno\bin"
+    [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";$HOME\.deno\bin", "User")
 }
 
 uv venv
@@ -67,5 +76,6 @@ uv pip install -e .
 uv pip install -e ./Sense
 
 Write-Host "`n✅ Local environment synchronized." -ForegroundColor Green
+Write-Host "🛑 IMPORTANT: Restart your PowerShell console window to reload updated environment variables." -ForegroundColor Yellow
 Write-Host "Booting Synaptic Genesis...`n"
 uv run python -m System.cli setup

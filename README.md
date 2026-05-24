@@ -16,15 +16,15 @@ Brain OS operates on pure text and local embeddings, meaning you can parse your 
 
 **1. Absorb a workspace (0 Token Cost - Local Embeddings)**
 ```bash
-brain absorb ./my_project
+./brain absorb ./my_project
 ```
 **2. Execute a sandboxed agentic task**
 ```bash
-brain task "Audit ./my_project for concurrency race conditions and output to audit.md"
+./brain task "Audit ./my_project for concurrency race conditions and output to audit.md"
 ```
 **3. Native Unix Piping**
 ```bash
-cat error.log | grep "Timeout" | brain task "Explain this failure cascade"
+cat error.log | grep "Timeout" | ./brain task "Explain this failure cascade"
 ```
 
 ---
@@ -37,13 +37,13 @@ We hate global dependencies. Brain OS provides two strictly isolated installatio
 Zero host dependencies. Runs Brain OS inside an isolated container with local workspace volume mounting.
 1. `git clone https://github.com/mrdanielcasper/brain.git && cd brain`
 2. `docker compose build`
-3. Run `brain` (or `./brain.sh`). The wrapper automatically detects the container and routes all commands through the isolated sandbox.
+3. Run `./brain` (or `.\brain.bat` on Windows). The wrapper automatically resolves path relative offsets, enforces absolute host mounts, and routes calls through the isolated sandbox securely.
 
 ### Option B: Lightning Local (`uv`)
 Uses Astral's ultra-fast `uv` to resolve dependencies in seconds inside an isolated `.venv`.
 1. `git clone https://github.com/mrdanielcasper/brain.git && cd brain`
 2. Run `./setup.sh` (Mac/Linux) or `.\setup.ps1` (Windows).
-3. The script auto-hydrates the `.venv` and launches the interactive `Synaptic Genesis` wizard.
+3. The script auto-hydrates the `.venv`, configures the local Deno sandbox environment, and launches the interactive `Synaptic Genesis` wizard.
 
 *Have Ollama running? The setup script will auto-detect it on `localhost:11434` for 100% air-gapped, offline execution.*
 
@@ -59,11 +59,12 @@ Running LLM-generated code locally is inherently dangerous. Brain OS implements 
 
 ---
 
-## 📁 Workspace Agnosticism (Optional Obsidian Magic)
+## 📁 Workspace Agnosticism (Optional Obsidian Integration)
 
 **Brain OS expects text and outputs text.** You can point it at any standard directory, VSCode project, or Logseq graph.
 
-However, if you point it at an **Obsidian Vault**, Brain OS will automatically detect the `.obsidian` configuration folder and atomically inject native hotkeys (`Ctrl+Alt+S`), turning Obsidian into a rich graphical GUI for your AI daemons.
+However, if you point it at an **Obsidian Vault**, Brain OS will automatically detect the `.obsidian` configuration folder and atomically configure native hotkeys (`Ctrl+Alt+S`).
+*Note: To map active shell commands directly to these hotkey bindings from within the graphic editor interface, please ensure the standard `obsidian-shellcommands` community plugin is active in your vault.*
 
 ---
 
@@ -77,7 +78,7 @@ However, if you point it at an **Obsidian Vault**, Brain OS will automatically d
 ### 💀 Systemic Apoptosis (Zero-Residue Uninstall)
 If you are done with Brain OS, leave no trace behind:
 ```bash
-brain destroy
+./brain destroy
 ```
 *This securely purges all local ledgers, token tracking logs, environment API keys, and execution queues. It respects your machine.*
 
