@@ -123,9 +123,17 @@ async def test_auditor_headless_retry_bypass(mocker, tmp_path: Path) -> None:
     return_value=(False, 0),
 )
 async def test_synaptic_consolidation_commits_mid_pipeline(
-    mock_energy, mock_run_agent, mock_commit, mocker
+    mock_energy, mock_run_agent, mock_commit, mocker, tmp_path
 ):
     """Proves intermediate milestones are written directly to safe storage layers."""
+
+    # ⚡ THE FIX: Provide the structural files the OS expects to read in the temp dir!
+    config_dir = tmp_path / "System" / "config"
+    config_dir.mkdir(parents=True)
+    (config_dir / "tools.yaml").write_text("{}")
+
+    mocker.patch("System.neuroanatomy.cortical.executive_loop.ROOT_DIR", tmp_path)
+
     mocker.patch(
         "System.neuroanatomy.cortical.executive_loop.get_dna_config",
         return_value={

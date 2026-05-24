@@ -3,9 +3,10 @@ from System.llm import run_agent_async
 import asyncio
 import typer
 from typer.testing import CliRunner
-
 import json
 import pytest
+import System.cli as cli_module
+from System.cli import app
 
 runner = CliRunner()
 
@@ -138,3 +139,45 @@ def test_interrupted_queue_interception(monkeypatch, tmp_path, mocker):
 
     with pytest.raises(typer.Exit):
         main()
+
+
+def test_destroy_aborts_on_no(mocker, monkeypatch) -> None:
+    """Proves the uninstaller aborts if the user declines."""
+    monkeypatch.delenv("BRAIN_OS_HEADLESS", raising=False)
+    mocker.patch("System.cli.Confirm.ask", return_value=False)
+
+    result = runner.invoke(app, ["destroy"])
+    assert "Apoptosis aborted" in result.stdout
+    assert result.exit_code == 0
+
+
+def test_destroy_executes_on_yes(mocker, monkeypatch, tmp_path) -> None:
+    """Proves the uninstaller accurately targets and deletes core OS files."""
+    # ⚡ THE FIX: Prevent the global callback from short-circuiting on the queue file
+    monkeypatch.delenv("BRAIN_OS_HEADLESS", raising=False)
+
+    # Isolate the CLI to a temporary directory
+    mocker.patch.object(cli_module, "ROOT_DIR", tmp_path)
+    mocker.patch("System.cli.Confirm.ask", return_value=True)
+
+    # Create the dummy files to simulate a live OS
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    (log_dir / "agent_interactions.jsonl").touch()
+
+    env_file = tmp_path / ".env"
+    env_file.touch()
+
+    sys_dir = tmp_path / "System"
+    sys_dir.mkdir(parents=True, exist_ok=True)
+    queue_file = sys_dir / "execution_queue.json"
+    queue_file.touch()
+
+    # Simulate running the command
+    result = runner.invoke(app, ["destroy"])
+
+    # Assert all files were cleanly purged
+    assert "Systemic Apoptosis complete" in result.stdout
+    assert not log_dir.exists()
+    assert not env_file.exists()
+    assert not queue_file.exists()

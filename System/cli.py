@@ -4,6 +4,8 @@ from pathlib import Path
 import os
 import io
 import typer
+from rich.prompt import Confirm
+import shutil
 
 # Import Biological Modules
 from System.cli_cognitive import task, daydream, evolve, forage, compile, absorb
@@ -42,7 +44,21 @@ app = typer.Typer(
 
 
 @app.callback()
-def main():
+def main(
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Enable verbose systemic logging for daemons and reflexes",
+    ),
+):
+    """Global configuration for Brain OS."""
+    if verbose:
+        os.environ["BRAIN_VERBOSE"] = "1"
+        console.print(
+            "[dim cyan]🔊 Verbose sensory mode enabled. Somatic logging active.[/dim cyan]"
+        )
+
     queue_file = ROOT_DIR / "System" / "execution_queue.json"
     if queue_file.exists():
         if os.environ.get("BRAIN_OS_HEADLESS") == "1":
@@ -117,6 +133,51 @@ def setup() -> None:
     asyncio.run(run_onboarding())
 
 
+@app.command()
+def destroy() -> None:
+    """💀 Systemic Apoptosis: Zero-Residue Uninstaller to completely purge local logs and configurations."""
+    console.print(
+        "[bold red]⚠️ WARNING: You are about to initiate Systemic Apoptosis.[/bold red]"
+    )
+    console.print(
+        "This will permanently erase all memory ledgers, token usage logs, and environment API keys."
+    )
+
+    if not Confirm.ask(
+        "Are you absolutely sure you want to destroy Brain OS?", default=False
+    ):
+        console.print("[dim green]Apoptosis aborted. The OS survives.[/dim green]")
+        return
+
+    with console.status("[red]Executing Zero-Residue sequence...[/red]"):
+        # 1. Purge Logs & Metabolism Ledgers
+        log_dir = ROOT_DIR / "logs"
+        if log_dir.exists():
+            shutil.rmtree(log_dir, ignore_errors=True)
+            console.print(
+                "[dim]✔ Deleted episodic ledgers, token tracking, and system logs.[/dim]"
+            )
+
+        # 2. Purge Environment Credentials
+        env_file = ROOT_DIR / ".env"
+        if env_file.exists():
+            env_file.unlink()
+            console.print("[dim]✔ Deleted environment credentials and API keys.[/dim]")
+
+        # 3. Purge Execution Queues
+        queue_file = ROOT_DIR / "System" / "execution_queue.json"
+        if queue_file.exists():
+            queue_file.unlink()
+            console.print("[dim]✔ Flushed pending motor execution queues.[/dim]")
+
+    console.print(
+        "\n[bold green]✅ Systemic Apoptosis complete. Brain OS has been purged.[/bold green]"
+    )
+    console.print(
+        "[dim]Note: You can safely remove the 'brain' alias from your shell profile (~/.bashrc, ~/.zshrc, or $PROFILE) manually.[/dim]"
+    )
+
+
 # Cognitive (CNS)
 app.command(name="task")(task)
 app.command(name="daydream")(daydream)
@@ -124,6 +185,7 @@ app.command(name="evolve")(evolve)
 app.command(name="forage")(forage)
 app.command(name="compile")(compile)
 app.command(name="absorb")(absorb)
+app.command(name="destroy")(destroy)
 
 # Somatic (Reflexes)
 app.command(name="map-topology")(map_topology)

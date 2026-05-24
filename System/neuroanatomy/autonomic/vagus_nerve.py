@@ -9,6 +9,13 @@ console = Console()
 
 def trigger_halt() -> None:
     """Vagus Nerve (Parasympathetic): Forces an immediate, safe system-wide halt."""
+
+    # 🔊 THE VERBOSE CHECK
+    if os.environ.get("BRAIN_VERBOSE") == "1":
+        console.print(
+            "[dim magenta][VERBOSE] Vagus Nerve: Polling interrupt signal... Halt triggered![/dim magenta]"
+        )
+
     console.print(
         "[bold red]🚨 VAGUS NERVE ACTIVATED: Initiating Emergency Halt...[/bold red]"
     )
