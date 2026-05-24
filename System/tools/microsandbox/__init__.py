@@ -33,7 +33,7 @@ async def _spawn_worker(workspace_path: Path) -> asyncio.subprocess.Process:
     real_system_dir = Path(__file__).resolve().parent.parent.parent
     vendor_dir = real_system_dir / "vendor" / "pyodide"
 
-    # 🛡️ SHIFT-LEFT KERNEL ECONOMICS: Prevent the sandbox from locking the host CPU
+    # 🛡️ SHIFT-LEFT KERNEL ECONOMICS: Prevent the sandbox from locking the host CPU on Unix
     base_command: list[str] = []
     if sys.platform != "win32" and shutil.which("nice"):
         base_command.extend(["nice", "-n", "10"])
@@ -60,11 +60,32 @@ async def _spawn_worker(workspace_path: Path) -> asyncio.subprocess.Process:
     proc = await asyncio.create_subprocess_exec(
         *command,
         env=safe_env,
-        cwd=str(workspace_path.resolve()),  # ⚡ FIXED: Reverted to native path
+        cwd=str(workspace_path.resolve()),
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )
+
+    # 🛡️ SHIFT-LEFT KERNEL ECONOMICS: Prevent the sandbox from locking the host CPU on Windows
+    # We intercept the process handle at inception and throttle its scheduling class dynamically.
+    if sys.platform == "win32":
+        try:
+            import ctypes
+
+            PROCESS_SET_INFORMATION = 0x0200
+            BELOW_NORMAL_PRIORITY_CLASS = 0x00004000
+
+            # Use dynamic retrieval and explicit windll markers to pass Linux CI typing metrics cleanly
+            kernel32 = getattr(ctypes, "windll", None) and getattr(
+                ctypes.windll, "kernel32", None
+            )  # type: ignore[attr-defined]
+            if kernel32:
+                handle = kernel32.OpenProcess(PROCESS_SET_INFORMATION, False, proc.pid)
+                if handle:
+                    kernel32.SetPriorityClass(handle, BELOW_NORMAL_PRIORITY_CLASS)
+                    kernel32.CloseHandle(handle)
+        except Exception:
+            pass
 
     # ⚡ FIXED: Return the spawned process to satisfy Mypy and the worker pool!
     _ALL_SPAWNED_PROCESSES.append(proc)

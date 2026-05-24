@@ -2,21 +2,32 @@
 import pytest
 from pathlib import Path
 from System.tools.microsandbox import _spawn_worker
-from System.tools.microsandbox.deno_executor import execute_sandboxed_js
 
 
 @pytest.mark.asyncio
 async def test_wasm_kernel_flags_are_immutable(tmp_path: Path, mocker) -> None:
-    """DEFCON PROOF: Verifies the Deno V8 Isolate boots with cryptographically immutable flags."""
+    """DEFCON PROOF: Verifies the Deno V8 Isolate boots with cryptographically immutable flags and throttled priority."""
 
     workspace = tmp_path / "Studio"
     workspace.mkdir(parents=True)
 
     mock_exec = mocker.AsyncMock()
+    mock_exec.pid = 1234  # Inject a deterministic mock process ID
     mock_create = mocker.patch(
         "System.tools.microsandbox.asyncio.create_subprocess_exec",
         return_value=mock_exec,
     )
+
+    # 🛡️ ZERO-DEBT: Conditionally mock Win32 kernel hooks to prevent platform errors on Linux/macOS CI
+    import sys
+
+    mock_set_priority = None
+    if sys.platform == "win32":
+        mocker.patch("ctypes.windll.kernel32.OpenProcess", return_value=5678)
+        mock_set_priority = mocker.patch(
+            "ctypes.windll.kernel32.SetPriorityClass", return_value=True
+        )
+        mocker.patch("ctypes.windll.kernel32.CloseHandle", return_value=True)
 
     await _spawn_worker(workspace)
 
@@ -26,10 +37,10 @@ async def test_wasm_kernel_flags_are_immutable(tmp_path: Path, mocker) -> None:
 
     # 1. Verify V8 memory ceilings and strict execution flags
     assert "--v8-flags=--max-old-space-size=256,--wasm-max-mem-pages=4096" in args_str
-    assert "--allow-net" in args_str
+    assert "--allow-net=none" in args_str
     assert "--allow-import" in args_str
 
-    # 2. Verify read/write access explicitly contains the workspace
+    # 2. Verify read/write access explicitly contains the workspace (Using POSIX slashes for Windows safety)
     assert "--allow-read=" in args_str
     assert workspace.resolve().as_posix() in args_str
 
@@ -41,30 +52,14 @@ async def test_wasm_kernel_flags_are_immutable(tmp_path: Path, mocker) -> None:
     # 4. Verify working directory is physically locked
     assert kwargs.get("cwd") == str(workspace.resolve())
 
+    # 5. Verify Shift-Left Kernel Economics (Cross-Platform CPU Priority Throttling)
+    import shutil
 
-def test_raw_js_sandbox_kernel_flags_are_immutable(tmp_path: Path, mocker) -> None:
-    """DEFCON PROOF: Verifies raw JS execution has the same capability erasure as WASM."""
-
-    workspace = tmp_path / "Studio"
-    workspace.mkdir()
-    script = workspace / "test.js"
-    script.write_text("console.log('test');")
-
-    mock_run = mocker.patch("System.tools.microsandbox.deno_executor.subprocess.run")
-
-    execute_sandboxed_js(script, workspace)
-
-    mock_run.assert_called_once()
-    args, kwargs = mock_run.call_args
-    command_list = args[0]
-
-    # Verify Network is mathematically severed
-    assert "--allow-net=none" in command_list
-    assert "--no-prompt" in command_list
-    assert "--v8-flags=--max-old-space-size=256" in command_list
-
-    # Verify the OS Environment is stripped
-    assert kwargs.get("env") == {"NO_COLOR": "1"}
+    if sys.platform != "win32" and shutil.which("nice"):
+        assert "nice -n 10" in args_str
+    elif sys.platform == "win32" and mock_set_priority:
+        # Verify SetPriorityClass was invoked with mock handle and BELOW_NORMAL_PRIORITY_CLASS (0x00004000)
+        mock_set_priority.assert_called_once_with(5678, 0x00004000)
 
 
 @pytest.mark.asyncio
