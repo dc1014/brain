@@ -87,3 +87,39 @@ def get_system_vitals() -> Panel:
         border_style="magenta",
         expand=False,
     )
+
+
+def render_pipeline_diagnostics(session_metabolism: dict, eval_retries: int) -> None:
+    """Renders the terminal UI for token metabolism tracking."""
+    diag_table = Table(show_header=True, header_style="bold magenta", box=None)
+    diag_table.add_column("Engine / Model")
+    diag_table.add_column("Input (Prompt)", justify="right")
+    diag_table.add_column("Output (Comp)", justify="right")
+    diag_table.add_column("Sum", justify="right", style="bold cyan")
+
+    grand_prompt = 0
+    grand_comp = 0
+
+    for m_id, counts in session_metabolism.items():
+        p = counts["prompt"]
+        c = counts["comp"]
+        total = p + c
+        grand_prompt += p
+        grand_comp += c
+        diag_table.add_row(m_id, f"{p:,}", f"{c:,}", f"{total:,}")
+
+    diag_table.add_row("", "", "", "")
+    diag_table.add_row(
+        "[bold]TOTAL METABOLISM[/bold]",
+        f"[bold]{grand_prompt:,}[/bold]",
+        f"[bold]{grand_comp:,}[/bold]",
+        f"[bold]{grand_prompt + grand_comp:,}[/bold]",
+    )
+
+    console.print(
+        Panel(
+            diag_table,
+            title=f"📊 [ PIPELINE DIAGNOSTICS | Loops: {eval_retries} ] 📊",
+            border_style="blue",
+        )
+    )

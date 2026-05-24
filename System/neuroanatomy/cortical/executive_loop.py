@@ -1,0 +1,380 @@
+# --- System/neuroanatomy/cortical/executive_loop.py ---
+import asyncio
+import os
+import yaml  # type: ignore
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
+
+from System.core.paths import ROOT_DIR, normalize_path
+from System.core.dna import get_dna_config
+from System.neuroanatomy.systemic.endocrine import get_resolved_model
+from System.llm import run_agent_async, get_system_context
+from System.neuroanatomy.autonomic.interoception import (
+    check_energy_levels,
+    log_metabolism,
+)
+from System.neuroanatomy.autonomic.vestibular import commit_transaction, restore_balance
+from System.neuroanatomy.cortical.working_memory import (
+    persist_pipeline_state,
+    clear_pipeline_state,
+    WorkingMemory,
+)
+from System.tools.diagnostic import render_pipeline_diagnostics
+
+console = Console()
+
+
+async def execute_swarm_cohort(
+    swarm_steps: list[dict],
+    current_payload: str,
+    route_type: str,
+    domain: str,
+    is_exhausted: bool,
+    available_tools: dict,
+    pfc_memory: WorkingMemory,
+    origin: str = "HUMAN",
+) -> tuple[dict, list[str]]:
+    swarm_metabolism = {}
+    agents_invoked = []
+    console.print(
+        f"\n[bold magenta]🧠 Prefrontal Cortex: Spawning swarm of {len(swarm_steps)} agents in parallel...[/bold magenta]"
+    )
+
+    async def _task(sub_step):
+        a_cfg = get_dna_config()["agents"][sub_step["agent"]]
+        model_str = get_resolved_model(a_cfg["model"], is_exhausted)
+        active_tools = [
+            t
+            for group in sub_step.get("tools", [])
+            for t in available_tools.get(group, [])
+        ]
+        full_sys_prompt = a_cfg["system_prompt"] + get_system_context(
+            sub_step.get("context", []), domain, prompt=current_payload
+        )
+        res = await run_agent_async(
+            role_name=a_cfg["name"],
+            model_string=model_str,
+            system_prompt=full_sys_prompt,
+            user_prompt=current_payload,
+            tools=active_tools if active_tools else None,
+            route=route_type,
+            domain=domain,
+            origin=origin,
+        )
+        return a_cfg["name"], model_str, res
+
+    swarm_results = await asyncio.gather(*[_task(s) for s in swarm_steps])
+    for agent_name, model_id, step_result in swarm_results:
+        usage = getattr(step_result, "usage", {})
+        p_tokens = (
+            usage.get("prompt_tokens", 0)
+            if isinstance(usage, dict)
+            else getattr(usage, "prompt_tokens", 0)
+        )
+        c_tokens = (
+            usage.get("completion_tokens", 0)
+            if isinstance(usage, dict)
+            else getattr(usage, "completion_tokens", 0)
+        )
+
+        if model_id not in swarm_metabolism:
+            swarm_metabolism[model_id] = {"prompt": 0, "comp": 0}
+
+        swarm_metabolism[model_id]["prompt"] += p_tokens
+        swarm_metabolism[model_id]["comp"] += c_tokens
+
+        await asyncio.to_thread(log_metabolism, p_tokens + c_tokens)
+
+        agents_invoked.append(agent_name)
+        display_text = step_result.text + (
+            "\n\n**Actions Taken:**\n"
+            + "\n".join([f"- {a}" for a in step_result.actions])
+            if step_result.actions
+            else ""
+        )
+        console.print(
+            Panel(
+                Markdown(display_text),
+                title=f"[bold magenta]🐝 {agent_name} (Swarm Node)[/bold magenta]",
+                border_style="magenta",
+            )
+        )
+        pfc_memory.add_event(
+            agent_name=agent_name,
+            raw_output=step_result.text,
+            actions=step_result.actions,
+        )
+
+    return swarm_metabolism, agents_invoked
+
+
+async def execute_pipeline(
+    description: str,
+    route_type: str,
+    domain: str,
+    resume_pipeline: list | None = None,
+    origin: str = "HUMAN",
+) -> None:
+    commit_transaction()
+    tools_path = ROOT_DIR / "System" / "config" / "tools.yaml"
+    with open(tools_path, "r", encoding="utf-8") as f:
+        available_tools = yaml.safe_load(f)
+
+    code_execution_enabled = os.environ.get(
+        "BRAIN_ENABLE_CODE_EXECUTION", "false"
+    ).lower() in ("true", "1", "yes")
+
+    if not code_execution_enabled:
+        restricted_tools = {
+            "execute_in_sandbox",
+            "execute_code",
+            "run_terminal_command",
+            "run_script",
+            "deno_executor",
+            "execute_command",
+        }
+        for group in available_tools:
+            if isinstance(available_tools[group], list):
+                available_tools[group] = [
+                    t
+                    for t in available_tools[group]
+                    if (isinstance(t, str) and t not in restricted_tools)
+                    or (isinstance(t, dict) and t.get("name") not in restricted_tools)
+                ]
+        console.print(
+            "\n[dim yellow]🛡️ Cognitive Pruning: Code execution tools hidden from active LLM context (Opt-In Required).[/dim yellow]"
+        )
+
+    pipeline = (
+        resume_pipeline
+        if resume_pipeline is not None
+        else list(get_dna_config().get("routes", {}).get(route_type, []))
+    )
+    eval_retries = 0
+    MAX_RETRIES = 1
+
+    is_exhausted, tokens_burned = check_energy_levels()
+    if is_exhausted:
+        console.print(
+            f"\n[bold yellow]⚠️ Interoception Alert: System Exhausted ({tokens_burned:,} tokens burned). Downgrading cognitive load.[/bold yellow]"
+        )
+
+    session_metabolism = {}
+    agents_invoked: list[str] = []
+    pipeline_aborted = False
+    pfc_memory = WorkingMemory(description)
+
+    while len(pipeline) > 0:
+        persist_pipeline_state(description, route_type, domain, pipeline)
+
+        abort_flag = normalize_path(ROOT_DIR / "System" / ".vagus_abort_signal")
+        if abort_flag.exists():
+            console.print(
+                "\n[bold red]🛑 Vagus Nerve Signal detected. Halting pipeline safely.[/bold red]"
+            )
+            pipeline_aborted = True
+            try:
+                os.remove(abort_flag)
+            except OSError:
+                pass
+            break
+
+        step = pipeline.pop(0)
+        current_payload = pfc_memory.get_current_context()
+
+        # 1. Swarm Execution
+        if "swarm" in step:
+            swarm_metabolism, swarm_agents = await execute_swarm_cohort(
+                step["swarm"],
+                current_payload,
+                route_type,
+                domain,
+                is_exhausted,
+                available_tools,
+                pfc_memory,
+                origin,
+            )
+            for m_id, counts in swarm_metabolism.items():
+                if m_id not in session_metabolism:
+                    session_metabolism[m_id] = {"prompt": 0, "comp": 0}
+                session_metabolism[m_id]["prompt"] += counts["prompt"]
+                session_metabolism[m_id]["comp"] += counts["comp"]
+
+            agents_invoked.extend(swarm_agents)
+            await pfc_memory.compress_if_bloated()
+            commit_transaction()
+            console.print(
+                "\n[bold green]💾 Synaptic Consolidation: Swarm milestone committed to disk.[/bold green]"
+            )
+            continue
+
+        # 2. Linear Execution
+        agent_cfg = get_dna_config()["agents"][step["agent"]]
+        model_str = get_resolved_model(agent_cfg["model"], is_exhausted)
+        active_tools = [
+            t for group in step.get("tools", []) for t in available_tools.get(group, [])
+        ]
+        full_system_prompt = agent_cfg["system_prompt"] + get_system_context(
+            step.get("context", []), domain, prompt=current_payload
+        )
+
+        console.print(f"\n[bold cyan]⏳ {agent_cfg['name']} is working...[/bold cyan]")
+        agents_invoked.append(agent_cfg["name"])
+
+        step_result = await run_agent_async(
+            role_name=agent_cfg["name"],
+            model_string=model_str,
+            system_prompt=full_system_prompt,
+            user_prompt=current_payload,
+            tools=active_tools if active_tools else None,
+            route=route_type,
+            domain=domain,
+            origin=origin,
+        )
+
+        usage = getattr(step_result, "usage", {})
+        p_tokens = (
+            usage.get("prompt_tokens", 0)
+            if isinstance(usage, dict)
+            else getattr(usage, "prompt_tokens", 0)
+        )
+        c_tokens = (
+            usage.get("completion_tokens", 0)
+            if isinstance(usage, dict)
+            else getattr(usage, "completion_tokens", 0)
+        )
+
+        if model_str not in session_metabolism:
+            session_metabolism[model_str] = {"prompt": 0, "comp": 0}
+
+        session_metabolism[model_str]["prompt"] += p_tokens
+        session_metabolism[model_str]["comp"] += c_tokens
+        await asyncio.to_thread(log_metabolism, p_tokens + c_tokens)
+
+        display_text = step_result.text + (
+            "\n\n**Actions Taken:**\n"
+            + "\n".join([f"- {a}" for a in step_result.actions])
+            if step_result.actions
+            else ""
+        )
+        console.print(
+            Panel(
+                Markdown(display_text),
+                title=f"[bold cyan]{agent_cfg['name']}[/bold cyan]",
+                border_style="cyan",
+            )
+        )
+
+        is_system_halt = step_result.text.strip().startswith("[SYSTEM HALT]")
+        is_api_error = step_result.text.strip().startswith("API/Execution Error:")
+
+        if is_system_halt or is_api_error:
+            console.print(
+                "\n[bold red]🛑 PIPELINE ABORTED via explicit exception response.[/bold red]"
+            )
+            pipeline_aborted = True
+            break
+
+        if agent_cfg.get("creates_milestone", True):
+            commit_transaction()
+            console.print(
+                f"\n[dim green]💾 Synaptic Consolidation: {agent_cfg['name']} milestone committed to disk.[/dim green]"
+            )
+
+        pfc_memory.add_event(agent_cfg["name"], step_result.text, step_result.actions)
+        await pfc_memory.compress_if_bloated()
+
+        # 3. Broca's Area (Data Contract Validation & RETRY LOOP)
+        if step["agent"] == "qa_auditor":
+            from System.neuroanatomy.cortical.broca import validate_qa_audit
+
+            is_valid, critique_msg = validate_qa_audit(step_result.text)
+
+            if not is_valid:
+                if eval_retries < MAX_RETRIES:
+                    if "BROCA FORMATTING ERROR" in critique_msg:
+                        console.print(
+                            "\n[bold yellow]🗣️ Broca's Area intercepted malformed JSON. Forcing retry.[/bold yellow]"
+                        )
+                    else:
+                        console.print(
+                            "\n[bold red]❌ Audit Failed! The Product Manager needs to fix the code.[/bold red]\n"
+                        )
+
+                    if os.environ.get("BRAIN_OS_HEADLESS") == "1":
+                        retry_auth = "y"
+                    else:
+                        try:
+                            retry_auth = (
+                                input("Authorize autonomous retry? [Y/n]: ")
+                                .strip()
+                                .lower()
+                            )
+                        except (EOFError, KeyboardInterrupt):
+                            retry_auth = "n"
+
+                    if retry_auth in ["n", "no"]:
+                        console.print(
+                            "\n[bold red]🛑 Task Aborted: User declined autonomous retry.[/bold red]\n"
+                        )
+                        pipeline_aborted = True
+                        break
+
+                    pipeline.insert(
+                        0,
+                        {
+                            "agent": "qa_auditor",
+                            "tools": ["base"],
+                            "context": ["Meta", "Domain", "Studio"],
+                        },
+                    )
+                    pipeline.insert(
+                        0,
+                        {
+                            "agent": "product_manager",
+                            "tools": ["base", "write", "execute", "sense_environment"],
+                            "context": ["Meta", "Domain", "Studio"],
+                        },
+                    )
+                    pfc_memory.add_event("QA System", critique_msg, [])
+                    eval_retries += 1
+                    continue
+                else:
+                    console.print(
+                        "\n[bold red]🛑 CIRCUIT BREAKER: Max eval retries reached. Halting pipeline.[/bold red]\n"
+                    )
+                    pipeline_aborted = True
+                    break
+
+    render_pipeline_diagnostics(session_metabolism, eval_retries)
+
+    log_dir = normalize_path(ROOT_DIR / "System" / "logs")
+    if not log_dir.exists():
+        try:
+            os.makedirs(log_dir, exist_ok=True)
+        except OSError:
+            pass
+
+    state_path = log_dir / "pipeline_state.md"
+
+    if pipeline_aborted:
+        restore_balance()
+        console.print(
+            "\n[bold red]🛑 Task Aborted. Environment safely rolled back.[/bold red]\n"
+        )
+        try:
+            with open(state_path, "w", encoding="utf-8") as f:
+                f.write("STATUS: ABORTED\n")
+        except OSError:
+            pass
+    else:
+        commit_transaction()
+        console.print("\n[bold green]✅ Task Complete. Files committed.[/bold green]\n")
+        try:
+            with open(state_path, "w", encoding="utf-8") as f:
+                f.write("STATUS: COMPLETE\n")
+        except OSError:
+            pass
+
+    clear_pipeline_state()

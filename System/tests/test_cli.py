@@ -54,7 +54,7 @@ def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:  # type: ign
 
     # ⚡ ZERO-DEBT: Inject the missing DNA config!
     mocker.patch(
-        "System.neuroanatomy.cortical.prefrontal.get_dna_config",
+        "System.neuroanatomy.cortical.executive_loop.get_dna_config",
         return_value={
             "routes": {"FORGE": [{"agent": "qa_auditor"}]},
             "agents": {
@@ -94,7 +94,7 @@ def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:  # type: ign
         )
 
     mocker.patch(
-        "System.neuroanatomy.cortical.prefrontal.run_agent_async",
+        "System.neuroanatomy.cortical.executive_loop.run_agent_async",
         side_effect=mock_run_agent_side_effect,
     )
 
@@ -129,7 +129,7 @@ def test_interrupted_queue_interception(monkeypatch, tmp_path, mocker):
 
     # ⚡ ZERO-DEBT: Target the function at its anatomical source since it's locally imported
     mocker.patch(
-        "System.neuroanatomy.cortical.prefrontal.execute_pipeline",
+        "System.neuroanatomy.cortical.executive_loop.execute_pipeline",
         new_callable=mocker.AsyncMock,
     )
     mocker.patch("System.core.boot.bootstrap", return_value=True)

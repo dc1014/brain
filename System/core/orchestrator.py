@@ -5,7 +5,7 @@ from rich.console import Console
 from rich.panel import Panel
 from System.neuroanatomy.limbic.thalamus import route_sensory_input
 from System.core.paths import ROOT_DIR
-from System.neuroanatomy.cortical.prefrontal import execute_pipeline
+from System.neuroanatomy.cortical.executive_loop import execute_pipeline
 
 console = Console()
 

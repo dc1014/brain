@@ -12,7 +12,6 @@
 >
 > - Daniel Casper, 5/20/2026
 
----
 
 ## 🚀 Quick Start
 
@@ -30,6 +29,18 @@ For your absolute physical protection, Brain OS implements a strict **fail-close
 * **Semantic Alignment:** Agents are structurally informed via their system prompts to act solely as expert advisers, writing clean scripts to disk and providing step-by-step manual execution instructions.
 
 To unlock full autonomous micro-sandbox container execution, explicitly opt-in by adding the following variable to your `.env` configuration - `BRAIN_ENABLE_CODE_EXECUTION=true`.
+
+---
+
+
+## 🔒 100% Local Privacy Guarantee
+**Brain operates entirely locally by default.** - 🛑 **No cloud telemetry.** - 🛑 **No remote logging.**
+- 🛑 **No shadow-syncing.**
+
+All token tracking, memory ledgers, diagnostic vitals, and vector indexing happen directly on your local file system (`/logs` and `/System/neuroanatomy`). The *only* time data leaves your machine is when a specific context window is routed to your configured LLM provider (OpenAI, Anthropic, etc.).
+
+If you configure Brain to use local SLMs (via Ollama), the entire OS can operate completely air-gapped.
+
 
 ---
 

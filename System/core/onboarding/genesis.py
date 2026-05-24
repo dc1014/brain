@@ -381,20 +381,32 @@ async def main():
         _atomic_write_text(FEATURES_PATH, json.dumps(features, indent=4))
 
     # 3. Inject global shell profile alias
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[cyan]Binding global neural pathways (adding to PATH)...[/cyan]"),
-        transient=True,
-    ) as progress:
-        progress.add_task("", total=None)
-        if bind_global_alias():
-            console.print(
-                "[bold green]✅ Global alias 'brain' injected into shell profile![/bold green]"
-            )
-        else:
-            console.print(
-                "[dim yellow]⚠️ Could not auto-bind shell profile. You can manually alias 'brain' later.[/dim yellow]"
-            )
+    # --- 3. Inject global shell profile alias ---
+    console.print("\n")
+    if Confirm.ask(
+        "🌐 Would you like to make 'brain' globally accessible? (Safely adds an alias to your shell profile)",
+        default=True,
+    ):
+        with Progress(
+            SpinnerColumn(),
+            TextColumn(
+                "[cyan]Binding global neural pathways (adding to PATH)...[/cyan]"
+            ),
+            transient=True,
+        ) as progress:
+            progress.add_task("", total=None)
+            if bind_global_alias():
+                console.print(
+                    "[bold green]✅ Global alias 'brain' injected into shell profile![/bold green]"
+                )
+            else:
+                console.print(
+                    "[dim yellow]⚠️ Could not auto-bind shell profile. You can manually alias 'brain' later.[/dim yellow]"
+                )
+    else:
+        console.print(
+            "[dim yellow]⏭️ Global alias skipped. You can always run the OS via 'uv run python -m System.cli'.[/dim yellow]"
+        )
 
     # 4. Handoff
     console.print("\n[bold green]🎉 SYNAPTIC GENESIS COMPLETE 🎉[/bold green]")
