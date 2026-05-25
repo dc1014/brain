@@ -1,3 +1,4 @@
+# --- System/neuroanatomy/limbic/thalamus.py ---
 from System.core.paths import ROOT_DIR
 import yaml  # type: ignore
 from litellm import completion  # type: ignore
@@ -19,7 +20,7 @@ def filter_attention(prompt: str, raw_memory: str) -> str:
         return raw_memory
 
     console.print(
-        "[dim magenta]🧠 Thalamus Active: Filtering context noise...[/dim magenta]"
+        "[dim magenta][*] Thalamus Active: Filtering context noise...[/dim magenta]"
     )
 
     try:
@@ -84,7 +85,7 @@ def route_public_pulse(sender_id: str, payload: str, signature: str) -> str:
     from rich.console import Console
 
     Console().print(
-        "[bold magenta]👁️ Thalamus: Routing external stimulus to Exocortex...[/bold magenta]"
+        "[bold magenta][*] Thalamus: Routing external stimulus to Exocortex...[/bold magenta]"
     )
 
     from System.neuroanatomy.cortical.exocortex import Exocortex
@@ -170,7 +171,7 @@ async def route_sensory_input(prompt: str) -> tuple[bool, str, str, str, dict]:
             domain = data.domain.strip().upper()
 
             console.print(
-                f"[dim green]🧠 Thalamus Reasoning: {data.reasoning}[/dim green]"
+                f"[dim green][*] Thalamus Reasoning: {data.reasoning}[/dim green]"
             )
 
         except Exception as e:

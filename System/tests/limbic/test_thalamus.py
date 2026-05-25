@@ -1,29 +1,20 @@
+# --- System/tests/limbic/test_thalamus.py ---
 import pytest
 from unittest.mock import MagicMock
 from System.neuroanatomy.limbic.thalamus import filter_attention, route_sensory_input
 
 
-# --- FILTER ATTENTION TESTS (Preserved) ---
-
-
 def test_thalamus_fast_path():
-    """Proves the Thalamus skips filtering if the memory is short enough."""
     short_memory = "This is a short memory."
     filtered = filter_attention("Build a react app", short_memory)
-
-    # Should return exactly the original text (bypassing the LLM)
     assert filtered == short_memory
 
 
 def test_thalamus_filtering(monkeypatch):
-    """Proves the Thalamus correctly calls the LLM for large memories."""
-
-    # Create a dummy memory large enough to trigger the Thalamus (> 2000 chars)
     large_memory = "A" * 2500
 
-    # Mock the LLM to return a specific filtered string
     monkeypatch.setattr(
-        "System.neuroanatomy.limbic.thalamus.completion",  # Patch the local module reference!
+        "System.neuroanatomy.limbic.thalamus.completion",
         lambda *args, **kwargs: type(
             "Mock",
             (),
@@ -47,13 +38,8 @@ def test_thalamus_filtering(monkeypatch):
     assert "Filtered React bullet point." in filtered
 
 
-# --- ROUTE SENSORY INPUT TESTS (Upgraded from analyze_task) ---
-
-
 @pytest.mark.asyncio
 async def test_thalamus_pydantic_fallback(mocker, monkeypatch):
-    """Proves the Thalamus gracefully catches malformed JSON from the LLM."""
-
     mocker.patch(
         "System.neuroanatomy.systemic.enteric.get_gut_reaction", return_value=None
     )
@@ -74,15 +60,13 @@ async def test_thalamus_pydantic_fallback(mocker, monkeypatch):
 
         return MockResponse()
 
-    # Patch the LLM call inside the new Thalamus module
     monkeypatch.setattr("System.llm.acompletion", mock_acompletion)
 
-    # 2. Execute the Thalamus using the new function name
     is_valid, reason, route, domain, usage = await route_sensory_input(
         "Write some code."
     )
 
-    # 3. Assert the Pydantic ValidationError was caught and handled gracefully
+    # Pydantic validation failures degrade safely to True/UNKNOWN to keep the OS alive
     assert is_valid is True
     assert route == "UNKNOWN"
     assert domain == "NONE"
@@ -90,8 +74,6 @@ async def test_thalamus_pydantic_fallback(mocker, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_thalamus_rejection_logic(mocker, monkeypatch):
-    """Proves the Thalamus correctly rejects tasks outside OS capabilities."""
-
     mocker.patch(
         "System.neuroanatomy.systemic.enteric.get_gut_reaction", return_value=None
     )
@@ -117,13 +99,11 @@ async def test_thalamus_rejection_logic(mocker, monkeypatch):
     is_valid, reason, route, domain, usage = await route_sensory_input("Order a pizza")
 
     assert is_valid is False
-    # Match the Thalamus's .upper() capitalization shift
     assert "I CANNOT ORDER A PHYSICAL PIZZA FOR YOU." in reason
 
 
 @pytest.mark.asyncio
 async def test_thalamus_amygdala_interception(mocker):
-    """Proves the Thalamus blocks prompts if the Amygdala detects a threat."""
     mocker.patch(
         "System.neuroanatomy.systemic.enteric.get_gut_reaction", return_value=None
     )
@@ -141,7 +121,6 @@ async def test_thalamus_amygdala_interception(mocker):
 
 @pytest.mark.asyncio
 async def test_thalamus_gut_reaction_shortcut(mocker):
-    """Proves the Thalamus bypasses the LLM entirely if the Enteric nervous system has a reflex."""
     mock_gut_response = (
         True,
         "Gut Approved",

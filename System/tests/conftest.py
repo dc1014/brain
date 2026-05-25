@@ -6,20 +6,17 @@ import time
 import threading
 import _pytest.pathlib
 
-# 1. Neutralize WinError 5 Access Denied temp directory locks
 _pytest.pathlib.cleanup_numbered_dir = lambda *args, **kwargs: None
 
 
 @pytest.fixture(autouse=True, scope="session")
 def enforce_headless_mode():
-    """Guarantees tests never pause waiting for human [Y/N] input."""
     os.environ["BRAIN_OS_HEADLESS"] = "1"
     os.environ["BRAIN_OS_TESTING"] = "1"
 
 
 @pytest.fixture(autouse=True)
 def safe_async_teardown():
-    """Safely cancels dangling async tasks to keep loops clean."""
     yield
     try:
         loop = asyncio.get_running_loop()
@@ -31,7 +28,6 @@ def safe_async_teardown():
 
 
 def pytest_sessionfinish(session, exitstatus):
-    """Worker Node Guillotine: Prevents xdist from hanging on Windows subprocess pipes."""
     if hasattr(session.config, "workerinput"):
 
         def worker_seppuku():
@@ -43,7 +39,6 @@ def pytest_sessionfinish(session, exitstatus):
 
 @pytest.fixture
 def safe_subprocess_mock(mocker):
-    """Standardized mock process to prevent real subprocess deadlocks in execution tests."""
     mock_proc = mocker.AsyncMock()
     mock_proc.returncode = 0
     mock_proc.communicate.return_value = (b"Mocked output", b"")
@@ -54,19 +49,22 @@ def safe_subprocess_mock(mocker):
     mock_proc.kill = mocker.MagicMock()
     mock_proc.stdin.close = mocker.MagicMock()
     mock_proc.stdin.write = mocker.MagicMock()
+
+    # Required for Deno micro-sandbox execution flows
+    mock_proc.stdin.drain = mocker.AsyncMock()
+    mock_proc.stdin.wait_closed = mocker.AsyncMock()
+    mock_proc.stdout.at_eof = mocker.MagicMock(return_value=False)
+
     return mock_proc
 
 
 @pytest.fixture(autouse=True)
 def align_windows_sandbox_paths(mocker, tmp_path):
-    """ZERO-DEBT PATH ALIGNER."""
     safe_root = tmp_path.resolve()
 
     mocker.patch("System.core.paths.ROOT_DIR", safe_root)
     mocker.patch("System.tools.sandbox.ROOT_DIR", safe_root)
 
-    # ⚡ FIXED: Removed `safe_root` itself from ALLOWED_DIRECTORIES!
-    # This restores the strict write-protection for the System/core directory.
     mocker.patch(
         "System.tools.sandbox.ALLOWED_DIRECTORIES",
         {safe_root / "Studio", safe_root / "Media", safe_root / "Professional"},
@@ -86,14 +84,11 @@ def align_windows_sandbox_paths(mocker, tmp_path):
 
 
 def pytest_collection_modifyitems(config, items):
-    """Only quarantine tests that are physically obsolete or contain infinite loops."""
     skip_obsolete = pytest.mark.skip(reason="Obsolete architecture or Infinite Loop")
 
     quarantine_targets = {
-        # Infinite Daemon Loops (Require structural rewrites to exit safely)
         "test_medulla_cognitive_heartbeat_execution",
         "test_medulla_lifecycle_execution",
-        # Legacy locks & Deprecated Phase 2 architecture
         "test_executive_state_machine_qa_fallback",
         "test_proprioception_is_lock_free",
         "test_proprioception_atomic_lock_concurrency",

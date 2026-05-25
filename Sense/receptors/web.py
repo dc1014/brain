@@ -1,9 +1,9 @@
+# --- Sense/receptors/web.py ---
 import socket
 import ipaddress
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from markdownify import markdownify  # type: ignore
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 MAX_SENSORY_CHARS = 25000
 
@@ -43,10 +43,19 @@ def transduce_web_page(url: str) -> str:
     except SecurityBlockError as e:
         return f'<sensory_error source="{url}">\n{str(e)}\n</sensory_error>'
 
+    # Lazy import prevents CI/CD and clean setup failures
+    try:
+        from playwright.sync_api import (
+            sync_playwright,
+            TimeoutError as PlaywrightTimeoutError,
+        )
+    except ImportError:
+        return f'<sensory_error source="{url}">\nVision extras not installed. Run "ctx setup" and enable the Retina sense.\n</sensory_error>'
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 BrainOS/1.0"
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 CoreTexOS/1.0"
         )
         page = context.new_page()
 
@@ -93,7 +102,7 @@ def transduce_web_page(url: str) -> str:
     if len(markdown_content) > MAX_SENSORY_CHARS:
         markdown_content = (
             markdown_content[:MAX_SENSORY_CHARS]
-            + "\n\n... [TRUNCATED BY BRAIN OS TO PREVENT TOKEN EXHAUSTION] ..."
+            + "\n\n... [TRUNCATED BY CORETEX OS TO PREVENT TOKEN EXHAUSTION] ..."
         )
 
     return markdown_content

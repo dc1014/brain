@@ -1,8 +1,8 @@
-# 🧠 CoreTex OS: Biomimetic Agentic Control Plane
+# 🧠 CoreTex: Biomimetic Agentic Control Plane and Knowledge Engine
 
 ![Architecture](https://img.shields.io/badge/Architecture-Biomimetic--Multiagent-purple.svg) ![Security](https://img.shields.io/badge/Sandbox-Deno_WASM-red.svg) ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg) ![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
-> **Note to Systems Engineers:** I took the biomimicry domain-driven design quite far (e.g., the routing matrix is the `Medulla`, memory is the `Hippocampus`). It might look eccentric, but underneath is a highly optimized, concurrent, lock-safe, and zero-debt execution engine.
+> **Note to Systems Engineers:** I took the biomimicry domain-driven design quite far (e.g., the master daemon is the `Medulla`, short-term memory is the `Hippocampus`). It might look eccentric, but underneath is (arguably) a highly optimized, concurrent, lock-safe, and zero-debt execution engine.
 
 **CoreTex** is a fully local, headless AI operating system inspired by human neuroanatomy and the Unix Philosophy. It operates directly on your local file system, orchestrates multi-agent swarms, and executes code within strict WebAssembly sandboxes.
 

@@ -9,6 +9,7 @@ import uuid
 import json
 import shlex
 import subprocess
+import asyncio
 from typing import Any, List, Dict, Optional
 from rich.console import Console
 
@@ -22,25 +23,28 @@ LOG_PATH.mkdir(parents=True, exist_ok=True)
 
 medulla_logger = logging.getLogger("Medulla")
 medulla_logger.setLevel(logging.INFO)
-file_handler = logging.FileHandler(LOG_PATH / "medulla.log", encoding="utf-8")
-file_handler.setFormatter(
-    logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-)
+
 if not medulla_logger.handlers:
-    medulla_logger.addHandler(file_handler)
+    try:
+        file_handler = logging.FileHandler(LOG_PATH / "medulla.log", encoding="utf-8")
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        )
+        medulla_logger.addHandler(file_handler)
+    except PermissionError:
+        medulla_logger.addHandler(logging.NullHandler())
 
 _ACTIVE_MEDULLA_INSTANCES: List["MedullaOblongata"] = []
 
 
 def cleanup_active_medullas() -> None:
-    """🛡️ DAEMON REAPER: Cleanly disengages running Medulla instances to eliminate test stalls."""
+    """DAEMON REAPER: Cleanly disengages running Medulla instances to eliminate test stalls."""
     global _ACTIVE_MEDULLA_INSTANCES
     for instance in _ACTIVE_MEDULLA_INSTANCES:
         if instance.is_alive:
             try:
                 instance.stop()
             except Exception as e:
-                # ⚡ P1 FIX: Log the disengagement failure instead of passing silently
                 medulla_logger.error(
                     f"Failed to cleanly disengage medulla instance: {e}"
                 )
@@ -49,7 +53,7 @@ def cleanup_active_medullas() -> None:
 
 
 class OrchestrationMismatchException(Exception):
-    """⚡ Custom Exception thrown when high-specificity orchestration states collapse prematurely."""
+    """Custom Exception thrown when high-specificity orchestration states collapse prematurely."""
 
     pass
 
@@ -70,7 +74,6 @@ class DurableTaskLog:
                 with open(self.wal_path, "a", encoding="utf-8") as f:
                     f.write(json.dumps(record) + "\n")
             except Exception as e:
-                # ⚡ P1 FIX: Ensure failed intent registrations are explicitly logged
                 medulla_logger.error(f"WAL Write Error (register_intent): {e}")
         return task_id
 
@@ -105,7 +108,6 @@ class DurableTaskLog:
                         else:
                             states.pop(t_id, None)
             except Exception as e:
-                # ⚡ P1 FIX: Log corruption during recovery rather than failing silently
                 medulla_logger.error(f"WAL Read Error (recover_interrupted_tasks): {e}")
 
         return list(states.values())
@@ -131,7 +133,6 @@ class MedullaOblongata:
         self.ipc_client: Optional[Any] = None
         self.task_log = DurableTaskLog(str(LOG_PATH))
 
-        # ⚡ P0 PERFORMANCE: Initialize the dynamic multi-core allocation pool
         self.recovery_pool = get_isolated_executor(max_workers=3)
 
         _ACTIVE_MEDULLA_INSTANCES.append(self)
@@ -213,17 +214,14 @@ class MedullaOblongata:
             ]
             modulation_chemistry = acc.inspect_context_buffer(mock_history)
 
-            # Explicitly cast to float to pacify Mypy
             target_temp = float(modulation_chemistry.get("temperature", 0.0))
 
-            # ⚡ P1 FIX: Inherit the fast fallback model from the user's DNA identity
             from System.core.dna import get_dna_config
 
             fallback = (
                 get_dna_config().get("models", {}).get("fast", "openai/gpt-4o-mini")
             )
 
-            # Force strict string evaluation and eliminate 'None' ambiguity
             target_engine = str(
                 modulation_chemistry.get("engine_override")
                 or fallback
@@ -238,7 +236,6 @@ class MedullaOblongata:
             except OrchestrationMismatchException:
                 self.cognitive_state = target_tier
 
-            # ⚡ Routinely dispatch to the isolated PEP 734 / Process pool
             self.recovery_pool.submit(
                 self._execute_recovered_task_safely,
                 task_id,
@@ -255,8 +252,6 @@ class MedullaOblongata:
             env_override["BRAIN_RECOVERY_TEMPERATURE"] = str(temperature)
             env_override["BRAIN_RECOVERY_ENGINE"] = engine
 
-            # ⚡ P0 FIX: Safely split the command string to completely eliminate
-            # the shell=True command injection vulnerability.
             safe_command = shlex.split(command)
 
             result = subprocess.run(
@@ -303,11 +298,14 @@ class MedullaOblongata:
                 try:
                     from System.core.orchestrator import run_pending_queue
 
-                    run_pending_queue()
+                    # FIX: Safely interpret and consume coroutine instances natively
+                    execution_payload = run_pending_queue()
+                    if asyncio.iscoroutine(execution_payload):
+                        asyncio.run(execution_payload)
                 except Exception as e:
                     medulla_logger.error(f"Cognitive heartbeat exception: {str(e)}")
 
-            for _ in range(150):
+            for _ in range(50):
                 if not self.is_alive:
                     break
                 time.sleep(0.1)
@@ -334,7 +332,7 @@ class MedullaOblongata:
             except Exception as e:
                 medulla_logger.error(f"Homeostasis disruption: {str(e)}")
 
-            for _ in range(300):
+            for _ in range(50):
                 if not self.is_alive:
                     break
                 time.sleep(0.1)
@@ -433,8 +431,6 @@ class MedullaOblongata:
         if self.is_alive:
             return
 
-        # 🔐 HARDENED BOOT RECOVERY: Clean up any stale file-based lock flags left behind by
-        # previous hard process terminations or watchdog unlinks to prevent startup hangs.
         try:
             for root, _, files in os.walk(str(ROOT_DIR)):
                 for f in files:
@@ -466,7 +462,6 @@ class MedullaOblongata:
         threading.Thread(target=self._monitor_homeostasis, daemon=True).start()
         threading.Thread(target=self._cognitive_heartbeat, daemon=True).start()
 
-        # ⚡ DEFAULT BASELINE PROFILE: Drop back into the minimal Ready active layer
         self.cognitive_state = "ORCHESTRATION_MINIMAL"
         medulla_logger.info(
             f"System profile established: {self.default_profile} [ORCHESTRATION_MINIMAL]"
@@ -507,7 +502,6 @@ class MedullaOblongata:
         except Exception as e:
             medulla_logger.error(f"Error during pre-sleep coordination sweep: {e}")
 
-        # ⚡ SELF-DEFENDING TEST GATEWAY: Absolute block preventing live LLM generation during tests
         if os.environ.get("BRAIN_OS_TESTING") == "1":
             medulla_logger.info(
                 "Medulla sleep phase: Daydream loop bypassed inside testing environment."
@@ -519,7 +513,11 @@ class MedullaOblongata:
                 medulla_logger.info(
                     "Medulla brainstem sleep phase: Invoking default mode network distillation loop."
                 )
-                trigger_daydreams(topic=None, domain="STUDIO")
+
+                # FIX: Safely interpret and consume coroutine instances natively
+                daydream_payload = trigger_daydreams(topic=None, domain="STUDIO")
+                if asyncio.iscoroutine(daydream_payload):
+                    asyncio.run(daydream_payload)
             except Exception as dmn_err:
                 medulla_logger.error(
                     f"Failed to execute background subcortex synthesis during disengagement: {dmn_err}"
@@ -528,10 +526,8 @@ class MedullaOblongata:
         self.is_alive = False
         self.cognitive_state = "SLEEP"
 
-        # ⚡ Cleanly sever the multi-core executor pool
         self.recovery_pool.shutdown(wait=False, cancel_futures=True)
 
-        # ⚡ SYSTEM PROTECTION GATE: Avoid recursively terminating the pytest runner's entire infrastructure process tree
         if os.environ.get("BRAIN_OS_TESTING") == "1":
             medulla_logger.info(
                 "Medulla sleep phase: Bypassed recursive psutil child process sweeps inside testing track."
@@ -572,7 +568,6 @@ def child_boot(ipc_address: str):
     medulla.wake()
     try:
         while True:
-            # ⚡ DESIGN INTEGRITY MAINTENANCE: Symmetrical fix to avoid runtime attribute breaks
             time.sleep(1)
     except KeyboardInterrupt:
         medulla.stop()

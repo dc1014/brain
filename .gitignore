@@ -117,3 +117,4 @@ System/vendor/
 *.db-shm
 System/snapshot_ledger.json
 System/snapshots/
+coretex.egg-info/

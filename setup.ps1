@@ -2,16 +2,18 @@
 $ErrorActionPreference = "Stop"
 
 Clear-Host
-Write-Host " ██████╗ ██████╗ ██████╗ ███████╗████████╗███████╗██╗  ██╗" -ForegroundColor Cyan
-Write-Host "██╔════╝██╔═══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝╚██╗██╔╝" -ForegroundColor Cyan
-Write-Host "██║     ██║   ██║██████╔╝█████╗     ██║   █████╗   ╚███╔╝ " -ForegroundColor Cyan
-Write-Host "██║     ██║   ██║██╔══██╗██╔══╝     ██║   ██╔══╝   ██╔██╗ " -ForegroundColor Cyan
-Write-Host "╚██████╗╚██████╔╝██║  ██║███████╗   ██║   ███████╗██╔╝ ██╗" -ForegroundColor Cyan
-Write-Host " ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚══╝" -ForegroundColor Cyan
+Write-Host "====================================================" -ForegroundColor Cyan
+Write-Host "  ______  ______   ______   ______ ______ ______ _  _  " -ForegroundColor Cyan
+Write-Host " / _____ /  __  \ /  __  \ / ____ /__  __ / ____ / / / / " -ForegroundColor Cyan
+Write-Host " / /     / /  / / / /__/ / / ___    / /   / ___  \  / /  " -ForegroundColor Cyan
+Write-Host " / /____ / /__/ / /  __  / /____   / /   / /____ / / \ \ " -ForegroundColor Cyan
+Write-Host " \______ \______/ /_/  \_ \_____/   /_/   \_____/_/   \_\" -ForegroundColor Cyan
+Write-Host "====================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Biomimetic Agentic OS // Initialization Probe" -ForegroundColor DarkGray
 Write-Host ""
 
+# 1. Probe for Air-Gapped AI (Ollama)
 try {
     $OllamaCheck = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
     if ($OllamaCheck.StatusCode -eq 200) {
@@ -26,7 +28,6 @@ Write-Host ""
 
 $DockerAvailable = $false
 if ($null -ne (Get-Command docker -ErrorAction SilentlyContinue)) {
-    # Verify the Docker Engine is running on Windows (Requires WSL2/Hyper-V)
     docker info >$null 2>&1
     if ($?) {
         $DockerAvailable = $true
@@ -68,7 +69,11 @@ if ($DeployChoice -eq "2" -and $DockerAvailable) {
 
 Write-Host "`n[*] Initializing Pure Local Environment..." -ForegroundColor Cyan
 
-$UvBin = "uv"
+# Helper function to dynamically pull the latest PATH variables after an installation
+function Refresh-EnvPath {
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+}
+
 if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
     if ($AutoInstall) {
         Write-Host "[*] Installing uv automatically in headless mode..." -ForegroundColor Cyan
@@ -79,19 +84,32 @@ if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
         if ([string]::IsNullOrEmpty($InstallUV)) { $InstallUV = "y" }
         if ($InstallUV -match "^[Yy]$") {
             irm https://astral.sh/uv/install.ps1 | iex
-            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "User") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-            $UvBin = "$HOME\.cargo\bin\uv.exe"
         } else {
             Write-Error -Message "Aborting. uv is required for local installation."
             exit 1
         }
     }
+    Refresh-EnvPath
 }
+
+# Dynamically resolve the binary path using Get-Command
+$UvCmd = Get-Command uv -ErrorAction SilentlyContinue
+if ($null -eq $UvCmd) {
+    Write-Error "uv installation failed or could not be found in PATH. Please restart your terminal."
+    exit 1
+}
+$UvBin = $UvCmd.Source
 
 if ($null -eq (Get-Command deno -ErrorAction SilentlyContinue)) {
     Write-Host "`n[*] Installing Deno WASM Sandbox locally..." -ForegroundColor Cyan
     irm https://deno.land/install.ps1 | iex
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "User") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+    Refresh-EnvPath
+}
+
+$DenoCmd = Get-Command deno -ErrorAction SilentlyContinue
+if ($null -eq $DenoCmd) {
+    Write-Error "deno installation failed or could not be found in PATH. Please restart your terminal."
+    exit 1
 }
 
 & $UvBin venv
