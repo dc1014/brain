@@ -10,6 +10,7 @@ KEY_PATTERNS: Dict[str, str] = {
     "ANTHROPIC_API_KEY": r"^sk-ant-[a-zA-Z0-9_-]{95,}$",
     "GEMINI_API_KEY": r"^AIzaSy[a-zA-Z0-9_-]{33}$",
     "OPENROUTER_API_KEY": r"^sk-or-v1-[a-zA-Z0-9_-]{64}$",
+    "GATEWAY_API_KEY": r"^.+$",
 }
 
 

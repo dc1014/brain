@@ -141,7 +141,6 @@ def innervate_senses() -> dict:
     return features
 
 
-# --- 4. SYNAPSES (Cloud & Local LLMs) ---
 async def harvest_credentials() -> dict:
     console.print(
         Panel(
@@ -152,29 +151,51 @@ async def harvest_credentials() -> dict:
     )
     valid_keys = {}
 
-    providers = {
-        "OPENAI": {"prompt": "OpenAI API Key", "model": "openai/gpt-4o-mini"},
-        "ANTHROPIC": {
-            "prompt": "Anthropic API Key",
-            "model": "anthropic/claude-3-5-haiku-20241022",
-        },
-        "GEMINI": {
-            "prompt": "Google Gemini API Key",
-            "model": "gemini/gemini-2.5-flash",
-        },
-        "OPENROUTER": {
-            "prompt": "OpenRouter API Key",
-            "model": "openrouter/auto",
-        },
-    }
+    routing_choice = Prompt.ask(
+        "\n[?] Route safely through an AI Gateway/Broker, or provide raw provider keys? [Gateway / Raw]",
+        choices=["Raw", "Gateway", "raw", "gateway", "RAW", "GATEWAY"],
+        default="Raw",
+    ).lower()
 
-    for prov, data in providers.items():
-        key = Prompt.ask(f"[cyan]{data['prompt']}[/cyan]", password=True)
-        if key:
-            valid_keys[f"{prov}_API_KEY"] = key
+    if routing_choice == "gateway":
+        console.print(
+            "[dim]A custom broker intercepts traffic to providers like OpenAI or Anthropic.[/dim]"
+        )
+        gateway_url = Prompt.ask(
+            "[cyan]Gateway Base URL (e.g., Cloudflare/Portkey)[/cyan]"
+        )
+        if gateway_url:
+            valid_keys["GATEWAY_BASE_URL"] = gateway_url
+            gateway_key = Prompt.ask(
+                "[cyan]Gateway Proxy Token / API Key[/cyan]", password=True
+            )
+            if gateway_key:
+                valid_keys["GATEWAY_API_KEY"] = gateway_key
+    else:
+        # Original provider polling logic
+        providers = {
+            "OPENAI": {"prompt": "OpenAI API Key", "model": "openai/gpt-4o-mini"},
+            "ANTHROPIC": {
+                "prompt": "Anthropic API Key",
+                "model": "anthropic/claude-3-5-haiku-20241022",
+            },
+            "GEMINI": {
+                "prompt": "Google Gemini API Key",
+                "model": "gemini/gemini-2.5-flash",
+            },
+            "OPENROUTER": {
+                "prompt": "OpenRouter API Key",
+                "model": "openrouter/auto",
+            },
+        }
+
+        for prov, data in providers.items():
+            key = Prompt.ask(f"[cyan]{data['prompt']}[/cyan]", password=True)
+            if key:
+                valid_keys[f"{prov}_API_KEY"] = key
 
     brave_key = Prompt.ask(
-        "[cyan]Brave Search API Key (Required for web search tools)[/cyan]",
+        "\n[cyan]Brave Search API Key (Required for web search tools)[/cyan]",
         password=True,
     )
     if brave_key:

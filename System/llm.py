@@ -228,6 +228,10 @@ async def run_agent_async(
 
             routed_model, api_key = vault.resolve_routing(current_target_model)
 
+            gateway_url = vault.get_secret("GATEWAY_BASE_URL")
+            if gateway_url:
+                api_key = vault.get_secret("GATEWAY_API_KEY") or api_key
+
             completion_kwargs: Dict[str, Any] = {
                 "model": routed_model,
                 "messages": pruned_messages,
@@ -236,6 +240,9 @@ async def run_agent_async(
                 "max_tokens": mod_tokens,
                 "api_key": api_key,
             }
+
+            if gateway_url:
+                completion_kwargs["api_base"] = gateway_url
 
             if not tools:
                 completion_kwargs["response_format"] = AgentResponseSchema
@@ -398,12 +405,22 @@ async def compress_memory_buffer(current_text: str) -> str | None:
         model = (
             get_dna_config().get("models", {}).get("fast", "gemini/gemini-2.5-flash")
         )
-        response = await acompletion(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,
-            api_key=vault.get_api_key_for_model(model),
-        )
+        routed_model, api_key = vault.resolve_routing(model)
+
+        gateway_url = vault.get_secret("GATEWAY_BASE_URL")
+        if gateway_url:
+            api_key = vault.get_secret("GATEWAY_API_KEY") or api_key
+
+        kwargs = {
+            "model": routed_model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.0,
+            "api_key": api_key,
+        }
+        if gateway_url:
+            kwargs["api_base"] = gateway_url
+
+        response = await acompletion(**kwargs)
         return response.choices[0].message.content.strip()
     except Exception as e:
         console.print(f"[dim red]PFC Compression Failed: {e}[/dim red]")

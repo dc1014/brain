@@ -122,3 +122,20 @@ def test_secret_vault_resolve_routing_absolute_failsafe(mocker):
     model, key = vault.resolve_routing("openai/gpt-4o")
     assert model == "anthropic/claude-3-haiku-20240307"
     assert key == "claude-failsafe-secret"
+
+
+def test_vault_masks_gateway_proxy_tokens():
+    """Proves the efferent shield scrubs Gateway Proxy tokens from outbound logs."""
+    from System.neuroanatomy.systemic.immune_system import vault
+
+    # Temporarily inject a fake gateway token into the singleton vault
+    vault._secrets["GATEWAY_API_KEY"] = "super-secret-proxy-token"
+
+    raw_log = "The agent successfully connected using super-secret-proxy-token to the gateway."
+    scrubbed_log = vault.mask_secrets(raw_log)
+
+    assert "super-secret-proxy-token" not in scrubbed_log
+    assert "[GATEWAY_API_KEY_REDACTED]" in scrubbed_log
+
+    # Cleanup singleton state
+    del vault._secrets["GATEWAY_API_KEY"]

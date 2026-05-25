@@ -47,3 +47,22 @@ def test_verify_deno_sandbox(mocker):
 
     mocker.patch("System.core.onboarding.security.shutil.which", return_value=None)
     assert not verify_deno_sandbox()
+
+
+def test_is_valid_key_format_allows_gateways():
+    """Proves the validation regex permits custom Gateway API keys."""
+    from System.core.onboarding.security import is_valid_key_format
+
+    # Standard providers should still be strictly validated
+    assert (
+        is_valid_key_format(
+            "OPENAI", "sk-123456789012345678901234567890123456789012345678"
+        )
+        is True
+    )
+    assert is_valid_key_format("OPENAI", "invalid-key") is False
+
+    # Gateways use custom proprietary formats, so any non-empty string should pass
+    assert is_valid_key_format("GATEWAY", "cf-proxy-12345-token") is True
+    assert is_valid_key_format("GATEWAY", "portkey_1234") is True
+    assert is_valid_key_format("GATEWAY", "") is False

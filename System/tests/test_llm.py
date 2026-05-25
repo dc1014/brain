@@ -467,3 +467,66 @@ def test_amnesia_sliding_window_logic():
     assert "OLDER EXECUTIONS PRUNED" in pruned_context
     assert pruned_context.startswith("START_")
     assert pruned_context.endswith("END_")
+
+
+@pytest.mark.asyncio
+async def test_run_agent_async_gateway_routing_injection(mocker):
+    """
+    Zero-Debt Test: Proves that AI Gateway parameters (like Cloudflare/Portkey)
+    are successfully intercepted from the vault and passed natively to LiteLLM.
+    """
+    from System.llm import run_agent_async
+
+    # 1. Mock the Immune System Vault to simulate a configured API Gateway
+    def mock_get_secret(key):
+        secrets = {
+            "GATEWAY_BASE_URL": "https://gateway.ai.cloudflare.com/v1/mock/gateway/",
+            "GATEWAY_API_KEY": "proxy-token-123",
+        }
+        return secrets.get(key)
+
+    mocker.patch("System.llm.vault.get_secret", side_effect=mock_get_secret)
+    mocker.patch(
+        "System.llm.vault.resolve_routing",
+        return_value=("openai/gpt-4o", "ignored-native-key"),
+    )
+    mocker.patch("System.llm.log_interaction")
+
+    # 2. Mock LiteLLM acompletion to capture the exact kwargs being passed
+    mock_acompletion = mocker.patch("System.llm.acompletion")
+
+    mock_response = mocker.MagicMock()
+    mock_response.choices = [
+        mocker.MagicMock(
+            message=mocker.MagicMock(content="Gateway response", tool_calls=[])
+        )
+    ]
+    mock_response.usage = mocker.MagicMock(prompt_tokens=10, completion_tokens=10)
+    mock_acompletion.return_value = mock_response
+
+    # Prevent Motor Cortex side effects
+    mocker.patch(
+        "System.neuroanatomy.pathways.corpus_callosum.route_hemisphere",
+        side_effect=lambda r, m: m,
+    )
+    mocker.patch(
+        "System.llm.EndocrineSystem.get_humoral_vector",
+        return_value={"dopamine": 0.5, "cortisol": 0.0, "adrenaline": 0.0},
+    )
+
+    # 3. Execute
+    await run_agent_async(
+        role_name="test_agent",
+        model_string="gpt-4o",
+        system_prompt="sys",
+        user_prompt="usr",
+    )
+
+    # 4. Assert the Gateway overrides were successfully injected into kwargs
+    mock_acompletion.assert_called_once()
+    call_kwargs = mock_acompletion.call_args[1]
+
+    assert (
+        call_kwargs["api_base"] == "https://gateway.ai.cloudflare.com/v1/mock/gateway/"
+    )
+    assert call_kwargs["api_key"] == "proxy-token-123"

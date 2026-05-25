@@ -37,6 +37,7 @@ def scan_for_pathogens(content: str) -> tuple[bool, str]:
 # --- Replacing SecretVault inside System/neuroanatomy/systemic/immune_system.py ---
 
 
+# --- In System/neuroanatomy/systemic/immune_system.py ---
 class SecretVault:
     def __init__(self) -> None:
         self._secrets: Dict[str, str] = {}
@@ -45,8 +46,10 @@ class SecretVault:
             "OPENAI_API_KEY",
             "ANTHROPIC_API_KEY",
             "GEMINI_API_KEY",
-            "OPENROUTER_API_KEY",  # Universal API Aggregator Support
+            "OPENROUTER_API_KEY",
             "DEPLOYMENT_TOKEN",
+            "GATEWAY_BASE_URL",
+            "GATEWAY_API_KEY",
         ]
 
     def secure_environment(self) -> None:

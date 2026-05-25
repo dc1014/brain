@@ -45,6 +45,11 @@ To bypass native Windows script execution restrictions safely without modifying 
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
+### 🛡️ Enterprise API Gateways & Proxies
+CoreTex OS natively supports routing your LLM traffic through enterprise API Gateways (like **Cloudflare AI Gateway**, **Portkey**, or **Helicone**) to centralize observability, rate-limiting, and cost tracking.
+
+During the interactive `ctx setup` phase, simply select `[Gateway]` to provide your proxy URL and Gateway API Token. CoreTex will seamlessly inject the `api_base` into the execution stream, keeping your traffic monitored and secure.
+
 ---
 
 ## 🪐 The Deployment Pathways
