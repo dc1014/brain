@@ -47,7 +47,7 @@ def form_habit(name: str, command: str, interval_minutes: int) -> str:
     }
     _save_habits(habits)
     console.print(
-        f"[bold magenta]🧠 Basal Ganglia: Formed new habit '{name}' (every {interval_minutes}m)[/bold magenta]"
+        f"[bold magenta] Basal Ganglia: Formed new habit '{name}' (every {interval_minutes}m)[/bold magenta]"
     )
     return f"SUCCESS: Habit '{name}' formed."
 
@@ -84,11 +84,11 @@ def tick_habits() -> None:
 
             if delta.total_seconds() >= (data["interval_minutes"] * 60):
                 console.print(
-                    f"[dim magenta]🕰️ Basal Ganglia: Triggering habit '{name}'...[/dim magenta]"
+                    f"[dim magenta] Basal Ganglia: Triggering habit '{name}'...[/dim magenta]"
                 )
 
                 with open(log_file_path, "a", encoding="utf-8") as log_file:
-                    log_file.write(f"\n### 🕰️ Executed '{name}' at {now.isoformat()}\n")
+                    log_file.write(f"\n### Executed '{name}' at {now.isoformat()}\n")
                     log_file.write(f"**Command:** `{data['command']}`\n```text\n")
                     log_file.flush()
 
