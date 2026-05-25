@@ -1,0 +1,37 @@
+#!/bin/bash
+# ⚡ ZERO-DEBT: Unix Spinal Cord with Absolute Path Virtualization
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$DIR"
+
+# Check if the user built the Docker sandbox containment loop
+if command -v docker &> /dev/null && docker image inspect coretex-os &> /dev/null; then
+    # 🛡️ HARDENING: Explicitly calculate and export runtime environment variables.
+    export UID=$(id -u)
+    export GID=$(id -g)
+
+    # Natively build fallback directory to preserve host user ownership boundaries
+    export CORETEX_WORKSPACE_MOUNT="$(pwd)/Workspace"
+    mkdir -p "$CORETEX_WORKSPACE_MOUNT"
+
+    ARGS=()
+    for arg in "$@"; do
+        if [[ -e "$arg" ]]; then
+            ABS_PATH="$(cd "$(dirname "$arg")" && pwd)/$(basename "$arg")"
+            if [[ -d "$arg" ]]; then
+                export CORETEX_WORKSPACE_MOUNT="$ABS_PATH"
+                ARGS+=("/workspace")
+            else
+                # Virtualization Fix: Extract parent folder to mount, map file via sub-layer handle
+                export CORETEX_WORKSPACE_MOUNT="$(cd "$(dirname "$arg")" && pwd)"
+                ARGS+=("/workspace/$(basename "$arg")")
+            fi
+        else
+            ARGS+=("$arg")
+        fi
+    done
+
+    exec docker compose run --rm coretex "${ARGS[@]}"
+fi
+
+# Fallback route directly to the lightning-fast local virtual environment
+exec ./.venv/bin/python -m System.cli "$@"

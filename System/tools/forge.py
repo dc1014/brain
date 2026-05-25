@@ -42,7 +42,7 @@ def operate_forge(project_name: str, instruction: str) -> ExecutionResult:
             "\n[bold red]⚠️  SECURITY ALERT: FORGE OPERATION REQUESTED[/bold red]"
         )
         console.print(
-            f"[yellow]Brain OS wants to command Forge for project:[/yellow] '{project_name}'\n[yellow]Instruction:[/yellow] '{instruction}'"
+            f"[yellow]CoreTex OS wants to command Forge for project:[/yellow] '{project_name}'\n[yellow]Instruction:[/yellow] '{instruction}'"
         )
 
         if os.environ.get("BRAIN_OS_HEADLESS") == "1":

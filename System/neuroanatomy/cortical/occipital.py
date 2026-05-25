@@ -250,7 +250,7 @@ def perceive_webcam(query: str) -> str:
             "\n[bold red]⚠️  SECURITY ALERT: WEBCAM ACCESS REQUESTED[/bold red]"
         )
         console.print(
-            f"[yellow]Brain OS wants to look through your webcam to answer:[/yellow] '{query}'"
+            f"[yellow]CoreTex OS wants to look through your webcam to answer:[/yellow] '{query}'"
         )
         try:
             auth = input("Allow webcam access? [y/N]: ").strip().lower()
@@ -318,7 +318,7 @@ def memorize_user_appearance() -> str:
     if os.environ.get("BRAIN_OS_HEADLESS") != "1":
         console.print("\n[bold red]⚠️  SECURITY ALERT: PHYSICAL MEMORY HOOK[/bold red]")
         console.print(
-            "[yellow]Brain OS wants to take a photo of you and permanently save it to Media/user_reference.jpg.[/yellow]"
+            "[yellow]CoreTex OS wants to take a photo of you and permanently save it to Media/user_reference.jpg.[/yellow]"
         )
         try:
             auth = input("Allow permanent physical snapshot? [y/N]: ").strip().lower()
@@ -368,7 +368,7 @@ def record_user_video(duration_seconds: int = 5) -> str:
             "\n[bold red]⚠️  SECURITY ALERT: PHYSICAL TEMPORAL MEMORY HOOK[/bold red]"
         )
         console.print(
-            f"[yellow]Brain OS wants to record a {duration_seconds}s video of you and permanently save it to Media/user_video_reference.mp4.[/yellow]"
+            f"[yellow]CoreTex OS wants to record a {duration_seconds}s video of you and permanently save it to Media/user_video_reference.mp4.[/yellow]"
         )
         try:
             auth = (

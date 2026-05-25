@@ -1,27 +1,20 @@
 # --- System/tests/tools/test_wasm_containment.py ---
 import pytest
 import shutil
+import os
 from pathlib import Path
 from System.tools.sandbox import execute_in_sandbox
 
 
-@pytest.fixture(autouse=True)
-def align_windows_sandbox_paths(mocker, tmp_path):
-    """Zero-Debt Fix: Aligns execution path validators with Pytest's Windows Temp directory."""
-    safe_root = tmp_path.resolve()
-    mocker.patch("System.tools.sandbox.ROOT_DIR", safe_root)
-    mocker.patch(
-        "System.tools.sandbox.ALLOWED_DIRECTORIES", {safe_root, safe_root / "Studio"}
-    )
-    mocker.patch("System.tools.execution.ROOT_DIR", safe_root, create=True)
-
-
 @pytest.mark.asyncio
-async def test_python_wasm_environment_is_isolated_from_host(tmp_path: Path) -> None:
+async def test_python_wasm_environment_is_isolated_from_host(
+    tmp_path: Path, monkeypatch
+) -> None:
     """
     ZERO DEBT PROOF: Proves that Python code executed by the sandbox runs inside
     Pyodide/WASM and cannot access the host operating system's filesystem natively.
     """
+    monkeypatch.setenv("CORETEX_ENABLE_CODE_EXECUTION", "true")
     if not shutil.which("deno"):
         pytest.skip("Deno is required to run the WebAssembly isolation tests.")
 
@@ -30,8 +23,6 @@ async def test_python_wasm_environment_is_isolated_from_host(tmp_path: Path) -> 
 
     malicious_script = workspace / "attack.py"
 
-    # This script attempts to read the root directory of the machine.
-    # In native Python, this would list host files. In WASM, it sees the virtual Emscripten filesystem.
     malicious_script.write_text(
         "import os\n"
         "print('VIRTUAL_ROOT:', os.listdir('/'))\n"
@@ -51,12 +42,10 @@ async def test_python_wasm_environment_is_isolated_from_host(tmp_path: Path) -> 
     )
 
     assert res.success is True
-    # 1. Prove we are in the emscripten virtual filesystem (home, tmp, dev), NOT the host Windows/Mac root
     assert "VIRTUAL_ROOT:" in res.output
     assert "dev" in res.output
     assert "home" in res.output
 
-    # 2. Prove subprocess usage is entirely blocked by the WASM architecture
     assert (
         "BLOCKED: NotImplementedError" in res.output or "BLOCKED: OSError" in res.output
     )
@@ -65,10 +54,10 @@ async def test_python_wasm_environment_is_isolated_from_host(tmp_path: Path) -> 
 @pytest.mark.asyncio
 async def test_sandbox_fails_closed_without_deno(tmp_path: Path, monkeypatch) -> None:
     """Proves the system refuses to run untrusted code if the Deno sandbox is missing."""
+    monkeypatch.setenv("CORETEX_ENABLE_CODE_EXECUTION", "true")
     workspace = tmp_path / "Studio"
     workspace.mkdir(parents=True)
 
-    # Force shutil.which to pretend Deno isn't installed
     monkeypatch.setattr("shutil.which", lambda x: None)
 
     res = await execute_in_sandbox(
@@ -90,7 +79,6 @@ async def test_os_level_network_guillotine(tmp_path: Path):
     🛡️ ZERO-DEBT TEST: Proves that the Deno --allow-net=none flag physically
     prevents the WebAssembly environment from opening network sockets.
     """
-    # ⚡ FIXED: Create an allowed "Studio" directory so the containment matrix allows execution
     workspace = tmp_path / "Studio"
     workspace.mkdir(parents=True, exist_ok=True)
 
@@ -103,25 +91,21 @@ except Exception as e:
     print(f"[SECURE] Network blocked at OS level: {e}")
 """
 
-    import os
-
-    os.environ["BRAIN_ENABLE_CODE_EXECUTION"] = "true"
+    os.environ["CORETEX_ENABLE_CODE_EXECUTION"] = "true"
 
     command = ["-c", malicious_script]
 
     result = await execute_in_sandbox(
         command=command,
-        workspace_path=workspace,  # ⚡ Pass the safe workspace here
+        workspace_path=workspace,
         env_secrets={},
         route="CODE_GENERATION",
     )
 
-    # 1. Verify the container did not crash completely
     assert result.success is True, (
         f"Sandbox crashed unexpectedly. Reason: {result.block_reason}"
     )
 
-    # 2. Verify the OS flag successfully blocked the socket
     assert "[FATAL_BREACH]" not in result.output, (
         "CRITICAL: The sandbox reached the internet!"
     )

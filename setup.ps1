@@ -1,81 +1,94 @@
 # --- setup.ps1 ---
 $ErrorActionPreference = "Stop"
 
-Write-Host "`n██████╗ ██████╗  █████╗ ██╗███╗   ██╗" -ForegroundColor Cyan
-Write-Host "██╔══██╗██╔══██╗██╔══██╗██║████╗  ██║" -ForegroundColor Cyan
-Write-Host "██████╔╝██████╔╝███████║██║██╔██╗ ██║" -ForegroundColor Cyan
-Write-Host "██╔══██╗██╔══██╗██╔══██║██║██║╚██╗██║" -ForegroundColor Cyan
-Write-Host "██████╔╝██║  ██║██║  ██║██║██║ ╚████║" -ForegroundColor Cyan
-Write-Host "╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝" -ForegroundColor Cyan
-Write-Host "Biomimetic Agentic OS // Initialization Probe`n" -ForegroundColor DarkGray
+Clear-Host
+Write-Host " ██████╗ ██████╗ ██████╗ ███████╗████████╗███████╗██╗  ██╗" -ForegroundColor Cyan
+Write-Host "██╔════╝██╔═══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝╚██╗██╔╝" -ForegroundColor Cyan
+Write-Host "██║     ██║   ██║██████╔╝█████╗     ██║   █████╗   ╚███╔╝ " -ForegroundColor Cyan
+Write-Host "██║     ██║   ██║██╔══██╗██╔══╝     ██║   ██╔══╝   ██╔██╗ " -ForegroundColor Cyan
+Write-Host "╚██████╗╚██████╔╝██║  ██║███████╗   ██║   ███████╗██╔╝ ██╗" -ForegroundColor Cyan
+Write-Host " ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚═╝" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Biomimetic Agentic OS // Initialization Probe" -ForegroundColor DarkGray
+Write-Host ""
 
-# 1. Probe for Ollama
-$ollamaRunning = $false
+# 1. Probe for Air-Gapped AI (Ollama)
 try {
-    $response = Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -Method Get -ErrorAction SilentlyContinue
-    $ollamaRunning = $true
-    Write-Host "🧠 Local Ollama Engine Detected. Air-gapped execution is available.`n" -ForegroundColor Green
+    $OllamaCheck = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
+    if ($OllamaCheck.StatusCode -eq 200) {
+        Write-Host "🧠 Local Ollama Engine Detected. Air-gapped execution is available." -ForegroundColor Green
+    } else {
+        Write-Host "☁️  No local Ollama detected. Cloud LLM keys will be required." -ForegroundColor Yellow
+    }
 } catch {
-    Write-Host "☁️ No local Ollama detected. Cloud LLM keys will be required.`n" -ForegroundColor Yellow
+    Write-Host "☁️  No local Ollama detected. Cloud LLM keys will be required." -ForegroundColor Yellow
 }
+Write-Host ""
 
 # 2. Probe for Docker
-$dockerAvailable = $false
-if (Get-Command "docker" -ErrorAction SilentlyContinue) {
-    $dockerAvailable = $true
-}
+$DockerAvailable = $null -ne (Get-Command docker -ErrorAction SilentlyContinue)
 
 # 3. Environment Selection
 Write-Host "Select your preferred deployment architecture:" -ForegroundColor White
 Write-Host "  [1] Pure Local (Requires 'uv' and Python 3.12+)"
-if ($dockerAvailable) {
+if ($DockerAvailable) {
     Write-Host "  [2] Isolated Container (Requires Docker - ZERO host dependencies)"
 } else {
-    Write-Host "  [2] Isolated Container (UNAVAILABLE - Docker not found)" -ForegroundColor DarkGray
+    Write-Host "  [2] Isolated Container (UNAVAILABLE - Docker not found)" -ForegroundColor Gray
 }
 
-$deployChoice = Read-Host "Enter choice [1]"
-if ([string]::IsNullOrWhiteSpace($deployChoice)) { $deployChoice = "1" }
+$AutoInstall = $false
+if ($env:CORETEX_HEADLESS -eq "1") {
+    $AutoInstall = $true
+    $DeployChoice = "1"
+} else {
+    $DeployChoice = Read-Host "Enter choice [1]"
+    if ([string]::IsNullOrEmpty($DeployChoice)) { $DeployChoice = "1" }
+}
 
-if ($deployChoice -eq "2" -and $dockerAvailable) {
+if ($DeployChoice -eq "2" -and $DockerAvailable) {
     Write-Host "`n🐳 Building Isolated Docker Sandbox..." -ForegroundColor Cyan
     docker compose build
     Write-Host "`n✅ Build complete." -ForegroundColor Green
-    Write-Host "To run Brain OS in the container, use the wrapper script: .\brain.bat"
+    Write-Host "To run CoreTex OS in the container, use the wrapper script: .\ctx.bat"
     exit
 }
 
 # 4. Pure Local Setup
 Write-Host "`n⚡ Initializing Pure Local Environment..." -ForegroundColor Cyan
-if (-not (Get-Command "uv" -ErrorAction SilentlyContinue)) {
-    $installUv = Read-Host "The 'uv' package manager is missing. Install it? (y/n) [y]"
-    if ([string]::IsNullOrWhiteSpace($installUv)) { $installUv = "y" }
 
-    if ($installUv -match "^[yY]") {
-        Invoke-WebRequest -Uri "https://astral.sh/uv/install.ps1" -OutFile "install_uv.ps1"
-        powershell -ExecutionPolicy ByPass -File "install_uv.ps1"
-        Remove-Item "install_uv.ps1"
-        $env:Path += ";$HOME\.cargo\bin"
-        [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";$HOME\.cargo\bin", "User")
+# Check for UV Package Manager
+if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
+    if ($AutoInstall) {
+        Write-Host "Installing 'uv' automatically in headless mode..." -ForegroundColor Cyan
+        Invoke-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+        irm https://astral.sh/uv/install.ps1 | iex
     } else {
-        Write-Host "Aborting. 'uv' is required for local installation." -ForegroundColor Red
-        exit
+        $InstallUV = Read-Host "The 'uv' package manager is missing. Install it? (y/n) [y]"
+        if ([string]::IsNullOrEmpty($InstallUV)) { $InstallUV = "y" }
+        if ($InstallUV -match "^[Yy]$") {
+            irm https://astral.sh/uv/install.ps1 | iex
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "User") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+        } else {
+            Write-Error "Aborting. 'uv' is required for local installation."
+            exit 1
+        }
     }
 }
 
-# 🛡️ Fix Blocker 3: Auto-install Deno on Windows for local execution compliance
-if (-not (Get-Command "deno" -ErrorAction SilentlyContinue)) {
+# Ensure Deno is installed locally for the WebAssembly sandbox environment
+if ($null -eq (Get-Command deno -ErrorAction SilentlyContinue)) {
     Write-Host "`n🦕 Installing Deno WASM Sandbox locally..." -ForegroundColor Cyan
     irm https://deno.land/install.ps1 | iex
-    $env:Path += ";$HOME\.deno\bin"
-    [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";$HOME\.deno\bin", "User")
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "User") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "Machine")
 }
 
+# Execute Environment Synchronization
 uv venv
 uv pip install -e .
 uv pip install -e ./Sense
 
 Write-Host "`n✅ Local environment synchronized." -ForegroundColor Green
-Write-Host "🛑 IMPORTANT: Restart your PowerShell console window to reload updated environment variables." -ForegroundColor Yellow
-Write-Host "Booting Synaptic Genesis...`n"
-uv run python main.py setup
+Write-Host "Booting Synaptic Genesis...`n" -ForegroundColor Cyan
+
+uv run python -m System.cli setup

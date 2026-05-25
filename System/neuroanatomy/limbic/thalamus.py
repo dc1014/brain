@@ -39,7 +39,7 @@ def filter_attention(prompt: str, raw_memory: str) -> str:
     except Exception:
         model = "gpt-4o-mini"
 
-    system_prompt = """You are the Thalamus of Brain OS.
+    system_prompt = """You are the Thalamus of CoreTex OS.
 Your job is to filter the long-term memory (Neocortex) and extract ONLY the exact bullet points, facts, and context highly relevant to the User's current task.
 Do NOT rewrite the memory. Do NOT answer the prompt.
 Just output the exact lines from the memory that are relevant.

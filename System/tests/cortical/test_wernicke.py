@@ -99,7 +99,7 @@ def test_transcribe_speech(mocker, tmp_path):
     # FIX: Patch litellm directly
     mock_transcription = mocker.patch("litellm.transcription")
     mock_response = MagicMock()
-    mock_response.text = "Hello, Brain OS."
+    mock_response.text = "Hello, CoreTex OS."
     mock_transcription.return_value = mock_response
 
     # 🛡️ SHIFT-LEFT FIX: Grant the test security clearance to the Vault
@@ -110,4 +110,4 @@ def test_transcribe_speech(mocker, tmp_path):
 
     result = transcribe_speech(str(fake_audio))
 
-    assert result == "Hello, Brain OS."
+    assert result == "Hello, CoreTex OS."

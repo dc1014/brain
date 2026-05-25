@@ -390,7 +390,7 @@ async def _compact_heavy_memory(filepath: str, content: str) -> bool:
     console.print(f"[dim blue]🧠 Compacting heavy memory: {filepath}...[/dim blue]")
 
     prompt = (
-        "You are the internal Semantic Compactor for Brain OS. "
+        "You are the internal Semantic Compactor for CoreTex OS. "
         "Your job is to protect the execution agent's context window. "
         "Read the following file content and generate a highly compressed, 2-3 sentence technical summary. "
         "Focus purely on architectural purpose, core functions, and state. Do not use filler words.\n\n"
@@ -462,7 +462,7 @@ async def _extract_and_update_beliefs() -> None:
         current_beliefs = BELIEFS_FILE_PATH.read_text(encoding="utf-8")
 
     prompt = (
-        "You are the Belief Consolidator for Brain OS.\n"
+        "You are the Belief Consolidator for CoreTex OS.\n"
         "Analyze the following recent interactions and extract any PERSISTENT user preferences, "
         "architectural rules, or long-term facts (e.g., 'The user prefers TypeScript', 'The project uses FastAPI').\n"
         "Merge any new findings with the CURRENT BELIEFS. Discard redundant information.\n"
@@ -556,7 +556,7 @@ async def _encode_short_term_memory() -> None:
 
         memory_payload = "\n".join(events)
         prompt = (
-            f"You are the Hippocampus of Brain OS. Summarize the following recent agent interactions for the {domain} domain into a brief, "
+            f"You are the Hippocampus of CoreTex OS. Summarize the following recent agent interactions for the {domain} domain into a brief, "
             "bulleted list of completed tasks, architectural changes, or context. Focus purely on technical facts.\n\n"
             f"RAW LOGS:\n{memory_payload}"
         )

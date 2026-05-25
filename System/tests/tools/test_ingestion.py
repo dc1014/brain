@@ -6,7 +6,7 @@ from System.tools.ingestion import KnowledgeIngestor
 
 @pytest.fixture
 def temp_workspace(tmp_path):
-    """Generates a sandboxed workspace layout imitating Brain OS path bounds."""
+    """Generates a sandboxed workspace layout imitating CoreTex OS path bounds."""
     root = tmp_path / "brain"
     root.mkdir()
     (root / "System" / "logs").mkdir(parents=True, exist_ok=True)

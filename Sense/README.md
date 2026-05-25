@@ -1,6 +1,6 @@
 ## 👁️ The Sensory Nervous System (`Sense`)
 
-Brain OS implements the UNIX philosophy via a completely decoupled transducer system called **`Sense`**.
+CoreTex OS implements the UNIX philosophy via a completely decoupled transducer system called **`Sense`**.
 
 In biology, the brain does not process raw photons; the retina transduces them into action potentials. Similarly, LLMs should not read raw HTML or massive Git trees. `Sense` fetches external stimuli (websites, repos, PDFs), strips the noise, and transduces them into strictly formatted XML "Action Potentials" that ensure zero context bloat.
 

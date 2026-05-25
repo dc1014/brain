@@ -1,8 +1,8 @@
 # 👁️ Obsidian Vault Integration & Cognitive View Layer Protocol
 
-In Brain OS, Obsidian is not treated as a passive markdown notepad. It functions as the system's **Visual Cortex and Somatosensory Layer**—an open, human-readable view engine that mirrors the absolute state of your core operational domains (`Meta`, `Studio`, `Personal`, `Professional`) in real time using a transparent, flat-file layout.
+In CoreTex OS, Obsidian is not treated as a passive markdown notepad. It functions as the system's **Visual Cortex and Somatosensory Layer**—an open, human-readable view engine that mirrors the absolute state of your core operational domains (`Meta`, `Studio`, `Personal`, `Professional`) in real time using a transparent, flat-file layout.
 
-By connecting Obsidian directly to underlying background daemons, Brain OS replaces slow, opaque vector chunks and bloated multi-agent prompt histories with a high-fidelity workspace where humans and autonomous agent swarms collaborate cleanly.
+By connecting Obsidian directly to underlying background daemons, CoreTex OS replaces slow, opaque vector chunks and bloated multi-agent prompt histories with a high-fidelity workspace where humans and autonomous agent swarms collaborate cleanly.
 
 ---
 
@@ -24,12 +24,12 @@ The structural notes, safety queues, and memory maps within the vault interact d
 
 ## 🛠️ 2. Setup & Onboarding: Importing the Vault Membrane
 
-Because Brain OS tracks your filesystem using a unified Unix philosophy, your software engineering repositories, technical documents, and markdown notes live within the same folder structure. There is no opaque database or external cloud storage layer to sync.
+Because CoreTex OS tracks your filesystem using a unified Unix philosophy, your software engineering repositories, technical documents, and markdown notes live within the same folder structure. There is no opaque database or external cloud storage layer to sync.
 
 ### Step 1: Initialize the Workspace Directory
 
 1. Open Obsidian and select **"Open folder as vault"**.
-2. Navigate to and select the absolute **root folder** of your cloned Brain OS repository.
+2. Navigate to and select the absolute **root folder** of your cloned CoreTex OS repository.
 3. Open your system terminal at the repository root and initiate the interactive Synaptic Genesis onboarding wizard using the `uv` toolchain:
 ```bash
 uv run System/cli.py setup
@@ -63,13 +63,13 @@ uv run System/cli.py approve
 
 ---
 
-## 🔬 3. Neurological Supercharging: How Brain OS Optimizes Obsidian
+## 🔬 3. Neurological Supercharging: How CoreTex OS Optimizes Obsidian
 
-Standard markdown notes frameworks slow down as they grow, flood LLM context prompts with loose formatting noise, trigger database index freezing, or accumulate dead wiki-links. Brain OS deploys specialized neuroanatomy modules that constantly clean, filter, protect, and optimize your Obsidian data paths autonomously.
+Standard markdown notes frameworks slow down as they grow, flood LLM context prompts with loose formatting noise, trigger database index freezing, or accumulate dead wiki-links. CoreTex OS deploys specialized neuroanatomy modules that constantly clean, filter, protect, and optimize your Obsidian data paths autonomously.
 
 ### Zero-Token Static Decay Detection (The Olfactory Bulb)
 
-Over time, massive note networks naturally develop broken formatting targets, empty placeholder documents, and dead relational link connections. Brain OS addresses this type of technical debt at **$0.00 in API token costs** using the Olfactory engine.
+Over time, massive note networks naturally develop broken formatting targets, empty placeholder documents, and dead relational link connections. CoreTex OS addresses this type of technical debt at **$0.00 in API token costs** using the Olfactory engine.
 
 * When you invoke a repository check via the command line:
 ```bash
@@ -85,12 +85,12 @@ uv run Sense/cli.py smell "Personal"
 
 If a sub-agent enters a logic loop or encounters a file code exception, it risks writing corrupt notes or duplicate references into your vault, breaking file indexing performance.
 
-* Brain OS prevents this via the **Anterior Cingulate Cortex** tracking layer. Before graph updates can write to disk, `supervised_rebuild` prompts the ACC to check the active context history ledger.
+* CoreTex OS prevents this via the **Anterior Cingulate Cortex** tracking layer. Before graph updates can write to disk, `supervised_rebuild` prompts the ACC to check the active context history ledger.
 * If consecutive tool failures or repeating tool traces are caught, the ACC triggers a structural circuit breaker, halting the transaction instantly to keep the knowledge graph (`.brain/graph_state.json`) pure and unpolluted until the runtime error is fixed.
 
 ### Vectorless, Graph-Boosted Search (Wernicke's Area)
 
-Opaque binary vector databases are completely banned from Brain OS. They are slow, resource-heavy, and hide processing states from human evaluation. Instead, **Wernicke’s Area** operates as a high-speed, local "LLM-as-a-Judge" search reranker.
+Opaque binary vector databases are completely banned from CoreTex OS. They are slow, resource-heavy, and hide processing states from human evaluation. Instead, **Wernicke’s Area** operates as a high-speed, local "LLM-as-a-Judge" search reranker.
 
 * Search requests check broad text relevance via a fast local SQLite FTS5 database full-text virtual table index.
 * Wernicke then cross-references these matches with `.brain/graph_state.json` to calculate document connection density. High-density associative links receive a relevance score boost, extracting targeted context snippets while stripping layout noise and saving premium token bandwidth.
@@ -99,7 +99,7 @@ Opaque binary vector databases are completely banned from Brain OS. They are slo
 
 Standard multi-agent frameworks often pass raw log data and complete history strings directly to the prompt context. This triggers token bloat, increases operational costs, and degrades agent reasoning precision.
 
-* Brain OS mitigates context explosion using the Prefrontal Cortex framework's **Working Memory Compressor**. The volatile buffer tracks its active character footprint against a strict cap:
+* CoreTex OS mitigates context explosion using the Prefrontal Cortex framework's **Working Memory Compressor**. The volatile buffer tracks its active character footprint against a strict cap:
 ```python
 self.compression_threshold_chars = 12000
 

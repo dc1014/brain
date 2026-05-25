@@ -56,7 +56,7 @@ async def test_brain_end_to_end_motor_loop_smoke(mocker, tmp_path) -> None:
     )
 
     # 5. EXECUTE THE COMPLETE CONTROL PLANE LOOP
-    # This fires up the exact pipelines users hit when running `./brain task "..."`
+    # This fires up the exact pipelines users hit when running `./ctx task "..."`
     await dispatch_task("Verify system integrity and initialize launch logs.")
 
     # 6. ARCHITECTURAL ASSERTIONS (The Eval Verification)

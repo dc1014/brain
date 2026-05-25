@@ -2,7 +2,7 @@
 
 Most autonomous agent architectures communicate with the external world using basic, unmanaged scraper utilities or raw file input dumps. This approach often floods the Large Language Model with noisy layout markups, causing rapid token bloating and reasoning degradation.
 
-Brain OS resolves this challenge through **`Sense`**—a completely decoupled, peripheral transducer system modeled directly after biological sensory organs.
+CoreTex OS resolves this challenge through **`Sense`**—a completely decoupled, peripheral transducer system modeled directly after biological sensory organs.
 
 In biological systems, the brain does not process raw photons; the retina transduces them into electrical action potentials. Following this principle, `Sense` operates as an independent workspace pipeline package. It captures external raw stimuli (websites, media feeds, audio streams, network pulses), filters out structural noise, and compresses them into tightly formatted representations ready for cortical attention.
 
@@ -113,7 +113,7 @@ The auditory module interfaces directly with host machine audio devices through 
 
 #### Implementation Mechanics
 
-The `ExoReceptor` gateway allows Brain OS to interact securely with other independent brain nodes or external agent frameworks (like OpenClaw or Hermes). It sets up two concurrent, asynchronous communication loops:
+The `ExoReceptor` gateway allows CoreTex OS to interact securely with other independent brain nodes or external agent frameworks (like OpenClaw or Hermes). It sets up two concurrent, asynchronous communication loops:
 
 1. **The Hormonal Path (REST/HTTP):** Listens for webhooks (`/acp/pulse`) on port `8765` using an aiohttp web server.
 2. **The Electrical Path (MCP/TCP):** Listens for fast, low-overhead socket connections on port `8766` via `asyncio.start_server`.

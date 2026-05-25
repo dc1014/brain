@@ -41,12 +41,10 @@ def task(
             "[dim cyan]🧠 Thalamus is analyzing the pending task...[/dim cyan]"
         )
         try:
-            # Use _ to explicitly discard the unused first tuple element
             _, reason, calc_route, calc_domain, _ = asyncio.run(
                 route_sensory_input(description)
             )
         except Exception as e:
-            # Removed is_valid entirely from the fallback assignment
             reason, calc_route, calc_domain = (
                 f"Analysis bypassed: {e}",
                 route,
@@ -102,7 +100,6 @@ def daydream(
     """🌌 Activates the Default Mode Network to process thoughts and generate strategic insights."""
     from System.neuroanatomy.autonomic.dmn import trigger_daydreams
 
-    # Catch the final execution status engram trace
     result = trigger_daydreams(topic=topic, domain=domain)
     console.print(f"[bold cyan]✨ {result}[/bold cyan]")
 
@@ -128,7 +125,7 @@ def evolve():
     asyncio.run(
         execute_pipeline(
             "Analyze the codebase and suggest evolutionary structural improvements.",
-            "CODE_GENERATION",  # Converted from FORGE
+            "CODE_GENERATION",
             "STUDIO",
         )
     )
@@ -141,7 +138,8 @@ def forage(
     ),
 ):
     """Information foraging and web scraping for a specific topic."""
-    os.environ["BRAIN_OS_HEADLESS"] = "1"
+    # FIX: Rebranded system headless configuration parameters to match CoreTex daemon rules
+    os.environ["CORETEX_HEADLESS"] = "1"
     console.print(f"[green]🌿 Foraging for information on:[/green] {topic} in {domain}")
     asyncio.run(
         execute_pipeline(

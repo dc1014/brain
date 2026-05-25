@@ -5,28 +5,17 @@ from pathlib import Path
 from System.tools.sandbox import execute_in_sandbox
 
 
-# Paste this near the top of the 3 files listed above!
-@pytest.fixture(autouse=True)
-def align_windows_sandbox_paths(mocker, tmp_path):
-    """Zero-Debt Fix: Aligns execution path validators with Pytest's Windows Temp directory."""
-    safe_root = tmp_path.resolve()
-    mocker.patch("System.tools.sandbox.ROOT_DIR", safe_root)
-    mocker.patch(
-        "System.tools.sandbox.ALLOWED_DIRECTORIES", {safe_root, safe_root / "Studio"}
-    )
-    mocker.patch("System.tools.execution.ROOT_DIR", safe_root, create=True)
-
-
 @pytest.fixture
 def secure_workspace(tmp_path: Path) -> Path:
-    workspace = tmp_path.resolve() / "Studio"
+    workspace = tmp_path / "Studio"
     workspace.mkdir(parents=True, exist_ok=True)
     return workspace
 
 
 @pytest.mark.asyncio
-async def test_ffi_lobotomy_escape(secure_workspace: Path) -> None:
+async def test_ffi_lobotomy_escape(secure_workspace: Path, monkeypatch) -> None:
     """DEFCON PROOF: Verifies the Python-to-JS bridge is mathematically blackholed."""
+    monkeypatch.setenv("CORETEX_ENABLE_CODE_EXECUTION", "true")
 
     malicious_script = secure_workspace / "escape.py"
     malicious_script.write_text(
@@ -48,15 +37,17 @@ async def test_ffi_lobotomy_escape(secure_workspace: Path) -> None:
     )
 
     assert result.success is True
-    # Verify the native bridges are physically None and raise exceptions
     assert "JS Module: None" in result.output
     assert "Pyodide JS: None" in result.output
     assert "ImportError: ModuleNotFoundError" in result.output
 
 
 @pytest.mark.asyncio
-async def test_pipe_bomb_stream_guillotine(secure_workspace: Path, mocker) -> None:
+async def test_pipe_bomb_stream_guillotine(
+    secure_workspace: Path, mocker, monkeypatch
+) -> None:
     """DEFCON PROOF: Verifies the 5MB output stream accumulator violently severs memory flood attacks."""
+    monkeypatch.setenv("CORETEX_ENABLE_CODE_EXECUTION", "true")
 
     malicious_script = secure_workspace / "pipebomb.py"
     malicious_script.write_text(
@@ -66,7 +57,6 @@ async def test_pipe_bomb_stream_guillotine(secure_workspace: Path, mocker) -> No
         encoding="utf-8",
     )
 
-    # We patch the MAX_BYTES in sandbox to a smaller threshold (50KB) for a fast unit test
     mocker.patch("System.tools.sandbox.MAX_BYTES", 50 * 1024)
 
     result = await execute_in_sandbox(
@@ -76,23 +66,24 @@ async def test_pipe_bomb_stream_guillotine(secure_workspace: Path, mocker) -> No
         route="CODE_GENERATION",
     )
 
-    # The orchestrator MUST terminate the process and inject the security warning
     assert result.success is False
     assert "CRITICAL SECURITY BLOCK: WASM Output Stream Exceeded" in result.output
     assert "Pipe Bomb Prevented" in result.output
 
 
 @pytest.mark.asyncio
-async def test_storage_bomb_guillotine(secure_workspace: Path, mocker) -> None:
+async def test_storage_bomb_guillotine(
+    secure_workspace: Path, mocker, monkeypatch
+) -> None:
     """DEFCON PROOF: Verifies the asynchronous storage monitor kills disk inflation attacks."""
+    monkeypatch.setenv("CORETEX_ENABLE_CODE_EXECUTION", "true")
 
     malicious_script = secure_workspace / "storage_bomb.py"
     malicious_script.write_text("import time\ntime.sleep(5)\n", encoding="utf-8")
 
-    # Mock the directory size calculator to simulate an instant 200MB disk write inflation
     mocker.patch(
         "System.tools.sandbox._get_directory_size",
-        side_effect=[0, 200 * 1024 * 1024],  # Starts at 0, instantly inflates to 200MB
+        side_effect=[0, 200 * 1024 * 1024],
     )
 
     result = await execute_in_sandbox(
@@ -108,11 +99,10 @@ async def test_storage_bomb_guillotine(secure_workspace: Path, mocker) -> None:
 
 @pytest.mark.asyncio
 async def test_missing_deno_runtime_triggers_guillotine(
-    secure_workspace: Path, mocker
+    secure_workspace: Path, mocker, monkeypatch
 ) -> None:
     """DEFCON PROOF: Verifies that the sandbox safely aborts if the Deno runtime is missing from the host."""
-
-    # Mock shutil.which to simulate an environment where Deno is not installed
+    monkeypatch.setenv("CORETEX_ENABLE_CODE_EXECUTION", "true")
     mocker.patch("System.tools.sandbox.shutil.which", return_value=None)
 
     malicious_script = secure_workspace / "ghost_script.py"
@@ -135,16 +125,14 @@ async def test_missing_deno_runtime_triggers_guillotine(
 @pytest.mark.asyncio
 async def test_sandbox_safe_by_default_blocks_execution(mocker, tmp_path: Path) -> None:
     """Proves the system rejects code execution when the global opt-in flag is missing."""
-    # Ensure the environment variable is explicitly removed for this test
     mocker.patch.dict(os.environ, clear=True)
-    # Bypass the directory check so we strictly test the Opt-In gate
     mocker.patch("System.tools.sandbox.is_safe_path", return_value=True)
 
     res = await execute_in_sandbox(
         command="npm install",
         workspace_path=tmp_path,
         env_secrets={},
-        route="CODE_GENERATION",  # A route that REQUIRES_CONTAINMENT
+        route="CODE_GENERATION",
     )
 
     assert not res.success
@@ -157,21 +145,16 @@ async def test_sandbox_safe_by_default_blocks_execution(mocker, tmp_path: Path) 
 @pytest.mark.asyncio
 async def test_sandbox_allows_execution_when_opted_in(mocker, tmp_path: Path) -> None:
     """Proves the system allows WASM containment execution when the user explicitly opts in."""
-    # Simulate a user opting in via environment variables
-    mocker.patch.dict(os.environ, {"BRAIN_ENABLE_CODE_EXECUTION": "true"})
+    mocker.patch.dict(os.environ, {"CORETEX_ENABLE_CODE_EXECUTION": "true"})
 
-    # Bypass directory and Deno installation checks for the unit test
     mocker.patch("System.tools.sandbox.is_safe_path", return_value=True)
     mocker.patch("System.tools.sandbox.shutil.which", return_value="/usr/bin/deno")
 
-    # Mock the new Deno Pre-warmed Worker pool
     mock_proc = mocker.AsyncMock()
     mock_proc.returncode = 0
     mock_proc.stdout.read = mocker.AsyncMock(
         side_effect=[b"Executed cleanly.[__EXECUTION_COMPLETE__]", b""]
     )
-
-    # Explicitly mock these as synchronous to prevent "never awaited" warnings
     mock_proc.stdin.write = mocker.MagicMock()
     mock_proc.stdin.close = mocker.MagicMock()
     mock_proc.kill = mocker.MagicMock()
@@ -179,7 +162,6 @@ async def test_sandbox_allows_execution_when_opted_in(mocker, tmp_path: Path) ->
     mocker.patch("System.tools.sandbox.get_pre_warmed_worker", return_value=mock_proc)
     mocker.patch("System.tools.sandbox.replenish_worker_pool_detached")
 
-    # Mock the transducer to bypass sensory parsing logic in testing
     mock_transducer = mocker.patch(
         "System.neuroanatomy.sensory.somatosensory.SensoryTransducer"
     )

@@ -155,7 +155,7 @@ def map_system_topology(format_type: str) -> str:
         # 5. Format and Export to Pristine Markdown File Sequentially
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         markdown_lines = [
-            "# Brain OS Dynamic Neuroanatomy Topology Map",
+            "# CoreTex OS Dynamic Neuroanatomy Topology Map",
             f"*Generated dynamically via AST Explorer on: {timestamp}*",
             "",
             "## System Interconnections Reference",

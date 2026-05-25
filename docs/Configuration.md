@@ -1,6 +1,6 @@
 # ⚙️ Configuration & Customization Blueprint: Tuning the Cognitive Matrix
 
-Brain OS isolates its cognitive behavior, model mapping, and background loops entirely from its Python execution code. Everything is controlled through declarative YAML files located within the **`System/config/`** directory.
+CoreTex OS isolates its cognitive behavior, model mapping, and background loops entirely from its Python execution code. Everything is controlled through declarative YAML files located within the **`System/config/`** directory.
 
 By altering these files, developers can swap model endpoints, adjust sub-agent personas, customize file routing permissions, and calibrate behavioral sensitivities without touching a single line of application source code.
 
@@ -57,7 +57,7 @@ By altering these files, developers can swap model endpoints, adjust sub-agent p
 
 ### Mapping Providers & Aliases (`System/config/models.yaml`)
 
-The `models.yaml` configuration defines the model endpoints used throughout the operating system. Brain OS uses LiteLLM under the hood, natively supporting over 100 commercial cloud and local model providers (including OpenAI, Anthropic, Google Gemini, OpenRouter, and local Ollama frameworks).
+The `models.yaml` configuration defines the model endpoints used throughout the operating system. CoreTex OS uses LiteLLM under the hood, natively supporting over 100 commercial cloud and local model providers (including OpenAI, Anthropic, Google Gemini, OpenRouter, and local Ollama frameworks).
 
 ```yaml
 # --- System/config/models.yaml ---
@@ -88,7 +88,7 @@ agents:
     system_prompt: |
       <system_instructions>
       <persona>
-      You are the Brain OS Thalamus. Your ONLY job is to validate and route user tasks.
+      You are the CoreTex OS Thalamus. Your ONLY job is to validate and route user tasks.
       </persona>
       <execution_protocol>
       <step number="1">Evaluate systemic capabilities...</step>

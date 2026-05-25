@@ -34,7 +34,7 @@ async def trigger_immune_response_async(
     while current_attempt < max_retries:
         current_attempt += 1
 
-        prompt = f"""You are the Microglia (Immune System) for Brain OS.
+        prompt = f"""You are the Microglia (Immune System) for CoreTex OS.
 A shell command failed. Analyze the error and provide EXACTLY ONE shell command to fix it.
 DO NOT provide markdown, explanations, or any other text. JUST the raw command.
 Failed Command: `{failed_cmd}`

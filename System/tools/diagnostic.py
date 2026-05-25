@@ -11,7 +11,7 @@ console = Console()
 def get_system_vitals() -> Panel:
     """
     INTEROCEPTION: Compiles real-time structural, immune, and metabolic vitals
-    of Brain OS into an absolute-zero debt telemetry report.
+    of CoreTex OS into an absolute-zero debt telemetry report.
     """
     # 🛡️ 1. Evaluate Membrane Integrity
     bbb_headless = os.environ.get("BRAIN_OS_HEADLESS") == "1"
@@ -83,7 +83,7 @@ def get_system_vitals() -> Panel:
 
     return Panel(
         table,
-        title="[bold magenta]📊 Brain OS: Autonomic Telemetry Dashboard[/bold magenta]",
+        title="[bold magenta]📊 CoreTex OS: Autonomic Telemetry Dashboard[/bold magenta]",
         border_style="magenta",
         expand=False,
     )

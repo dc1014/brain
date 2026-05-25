@@ -3,7 +3,7 @@ jobs:
   security-and-tests:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false # 🛡️ ZERO-DEBT: If 3.14 fails, let 3.12 finish so we can isolate the break
+      fail-fast: false
       matrix:
         python-version: ["3.12", "3.13", "3.14"]
 
@@ -11,7 +11,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Required for TruffleHog to scan the entire history
+          fetch-depth: 0
 
       - name: TruffleHog Secret Scanner
         uses: trufflesecurity/trufflehog@main
@@ -19,7 +19,6 @@ jobs:
           path: ./
           extra_args: --only-verified
 
-      # ⚡ FIXED: Inject the Deno runtime into the CI runner so the WebAssembly sandbox can compile
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
@@ -32,7 +31,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          allow-prereleases: true # Safely pull the latest 3.14 engine drops
+          allow-prereleases: true
 
       - name: Install Dependencies
         run: uv sync --all-extras --dev

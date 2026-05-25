@@ -33,8 +33,8 @@ def test_dermis_signature_verification():
 
 def test_dermis_extract_field():
     """Proves the dot-notation extractor properly navigates complex nested JSON payloads."""
-    data = {"repository": {"name": "brain-os"}, "author": "admin"}
-    assert _extract_field(data, "repository.name") == "brain-os"
+    data = {"repository": {"name": "ctx-os"}, "author": "admin"}
+    assert _extract_field(data, "repository.name") == "ctx-os"
     assert _extract_field(data, "author") == "admin"
     assert _extract_field(data, "missing.key") == "Unknown"
 

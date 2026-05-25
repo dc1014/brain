@@ -88,7 +88,8 @@ def get_system_context(
     for r in roles:
         agent_data = get_dna_config().get("agents", {}).get(r.lower(), {})
         base_prompt += (
-            agent_data.get("system_prompt", f"You are the {r} node of Brain OS.") + "\n"
+            agent_data.get("system_prompt", f"You are the {r} node of CoreTex OS.")
+            + "\n"
         )
 
     if prompt:

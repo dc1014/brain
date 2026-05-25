@@ -43,7 +43,7 @@ RATE_LIMIT_WINDOW = 60.0
 MAX_REQUESTS_PER_WINDOW = 50
 MAX_PAYLOAD_SIZE = 2 * 1024 * 1024  # Strict 2MB ceiling to immunize against OOM bounds
 
-app = FastAPI(title="Brain OS Ingress Receptor", version="2.0.0")
+app = FastAPI(title="CoreTex OS Ingress Receptor", version="2.0.0")
 CONFIG_ROUTES: Dict[str, Any] = {}
 
 

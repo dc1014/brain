@@ -1,8 +1,8 @@
-# 🧠 Brain OS Memory Architecture & Synaptic Consolidation Model
+# 🧠 CoreTex OS Memory Architecture & Synaptic Consolidation Model
 
 Most autonomous agent frameworks treat context as an unmanaged history array or rely entirely on slow, expensive vector lookups that suffer from context drift, drop historical technical depth, or inflate API bills.
 
-Brain OS resolves this constraint by implementing a **5-Tier Biomimetic Cognitive Memory Stack**. Information flows from high-frequency volatile runtime buffers through structural reranking algorithms, culminating in low-entropy technical documentation archives consolidated during sleep cycles.
+CoreTex OS resolves this constraint by implementing a **5-Tier Biomimetic Cognitive Memory Stack**. Information flows from high-frequency volatile runtime buffers through structural reranking algorithms, culminating in low-entropy technical documentation archives consolidated during sleep cycles.
 
 ---
 
@@ -70,7 +70,7 @@ When a process executes or telemetry is generated, data flows down through the f
 
 #### Implementation Mechanics
 
-Active sub-agent execution steps and JSON tool outputs are passed directly into the execution history array. Unlike legacy agents that suffer from "amnesia" by silently discarding older messages (FIFO), Brain OS evaluates the active token footprint of the entire conversation.
+Active sub-agent execution steps and JSON tool outputs are passed directly into the execution history array. Unlike legacy agents that suffer from "amnesia" by silently discarding older messages (FIFO), CoreTex OS evaluates the active token footprint of the entire conversation.
 
 When total logs cross the 12,000 character threshold, `compress_message_array()` executes. It fires an asynchronous background call using a fast, high-efficiency model (e.g., `gemini-2.5-flash`) to summarize the historical middle-nodes of the conversation.
 
@@ -86,7 +86,7 @@ The processor strips away conversational filler, flattens synthetic tool results
 
 #### Implementation Mechanics
 
-Rather than spending tokens or processing time querying external vector database models for project text file analysis, Brain OS maps localized storage queries through a virtualized indexing engine. At boot or reindex sweeps, workspace directories (`Studio`, `Meta`, `Personal`, `Professional`) are scanned for valid code extensions (`.py`, `.md`, `.json`, `.ts`). Content payloads are written straight into a local SQLite virtual data configuration:
+Rather than spending tokens or processing time querying external vector database models for project text file analysis, CoreTex OS maps localized storage queries through a virtualized indexing engine. At boot or reindex sweeps, workspace directories (`Studio`, `Meta`, `Personal`, `Professional`) are scanned for valid code extensions (`.py`, `.md`, `.json`, `.ts`). Content payloads are written straight into a local SQLite virtual data configuration:
 
 ```sql
 CREATE VIRTUAL TABLE IF NOT EXISTS memories
@@ -174,7 +174,7 @@ Instead of running an expensive $O(N)$ full-directory crawl across the vault, th
 
 ### 2. The Ripgrep Engine & Context Window Protection
 
-When an agent executes a global search (`global_text_search`), Brain OS completely bypasses Python's internal memory allocation limits by dropping into a native `ripgrep` (`rg`) subprocess.
+When an agent executes a global search (`global_text_search`), CoreTex OS completely bypasses Python's internal memory allocation limits by dropping into a native `ripgrep` (`rg`) subprocess.
 
 To protect the LLM from token degradation when retrieving massive files, the Hippocampus employs a **Hybrid Illusion**. If the Ripgrep search hits a massive file, Python silently intercepts the output and stitches the pre-computed Semantic Sidecar summary directly to the top of the search result. The agent gains total technical omniscience without ever flooding its context window.
 

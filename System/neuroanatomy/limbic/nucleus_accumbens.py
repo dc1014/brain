@@ -42,7 +42,7 @@ def process_dopaminergic_reward(objective: str, outcome: str) -> None:
     )
 
     prompt = (
-        "You are the Nucleus Accumbens of Brain OS. The organism just experienced a failure.\n"
+        "You are the Nucleus Accumbens of CoreTex OS. The organism just experienced a failure.\n"
         f"OBJECTIVE: {objective}\n"
         f"FAILURE OUTCOME: {outcome}\n\n"
         "Based on this pain, write a SINGLE, concise, imperative rule that must be added to "

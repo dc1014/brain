@@ -5,13 +5,15 @@ from System.tools.sandbox import execute_in_sandbox
 
 
 @pytest.mark.asyncio
-async def test_code_generation_route_mandates_container_execution(tmp_path):
+async def test_code_generation_route_mandates_container_execution(
+    tmp_path, monkeypatch
+):
     """Proves that any task running under CODE_GENERATION forces user-space containment."""
+    monkeypatch.setenv("CORETEX_ENABLE_CODE_EXECUTION", "true")
     safe_workspace = tmp_path / "Studio" / "AppDevelopmentWorkspace"
     safe_workspace.mkdir(parents=True)
 
     with patch("System.tools.sandbox.ROOT_DIR", tmp_path):
-        # ⚡ FIXED: Perfectly structure the async/sync bounds to eliminate all Pytest coroutine RuntimeWarnings
         from unittest.mock import Mock, AsyncMock
 
         mock_stdin = Mock()
@@ -41,8 +43,9 @@ async def test_code_generation_route_mandates_container_execution(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_container_blocks_system_core_pollution(tmp_path):
+async def test_container_blocks_system_core_pollution(tmp_path, monkeypatch):
     """Proves that sandbox execution returns a security block immediately if an agent targets restricted directories."""
+    monkeypatch.setenv("CORETEX_ENABLE_CODE_EXECUTION", "true")
     unsafe_workspace = tmp_path / "System" / "core"
     unsafe_workspace.mkdir(parents=True)
 
@@ -52,4 +55,4 @@ async def test_container_blocks_system_core_pollution(tmp_path):
         )
 
         assert res.success is False
-        assert "CRITICAL SECURITY TERMINATION" in res.block_reason
+        assert "CRITICAL SECURITY TERMINATION" in str(res.block_reason)

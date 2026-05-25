@@ -1,6 +1,6 @@
-# Brain OS Token Economics & Metabolic Infrastructure
+# CoreTex OS Token Economics & Metabolic Infrastructure
 
-Most autonomous agent architectures treat tokens as an abstract billing concern, running execution scripts continuously until an API key wallet runs dry or a rate limit forces a hard crash. Brain OS models token management through **Autonomic Metabolic Interoception**.
+Most autonomous agent architectures treat tokens as an abstract billing concern, running execution scripts continuously until an API key wallet runs dry or a rate limit forces a hard crash. CoreTex OS models token management through **Autonomic Metabolic Interoception**.
 
 By treating token windows and API requests as a scarce biological resource, the system monitors, compresses, and gates data ingestion across the entire processing stack—spanning the sensory perimeter, cortical working memory, and core brainstem routing.
 
@@ -21,7 +21,7 @@ By treating token windows and API requests as a scarce biological resource, the 
 
 ## 1. The Daily Caloric Budget (Metabolic Interoception)
 
-Brain OS models raw token usage as systemic "calories burned". This allocation is governed by the interoceptive framework:
+CoreTex OS models raw token usage as systemic "calories burned". This allocation is governed by the interoceptive framework:
 
 * **Hard Perimeter Ceiling:** The system establishes a baseline cap of `DAILY_TOKEN_LIMIT = 500_000` tokens per day.
 * **Write-Ahead Ledger Logging:** Every cognitive action records telemetry down to `logs/metabolism.json` via `log_metabolism(tokens)`.

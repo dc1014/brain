@@ -1,4 +1,4 @@
-# --- System/core/onboarding/cli.py ---
+# --- System/core/onboarding/genesis.py ---
 import sys
 import json
 import asyncio
@@ -34,19 +34,18 @@ FEATURES_PATH = ROOT_DIR / "System" / "config" / "features.json"
 
 
 # --- 1. THE AWAKENING ---
-# --- Inside System/core/onboarding/cli.py ---
-def draw_brain():
+def draw_coretex():
     console.clear()
-    # Crisp, symmetrical, high-fidelity ASCII block representation for BRAIN
-    brain_art = """[bold cyan]
-██████╗ ██████╗  █████╗ ██╗███╗   ██╗
-██╔══██╗██╔══██╗██╔══██╗██║████╗  ██║
-██████╔╝██████╔╝███████║██║██╔██╗ ██║
-██╔══██╗██╔══██╗██╔══██║██║██║╚██╗██║
-██████╔╝██║  ██║██║  ██║██║██║ ╚████║
-╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝
+    # Crisp, symmetrical, high-fidelity ASCII block representation for CORETEX
+    coretex_art = """[bold cyan]
+ ██████╗ ██████╗ ██████╗ ███████╗████████╗███████╗██╗  ██╗
+██╔════╝██╔═══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝╚██╗██╔╝
+██║     ██║   ██║██████╔╝█████╗     ██║   █████╗   ╚███╔╝
+██║     ██║   ██║██╔══██╗██╔══╝     ██║   ██╔══╝   ██╔██╗
+╚██████╗╚██████╔╝██║  ██║███████╗   ██║   ███████╗██╔╝ ██╗
+ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚═╝
     [/bold cyan]"""
-    console.print(brain_art)
+    console.print(coretex_art)
     console.print(
         "       [dim]Biomimetic AI Control Plane And Obsidian Vault // Synaptic Genesis[/dim]\n"
     )
@@ -77,10 +76,10 @@ def draw_brain():
 # --- 2. SECURITY GATE ---
 def configure_security_gate() -> bool:
     gate_text = (
-        "Brain operates as a [bold green]Cognitive Assistant[/bold green] by default. "
+        "CoreTex operates as a [bold green]Cognitive Assistant[/bold green] by default. "
         "It can freely read, organize, and write Markdown files to your Obsidian vault, "
         "but its Motor Cortex is physically disconnected—it cannot execute terminal commands or run scripts.\n\n"
-        "To allow Brain to autonomously execute code and run terminal commands, you must enable Agentic Mode.\n\n"
+        "To allow CoreTex to autonomously execute code and run terminal commands, you must enable Agentic Mode.\n\n"
         "[bold red]RISK WARNING:[/bold red] Agentic mode grants the LLM permission to invoke OS-level subprocesses. "
         "Only enable this if you trust your API provider's alignment."
     )
@@ -123,7 +122,7 @@ def configure_security_gate() -> bool:
             else:
                 fail_msg = (
                     "[bold red]❌ CONTAINER ENGINE MISSING:[/bold red] Sandboxed code execution requires the Deno runtime.\n\n"
-                    "Brain has safely forced your profile back to [bold green][ Cognitive Mode ][/bold green].\n\n"
+                    "CoreTex has safely forced your profile back to [bold green][ Cognitive Mode ][/bold green].\n\n"
                     "To unlock Agentic mode later, install Deno and rerun setup:\n"
                     "👉 macOS/Linux: [cyan]curl -fsSL https://deno.land/install.sh | sh[/cyan]\n"
                     "👉 Windows:     [cyan]irm https://deno.land/install.ps1 | iex[/cyan]"
@@ -279,15 +278,17 @@ async def harvest_credentials() -> dict:
 def configure_neural_cryptography() -> str:
     console.print(
         Panel(
-            "Brain can generate a unique cryptographic identity key. "
-            "This allows you to securely encrypt memory backups or securely 'share brains' "
+            "CoreTex can generate a unique cryptographic identity key. "
+            "This allows you to securely encrypt memory backups or securely 'share contexts' "
             "with other instances over peer-to-peer networks.",
-            title="🧬 [ NEURAL CRYPTOGRAPHY ] 🧬",
+            title="🧬 [ CRYPTOGRAPHY ] 🧬",
             border_style="green",
         )
     )
 
-    if Confirm.ask("Generate a secure identity key for this Brain?", default=True):
+    if Confirm.ask(
+        "Generate a secure identity key for this CoreTex node?", default=True
+    ):
         crypto_key = secrets.token_urlsafe(32)
         console.print(
             "[bold green]✅ Cryptographic Identity Key generated and secured.[/bold green]\n"
@@ -304,8 +305,8 @@ def configure_neural_cryptography() -> str:
 def bind_workspace() -> str:
     console.print(
         Panel(
-            "Brain OS operates on plain text. You can bind it to [bold]any local folder[/bold].\n"
-            "If you happen to use Obsidian, Brain will auto-install native hotkeys.",
+            "CoreTex OS operates on plain text. You can bind it to [bold]any local folder[/bold].\n"
+            "If you happen to use Obsidian, CoreTex will auto-install native hotkeys.",
             title="📁 [ WORKSPACE BINDING ] 📁",
             border_style="cyan",
         )
@@ -318,7 +319,7 @@ def bind_workspace() -> str:
         vault_paths = list(vaults.values())
         if len(vault_paths) == 1:
             if Confirm.ask(
-                f"Found an Obsidian vault at [bold cyan]{vault_paths[0]}[/bold cyan]. Bind Brain OS to this directory?",
+                f"Found an Obsidian vault at [bold cyan]{vault_paths[0]}[/bold cyan]. Bind CoreTex OS to this directory?",
                 default=True,
             ):
                 final_path = vault_paths[0]
@@ -337,11 +338,11 @@ def bind_workspace() -> str:
 
     if not final_path:
         final_path = Prompt.ask(
-            "Drag-and-drop [bold]any folder[/bold] into this terminal to act as Brain's memory space, and press Enter"
+            "Drag-and-drop [bold]any folder[/bold] into this terminal to act as CoreTex's memory space, and press Enter"
         ).strip("'\" ")
 
     if not final_path:
-        final_path = str(Path.home() / "Brain_Workspace")
+        final_path = str(Path.home() / "CoreTex_Workspace")
         console.print(f"[dim]No path provided. Defaulting to: {final_path}[/dim]")
 
     workspace_path = Path(final_path)
@@ -353,16 +354,15 @@ def bind_workspace() -> str:
         )
     else:
         console.print(
-            "[bold green]✅ Standard Workspace bound! Brain OS will operate via terminal commands.[/bold green]\n"
+            "[bold green]✅ Standard Workspace bound! CoreTex OS will operate via terminal commands.[/bold green]\n"
         )
 
     return str(workspace_path)
 
 
 # --- MASTER EXECUTION ORCHESTRATOR ---
-# --- MASTER EXECUTION ORCHESTRATOR ---
 async def main():
-    draw_brain()
+    draw_coretex()
 
     # Execute exactly in sequential, decoupled phases
     code_execution_enabled = configure_security_gate()
@@ -387,11 +387,11 @@ async def main():
 
         # 1. Safely write environment variables
         env_content = (
-            f"BRAIN_ENABLE_CODE_EXECUTION={str(code_execution_enabled).lower()}\n"
+            f"CORETEX_ENABLE_CODE_EXECUTION={str(code_execution_enabled).lower()}\n"
         )
-        env_content += f"BRAIN_VAULT_PATH={workspace_path}\n"
+        env_content += f"CORETEX_VAULT_PATH={workspace_path}\n"
         if crypto_key:
-            env_content += f"BRAIN_CRYPTO_KEY={crypto_key}\n"
+            env_content += f"CORETEX_CRYPTO_KEY={crypto_key}\n"
         for k, v in valid_keys.items():
             env_content += f"{k}={v}\n"
 
@@ -411,7 +411,7 @@ async def main():
     # --- 3. Inject global shell profile alias ---
     console.print("\n")
     if Confirm.ask(
-        "🌐 Would you like to make 'brain' globally accessible? (Safely adds an alias to your shell profile)",
+        "🌐 Would you like to make 'ctx' globally accessible? (Safely adds an alias to your shell profile)",
         default=True,
     ):
         with Progress(
@@ -424,11 +424,11 @@ async def main():
             progress.add_task("", total=None)
             if bind_global_alias():
                 console.print(
-                    "[bold green]✅ Global alias 'brain' injected into shell profile![/bold green]"
+                    "[bold green]✅ Global alias 'ctx' injected into shell profile![/bold green]"
                 )
             else:
                 console.print(
-                    "[dim yellow]⚠️ Could not auto-bind shell profile. You can manually alias 'brain' later.[/dim yellow]"
+                    "[dim yellow]⚠️ Could not auto-bind shell profile. You can manually alias 'ctx' later.[/dim yellow]"
                 )
     else:
         console.print(
@@ -437,8 +437,8 @@ async def main():
 
     # 4. Handoff
     console.print("\n[bold green]🎉 SYNAPTIC GENESIS COMPLETE 🎉[/bold green]")
-    console.print("Restart your terminal to load the alias, then simply run:\n")
-    console.print("  [bold cyan]brain[/bold cyan]\n")
+    console.print("Restart your terminal to load the alias, then simply run:\\n")
+    console.print("  [bold cyan]ctx[/bold cyan]\\n")
 
 
 if __name__ == "__main__":

@@ -44,8 +44,9 @@ def test_run_agent_error_handling(mocker) -> None:
 
 
 def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:
-    monkeypatch.delenv("BRAIN_OS_HEADLESS", raising=False)
-    monkeypatch.setenv("BRAIN_OS_BYPASS_PFC", "1")
+    # FIX: Rebranded environment variables
+    monkeypatch.delenv("CORETEX_HEADLESS", raising=False)
+    monkeypatch.setenv("CORETEX_BYPASS_PFC", "1")
 
     mocker.patch(
         "System.core.orchestrator.route_sensory_input",
@@ -116,7 +117,9 @@ def test_interrupted_queue_interception(monkeypatch, tmp_path, mocker):
         "remaining_steps": [{"agent": "product_manager"}],
     }
     queue_file.write_text(json.dumps(mock_queue), encoding="utf-8")
-    monkeypatch.setenv("BRAIN_OS_HEADLESS", "1")
+
+    # FIX: Rebranded environment variable injected into mock environment
+    monkeypatch.setenv("CORETEX_HEADLESS", "1")
 
     mocker.patch(
         "System.neuroanatomy.cortical.executive_loop.execute_pipeline",
@@ -131,7 +134,8 @@ def test_interrupted_queue_interception(monkeypatch, tmp_path, mocker):
 
 
 def test_destroy_aborts_on_no(mocker, monkeypatch) -> None:
-    monkeypatch.delenv("BRAIN_OS_HEADLESS", raising=False)
+    # FIX: Rebranded environment variables
+    monkeypatch.delenv("CORETEX_HEADLESS", raising=False)
     mocker.patch("System.cli.Confirm.ask", return_value=False)
 
     result = runner.invoke(app, ["destroy"])
@@ -140,7 +144,8 @@ def test_destroy_aborts_on_no(mocker, monkeypatch) -> None:
 
 
 def test_destroy_executes_on_yes(mocker, monkeypatch, tmp_path) -> None:
-    monkeypatch.delenv("BRAIN_OS_HEADLESS", raising=False)
+    # FIX: Rebranded environment variables
+    monkeypatch.delenv("CORETEX_HEADLESS", raising=False)
     mocker.patch.object(cli_module, "ROOT_DIR", tmp_path)
     mocker.patch("System.cli.Confirm.ask", return_value=True)
 

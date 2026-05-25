@@ -254,7 +254,7 @@ def map_system_topology_tool() -> ExecutionResult:
 async def transmit_telepathy(
     target_node_id: str, action: str, target: str = "", protocol: str = "acp"
 ) -> str:
-    """Commands an external AI framework or peer Brain OS node via the Exocortex."""
+    """Commands an external AI framework or peer CoreTex OS node via the Exocortex."""
     from System.neuroanatomy.cortical.exocortex import Exocortex
 
     exo = Exocortex()

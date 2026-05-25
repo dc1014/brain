@@ -40,7 +40,7 @@ class CerebellarCompiler:
         )
 
         prompt = (
-            "You are the Cerebellum of Brain OS. Your job is to write deterministic Python 3 code.\n"
+            "You are the Cerebellum of CoreTex OS. Your job is to write deterministic Python 3 code.\n"
             "Take the following objective and execution trace, and write a single, flawless Python script "
             "that accomplishes this exact task WITHOUT using AI or LLM API calls. Use standard libraries "
             "(os, sys, subprocess, pathlib) or safely invoke local shell commands.\n\n"

@@ -23,7 +23,7 @@ Brain **attempts** to solve this by enforcing **Shift-Left Perimeter Defense-in-
 
 ### 1. The Safe-by-Default Cognitive Alignment Sheath
 
-To maintain an uncompromised host system while optimizing token economics, Brain OS separates security enforcement into three decoupled systemic horizons when running in its default state (`BRAIN_ENABLE_CODE_EXECUTION=false`):
+To maintain an uncompromised host system while optimizing token economics, CoreTex OS separates security enforcement into three decoupled systemic horizons when running in its default state (`BRAIN_ENABLE_CODE_EXECUTION=false`):
 
 * **The Infrastructure Gateway Gatekeeper (`System/tools/sandbox.py`):** The absolute master execution router checks for explicit human consent before spawning sandboxed workers. If the opt-in flag evaluates to false, it immediately fails closed, returning an `OPT-IN REQUIRED` termination signal.
 * **Shift-Left Cognitive Tool Pruning (`System/neuroanatomy/cortical/prefrontal.py`):** The Prefrontal Cortex intercepts the pipeline hydration phase. If code execution is disabled, all execution-capable tools are dynamically stripped from the available tool schema dictionary *before* it is packaged for the LLM. By hiding the tools entirely, the agent is structurally incapable of attempting an execution invocation loop.

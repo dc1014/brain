@@ -1,8 +1,8 @@
-# 🌌 Brain OS Default Mode Network (DMN) & Background Synthesis Model
+# 🌌 CoreTex OS Default Mode Network (DMN) & Background Synthesis Model
 
 Most autonomous agent frameworks operate strictly on linear, reactive event loops. When a user stops submitting prompts, the system sits completely frozen—wasting valuable compute idle-time and ignoring the latent structural connections, optimization vectors, and conceptual patterns hidden within its recent execution logs.
 
-Brain OS resolves this constraint by implementing a permanent **Autonomic Default Mode Network (DMN)**. Modeled directly after human neurobiology, the DMN functions as a background, non-blocking cognitive synthesis engine that awakens during system idle cycles or simulated REM sleep states to clean, reflect on, and self-heal the active workspace environment.
+CoreTex OS resolves this constraint by implementing a permanent **Autonomic Default Mode Network (DMN)**. Modeled directly after human neurobiology, the DMN functions as a background, non-blocking cognitive synthesis engine that awakens during system idle cycles or simulated REM sleep states to clean, reflect on, and self-heal the active workspace environment.
 
 ---
 
@@ -20,7 +20,7 @@ Brain OS resolves this constraint by implementing a permanent **Autonomic Defaul
 
 ## 🔄 The Subconscious Lifecycle: A Biomimetic Deep Dive
 
-When the central orchestrator registers an active workspace pause, or when a user explicitly stimulates the network via the command-line somatic interface (`./brain daydream`), the DMN initializes a five-phase non-linear synthesis routine.
+When the central orchestrator registers an active workspace pause, or when a user explicitly stimulates the network via the command-line somatic interface (`./ctx daydream`), the DMN initializes a five-phase non-linear synthesis routine.
 
 ```
 [ Waking Loop Paused ] ---> Circadian Fatigue Triggers Sleep Onset

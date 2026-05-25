@@ -61,7 +61,7 @@ def enter_sleep_cycle() -> None:
     When the Pineal gland detects sleep, it consolidates memory, flushes waste, and triggers REM sleep.
     """
     console.print(
-        "\n[bold magenta]🌙 Brain OS is entering Deep Sleep...[/bold magenta]"
+        "\n[bold magenta]🌙 CoreTex OS is entering Deep Sleep...[/bold magenta]"
     )
 
     # 0. Hippocampus Consolidation

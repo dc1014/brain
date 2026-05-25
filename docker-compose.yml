@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: brain-os
+    container_name: ctx-os
     # 🛡️ SHIFT-LEFT SECURITY: Map host user credentials dynamically to bypass root permission pollution
     user: "${UID:-1000}:${GID:-1000}"
     environment:

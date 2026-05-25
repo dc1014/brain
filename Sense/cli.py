@@ -13,7 +13,7 @@ lock_concurrency_defaults()
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-app = typer.Typer(help="Sense: The Sensory Nervous System for Brain OS")
+app = typer.Typer(help="Sense: The Sensory Nervous System for CoreTex OS")
 console = Console()
 
 if sys.stdout.encoding.lower() != "utf-8":

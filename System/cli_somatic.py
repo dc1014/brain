@@ -101,7 +101,6 @@ def sleep():
             f"[dim red]❌ Stylistic baseline consolidation skipped: {e}[/dim red]"
         )
 
-    # ⚡ NEW: Trigger the Semantic Compactor daemon
     console.print(
         "[dim cyan]📚 Limbic Compression: Compacting heavy memories into semantic sidecars...[/dim cyan]"
     )
@@ -122,7 +121,7 @@ def sleep():
         console.print(f"[dim red]❌ Somatic sleep sweep skipped: {e}[/dim red]")
 
     console.print(
-        "[bold green]💤 Sleep cycle completed flawlessly. Brain OS is fully optimized.[/bold green]"
+        "[bold green]💤 Sleep cycle completed flawlessly. CoreTex OS is fully optimized.[/bold green]"
     )
 
 
@@ -235,18 +234,14 @@ def assimilate(
 
     if success:
         console.print(f"[bold green]✅ {message}[/bold green]")
-        console.print(f"[dim]Run via: uv run System/cli.py reflex {engram_name}[/dim]")
+        # FIX: Rebranded console tracking syntax guidelines to use the ctx shortcut format
+        console.print(f"[dim]Run via: ctx reflex {engram_name}[/dim]")
     else:
         console.print(f"[bold red]🛑 Security Block: {message}[/bold red]")
 
 
 def watch(max_loops: Optional[int] = typer.Option(None, hidden=True)):
-    """🫁 Somatosensory Cortex: File watcher daemon (Respiratory system).
-
-    Autonomously tracks real-time workspace modifications via a low-overhead, dual-rate Phasic-Tonic polling engine.
-    """
-    # 🔐 CRITICAL REALIGNMENT GUARD: If called programmatically inside a background thread,
-    # normalize the Typer descriptor OptionInfo object value back to a clean None state.
+    """🫁 Somatosensory Cortex: File watcher daemon (Respiratory system)."""
     if not isinstance(max_loops, int):
         max_loops = None
 
@@ -258,7 +253,6 @@ def watch(max_loops: Optional[int] = typer.Option(None, hidden=True)):
     ignore_parts = {".git", "__pycache__", ".venv", ".trash", "node_modules"}
 
     def _discover_files() -> None:
-        """Autonomously syncs filesystem structural bounds with in-place lookahead pruning gates."""
         current_tracked = set()
         for domain in core_domains:
             domain_path = ROOT_DIR / domain

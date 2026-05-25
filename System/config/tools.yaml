@@ -168,7 +168,7 @@ base:
     function:
       name: map_system_topology
       description: >-
-        META: Generates a visual Mermaid diagram of the current Brain OS
+        META: Generates a visual Mermaid diagram of the current CoreTex OS
         architecture and autonomic state, saving it to Meta/system_topology.md. Use
         this to document your own brain state.
       parameters:

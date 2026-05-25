@@ -59,7 +59,7 @@ if sys.platform.startswith("win") and "pytest" not in sys.modules:
 console = Console()
 
 
-def graceful_brain_excepthook(exc_type, exc_value, exc_traceback):
+def graceful_coretex_excepthook(exc_type, exc_value, exc_traceback):
     if exc_type.__name__ == "Exit" or exc_type is SystemExit:
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
@@ -77,11 +77,11 @@ def graceful_brain_excepthook(exc_type, exc_value, exc_traceback):
     sys.exit(1)
 
 
-sys.excepthook = graceful_brain_excepthook
+sys.excepthook = graceful_coretex_excepthook
 
 # Master Typer Configuration
 app = typer.Typer(
-    help="🦾 Brain OS: Biomimetic Agentic Operating System", no_args_is_help=True
+    help="🦾 CoreTex OS: Biomimetic Agentic Operating System", no_args_is_help=True
 )
 
 # Sub-App Domain Subcommands
@@ -107,14 +107,14 @@ def main(
 ):
     """Global configuration check parameters."""
     if verbose:
-        os.environ["BRAIN_VERBOSE"] = "1"
+        os.environ["CORETEX_VERBOSE"] = "1"
         console.print(
             "[dim cyan]🔊 Verbose sensory mode enabled. Somatic logging active.[/dim cyan]"
         )
 
     queue_file = ROOT_DIR / "System" / "execution_queue.json"
-    queue_data = read_state_sync(queue_file, default_factory=list)
-    if queue_data and os.environ.get("BRAIN_OS_HEADLESS") == "1":
+    queue_data = read_state_sync(queue_file, default_factory=dict)
+    if queue_data and os.environ.get("CORETEX_HEADLESS") == "1":
         raise typer.Exit()
 
 
@@ -125,7 +125,7 @@ def main(
 
 @app.command()
 def setup() -> None:
-    """Initializes Brain OS using the interactive, high-fidelity Synaptic Genesis onboarding wizard."""
+    """Initializes CoreTex OS using the interactive, high-fidelity Synaptic Genesis onboarding wizard."""
     import asyncio
     from System.core.onboarding.genesis import main as run_onboarding
 
@@ -200,7 +200,7 @@ def destroy() -> None:
     )
 
     if not Confirm.ask(
-        "Are you absolutely sure you want to destroy Brain OS?", default=False
+        "Are you absolutely sure you want to destroy CoreTex OS?", default=False
     ):
         console.print("[dim green]Apoptosis aborted. The OS survives.[/dim green]")
         return
@@ -224,7 +224,7 @@ def destroy() -> None:
             console.print("[dim]✔ Flushed pending motor execution queues.[/dim]")
 
     console.print(
-        "\n[bold green]✅ Systemic Apoptosis complete. Brain OS has been purged.[/bold green]"
+        "\n[bold green]✅ Systemic Apoptosis complete. CoreTex OS has been purged.[/bold green]"
     )
 
 

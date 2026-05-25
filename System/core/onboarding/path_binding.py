@@ -14,7 +14,7 @@ def bind_global_alias() -> bool:
     os_name = platform.system()
     home = Path.home()
 
-    # Define the absolute command to trigger the Brain CLI
+    # Define the absolute command to trigger the CoreTex CLI
     abs_root = str(ROOT_DIR.resolve())
 
     if os_name == "Windows":

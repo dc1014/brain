@@ -1,6 +1,6 @@
 # 🕹️ Ecosystem Command Interface: Complete Somatic & Sensory Command Manifest
 
-This manifest documents the complete, un-truncated suite of command-line interfaces exposed across the Brain OS ecosystem. It captures every command registered within the core execution bootloader (`System/cli.py`) and the decoupled sensory receptor interface (`Sense/cli.py`), mapped directly to their corresponding software file paths and biological neuroanatomy analogs.
+This manifest documents the complete, un-truncated suite of command-line interfaces exposed across the CoreTex OS ecosystem. It captures every command registered within the core execution bootloader (`System/cli.py`) and the decoupled sensory receptor interface (`Sense/cli.py`), mapped directly to their corresponding software file paths and biological neuroanatomy analogs.
 
 ---
 

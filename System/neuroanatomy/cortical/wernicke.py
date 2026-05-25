@@ -39,7 +39,7 @@ def filter_semantic_relevance(query: str, raw_search_results: str) -> str:
 
     # SHIFT-LEFT SECURITY: XML Sandboxing to prevent Prompt Injection from malicious notes
     system_prompt = (
-        "You are Wernicke's Area, the semantic comprehension engine of Brain OS.\n"
+        "You are Wernicke's Area, the semantic comprehension engine of CoreTex OS.\n"
         "Your task is to act as a semantic filter. Discard all irrelevant noise.\n"
         "Extract and synthesize ONLY the information that semantically answers the user's query.\n"
         "If none of the search results answer the query, reply EXACTLY with: 'No semantically relevant information found.'\n"

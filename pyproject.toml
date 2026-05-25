@@ -1,11 +1,10 @@
 [project]
-name = "brain"
+name = "coretex"
 version = "0.1.0"
-description = "Brain is the first biomimetic control plane for AI tooling - interoperable, safe, token efficient, self-healing, and self-improving."
+description = "CoreTex is the biomimetic control plane for AI - interoperable, safe, token efficient, self-healing, and self-improving."
 readme = "README.md"
 requires-python = ">=3.12, <3.15"
 dependencies = [
-    # ⚡ CORE FOOTPRINT: The absolute minimum required for cognition, routing, and memory.
     "litellm>=1.83.14",
     "python-dotenv>=1.2.2",
     "rich>=15.0.0",
@@ -19,11 +18,10 @@ dependencies = [
     "filelock>=3.29.0",
     "fastapi>=0.136.1",
     "uvicorn>=0.47.0",
-    "brain-sense",
+    "coretex-sense",
 ]
 
 [project.optional-dependencies]
-# 🧠 POLYGLOT SYNTAX: Advanced AST parsing for JS/TS/Python code refactoring
 syntax = [
     "tree-sitter>=0.25.2",
     "tree-sitter-python>=0.25.0",
@@ -31,14 +29,12 @@ syntax = [
     "tree-sitter-javascript>=0.25.0",
 ]
 
-# 👁️ VISION CORTEX: Multimodal capabilities, layout auditing, and screenshot rendering
 vision = [
     "playwright>=1.59.0",
     "opencv-python-headless>=4.9.0.80",
     "numpy>=2.4.4"
 ]
 
-# 👂 AUDITORY CORTEX: Physical voice input/output via system microphones and speakers
 audio = [
     "sounddevice>=0.5.5",
     "soundfile>=0.13.1",
@@ -57,7 +53,6 @@ dev = [
 ]
 
 [tool.mypy]
-# SHIFT-LEFT: Prevent the OS from type-checking dynamically generated sandbox code
 exclude = [
     "^Studio/",
     "^Personal/",
@@ -66,7 +61,6 @@ exclude = [
     "^logs/",
     "System/snapshots/",
 ]
-# Ignore missing imports for third-party libraries that don't have type hints
 ignore_missing_imports = true
 namespace_packages = true
 explicit_package_bases = true
@@ -74,7 +68,6 @@ mypy_path = "."
 
 
 [tool.pytest.ini_options]
-# ⚡ SHIFT-LEFT: Explicit loop isolation prevents parallel test futures from hanging
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "-v -n auto --dist=loadfile --strict-markers -m \"not eval\""
@@ -90,10 +83,9 @@ markers = [
 members = ["Sense"]
 
 [tool.uv.sources]
-brain-sense = { workspace = true }
+coretex-sense = { workspace = true }
 
 [tool.coverage.run]
-# Tells coverage exactly what module path directory to monitor
 source = ["System"]
 omit = [
     "System/cli.py",
@@ -103,7 +95,6 @@ omit = [
 ]
 
 [tool.coverage.report]
-# Automatically outputs missing line numbers to your terminal screen
 show_missing = true
 # Enforces the strict CLAUDE.md gate rule programmatically
 fail_under = 80

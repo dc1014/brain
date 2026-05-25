@@ -2,7 +2,7 @@
 
 Most autonomous developer swarms treat behavioral execution histories as ephemeral logs and generate text assets with generic, prompt-instructed writing layouts. This approach incurs heavy cloud token context debt, strips technical personality from text generation blocks, and introduces structural formatting skews across local code repositories.
 
-The Brain OS **Cortical Mirror Neurons Subsystem** resolves these constraints by establishing an asynchronous imitation backplane. Operating inside the premotor and somatosensory cortical integration layers, this engine tracks peer-agent terminal behavior tracks and extracts highly personalized handwriting characteristics natively. By transforming text patterns into a low-overhead, token-free statistical momentum map, Brain OS mirrors human style hierarchies across code and prose tasks flawlessly.
+The CoreTex OS **Cortical Mirror Neurons Subsystem** resolves these constraints by establishing an asynchronous imitation backplane. Operating inside the premotor and somatosensory cortical integration layers, this engine tracks peer-agent terminal behavior tracks and extracts highly personalized handwriting characteristics natively. By transforming text patterns into a low-overhead, token-free statistical momentum map, CoreTex OS mirrors human style hierarchies across code and prose tasks flawlessly.
 
 ---
 
@@ -72,7 +72,7 @@ When concurrent sub-agents execute successful sequences, terminal trajectories a
 * **Subsystem Source Path:** `_parse_metrics_isolated()`
 * **Analysis Model:** High-performance, compile-free lexical token stream parsing.
 
-Rather than running brittle regex queries that mismatch multiline code definitions, Brain OS pipes source files directly through Python's native standard library `tokenize` compiler. The system maps active indent tokens (`tokenize.INDENT`) to isolate exact layout configurations (e.g., 2-spaces, 4-spaces, tabs) and inspects name boundaries to identify function conventions (camelCase vs snake_case).
+Rather than running brittle regex queries that mismatch multiline code definitions, CoreTex OS pipes source files directly through Python's native standard library `tokenize` compiler. The system maps active indent tokens (`tokenize.INDENT`) to isolate exact layout configurations (e.g., 2-spaces, 4-spaces, tabs) and inspects name boundaries to identify function conventions (camelCase vs snake_case).
 
 To prevent memory leaks on massive log exports or vendor assets, a strict line-capping gateway intercepts streams, trimming files to a maximum 2,000-line lookup boundary. The execution block is enclosed inside a specialized exception safety block: if a user updates an asset mid-keystroke, triggering incomplete brackets or unterminated string elements, the lexer intercepts the error cleanly (`except (tokenize.TokenError, IndentationError):`), skipping the re-profile slice without interrupting background systems.
 
@@ -80,7 +80,7 @@ To prevent memory leaks on massive log exports or vendor assets, a strict line-c
 * **Subsystem Command Route:** `watch()` daemon target
 * **Monitoring Overhead:** $O(1)$ flat dictionary checking loop during normal ticks.
 
-To achieve platform-agnostic file tracking without third-party dependency pollution, Brain OS deploys an involuntary Dual-Rate Phasic-Tonic Polling Engine.
+To achieve platform-agnostic file tracking without third-party dependency pollution, CoreTex OS deploys an involuntary Dual-Rate Phasic-Tonic Polling Engine.
 
 on the 1-second **Phasic Wave** heartbeat, the system skips expensive directory tree walks, iterating directly over a flat dictionary cache of known path indices to call object-oriented `Path(p).stat().st_mtime` inquiries. If a file handle disappears (manually unlinked or deleted mid-cooldown), the phasic scanner triggers immediate handle eviction, removing the key from memory maps to prevent `FileNotFoundError` faults. Every 10 seconds, the **Tonic Wave** fires a slow structural lookup: it scans main folder domains using aggressive in-place lookahead pruning (`dirs[:] = [d for d in dirs if d not in ignore_parts]`), discovering new assets at near-zero computation debt.
 
@@ -107,7 +107,7 @@ An active rule changes only if a new convention accumulates enough continuous re
 * **Subsystem Lock Layer:** `_STYLE_MUTEX` barrier combined with `BiologicalLock` handles
 * **Write Integrity Model:** Non-blocking out-of-place kernel replacements.
 
-Under high-velocity multi-threaded workflows, background watchdog processing runs the risk of read-write conflict collisions. Brain OS locks down file operations by serializing memory mutations behind a global thread barrier (`_STYLE_MUTEX`) paired with decentralized file handles.
+Under high-velocity multi-threaded workflows, background watchdog processing runs the risk of read-write conflict collisions. CoreTex OS locks down file operations by serializing memory mutations behind a global thread barrier (`_STYLE_MUTEX`) paired with decentralized file handles.
 
 When rules solidify, the profile state is staged out-of-place into a localized hidden file extension (`*.tmp`). Once the disk buffer is safely completed and flushed, the system executes a native operating system kernel-level atomic replacement call: `os.replace(tmp_path, active_path)`. This non-blocking swap ensures downstream generation pipelines always read a completely structurally valid configuration layout, removing file lock contention entirely.
 

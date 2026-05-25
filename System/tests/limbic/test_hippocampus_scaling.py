@@ -33,9 +33,9 @@ def clean_db(tmp_path, mocker):
 
 def test_cas_hash_generation():
     """Proves the BLAKE3/SHA-256 equivalent hashing generates pure, deterministic boundaries."""
-    content = "Hello, Brain OS!"
+    content = "Hello, CoreTex OS!"
     hash1 = _compute_hash(content)
-    hash2 = _compute_hash("Hello, Brain OS!")
+    hash2 = _compute_hash("Hello, CoreTex OS!")
     hash3 = _compute_hash("Hello, brain os!")
 
     assert hash1 == hash2

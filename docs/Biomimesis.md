@@ -1,6 +1,6 @@
-# 🧬 Brain OS Biomimetic Architecture: Complete Neuroanatomical Blueprint
+# 🧬 CoreTex OS Biomimetic Architecture: Complete Neuroanatomical Blueprint
 
-Brain OS rejects the paradigm of simple linear state machines and unmanaged agent scripts. Instead, it implements a **completely unified, self-maintaining cognitive engine** modeled directly on human neuroanatomy and evolutionary biology. Every directory, daemon, and file tracking boundary functions as a biological analog designed to maximize context efficiency, defend resource balances, and automate code generation without technical debt.
+CoreTex OS rejects the paradigm of simple linear state machines and unmanaged agent scripts. Instead, it implements a **completely unified, self-maintaining cognitive engine** modeled directly on human neuroanatomy and evolutionary biology. Every directory, daemon, and file tracking boundary functions as a biological analog designed to maximize context efficiency, defend resource balances, and automate code generation without technical debt.
 
 ---
 
@@ -21,7 +21,7 @@ Brain OS rejects the paradigm of simple linear state machines and unmanaged agen
 ### Ephemeral Indexing Tables (The Hippocampus)
 
 * **Subsystem Core Path:** `System/neuroanatomy/limbic/hippocampus.py`
-* **Mechanics:** Functions as the primary volatile, append-only chronological ledger tracking daily sub-agent transactions via `agent_interactions.jsonl`. To minimize context-window bloat, Brain OS uses an ephemeral, throwaway SQLite FTS5 virtual lookup database (`hippocampus.db`). Lexical tool calls retrieve tightly cropped data snippets via native BM25 rank calculations instead of executing high-latency reads across large plaintext code trees.
+* **Mechanics:** Functions as the primary volatile, append-only chronological ledger tracking daily sub-agent transactions via `agent_interactions.jsonl`. To minimize context-window bloat, CoreTex OS uses an ephemeral, throwaway SQLite FTS5 virtual lookup database (`hippocampus.db`). Lexical tool calls retrieve tightly cropped data snippets via native BM25 rank calculations instead of executing high-latency reads across large plaintext code trees.
 
 ### Associative Fact Vaults (The Neocortex)
 
@@ -94,7 +94,7 @@ Brain OS rejects the paradigm of simple linear state machines and unmanaged agen
 ### Strategic Planning & Pipeline Governance (The Prefrontal Cortex)
 
 * **Subsystem Core Path:** `System/neuroanatomy/cortical/prefrontal.py`
-* **Mechanics:** Houses the core executive architecture of Brain OS. The module decomposes high-level user tasks into actionable milestone arrays, manages sub-agent routing profiles, and executes final validation audits. It tracks active focus sequences through a strict `WorkingMemory` buffer character gate to prevent reasoning degradation.
+* **Mechanics:** Houses the core executive architecture of CoreTex OS. The module decomposes high-level user tasks into actionable milestone arrays, manages sub-agent routing profiles, and executes final validation audits. It tracks active focus sequences through a strict `WorkingMemory` buffer character gate to prevent reasoning degradation.
 
 ### Deterministic Code Construction (Somatic Muscle Memory)
 

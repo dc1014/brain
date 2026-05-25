@@ -2,7 +2,7 @@
 
 Most autonomous agent architectures struggle with physical execution execution paths because they fail to decouple planning from doing. When an agent attempts to write files or spin up servers in parallel, it often encounters race conditions, orphaned terminal processes, or corrupted codebases due to interrupted pipeline operations.
 
-Brain OS resolves this through **Cognitive Segregation**, completely separating executive function from somatic muscle execution. By delegating technical work to an isolated subsystem and managing file paths and background processes with biological analogs, the system achieves zero-debt execution stability.
+CoreTex OS resolves this through **Cognitive Segregation**, completely separating executive function from somatic muscle execution. By delegating technical work to an isolated subsystem and managing file paths and background processes with biological analogs, the system achieves zero-debt execution stability.
 
 ---
 
@@ -115,6 +115,6 @@ This registry allows agents to manage background runtimes cleanly via explicit t
 
 #### Mechanics
 
-Brain OS respects the boundaries of executive abstraction. The Prefrontal Cortex restricts its operations to processing tasks, defining strategies, and mapping route structures. It delegates physical engineering work—such as formatting source code, running pytest suites, or analyzing compiler outputs—directly to an isolated execution factory (Forge OS). By preventing the core brain from micromanaging mechanical file changes, the system preserves reasoning bandwidth, keeping processing pipelines fast and context windows lean.
+CoreTex OS respects the boundaries of executive abstraction. The Prefrontal Cortex restricts its operations to processing tasks, defining strategies, and mapping route structures. It delegates physical engineering work—such as formatting source code, running pytest suites, or analyzing compiler outputs—directly to an isolated execution factory (Forge OS). By preventing the core brain from micromanaging mechanical file changes, the system preserves reasoning bandwidth, keeping processing pipelines fast and context windows lean.
 
 ---

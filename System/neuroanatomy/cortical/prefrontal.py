@@ -61,7 +61,7 @@ class PrefrontalCortex:
             "[dim cyan]🧠 PFC: Consulting past experiences and decomposing objective...[/dim cyan]"
         )
         prompt = (
-            "You are the Prefrontal Cortex of Brain OS. Your job is executive function and goal decomposition.\n"
+            "You are the Prefrontal Cortex of CoreTex OS. Your job is executive function and goal decomposition.\n"
             "Break the following objective down into a strict JSON list of 1 to 3 independent, actionable string commands.\n"
             "CRITICAL PROTOCOL: If the task is a simple, single-step action (e.g., writing a file, running a single script, answering a question), you MUST output exactly ONE command in the array. DO NOT overcomplicate it. Only use 2 or 3 steps if the task genuinely requires distinct sequential phases.\n"
             "Review your PAST EXPERIENCES to avoid repeating historical mistakes or failed approaches.\n"
