@@ -12,6 +12,77 @@ echo " ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══
 echo -e "\033[0m"
 echo -e "\033[2mBiomimetic Agentic OS // Initialization Probe\033[0m\\n"
 
+# 1. Detect and auto-remediate missing core system utilities
+MISSING_UTILS=()
+for util in curl unzip file; do
+    if ! command -v "$util" &> /dev/null; then
+        MISSING_UTILS+=("$util")
+    fi
+done
+
+if [ ${#MISSING_UTILS[@]} -ne 0 ]; then
+    echo -e "\033[1;33m⚠️ Missing required system utilities: ${MISSING_UTILS[*]}\033[0m"
+
+    PKG_MANAGER=""
+    INSTALL_CMD=""
+    UPDATE_CMD=""
+
+    if command -v apt-get &> /dev/null; then
+        PKG_MANAGER="apt"
+        UPDATE_CMD="apt-get update -y"
+        INSTALL_CMD="apt-get install -y ${MISSING_UTILS[*]}"
+    elif command -v dnf &> /dev/null; then
+        PKG_MANAGER="dnf"
+        INSTALL_CMD="dnf install -y ${MISSING_UTILS[*]}"
+    elif command -v yum &> /dev/null; then
+        PKG_MANAGER="yum"
+        INSTALL_CMD="yum install -y ${MISSING_UTILS[*]}"
+    elif command -v pacman &> /dev/null; then
+        PKG_MANAGER="pacman"
+        INSTALL_CMD="pacman -Sy --noconfirm ${MISSING_UTILS[*]}"
+    elif command -v apk &> /dev/null; then
+        PKG_MANAGER="apk"
+        INSTALL_CMD="apk add ${MISSING_UTILS[*]}"
+    elif command -v brew &> /dev/null; then
+        # 🍏 macOS Homebrew Support
+        PKG_MANAGER="homebrew"
+        INSTALL_CMD="brew install ${MISSING_UTILS[*]}"
+    fi
+
+    if [ -n "$PKG_MANAGER" ]; then
+        SUDO=""
+        # Do not use sudo for Homebrew
+        if [ "$PKG_MANAGER" != "homebrew" ] && [ "$(id -u)" -ne 0 ] && command -v sudo &> /dev/null; then
+            SUDO="sudo"
+        fi
+
+        AUTO_INSTALL=false
+        if [ "$(id -u)" -eq 0 ] || [ "$CORETEX_HEADLESS" == "1" ]; then
+            AUTO_INSTALL=true
+        else
+            read -p "Would you like to install them via $PKG_MANAGER? (y/n) [y]: " CONFIRM_PKG
+            CONFIRM_PKG=${CONFIRM_PKG:-y}
+            if [[ "$CONFIRM_PKG" =~ ^[Yy]$ ]]; then
+                AUTO_INSTALL=true
+            fi
+        fi
+
+        if [ "$AUTO_INSTALL" = true ]; then
+            echo "Installing system dependencies natively..."
+            if [ -n "$UPDATE_CMD" ]; then
+                $SUDO $UPDATE_CMD
+            fi
+            $SUDO $INSTALL_CMD
+        else
+            echo -e "\033[1;31mAborting. System utilities [${MISSING_UTILS[*]}] are required to continue.\033[0m"
+            exit 1
+        fi
+    else
+        echo -e "\033[1;31mERROR: Unsupported package manager. Please install [${MISSING_UTILS[*]}] manually.\033[0m"
+        exit 1
+    fi
+fi
+
 if curl -s http://localhost:11434/api/tags > /dev/null; then
     echo -e "🧠 \033[1;32mLocal Ollama Engine Detected.\033[0m Private private inference interface available."
 else
@@ -63,6 +134,11 @@ uv venv
 uv pip install -e .
 uv pip install -e ./Sense
 
-echo -e "\n✅ \033[1;32mLocal environment synchronized.\033[0m"
+# 🛡️ PERMISSION ENFORCEMENT GUARD
+if [ -f "./ctx" ]; then
+    chmod +x ./ctx
+fi
+
+echo -e "\n✅ Local environment synchronized."
 echo -e "Booting Synaptic Genesis...\n"
 uv run python -m System.cli setup

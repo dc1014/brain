@@ -35,13 +35,13 @@ We hate global dependencies. CoreTex provides two strictly isolated installation
 
 ### Option A: The Docker Sandbox (Recommended)
 Zero host dependencies. Runs CoreTex OS inside an isolated container with local workspace volume mounting.
-1. `git clone https://github.com/mrdanielcasper/brain.git && cd brain`
+1. `git clone https://github.com/mrdanielcasper/coretex.git && cd coretex`
 2. `docker compose build`
 3. Run `./ctx` (or `.\ctx.bat` on Windows). The wrapper automatically resolves path relative offsets, enforces absolute host mounts, and routes calls through the isolated sandbox securely.
 
 ### Option B: Lightning Local (`uv`)
 Uses Astral's ultra-fast `uv` to resolve dependencies in seconds inside an isolated `.venv`.
-1. `git clone https://github.com/mrdanielcasper/brain.git && cd brain`
+1. `git clone https://github.com/mrdanielcasper/coretex.git && cd coretex`
 2. Run `./setup.sh` (Mac/Linux) or `.\setup.ps1` (Windows).
 3. The script auto-hydrates the `.venv`, configures the local Deno sandbox environment, and launches the interactive `Synaptic Genesis` wizard.
 

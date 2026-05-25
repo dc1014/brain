@@ -7,12 +7,11 @@ Write-Host "██╔════╝██╔═══██╗██╔══�
 Write-Host "██║     ██║   ██║██████╔╝█████╗     ██║   █████╗   ╚███╔╝ " -ForegroundColor Cyan
 Write-Host "██║     ██║   ██║██╔══██╗██╔══╝     ██║   ██╔══╝   ██╔██╗ " -ForegroundColor Cyan
 Write-Host "╚██████╗╚██████╔╝██║  ██║███████╗   ██║   ███████╗██╔╝ ██╗" -ForegroundColor Cyan
-Write-Host " ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚═╝" -ForegroundColor Cyan
+Write-Host " ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚══╝" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Biomimetic Agentic OS // Initialization Probe" -ForegroundColor DarkGray
 Write-Host ""
 
-# 1. Probe for Air-Gapped AI (Ollama)
 try {
     $OllamaCheck = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
     if ($OllamaCheck.StatusCode -eq 200) {
@@ -25,10 +24,8 @@ try {
 }
 Write-Host ""
 
-# 2. Probe for Docker
 $DockerAvailable = $null -ne (Get-Command docker -ErrorAction SilentlyContinue)
 
-# 3. Environment Selection
 Write-Host "Select your preferred deployment architecture:" -ForegroundColor White
 Write-Host "  [1] Pure Local (Requires 'uv' and Python 3.12+)"
 if ($DockerAvailable) {
@@ -54,14 +51,13 @@ if ($DeployChoice -eq "2" -and $DockerAvailable) {
     exit
 }
 
-# 4. Pure Local Setup
 Write-Host "`n⚡ Initializing Pure Local Environment..." -ForegroundColor Cyan
 
-# Check for UV Package Manager
 if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
     if ($AutoInstall) {
         Write-Host "Installing 'uv' automatically in headless mode..." -ForegroundColor Cyan
-        Invoke-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+        # FIX: Corrected standard PowerShell script execution policy bypass cmdlet
+        Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
         irm https://astral.sh/uv/install.ps1 | iex
     } else {
         $InstallUV = Read-Host "The 'uv' package manager is missing. Install it? (y/n) [y]"
@@ -76,14 +72,12 @@ if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
     }
 }
 
-# Ensure Deno is installed locally for the WebAssembly sandbox environment
 if ($null -eq (Get-Command deno -ErrorAction SilentlyContinue)) {
     Write-Host "`n🦕 Installing Deno WASM Sandbox locally..." -ForegroundColor Cyan
     irm https://deno.land/install.ps1 | iex
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "User") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "Machine")
 }
 
-# Execute Environment Synchronization
 uv venv
 uv pip install -e .
 uv pip install -e ./Sense
