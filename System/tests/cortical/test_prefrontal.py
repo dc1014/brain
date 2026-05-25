@@ -105,8 +105,8 @@ async def test_auditor_headless_retry_bypass(mocker, tmp_path: Path) -> None:
 @patch("System.neuroanatomy.cortical.executive_loop.commit_transaction")
 @patch("System.neuroanatomy.cortical.executive_loop.run_agent_async")
 @patch(
-    "System.neuroanatomy.cortical.executive_loop.check_energy_levels",
-    return_value=(False, 0),
+    "System.neuroanatomy.cortical.executive_loop.get_current_metabolism",
+    return_value={"exhausted": False, "tokens_burned": 0},
 )
 async def test_synaptic_consolidation_commits_mid_pipeline(
     mock_energy, mock_run_agent, mock_commit, mocker, tmp_path

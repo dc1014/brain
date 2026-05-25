@@ -10,8 +10,9 @@ from System.core.dna import get_dna_config
 from System.neuroanatomy.systemic.endocrine import get_resolved_model
 from System.llm import run_agent_async, get_system_context, compress_memory_buffer
 from System.neuroanatomy.autonomic.interoception import (
-    check_energy_levels,
+    get_current_metabolism,
     log_metabolism,
+    validate_metabolic_clearance,
 )
 from System.neuroanatomy.autonomic.vestibular import commit_transaction, restore_balance
 from System.neuroanatomy.cortical.working_memory import (
@@ -148,10 +149,14 @@ async def execute_pipeline(
         if resume_pipeline is not None
         else list(get_dna_config().get("routes", {}).get(route_type, []))
     )
-    eval_retries = 0
-    MAX_RETRIES = 1
+    eval_retries: int = 0
+    MAX_RETRIES: int = 1
 
-    is_exhausted, tokens_burned = check_energy_levels()
+    # ⚡ FIX: Sync the updated metabolism fetching hook
+    metabolism_data = get_current_metabolism()
+    is_exhausted = metabolism_data.get("exhausted", False)
+    tokens_burned = metabolism_data.get("tokens_burned", 0)
+
     if is_exhausted:
         console.print(
             f"\n[bold yellow]Interoception Alert: System Exhausted ({tokens_burned:,} tokens burned). Downgrading cognitive load.[/bold yellow]"
@@ -162,7 +167,9 @@ async def execute_pipeline(
     pipeline_aborted = False
     pfc_memory = WorkingMemory(description)
 
-    current_state_idx = 0
+    # ⚡ FIX: Explicitly type annotate the iterator to satisfy strict Mypy bounds
+    current_state_idx: int = 0
+
     while current_state_idx < len(pipeline):
         persist_pipeline_state(
             description, route_type, domain, pipeline[current_state_idx:]
@@ -175,6 +182,15 @@ async def execute_pipeline(
             )
             pipeline_aborted = True
             abort_flag.unlink(missing_ok=True)
+            break
+
+        # ⚡ NEW GUARDRAIL: Halt if metabolic budget is exceeded mid-flight
+        is_clear, clearance_reason = validate_metabolic_clearance()
+        if not is_clear:
+            console.print(
+                f"\n[bold red]🛑 METABOLIC HALT: {clearance_reason}[/bold red]"
+            )
+            pipeline_aborted = True
             break
 
         step = pipeline[current_state_idx]

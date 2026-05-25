@@ -13,7 +13,7 @@ from rich.console import Console
 from System.core.paths import ROOT_DIR
 from System.neuroanatomy.systemic.immune_system import vault
 from System.neuroanatomy.systemic.endocrine import EndocrineSystem
-from System.neuroanatomy.autonomic.interoception import check_energy_levels
+from System.neuroanatomy.autonomic.interoception import get_current_metabolism
 
 from litellm import acompletion  # type: ignore
 
@@ -158,8 +158,8 @@ async def run_agent_async(
     origin: str = "HUMAN",
 ) -> AgentResponse:
 
-    # Pre-execution token budget enforcement
-    is_exhausted, _ = check_energy_levels()
+    metabolism_data = get_current_metabolism()
+    is_exhausted = metabolism_data.get("exhausted", False)
     if is_exhausted:
         return AgentResponse(
             text="API SECURITY BLOCK: Daily token budget exhausted. System is in refractory sleep state.",

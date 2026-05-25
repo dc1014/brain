@@ -156,8 +156,8 @@ async def test_executive_loop_embedded_system_halt(mocker, tmp_path):
         return_value=mock_response,
     )
     mocker.patch(
-        "System.neuroanatomy.cortical.executive_loop.check_energy_levels",
-        return_value=(False, 0),
+        "System.neuroanatomy.cortical.executive_loop.get_current_metabolism",
+        return_value={"exhausted": False, "tokens_burned": 0},
     )
     mocker.patch("System.neuroanatomy.cortical.executive_loop.commit_transaction")
 
@@ -179,3 +179,39 @@ async def test_executive_loop_embedded_system_halt(mocker, tmp_path):
     # Verify the rollback function was triggered because of the abort
     mock_restore.assert_called_once()
     clear_pipeline_state()
+
+
+@pytest.mark.asyncio
+@patch("System.neuroanatomy.cortical.executive_loop.validate_metabolic_clearance")
+@patch("System.neuroanatomy.cortical.executive_loop.restore_balance")
+@patch("System.neuroanatomy.cortical.executive_loop.clear_pipeline_state")
+@patch("System.neuroanatomy.cortical.executive_loop.run_agent_async")
+async def test_executive_loop_metabolic_budget_halt(
+    mock_run_agent, mock_clear, mock_restore, mock_clearance, mocker, tmp_path
+):
+    """Proves that a breached metabolic budget completely halts the pipeline and rolls back."""
+    mocker.patch("System.neuroanatomy.cortical.executive_loop.ROOT_DIR", tmp_path)
+
+    # ⚡ Force the clearance check to fail
+    mock_clearance.return_value = (False, "Metabolic budget exhausted.")
+
+    mocker.patch(
+        "System.neuroanatomy.cortical.executive_loop.get_dna_config",
+        return_value={
+            "routes": {"TEST": [{"agent": "engineer", "tools": []}]},
+            "agents": {
+                "engineer": {"name": "Eng", "model": "test", "system_prompt": ""}
+            },
+        },
+    )
+    mocker.patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state")
+
+    # Run the pipeline
+    await execute_pipeline("Test budget halt", "TEST", "STUDIO")
+
+    # Assert 1: The agent MUST NOT have been invoked (zero token cost)
+    mock_run_agent.assert_not_called()
+
+    # Assert 2: The system must have safely cleaned up the workspace and queues
+    mock_restore.assert_called_once()
+    mock_clear.assert_called_once()
