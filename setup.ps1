@@ -15,12 +15,12 @@ Write-Host ""
 try {
     $OllamaCheck = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
     if ($OllamaCheck.StatusCode -eq 200) {
-        Write-Host "🧠 Local Ollama Engine Detected. Air-gapped execution is available." -ForegroundColor Green
+        Write-Host "[+] Local Ollama Engine Detected. Air-gapped execution is available." -ForegroundColor Green
     } else {
-        Write-Host "☁️  No local Ollama detected. Cloud LLM keys will be required." -ForegroundColor Yellow
+        Write-Host "[-] No local Ollama detected. Cloud LLM keys will be required." -ForegroundColor Yellow
     }
 } catch {
-    Write-Host "☁️  No local Ollama detected. Cloud LLM keys will be required." -ForegroundColor Yellow
+    Write-Host "[-] No local Ollama detected. Cloud LLM keys will be required." -ForegroundColor Yellow
 }
 Write-Host ""
 
@@ -44,28 +44,26 @@ if ($env:CORETEX_HEADLESS -eq "1") {
 }
 
 if ($DeployChoice -eq "2" -and $DockerAvailable) {
-    Write-Host "`n🐳 Building Isolated Docker Sandbox..." -ForegroundColor Cyan
+    Write-Host "`n[*] Building Isolated Docker Sandbox..." -ForegroundColor Cyan
 
-    # ⚡ FIX: Protect volume constraints by forcing a blank file map layout if it does not exist
     if (-not (Test-Path .env)) { New-Item -Path . -Name ".env" -ItemType "file" > $null }
     foreach ($dir in "logs", "System\config", "Meta", "Workspace") {
         if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir > $null }
     }
 
     docker compose build
-    Write-Host "`n✅ Build complete." -ForegroundColor Green
+    Write-Host "`n[+] Build complete." -ForegroundColor Green
     Write-Host "Booting Synaptic Genesis inside container context...`n" -ForegroundColor Cyan
 
-    # ⚡ FIX: Automatically chain execution down into container wizard initialization
     .\ctx.bat setup
     exit
 }
 
-Write-Host "`n⚡ Initializing Pure Local Environment..." -ForegroundColor Cyan
+Write-Host "`n[*] Initializing Pure Local Environment..." -ForegroundColor Cyan
 
 if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
     if ($AutoInstall) {
-        Write-Host "Installing uv automatically in headless mode..." -ForegroundColor Cyan
+        Write-Host "[*] Installing uv automatically in headless mode..." -ForegroundColor Cyan
         Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
         irm https://astral.sh/uv/install.ps1 | iex
     } else {
@@ -82,7 +80,7 @@ if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
 }
 
 if ($null -eq (Get-Command deno -ErrorAction SilentlyContinue)) {
-    Write-Host "`n🦕 Installing Deno WASM Sandbox locally..." -ForegroundColor Cyan
+    Write-Host "`n[*] Installing Deno WASM Sandbox locally..." -ForegroundColor Cyan
     irm https://deno.land/install.ps1 | iex
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "User") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "Machine")
 }
@@ -91,7 +89,7 @@ uv venv
 uv pip install -e .
 uv pip install -e ./Sense
 
-Write-Host "`n✅ Local environment synchronized." -ForegroundColor Green
+Write-Host "`n[+] Local environment synchronized." -ForegroundColor Green
 Write-Host "Booting Synaptic Genesis...`n" -ForegroundColor Cyan
 
 uv run python -m System.cli setup
