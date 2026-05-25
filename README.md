@@ -43,6 +43,7 @@ Zero host dependencies. Runs CoreTex OS inside an isolated container with local 
 Uses Astral's ultra-fast `uv` to resolve dependencies in seconds inside an isolated `.venv`.
 1. `git clone https://github.com/mrdanielcasper/coretex.git && cd coretex`
 2. Run `./setup.sh` (Mac/Linux) or `.\setup.ps1` (Windows).
+    a. For Windows - run `powershell -ExecutionPolicy Bypass -File .\setup.ps1` first
 3. The script auto-hydrates the `.venv`, configures the local Deno sandbox environment, and launches the interactive `Synaptic Genesis` wizard.
 
 *Have Ollama running? The setup script will auto-detect it on `localhost:11434` for 100% air-gapped, offline execution.*
