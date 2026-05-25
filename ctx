@@ -3,9 +3,7 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DIR"
 
-# Check if the user built the Docker sandbox containment loop
 if command -v docker &> /dev/null && docker image inspect coretex-os &> /dev/null; then
-    # 🛡️ HARDENING: Explicitly calculate and export runtime environment variables.
     export UID=$(id -u)
     export GID=$(id -g)
 
@@ -15,14 +13,14 @@ if command -v docker &> /dev/null && docker image inspect coretex-os &> /dev/nul
 
     ARGS=()
     for arg in "$@"; do
+        # FIX: Track absolute file paths accurately without blinding execution parameters
         if [[ -e "$arg" ]]; then
-            ABS_PATH="$(cd "$(dirname "$arg")" && pwd)/$(basename "$arg")"
+            ABS_PATH="$(cd "$(dirname "$arg")" && pwd)"
             if [[ -d "$arg" ]]; then
-                export CORETEX_WORKSPACE_MOUNT="$ABS_PATH"
+                export CORETEX_WORKSPACE_MOUNT="$(cd "$arg" && pwd)"
                 ARGS+=("/workspace")
             else
-                # Virtualization Fix: Extract parent folder to mount, map file via sub-layer handle
-                export CORETEX_WORKSPACE_MOUNT="$(cd "$(dirname "$arg")" && pwd)"
+                export CORETEX_WORKSPACE_MOUNT="$ABS_PATH"
                 ARGS+=("/workspace/$(basename "$arg")")
             fi
         else
@@ -33,5 +31,4 @@ if command -v docker &> /dev/null && docker image inspect coretex-os &> /dev/nul
     exec docker compose run --rm coretex "${ARGS[@]}"
 fi
 
-# Fallback route directly to the lightning-fast local virtual environment
 exec ./.venv/bin/python -m System.cli "$@"

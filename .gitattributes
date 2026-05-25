@@ -4,7 +4,11 @@
 # Auto-detect text files, normalize to LF in the repo.
 # When checking out on Windows, it will check out as CRLF (if core.autocrlf is true)
 # but it will ALWAYS commit as pure Unix LF.
-* text=auto eol=lf
+# Enforce native line endings for code and force LF for POSIX wrapper scripts
+* text=auto
+
+ctx text eol=lf
+setup.sh text eol=lf
 
 # -------------------------------------------------------------------
 # 2. Strict Text Files (Always LF)

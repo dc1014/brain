@@ -16,37 +16,62 @@ CoreTex operates on pure text and local embeddings, meaning you can parse your e
 
 **1. Absorb a workspace (0 Token Cost - Local Embeddings)**
 ```bash
-./ctx absorb ./my_project
+ctx absorb ./my_project
 ```
 **2. Execute a sandboxed agentic task**
 ```bash
-./ctx task "Audit ./my_project for concurrency race conditions and output to audit.md"
+ctx task "Audit ./my_project for concurrency race conditions and output to audit.md"
 ```
 **3. Native Unix Piping**
 ```bash
-cat error.log | grep "Timeout" | ./ctx task "Explain this failure cascade"
+cat error.log | grep "Timeout" | ctx task "Explain this failure cascade"
 ```
 
 ---
 
 ## 🚀 Installation (Zero-Debt & Frictionless)
 
-We hate global dependencies. CoreTex provides two strictly isolated installation paths:
+CoreTex features a unified, self-healing installation pipeline that automates all prerequisite matching, virtual environments, and secure container structures out of the box. Clone the repository and run the setup utility matching your host environment:
 
-### Option A: The Docker Sandbox (Recommended)
-Zero host dependencies. Runs CoreTex OS inside an isolated container with local workspace volume mounting.
-1. `git clone https://github.com/mrdanielcasper/coretex.git && cd coretex`
-2. `docker compose build`
-3. Run `./ctx` (or `.\ctx.bat` on Windows). The wrapper automatically resolves path relative offsets, enforces absolute host mounts, and routes calls through the isolated sandbox securely.
+### 🍏 macOS & 🐧 Linux
+```bash
+chmod +x setup.sh && ./setup.sh
+```
+*Note: The script automatically evaluates your localized package manager (`apt`, `dnf`, `pacman`, `apk`, or `brew`) to resolve missing system dependencies like `unzip` headlessly.*
 
-### Option B: Lightning Local (`uv`)
-Uses Astral's ultra-fast `uv` to resolve dependencies in seconds inside an isolated `.venv`.
-1. `git clone https://github.com/mrdanielcasper/coretex.git && cd coretex`
-2. Run `./setup.sh` (Mac/Linux) or `.\setup.ps1` (Windows).
-    a. For Windows - run `powershell -ExecutionPolicy Bypass -File .\setup.ps1` first
-3. The script auto-hydrates the `.venv`, configures the local Deno sandbox environment, and launches the interactive `Synaptic Genesis` wizard.
+### 🔷 Windows (PowerShell)
+To bypass native Windows script execution restrictions safely without modifying your global system security profile, execute the script via this process-isolated command:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
+```
 
-*Have Ollama running? The setup script will auto-detect it on `localhost:11434` for 100% air-gapped, offline execution.*
+---
+
+## 🪐 The Deployment Pathways
+
+The setup utility will probe your environment and offer two distinct runtime architectures:
+
+### 1. Pure Local Deployment (Recommended)
+Installs Astral's hyper-fast `uv` package manager and the `deno` secure runtime natively on your host machine. CoreTex executes directly on your file system, using local loops while isolating third-party code blocks inside a secure cryptographic WebAssembly jail.
+
+### 2. Isolated Container Deployment (Zero-Dependency)
+Requires Docker. The script handles all host user UID/GID mapping permissions natively to avoid root-owned directory pollution, seeds local environment states, and transparently pipes your session directly into the interactive setup plane.
+
+---
+
+## 🧬 Synaptic Genesis (Interactive Setup)
+
+Regardless of the installation route selected above, you will be launched into the high-fidelity **Synaptic Genesis** wizard to complete initialization:
+
+1. **Operating Profile Boundary:** Lock your environment to *Cognitive Mode* (advisory, safe file interactions) or *Agentic Mode* (sandboxed system execution via the Deno WASM engine).
+2. **Sensory Innervation:** Toggle layout-auditing vision scrapers (Playwright/Chromium) or hardware microphone/speaker channels natively.
+3. **Synaptic Handshake:** Securely link cloud providers (OpenAI, Anthropic, Gemini) or local private backends (Ollama).
+4. **Workspace Binding:** Wire CoreTex to any local directory or an Obsidian vault (which automatically injects custom hotkey configurations).
+
+Once complete, restart your terminal app to load environment changes, and control the entire operating plane using the global shorthand command:
+```bash
+ctx --help
+```
 
 ---
 
@@ -76,10 +101,18 @@ However, if you point it at an **Obsidian Vault**, CoreTex will automatically de
 * `ctx daydream`: Triggers the Default Mode Network (DMN) to autonomously organize files, compress old memories, and refactor code in the background.
 * `ctx status`: Opens the real-time Cortical Telemetry dashboard to monitor active agent loops and memory usage.
 
+### Sensory Perception Subcommands (Sense Module)
+Trigger CoreTex OS's external receptors directly from the execution plane:
+* `ctx sense screenshot "https://google.com" "google.png"` - *Takes a headless web screenshot.*
+* `ctx sense perceive "google.png" "Describe layout"` - *Uses the Occipital Lobe to analyze visual stimuli.*
+* `ctx sense scrape "https://github.com"` - *Transduces a web page into raw markdown text format.*
+* `ctx sense listen --duration 10` - *Activates physical microphone hardware receptors.*
+* `ctx sense speak output.wav` - *Dispatches sound arrays down physical speaker hardware channels.*
+
 ### 💀 Systemic Apoptosis (Zero-Residue Uninstall)
 If you are done with CoreTex, leave no trace behind:
 ```bash
-./ctx destroy
+ctx destroy
 ```
 *This securely purges all local ledgers, token tracking logs, environment API keys, and execution queues. It respects your machine.*
 

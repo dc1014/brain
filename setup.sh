@@ -44,14 +44,12 @@ if [ ${#MISSING_UTILS[@]} -ne 0 ]; then
         PKG_MANAGER="apk"
         INSTALL_CMD="apk add ${MISSING_UTILS[*]}"
     elif command -v brew &> /dev/null; then
-        # 🍏 macOS Homebrew Support
         PKG_MANAGER="homebrew"
         INSTALL_CMD="brew install ${MISSING_UTILS[*]}"
     fi
 
     if [ -n "$PKG_MANAGER" ]; then
         SUDO=""
-        # Do not use sudo for Homebrew
         if [ "$PKG_MANAGER" != "homebrew" ] && [ "$(id -u)" -ne 0 ] && command -v sudo &> /dev/null; then
             SUDO="sudo"
         fi
@@ -110,12 +108,27 @@ else
     DEPLOY_CHOICE=${DEPLOY_CHOICE:-1}
 fi
 
+# Make sure permissions are stamped onto the wrapper before calling it
+if [ -f "./ctx" ]; then
+    chmod +x ./ctx
+fi
+
 if [ "$DEPLOY_CHOICE" == "2" ] && [ "$DOCKER_AVAILABLE" = true ]; then
     echo -e "\n🐳 \033[1;34mBuilding Isolated Docker Sandbox...\033[0m"
+
+    # ⚡ FIX: Protect volume constraints by forcing a blank file map layout if it does not exist
+    touch .env
+    mkdir -p logs System/config Meta Workspace
+
+    export UID=$(id -u)
+    export GID=$(id -g)
     docker compose build
+
     echo -e "\n✅ \033[1;32mBuild complete.\033[0m"
-    echo "To run CoreTex OS in the container, use the wrapper script: ./ctx"
-    exit 0
+    echo "Booting Synaptic Genesis inside container context...\\n"
+
+    # ⚡ FIX: Automatically chain execution down into container wizard initialization
+    exec ./ctx setup
 fi
 
 echo -e "\n⚡ \033[1;36mInitializing Pure Local Environment...\033[0m"
@@ -133,11 +146,6 @@ fi
 uv venv
 uv pip install -e .
 uv pip install -e ./Sense
-
-# 🛡️ PERMISSION ENFORCEMENT GUARD
-if [ -f "./ctx" ]; then
-    chmod +x ./ctx
-fi
 
 echo -e "\n✅ Local environment synchronized."
 echo -e "Booting Synaptic Genesis...\n"

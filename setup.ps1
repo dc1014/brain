@@ -12,7 +12,6 @@ Write-Host ""
 Write-Host "Biomimetic Agentic OS // Initialization Probe" -ForegroundColor DarkGray
 Write-Host ""
 
-# 1. Probe for Air-Gapped AI (Ollama)
 try {
     $OllamaCheck = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
     if ($OllamaCheck.StatusCode -eq 200) {
@@ -25,10 +24,8 @@ try {
 }
 Write-Host ""
 
-# 2. Probe for Docker
 $DockerAvailable = $null -ne (Get-Command docker -ErrorAction SilentlyContinue)
 
-# 3. Environment Selection
 Write-Host "Select your preferred deployment architecture:" -ForegroundColor White
 Write-Host "  [1] Pure Local (Requires uv and Python 3.12+)"
 if ($DockerAvailable) {
@@ -48,44 +45,48 @@ if ($env:CORETEX_HEADLESS -eq "1") {
 
 if ($DeployChoice -eq "2" -and $DockerAvailable) {
     Write-Host "`n🐳 Building Isolated Docker Sandbox..." -ForegroundColor Cyan
+
+    # ⚡ FIX: Protect volume constraints by forcing a blank file map layout if it does not exist
+    if (-not (Test-Path .env)) { New-Item -Path . -Name ".env" -ItemType "file" > $null }
+    foreach ($dir in "logs", "System\config", "Meta", "Workspace") {
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir > $null }
+    }
+
     docker compose build
     Write-Host "`n✅ Build complete." -ForegroundColor Green
-    Write-Host "To run CoreTex OS in the container, use the wrapper script: .\ctx.bat"
+    Write-Host "Booting Synaptic Genesis inside container context...`n" -ForegroundColor Cyan
+
+    # ⚡ FIX: Automatically chain execution down into container wizard initialization
+    .\ctx.bat setup
     exit
 }
 
-# 4. Pure Local Setup
 Write-Host "`n⚡ Initializing Pure Local Environment..." -ForegroundColor Cyan
 
-# Check for UV Package Manager
 if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
     if ($AutoInstall) {
         Write-Host "Installing uv automatically in headless mode..." -ForegroundColor Cyan
         Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
         irm https://astral.sh/uv/install.ps1 | iex
     } else {
-        # FIX: Removed nested single quotes to satisfy older PowerShell tokenizers
         $InstallUV = Read-Host "The uv package manager is missing. Install it? (y/n) [y]"
         if ([string]::IsNullOrEmpty($InstallUV)) { $InstallUV = "y" }
         if ($InstallUV -match "^[Yy]$") {
             irm https://astral.sh/uv/install.ps1 | iex
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "User") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "Machine")
         } else {
-            # FIX: Formatted explicitly using the -Message block parameter and clean strings
             Write-Error -Message "Aborting. uv is required for local installation."
             exit 1
         }
     }
 }
 
-# Ensure Deno is installed locally for the WebAssembly sandbox environment
 if ($null -eq (Get-Command deno -ErrorAction SilentlyContinue)) {
     Write-Host "`n🦕 Installing Deno WASM Sandbox locally..." -ForegroundColor Cyan
     irm https://deno.land/install.ps1 | iex
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "User") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "Machine")
 }
 
-# Execute Environment Synchronization
 uv venv
 uv pip install -e .
 uv pip install -e ./Sense
