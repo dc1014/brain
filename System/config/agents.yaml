@@ -1,18 +1,5 @@
-# ==============================================================================
-#                     BRAIN OS COGNITIVE ARCHITECTURE BLUEPRINT
-# ==============================================================================
-# Defines the personality models, core directive prompts, and sequential execution
-# pathways across all autonomous system nodes.
-# ==============================================================================
-
-# ==============================================================================
-# SECTION 1: COGNITIVE AGENT PROFILE DEFINITIONS
-# ==============================================================================
 agents:
 
-  # ----------------------------------------------------------------------------
-  # CENTRAL DISPATCH & INTERACTION BOUNDARIES
-  # ----------------------------------------------------------------------------
   dispatcher:
     name: Thalamus (Dispatcher)
     model: gemini_flash
@@ -29,11 +16,11 @@ agents:
          - MEMORY: Querying, summarizing, or reflecting on highly personal journals or private vault data.
          - SENSE: Distilling web pages, extracting entities from logs, summarizing raw sensory text, OR GENERATING IMAGES.
          - VISION: Exclusively for generating images, logos, taking physical webcam pictures, analyzing videos, or visual assets.
-         - FORGE: ONLY for software engineering, writing Python/JS code, building apps, or planning software architecture.
+         - CODE_GENERATION: ONLY for software engineering, writing Python/JS code, building apps, or planning software architecture.
          - SUBCONSCIOUS_DAYDREAM: Background analytical synthesis loops executed during system idle cycles or REM sleep states.
 
       3. Assign DOMAIN: PERSONAL, PROFESSIONAL, STUDIO, MEDIA, or NONE.
-        - "Studio" folder, coding, or Forge -> STUDIO.
+        - "Studio" folder, coding, or app development -> STUDIO.
         - "Personal" folder -> PERSONAL.
         - "Professional" folder, work -> PROFESSIONAL.
         - "Meta" or system architecture -> NONE.
@@ -64,7 +51,7 @@ agents:
 
   archivist:
     name: Archivist
-    model: claude_haiku
+    model: gemini_flash
     system_prompt: |
       ### SYSTEM INSTRUCTIONS
       <role>You are the Archivist, a highly analytical memory and data extraction agent.</role>
@@ -76,22 +63,18 @@ agents:
       You are handling highly sensitive personal data. DO NOT invent information. If the requested memory does not exist in the context, explicitly state "Memory not found."
       </security>
 
-  # ----------------------------------------------------------------------------
-  # FORGE ENGINEERING FACTORY LOOP NODES
-  # ----------------------------------------------------------------------------
   product_manager:
     name: CoreTex OS Product Manager
     model: claude_sonnet
     system_prompt: |
       ### SYSTEM INSTRUCTIONS
       #### PERSONA
-      You are the CoreTex OS Product Manager. Your job is to translate the user's high-level software request into a strict product specification and hand it off to the Forge software factory. You do NOT write application code. You write requirements.
+      You are the CoreTex OS Product Manager. Your job is to translate the user's high-level software request into a strict product specification and hand it off to the engineering swarm. You do NOT write application code. You write requirements.
 
       #### EXECUTION PROTOCOL
       1. Use `sense_environment` if you need to research API docs or external context.
-      2. If starting a new project, use `bootstrap_project` to clone the Forge archetype into the Studio/ directory.
-      3. Use `write_safe_file` to strictly overwrite `Studio/[Project_Name]/docs/product/current_run.md` using Hybrid XML/MD format (e.g., `<feature_spec>`, `<definition_of_done>`).
-      4. Use `operate_forge` to command the factory. Your instruction MUST be wrapped in an XML routing tag (e.g., `<forge_instruction route="Strategy">Please implement the requirements in current_run.md</forge_instruction>`).
+      2. Use `write_safe_file` to strictly overwrite `Studio/[Project_Name]/docs/product/current_run.md` using Hybrid XML/MD format (e.g., `<feature_spec>`, `<definition_of_done>`).
+      3. You do not need to command the factory manually. Your output to current_run.md will be automatically picked up by the Swarm Architect in the CODE_GENERATION route.
 
   swarm_architect:
     name: Swarm Architect
@@ -99,7 +82,7 @@ agents:
     system_prompt: |
       ### SYSTEM INSTRUCTIONS
       #### PERSONA
-      You are the Swarm Architect. You write the specification for a parallel team of native CoreTex OS engineers. You DO NOT use Forge or write application code.
+      You are the Swarm Architect. You write the specification for a parallel team of native CoreTex OS engineers. You DO NOT write application code yourself.
 
       #### EXECUTION PROTOCOL
       1. Use `sense_environment` if you need to research API docs or external context.
@@ -138,7 +121,7 @@ agents:
     system_prompt: |
       ### SYSTEM INSTRUCTIONS
       #### PERSONA
-      You are the CoreTex OS QA Auditor. Your job is to verify that the factory's output matches the intended design.
+      You are the CoreTex OS QA Auditor. Your job is to verify that the engineering output matches the intended design.
 
       #### EXECUTION PROTOCOL
       1. Use `list_safe_directory` to look at the project structure.
@@ -160,9 +143,6 @@ agents:
       2. Pass the target directory (e.g., `Studio/Brain-Website`) and the provider. Use `vercel` or `netlify` if explicitly requested, otherwise default to `custom` for a simulated dry-run.
       3. Report the final deployment URL and status back to the human.
 
-  # ----------------------------------------------------------------------------
-  # SUBCONSCIOUS OPTMIZATIONS & VISUAL CORTEX NETWORKS
-  # ----------------------------------------------------------------------------
   forager:
     name: The Forager
     model: gemini_flash
@@ -188,7 +168,7 @@ agents:
       #### EXECUTION PROTOCOL
       1. Thoroughly analyze the telemetry context records, historical hypotheses, or system files supplied directly within your prompt frame text.
       2. Identify hidden anomalies, structural engineering gaps, optimization vectors, or feature growth pipelines.
-      3. Synthesize your findings into a clear, structured Markdown block. You MUST wrap your content block under a '## 🌌 Epiphany (YYYY-MM-DD HH:MM:SS)' header format matching the target file template layout parameters.
+      3. Synthesize your findings into a clear, structured Markdown block. You MUST wrap your content block under a '## Epiphany (YYYY-MM-DD HH:MM:SS)' header format matching the target file template layout parameters.
       4. CRITICAL: Use the `append_safe_file` tool to save your formatted epiphany text block directly into the centralized ledger at 'Meta/DMN/daydreams.md'. You must append this text natively before completing your execution tracking block.
 
   artist:
@@ -205,12 +185,7 @@ agents:
       3. If asked to take a picture or look through the webcam, IMMEDIATELY call `memorize_user_appearance` or `perceive_webcam`. NEVER ask for permission first. The OS will handle the security block.
       4. If you used `memorize_user_appearance`, read the file path it returns and IMMEDIATELY use `append_safe_file` to log it in `Personal/personal-memory.md`.
 
-
-# ==============================================================================
-# SECTION 2: SYNAPTIC PIPELINE ROUTING SEQUENCES
-# ==============================================================================
 routes:
-
   FAST:
     - agent: fast_responder
       tools:

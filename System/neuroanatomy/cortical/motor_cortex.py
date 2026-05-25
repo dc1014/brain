@@ -34,20 +34,14 @@ class MotorCortex:
 async def execute_tools(
     tool_calls: list[Any], role_name: str, step_index: int = 0, route: str = "UNKNOWN"
 ) -> tuple[list[dict[str, Any]], list[str], str]:
-    """
-    Executes a batch of tool calls securely, managing locks and formatting results.
-    Returns: (tool_messages, action_manifest_additions, system_halt_text)
-    """
     tool_messages: list[dict[str, Any]] = []
     action_manifest: list[str] = []
     system_halt_text: str = ""
 
     if tool_calls and step_index == 0:
-        console.print(f"\n[dim]⚡ {role_name} is thinking and acting...[/dim]")
+        console.print(f"\n[dim]{role_name} is thinking and acting...[/dim]")
 
     for tool_call in tool_calls:
-        # Idiomatic instance checks (No more mock-evasion strings)
-        # UUID generation (No more hash collisions for parallel tools)
         if isinstance(tool_call, dict):
             if "tool_name" in tool_call:
                 args = tool_call.get("parameters", {})
@@ -74,13 +68,22 @@ async def execute_tools(
             except Exception:
                 args = {}
 
+        if "path" in args and "filepath" not in args:
+            args["filepath"] = args.pop("path")
+
         is_halted = False
         raw_output = ""
 
         try:
+            # FIX: Check if the tool exists FIRST before enforcing strict parameter payloads
             if not hasattr(os_tools, func_name):
                 raw_output = f"ERROR: Unknown tool '{func_name}' in System.tools"
             else:
+                if not args and func_name not in ["get_time", "check_status"]:
+                    raise ValueError(
+                        f"SECURITY BLOCK: Missing required parameters for tool '{func_name}'. Received empty dictionary."
+                    )
+
                 tool_func = getattr(os_tools, func_name)
 
                 WRITE_TOOLS = {
@@ -99,7 +102,6 @@ async def execute_tools(
                 if func_name in EXECUTION_TOOLS:
                     args["route"] = route
 
-                # Dynamic event loop inspection to safely support future native-async tools
                 async def _run_tool():
                     if inspect.iscoroutinefunction(tool_func):
                         return await tool_func(**args)
@@ -158,7 +160,7 @@ async def execute_tools(
             else:
                 raw_output = f"ERROR executing {func_name}: {error_str}"
 
-        console.print(f"[dim]🔍 Tool Executed: {func_name}[/dim]")
+        console.print(f"[dim]Tool Executed: {func_name}[/dim]")
 
         MAX_CHARS = 8000
         truncated_output = raw_output[:MAX_CHARS] + (

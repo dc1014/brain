@@ -1,5 +1,7 @@
 import asyncio
+import pytest
 from unittest.mock import MagicMock
+from System.core.schemas import ExecutionResult
 from System.neuroanatomy.cortical.motor_cortex import MotorCortex, execute_tools
 
 
@@ -77,3 +79,25 @@ def test_execute_tools_truncation(mocker):
     content = tool_msgs[0]["content"]
     assert len(content) < 15000
     assert "[SYSTEM WARNING: Truncated" in content
+
+
+@pytest.mark.asyncio
+async def test_execute_tools_path_alias(mocker):
+    """Ensure that 'path' is correctly aliased to 'filepath' to handle Anthropic tool quirks."""
+    mock_call = MagicMock()
+    mock_call.function.name = "write_safe_file"
+    mock_call.function.arguments = '{"path": "Studio/test.md", "content": "hello"}'
+    mock_call.id = "call_alias_123"
+
+    # Mock the actual tool to verify the arguments passed to it
+    mock_tool = mocker.AsyncMock(
+        return_value=ExecutionResult(
+            success=True, output="File written.", block_reason=None
+        )
+    )
+    mocker.patch("System.tools.write_safe_file", mock_tool)
+
+    await execute_tools([mock_call], "Agent")
+
+    # Verify the tool was called with 'filepath', not 'path'
+    mock_tool.assert_called_once_with(filepath="Studio/test.md", content="hello")

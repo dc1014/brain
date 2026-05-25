@@ -1,3 +1,4 @@
+# --- System/llm.py ---
 from System.core.schemas import AgentResponseSchema, MarkdownTranslator
 import asyncio
 import json
@@ -6,7 +7,7 @@ import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 from rich.console import Console
 
 from System.core.paths import ROOT_DIR
@@ -26,7 +27,6 @@ LOG_FILE: Path = LOG_DIR / "agent_interactions.jsonl"
 
 
 def clean_json_output(text: str) -> str:
-    """Strips rogue markdown backticks from native structured outputs."""
     if not text:
         return "{}"
     return text.strip("`").removeprefix("json").strip()
@@ -79,7 +79,6 @@ async def log_interaction(
 def get_system_context(
     role_name: str | list[str], system_prompt: str = "", prompt: str = "", **kwargs
 ) -> str:
-    """Generates the context parameters for the active agent node workflows."""
     from System.core.dna import get_dna_config
 
     roles = role_name if isinstance(role_name, list) else [role_name]
@@ -121,7 +120,6 @@ def get_system_context(
 
 
 def apply_humoral_modulation(base_model: str) -> tuple[str, float, int]:
-    """Applies continuous metric float adjustments to bias temperature and resource quotas dynamically."""
     endocrine = EndocrineSystem()
     vector = endocrine.get_humoral_vector()
 
@@ -136,7 +134,7 @@ def apply_humoral_modulation(base_model: str) -> tuple[str, float, int]:
         if fast_model != base_model:
             final_model = fast_model
             console.print(
-                "[dim magenta]🩸 Cortisol Overload: Routing to efficiency matrix.[/dim magenta]"
+                "[dim magenta]Cortisol Overload: Routing to efficiency matrix.[/dim magenta]"
             )
 
     max_tokens = endocrine.calculate_token_limit(final_model)
@@ -155,7 +153,6 @@ async def run_agent_async(
     tools: list[dict[str, Any]] | None = None,
     origin: str = "HUMAN",
 ) -> AgentResponse:
-    """Invokes the target node context natively asynchronously using the litellm layer."""
     mod_model, mod_temp, mod_tokens = apply_humoral_modulation(model_string)
 
     messages: list[dict[str, Any]] = []
@@ -207,7 +204,7 @@ async def run_agent_async(
             ):
                 if iteration == 0:
                     console.print(
-                        "[yellow]⚠️ Anthropic key missing. Falling back to configured heavy model.[/yellow]"
+                        "[yellow]Anthropic key missing. Falling back to configured heavy model.[/yellow]"
                     )
                 from System.core.dna import get_dna_config
 
@@ -217,15 +214,20 @@ async def run_agent_async(
 
             routed_model, api_key = vault.resolve_routing(current_target_model)
 
-            response = await acompletion(
-                model=routed_model,
-                messages=pruned_messages,
-                response_format=AgentResponseSchema,
-                tools=tools,
-                temperature=mod_temp,
-                max_tokens=mod_tokens,
-                api_key=api_key,
-            )
+            # Enforce dict[str, Any] typing to satisfy mypy strict mapping assignment
+            completion_kwargs: Dict[str, Any] = {
+                "model": routed_model,
+                "messages": pruned_messages,
+                "tools": tools,
+                "temperature": mod_temp,
+                "max_tokens": mod_tokens,
+                "api_key": api_key,
+            }
+
+            if not tools:
+                completion_kwargs["response_format"] = AgentResponseSchema
+
+            response = await acompletion(**completion_kwargs)
 
             if not getattr(response, "choices", None) or len(response.choices) == 0:
                 return AgentResponse(
@@ -370,7 +372,6 @@ async def run_agent_async(
 
 
 async def compress_memory_buffer(current_text: str) -> str | None:
-    """MemoryCompressor Service: Offloads working memory summarization to an LLM."""
     safe_current_text = vault.mask_secrets(current_text)
     prompt = (
         "You are the Prefrontal Cortex. Synthesize the following pipeline activity into a highly "

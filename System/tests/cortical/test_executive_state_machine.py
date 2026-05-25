@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from System.core.paths import normalize_path
 from System.neuroanatomy.cortical.executive_loop import execute_pipeline
+from System.neuroanatomy.cortical.working_memory import clear_pipeline_state
 
 
 @pytest.mark.asyncio
@@ -133,3 +134,43 @@ async def test_executive_state_machine_vagus_abort(
     assert mock_run_agent.call_count == 1  # Fails if it proceeds to QA node at index 1
     # 2. The physical sentinel flag must be cleanly destroyed on exit to clear the loop channel
     assert not abort_file.exists()
+
+
+@pytest.mark.asyncio
+async def test_executive_loop_embedded_system_halt(mocker, tmp_path):
+    """Ensure the pipeline aborts even if the SYSTEM HALT string is buried inside verbose model text."""
+
+    # Mock the LLM to return a buried halt string
+    mock_response = MagicMock()
+    mock_response.text = "I tried to run this command, but I got a security error.\n\n[SYSTEM HALT] SECURITY BLOCK: Unauthorized directory access."
+    mock_response.actions = ["[HALTED] Security clearance denied."]
+    mock_response.usage = {"prompt_tokens": 10, "completion_tokens": 10}
+
+    mocker.patch(
+        "System.neuroanatomy.cortical.executive_loop.run_agent_async",
+        return_value=mock_response,
+    )
+    mocker.patch(
+        "System.neuroanatomy.cortical.executive_loop.check_energy_levels",
+        return_value=(False, 0),
+    )
+    mocker.patch("System.neuroanatomy.cortical.executive_loop.commit_transaction")
+
+    # Bind the patch to a local variable to easily assert it later
+    mock_restore = mocker.patch(
+        "System.neuroanatomy.cortical.executive_loop.restore_balance"
+    )
+
+    # Run a dummy pipeline
+    dummy_pipeline = [{"agent": "product_manager", "tools": []}]
+
+    await execute_pipeline(
+        description="Test Abort",
+        route_type="CODE_GENERATION",
+        domain="STUDIO",
+        resume_pipeline=dummy_pipeline,
+    )
+
+    # Verify the rollback function was triggered because of the abort
+    mock_restore.assert_called_once()
+    clear_pipeline_state()

@@ -7,7 +7,6 @@ from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt, Confirm
-from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from System.core.paths import ROOT_DIR
@@ -26,47 +25,6 @@ FEATURES_PATH = ROOT_DIR / "System" / "config" / "features.json"
 IS_DOCKER_RUNTIME = (
     Path("/.dockerenv").exists() or os.environ.get("CORETEX_CONTAINER_TRACK") == "1"
 )
-
-
-# --- 1. THE AWAKENING ---
-def draw_coretex():
-    console.clear()
-    coretex_art = """[bold cyan]
- ██████╗ ██████╗ ██████╗ ███████╗████████╗███████╗██╗  ██╗
-██╔════╝██╔═══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝╚██╗██╔╝
-██║     ██║   ██║██████╔╝█████╗     ██║   █████╗   ╚███╔╝
-██║     ██║   ██║██╔══██╗██╔══╝     ██║   ██╔══╝   ██╔██╗
-╚██████╗╚██████╔╝██║  ██║███████╗   ██║   ███████╗██╔╝ ██╗
- ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚══╝
-    [/bold cyan]"""
-    console.print(coretex_art)
-    console.print(
-        f"       [dim]Biomimetic AI Control Plane And Obsidian Vault // Synaptic Genesis [Context: {'Docker' if IS_DOCKER_RUNTIME else 'Host'}] [/dim]\n"
-    )
-
-    table = Table(show_header=True, header_style="bold cyan", box=None)
-    table.add_column("Neural Pathway")
-    table.add_column("Subsystem Target")
-    table.add_column("Status", justify="right")
-
-    table.add_row(
-        "System/core/", "Executive NLP Routing Matrix", "[bold green]READY[/bold green]"
-    )
-    table.add_row(
-        "System/neuroanatomy/",
-        "Structural Ledger & Indexing",
-        "[bold green]READY[/bold green]",
-    )
-    table.add_row(
-        "Sense/receptors/",
-        "Progressive Sensory Organs",
-        "[bold green]READY[/bold green]"
-        if IS_DOCKER_RUNTIME
-        else "[dim yellow]DORMANT[/dim yellow]",
-    )
-
-    console.print(table)
-    console.print("\n")
 
 
 # --- 2. SECURITY GATE ---
@@ -162,12 +120,25 @@ async def harvest_credentials() -> dict:
             "prompt": "Google Gemini API Key",
             "model": "gemini/gemini-2.5-flash",
         },
+        "OPENROUTER": {
+            "prompt": "OpenRouter API Key",
+            "model": "openrouter/auto",
+        },
     }
 
     for prov, data in providers.items():
         key = Prompt.ask(f"[cyan]{data['prompt']}[/cyan]", password=True)
         if key:
             valid_keys[f"{prov}_API_KEY"] = key
+
+    # Prompt for Web Search capability
+    brave_key = Prompt.ask(
+        "[cyan]Brave Search API Key (Required for web search tools)[/cyan]",
+        password=True,
+    )
+    if brave_key:
+        valid_keys["BRAVE_API_KEY"] = brave_key
+
     return valid_keys
 
 
@@ -197,7 +168,6 @@ def bind_workspace() -> str:
 
 # --- MASTER EXECUTION ORCHESTRATOR ---
 async def main():
-    draw_coretex()
 
     code_execution_enabled = configure_security_gate()
     features = innervate_senses()
