@@ -23,7 +23,6 @@ console = Console()
 ENV_PATH = ROOT_DIR / ".env"
 FEATURES_PATH = ROOT_DIR / "System" / "config" / "features.json"
 
-# FIX: Native runtime abstraction to detect container isolation states
 IS_DOCKER_RUNTIME = (
     Path("/.dockerenv").exists() or os.environ.get("CORETEX_CONTAINER_TRACK") == "1"
 )
@@ -74,7 +73,7 @@ def draw_coretex():
 def configure_security_gate() -> bool:
     if IS_DOCKER_RUNTIME:
         console.print(
-            "[dim green]🔒 Containerized isolation active. Security Mode locked to Agentic Runtime.[/dim green]\n"
+            "[dim green][+] Containerized isolation active. Security Mode locked to Agentic Runtime.[/dim green]\n"
         )
         return True
 
@@ -84,7 +83,7 @@ def configure_security_gate() -> bool:
         "To allow CoreTex to autonomously execute code and run terminal commands, you must enable Agentic Mode."
     )
     console.print(
-        Panel(gate_text, title="🔐 [ EXECUTION BOUNDARIES ] 🔐", border_style="cyan")
+        Panel(gate_text, title="[ EXECUTION BOUNDARIES ]", border_style="cyan")
     )
 
     choice = Prompt.ask(
@@ -118,11 +117,12 @@ def innervate_senses() -> dict:
         return features
 
     if Confirm.ask(
-        "👁️ Enable the Retina? (Vision / Multimodal web scraping +150MB)", default=False
+        "[?] Enable the Retina? (Vision / Multimodal web scraping +150MB)",
+        default=False,
     ):
         features["vision"]["selected"] = True
     if Confirm.ask(
-        "👂 Enable the Cochlea? (Audio / Speech input +50MB)", default=False
+        "[?] Enable the Cochlea? (Audio / Speech input +50MB)", default=False
     ):
         features["audio"]["selected"] = True
 
@@ -146,7 +146,7 @@ async def harvest_credentials() -> dict:
     console.print(
         Panel(
             "Leave blank to skip provider mapping registers.",
-            title="🔑 [ SYNAPTIC HANDSHAKE ] 🔑",
+            title="[ SYNAPTIC HANDSHAKE ]",
             border_style="magenta",
         )
     )
@@ -174,16 +174,15 @@ async def harvest_credentials() -> dict:
 # --- 5. WORKSPACE BINDING ---
 def bind_workspace() -> str:
     if IS_DOCKER_RUNTIME:
-        # FIX: Force clean path mapping resolution inside user space containment loops
         console.print(
-            "[bold green]✅ Volumetric Isolation: Workspace hard-locked to virtual /workspace layer.[/bold green]\n"
+            "[bold green][+] Volumetric Isolation: Workspace hard-locked to virtual /workspace layer.[/bold green]\n"
         )
         return "/workspace"
 
     console.print(
         Panel(
             "CoreTex OS operates on plain text. Bind it to any local folder.",
-            title="📁 [ WORKSPACE BINDING ] 📁",
+            title="[ WORKSPACE BINDING ]",
             border_style="cyan",
         )
     )
@@ -226,18 +225,17 @@ async def main():
         FEATURES_PATH.parent.mkdir(parents=True, exist_ok=True)
         _atomic_write_text(FEATURES_PATH, json.dumps(features, indent=4))
 
-    # FIX: Only attempt global shell path modification if we are running natively on the host machine
     if not IS_DOCKER_RUNTIME:
         if Confirm.ask(
-            "\n🌐 Make 'ctx' globally accessible in your shell profile?", default=True
+            "\n[?] Make 'ctx' globally accessible in your shell profile?", default=True
         ):
             bind_global_alias()
     else:
         console.print(
-            "\n[dim yellow]⏭️ Global shell alias mapping bypassed inside Docker context.[/dim yellow]\n"
+            "\n[dim yellow][*] Global shell alias mapping bypassed inside Docker context.[/dim yellow]\n"
         )
 
-    console.print("\n[bold green]🎉 SYNAPTIC GENESIS COMPLETE 🎉[/bold green]\n")
+    console.print("\n[bold green][+] SYNAPTIC GENESIS COMPLETE [+][/bold green]\n")
 
 
 if __name__ == "__main__":

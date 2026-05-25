@@ -24,14 +24,21 @@ try {
 }
 Write-Host ""
 
-$DockerAvailable = $null -ne (Get-Command docker -ErrorAction SilentlyContinue)
+$DockerAvailable = $false
+if ($null -ne (Get-Command docker -ErrorAction SilentlyContinue)) {
+    # Verify the Docker Engine is running on Windows (Requires WSL2/Hyper-V)
+    docker info >$null 2>&1
+    if ($?) {
+        $DockerAvailable = $true
+    }
+}
 
 Write-Host "Select your preferred deployment architecture:" -ForegroundColor White
 Write-Host "  [1] Pure Local (Requires uv and Python 3.12+)"
 if ($DockerAvailable) {
     Write-Host "  [2] Isolated Container (Requires Docker - ZERO host dependencies)"
 } else {
-    Write-Host "  [2] Isolated Container (UNAVAILABLE - Docker not found)" -ForegroundColor Gray
+    Write-Host "  [2] Isolated Container (UNAVAILABLE - Docker engine not running)" -ForegroundColor Gray
 }
 
 $AutoInstall = $false
@@ -53,7 +60,7 @@ if ($DeployChoice -eq "2" -and $DockerAvailable) {
 
     docker compose build
     Write-Host "`n[+] Build complete." -ForegroundColor Green
-    Write-Host "Booting Synaptic Genesis inside container context...`n" -ForegroundColor Cyan
+    Write-Host "[*] Booting Synaptic Genesis inside container context...`n" -ForegroundColor Cyan
 
     .\ctx.bat setup
     exit
@@ -61,6 +68,7 @@ if ($DeployChoice -eq "2" -and $DockerAvailable) {
 
 Write-Host "`n[*] Initializing Pure Local Environment..." -ForegroundColor Cyan
 
+$UvBin = "uv"
 if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
     if ($AutoInstall) {
         Write-Host "[*] Installing uv automatically in headless mode..." -ForegroundColor Cyan
@@ -72,6 +80,7 @@ if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
         if ($InstallUV -match "^[Yy]$") {
             irm https://astral.sh/uv/install.ps1 | iex
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "User") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+            $UvBin = "$HOME\.cargo\bin\uv.exe"
         } else {
             Write-Error -Message "Aborting. uv is required for local installation."
             exit 1
@@ -85,11 +94,11 @@ if ($null -eq (Get-Command deno -ErrorAction SilentlyContinue)) {
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "User") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "Machine")
 }
 
-uv venv
-uv pip install -e .
-uv pip install -e ./Sense
+& $UvBin venv
+& $UvBin pip install -e .
+& $UvBin pip install -e ./Sense
 
 Write-Host "`n[+] Local environment synchronized." -ForegroundColor Green
-Write-Host "Booting Synaptic Genesis...`n" -ForegroundColor Cyan
+Write-Host "[*] Booting Synaptic Genesis...`n" -ForegroundColor Cyan
 
-uv run python -m System.cli setup
+& $UvBin run python -m System.cli setup

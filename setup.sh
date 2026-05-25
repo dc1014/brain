@@ -12,7 +12,6 @@ echo " ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══
 echo -e "\033[0m"
 echo -e "\033[2mBiomimetic Agentic OS // Initialization Probe\033[0m\\n"
 
-# 1. Detect and auto-remediate missing core system utilities
 MISSING_UTILS=()
 for util in curl unzip file; do
     if ! command -v "$util" &> /dev/null; then
@@ -21,7 +20,7 @@ for util in curl unzip file; do
 done
 
 if [ ${#MISSING_UTILS[@]} -ne 0 ]; then
-    echo -e "\033[1;33m⚠️ Missing required system utilities: ${MISSING_UTILS[*]}\033[0m"
+    echo -e "\033[1;33m[!] Missing required system utilities: ${MISSING_UTILS[*]}\033[0m"
 
     PKG_MANAGER=""
     INSTALL_CMD=""
@@ -66,7 +65,7 @@ if [ ${#MISSING_UTILS[@]} -ne 0 ]; then
         fi
 
         if [ "$AUTO_INSTALL" = true ]; then
-            echo "Installing system dependencies natively..."
+            echo "[*] Installing system dependencies natively..."
             if [ -n "$UPDATE_CMD" ]; then
                 $SUDO $UPDATE_CMD
             fi
@@ -82,15 +81,18 @@ if [ ${#MISSING_UTILS[@]} -ne 0 ]; then
 fi
 
 if curl -s http://localhost:11434/api/tags > /dev/null; then
-    echo -e "🧠 \033[1;32mLocal Ollama Engine Detected.\033[0m Private private inference interface available."
+    echo -e "[+] \033[1;32mLocal Ollama Engine Detected.\033[0m Private inference interface available."
 else
-    echo -e "☁️  \033[1;33mNo local Ollama detected.\033[0m Cloud infrastructure access keys required."
+    echo -e "[-] \033[1;33mNo local Ollama detected.\033[0m Cloud infrastructure access keys required."
 fi
 echo ""
 
 DOCKER_AVAILABLE=false
 if command -v docker &> /dev/null; then
-    DOCKER_AVAILABLE=true
+    # Verify the Docker Daemon is actually running
+    if docker info >/dev/null 2>&1; then
+        DOCKER_AVAILABLE=true
+    fi
 fi
 
 echo -e "\033[1mSelect your preferred deployment architecture:\033[0m"
@@ -98,7 +100,7 @@ echo "  [1] Pure Local (Requires 'uv' and Python 3.12+)"
 if [ "$DOCKER_AVAILABLE" = true ]; then
     echo "  [2] Isolated Container (Requires Docker - ZERO host dependencies)"
 else
-    echo "  [2] Isolated Container (UNAVAILABLE - Docker not found)"
+    echo "  [2] Isolated Container (UNAVAILABLE - Docker engine not running)"
 fi
 
 if [ "$CORETEX_HEADLESS" == "1" ]; then
@@ -108,15 +110,13 @@ else
     DEPLOY_CHOICE=${DEPLOY_CHOICE:-1}
 fi
 
-# Make sure permissions are stamped onto the wrapper before calling it
 if [ -f "./ctx" ]; then
     chmod +x ./ctx
 fi
 
 if [ "$DEPLOY_CHOICE" == "2" ] && [ "$DOCKER_AVAILABLE" = true ]; then
-    echo -e "\n🐳 \033[1;34mBuilding Isolated Docker Sandbox...\033[0m"
+    echo -e "\n[*] \033[1;34mBuilding Isolated Docker Sandbox...\033[0m"
 
-    # ⚡ FIX: Protect volume constraints by forcing a blank file map layout if it does not exist
     touch .env
     mkdir -p logs System/config Meta Workspace
 
@@ -124,18 +124,19 @@ if [ "$DEPLOY_CHOICE" == "2" ] && [ "$DOCKER_AVAILABLE" = true ]; then
     export GID=$(id -g)
     docker compose build
 
-    echo -e "\n✅ \033[1;32mBuild complete.\033[0m"
-    echo "Booting Synaptic Genesis inside container context...\\n"
+    echo -e "\n[+] \033[1;32mBuild complete.\033[0m"
+    echo -e "[*] Booting Synaptic Genesis inside container context...\n"
 
-    # ⚡ FIX: Automatically chain execution down into container wizard initialization
     exec ./ctx setup
 fi
 
-echo -e "\n⚡ \033[1;36mInitializing Pure Local Environment...\033[0m"
+echo -e "\n[*] \033[1;36mInitializing Pure Local Environment...\033[0m"
 
+UV_BIN="uv"
 if ! command -v uv &> /dev/null; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
     export PATH="$HOME/.local/bin:$PATH"
+    UV_BIN="$HOME/.local/bin/uv"
 fi
 
 if ! command -v deno &> /dev/null; then
@@ -143,10 +144,10 @@ if ! command -v deno &> /dev/null; then
     export PATH="$HOME/.deno/bin:$PATH"
 fi
 
-uv venv
-uv pip install -e .
-uv pip install -e ./Sense
+$UV_BIN venv
+$UV_BIN pip install -e .
+$UV_BIN pip install -e ./Sense
 
-echo -e "\n✅ Local environment synchronized."
-echo -e "Booting Synaptic Genesis...\n"
-uv run python -m System.cli setup
+echo -e "\n[+] Local environment synchronized."
+echo -e "[*] Booting Synaptic Genesis...\n"
+$UV_BIN run python -m System.cli setup
