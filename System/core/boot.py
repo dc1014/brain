@@ -1,3 +1,4 @@
+# --- System/core/boot.py ---
 import sys
 from dotenv import load_dotenv
 from System.core.paths import ROOT_DIR
@@ -22,11 +23,12 @@ def bootstrap() -> bool:
             "Personal",
             "Professional",
             "Meta",
+            "Media",
             "Sense",
             "System/tools/engrams",
             "System/logs",
         ]
-        if not (ROOT_DIR / "Meta").exists():
+        if not (ROOT_DIR / "Meta").exists() or not (ROOT_DIR / "Media").exists():
             for d in target_dirs:
                 (ROOT_DIR / d).mkdir(parents=True, exist_ok=True)
 

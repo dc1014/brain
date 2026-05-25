@@ -1,0 +1,10 @@
+webhooks:
+  github:
+    route_name: "github"
+    secret_env_var: "GITHUB_WEBHOOK_SECRET"
+    signature_header: "X-Hub-Signature-256"
+    payload_mapping:
+      repo: "repository.name"
+      pusher: "pusher.name"
+    target_action: "exteroceptive"
+    template: "Environment Shift: Repository {repo} received a push from {pusher}."

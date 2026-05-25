@@ -298,7 +298,6 @@ class MedullaOblongata:
                 try:
                     from System.core.orchestrator import run_pending_queue
 
-                    # FIX: Safely interpret and consume coroutine instances natively
                     execution_payload = run_pending_queue()
                     if asyncio.iscoroutine(execution_payload):
                         asyncio.run(execution_payload)
@@ -340,7 +339,13 @@ class MedullaOblongata:
     def _supervise_threads(self):
         daemons_config = self.config_data.get("background_daemons", {})
 
+        # Track last restart times to prevent infinite console spam loops
+        dermis_last_restart = 0.0
+        watcher_last_restart = 0.0
+
         while self.is_alive:
+            now = time.time()
+
             if daemons_config.get("dermis_receptor", {}).get("enabled", True):
                 if "dermis" not in self.daemons:
                     try:
@@ -359,32 +364,38 @@ class MedullaOblongata:
                         )
                         dermis_thread.start()
                         self.daemons["dermis"] = dermis_thread
+                        dermis_last_restart = now
                     except Exception as e:
                         medulla_logger.error(
                             f"Dermis initial boot setup failure: {str(e)}"
                         )
                 elif not self.daemons["dermis"].is_alive():
-                    console.print(
-                        "[bold red]💓 Medulla: Dermis cardiac arrest detected! Reviving network skin...[/bold red]"
-                    )
-                    try:
-                        port = daemons_config.get("dermis_receptor", {}).get(
-                            "secure_port", 8080
+                    # Only attempt to resuscitate if 60 seconds have passed since the last start
+                    if now - dermis_last_restart > 60:
+                        dermis_last_restart = now
+                        console.print(
+                            "[bold red]💓 Medulla: Dermis cardiac arrest detected! Reviving network skin...[/bold red]"
                         )
-                        from Sense.receptors.dermis import DermisAbstraction
+                        try:
+                            port = daemons_config.get("dermis_receptor", {}).get(
+                                "secure_port", 8080
+                            )
+                            from Sense.receptors.dermis import DermisAbstraction
 
-                        dermis_skin = DermisAbstraction(port=port)
-                        self.active_instances["dermis"] = dermis_skin
+                            dermis_skin = DermisAbstraction(port=port)
+                            self.active_instances["dermis"] = dermis_skin
 
-                        dermis_thread = threading.Thread(
-                            target=dermis_skin.start,
-                            name="DermisReceptorThread",
-                            daemon=True,
-                        )
-                        dermis_thread.start()
-                        self.daemons["dermis"] = dermis_thread
-                    except Exception as e:
-                        medulla_logger.error(f"Dermis resuscitation failure: {str(e)}")
+                            dermis_thread = threading.Thread(
+                                target=dermis_skin.start,
+                                name="DermisReceptorThread",
+                                daemon=True,
+                            )
+                            dermis_thread.start()
+                            self.daemons["dermis"] = dermis_thread
+                        except Exception as e:
+                            medulla_logger.error(
+                                f"Dermis resuscitation failure: {str(e)}"
+                            )
 
             if daemons_config.get("file_watcher", {}).get("enabled", True):
                 if "watcher" not in self.daemons:
@@ -399,27 +410,33 @@ class MedullaOblongata:
                             )
                             watcher_thread.start()
                             self.daemons["watcher"] = watcher_thread
+                            watcher_last_restart = now
                     except Exception as e:
                         medulla_logger.error(
                             f"Watcher initial boot setup failure: {str(e)}"
                         )
                 elif not self.daemons["watcher"].is_alive():
-                    console.print(
-                        "[bold yellow]🫁 Medulla: Watcher respiratory arrest detected! Reviving somatosensory cortex...[/bold yellow]"
-                    )
-                    try:
-                        import System.cli_somatic as somatic
+                    # Only attempt to resuscitate if 60 seconds have passed since the last start
+                    if now - watcher_last_restart > 60:
+                        watcher_last_restart = now
+                        console.print(
+                            "[bold yellow]🫁 Medulla: Watcher respiratory arrest detected! Reviving somatosensory cortex...[/bold yellow]"
+                        )
+                        try:
+                            import System.cli_somatic as somatic
 
-                        if hasattr(somatic, "watch"):
-                            watcher_thread = threading.Thread(
-                                target=somatic.watch,
-                                name="SomatosensoryWatcherThread",
-                                daemon=True,
+                            if hasattr(somatic, "watch"):
+                                watcher_thread = threading.Thread(
+                                    target=somatic.watch,
+                                    name="SomatosensoryWatcherThread",
+                                    daemon=True,
+                                )
+                                watcher_thread.start()
+                                self.daemons["watcher"] = watcher_thread
+                        except Exception as e:
+                            medulla_logger.error(
+                                f"Watcher resuscitation failure: {str(e)}"
                             )
-                            watcher_thread.start()
-                            self.daemons["watcher"] = watcher_thread
-                    except Exception as e:
-                        medulla_logger.error(f"Watcher resuscitation failure: {str(e)}")
 
             for _ in range(50):
                 if not self.is_alive:
@@ -431,10 +448,23 @@ class MedullaOblongata:
         if self.is_alive:
             return
 
+        # Protected locks that should never be deleted by the cleanup sweeper
+        PROTECTED_LOCKS = {
+            "uv.lock",
+            "package-lock.json",
+            "yarn.lock",
+            "pnpm-lock.yaml",
+        }
+        # Folders to skip entirely to speed up boot time and prevent false-positives
+        IGNORE_DIRS = {".git", ".venv", "node_modules", "dist", "build", "__pycache__"}
+
         try:
-            for root, _, files in os.walk(str(ROOT_DIR)):
+            for root, dirs, files in os.walk(str(ROOT_DIR)):
+                # Prune skipped directories in-place
+                dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
+
                 for f in files:
-                    if f.endswith(".lock"):
+                    if f.endswith(".lock") and f not in PROTECTED_LOCKS:
                         lock_file = os.path.join(root, f)
                         try:
                             os.unlink(lock_file)
@@ -514,7 +544,6 @@ class MedullaOblongata:
                     "Medulla brainstem sleep phase: Invoking default mode network distillation loop."
                 )
 
-                # FIX: Safely interpret and consume coroutine instances natively
                 daydream_payload = trigger_daydreams(topic=None, domain="STUDIO")
                 if asyncio.iscoroutine(daydream_payload):
                     asyncio.run(daydream_payload)

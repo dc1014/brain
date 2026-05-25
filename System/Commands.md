@@ -1,44 +1,51 @@
-# ⚡ CoreTex OS: Command Line Interface
+# CoreTex: Unified Command Reference
 
-CoreTex OS is entirely modular and can be controlled via the unified CLI.
-Once path binding is complete, execute these commands from your shell using the `ctx` shorthand.
+CoreTex can be controlled entirely via the unified CLI using the `ctx` shorthand. Because of its multi-layered design, commands are routed through different autonomous layers of the system.
 
-### 🧠 Core Cognition
-Execute an autonomous task through the Prefrontal Cortex and Agent Swarm.
-* `ctx task "Your instruction here"`
-* **Example:** `ctx task "Use bootstrap_project to create a new app called 'My-App'"`
-* **Example:** `ctx task "Search Studio for 'fastapi' and summarize the endpoints."`
+## Core Lifecycle Commands
+Manage the fundamental boot, configuration, and structural state of the operating system.
 
-### 🖐️ Sensory Input (Somatosensory Cortex)
-Start the background watcher to feel for file modifications across all domains and trigger autonomous stylistic mirroring reflexes.
-* `ctx watch`
+* `ctx setup` - Initializes CoreTex using the interactive onboarding wizard.
+* `ctx live` - Boots background multi-agent daemons and establishes continuous somatic loops.
+* `ctx halt` - Instantly kills all active background daemon processes and file watchers.
+* `ctx recover` - Reboots the systemic daemons and clears locked memory states.
+* `ctx approve` - Approves pending agentic tasks waiting in the workspace.
+* `ctx destroy` - Zero-Residue Uninstaller to completely purge local logs and configurations.
 
-### 🌙 Autonomic States (Pineal Gland)
-Force the system into a Deep Sleep cycle (Triggers the Lymphatic flush, Cerebellar engram compilation, and semantic sidecar memory compaction loops).
-* `ctx sleep`
+## Cognitive Commands (CNS Execution Pathways)
+High-level commands that engage the Prefrontal Cortex and invoke active Large Language Model swarms.
 
-### 👁️ Sensory Perception (Sense Module Subcommands)
-Trigger CoreTex OS's external receptors directly from the execution plane.
-* `ctx sense screenshot "https://google.com" "google.png"` - *Takes a headless web screenshot.*
-* `ctx sense perceive "google.png" "Describe the layout."` - *Uses the Occipital Lobe to analyze visual stimuli.*
-* `ctx sense scrape "https://github.com"` - *Transduces a web page into raw text format.*
-* `ctx sense listen --duration 10` - *Activates physical microphone hardware receptors.*
-* `ctx sense speak audio_output.wav` - *Dispatches sound arrays down physical speaker hardware channels.*
+* `ctx task "objective"` - Engages the Prefrontal Cortex to execute an autonomous cognitive task.
+* `ctx daydream` - Triggers the Default Mode Network to synthesize structural patterns in the background.
+* `ctx evolve` - Compiles past executions into structured memory blocks.
+* `ctx forage` - Directs the Forager agent to monitor biological environmental targets.
+* `ctx compile` - Triggers Cerebellar consolidation of motor skills.
+* `ctx absorb "path/to/data"` - Ingests external data or codebases into long-term structures.
 
-### 🌊 Garbage Collection (Lymphatic System)
-Manage environment memory boundaries and compress historical interaction logs.
-* `ctx flush` - *Sweeps old logs and volatile snapshots into compressed Lymph Node archives.*
-* `ctx purge` - *Destructively and permanently deletes all archived memory sidecars and logs.*
+## Somatic Commands (Autonomic Reflex Arcs)
+Low-level native Python routines that bypass the LLM entirely to perform immediate actions for zero tokens.
 
-### 📊 Diagnostics (Interoception)
-View real-time interoceptive vitals, hardware allocations, and active agent tracking statistics.
-* `ctx status` - *Displays real-time component vitals and token spend metrics.*
-* `ctx map-topology` - *Generates a layout architecture map of your active environment graph.*
+* `ctx status` - Displays real-time interoceptive vitals (Token burn, Immune responses).
+* `ctx map-topology` - Generates a Mermaid diagram of the OS's active architecture.
+* `ctx watch` - Starts the Somatosensory file watcher daemon.
+* `ctx sleep` - Forces a deep sleep cycle (Lymphatic flush + Daydreaming + Compaction).
+* `ctx list-reflexes` - Lists all consolidated muscle memories (Engrams).
+* `ctx reflex "engram_name"` - Executes a compiled, zero-token somatic reflex safely.
+* `ctx assimilate "engram_name"` - Integrates a quarantined external engram into muscle memory.
+* `ctx expose-dermis --port 8080` - Opens a temporary secure reverse-tunnel to the local Dermis API.
+* `ctx observe "agent" "objective" "cmd1,cmd2"` - Tracks a successful peer multi-agent timeline.
+* `ctx sync-mirror "prompt"` - Replicates observed peer arrays for zero tokens.
+* `ctx imitate "path/to/file.md"` - Fingerprints personalized style cadences dynamically.
 
-### 🛠️ Quality Assurance & Developer Checks
-Run these validations inside terminal layers to guarantee Zero-Debt environmental metrics before staging code updates.
-* `uv run pytest System/tests` - *Run the biomimetic test suite validation pass.*
-* `uv run pre-commit run --all-files` - *Fire Shift-Left layout linters and static type checkers.*
+## Sensory Commands (Exteroceptive Receptors)
+Direct hardware and networking interfaces allowing the OS to fetch raw data.
 
-### 🌐 Public Webhooks (External Interoperability)
-* `ctx expose-dermis --port 8080`: Fires a somatic reflex to open a secure native reverse tunnel. Exposes your local port boundaries to a public gateway URL so external event triggers can push inbound data to CoreTex OS.
+* `ctx scrape "https://url.com"` - Transduces a web page into raw text format.
+* `ctx screenshot "https://url.com" "out.png"` - Takes a headless web screenshot.
+* `ctx perceive "image.png" "query"` - Uses the Occipital Lobe to analyze visual stimuli.
+* `ctx listen --duration 10` - Activates physical microphone hardware receptors.
+* `ctx speak "file.wav"` - Dispatches sound arrays down physical speaker hardware.
+* `ctx smell` - Scans the vault for rot or formatting anomalies.
+* `ctx taste "file.py"` - Validates syntax and basic file integrity.
+* `ctx flush` - Sweeps old logs and volatile snapshots into compressed archives.
+* `ctx purge` - Destructively deletes all archived memory sidecars and logs.

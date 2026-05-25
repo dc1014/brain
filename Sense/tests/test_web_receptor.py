@@ -1,4 +1,3 @@
-# --- Sense/tests/test_web_receptor.py ---
 import pytest
 from Sense.receptors.web import transduce_web_page, TargetValidator, SecurityBlockError
 
@@ -21,10 +20,10 @@ def test_target_validator_blocks_ssrf():
 
 def test_transduce_web_page_success(mocker):
     """Proves the Playwright receptor correctly renders and strips HTML noise."""
+    pytest.importorskip("playwright")
 
     mocker.patch("socket.gethostbyname", return_value="8.8.8.8")
 
-    # FIX: Patch the module where it lives natively since it's lazy-imported
     mock_sync_playwright = mocker.patch("playwright.sync_api.sync_playwright")
 
     mock_context_manager = mocker.MagicMock()
@@ -61,9 +60,10 @@ def test_transduce_web_page_success(mocker):
 
 def test_transduce_web_page_token_guillotine(mocker):
     """Proves the receptor truncates massive pages to protect the LLM token budget."""
+    pytest.importorskip("playwright")
+
     mocker.patch("socket.gethostbyname", return_value="8.8.8.8")
 
-    # FIX: Patch the module where it lives natively since it's lazy-imported
     mock_sync_playwright = mocker.patch("playwright.sync_api.sync_playwright")
 
     mock_context_manager = mocker.MagicMock()

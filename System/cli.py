@@ -22,6 +22,7 @@ from Sense.receptors.web import transduce_web_page
 from System.cli_cognitive import absorb, compile, daydream, evolve, forage, task
 from System.cli_somatic import (
     assimilate,
+    expose_dermis,
     imitate,
     list_reflexes,
     map_topology,
@@ -69,7 +70,7 @@ def graceful_coretex_excepthook(exc_type, exc_value, exc_traceback):
     console.print(
         Panel(
             f"[bold white]{error_msg}[/bold white]\n\n[dim]The Vagus Nerve has safely preserved your environment state.[/dim]",
-            title="[bold red]🛑 CORTICAL INTERRUPT[/bold red]",
+            title="[bold red]CORTICAL INTERRUPT[/bold red]",
             border_style="red",
             expand=False,
         )
@@ -81,15 +82,13 @@ sys.excepthook = graceful_coretex_excepthook
 
 # Master Typer Configuration
 app = typer.Typer(
-    help="🦾 CoreTex OS: Biomimetic Agentic Operating System", no_args_is_help=True
+    help="CoreTex OS: Biomimetic Agentic Operating System", no_args_is_help=True
 )
 
 # Sub-App Domain Subcommands
-cognitive_app = typer.Typer(help="🧠 Cognitive Commands (CNS Execution Pathways)")
-somatic_app = typer.Typer(help="⚡ Somatic Commands (Autonomic Reflex Arcs)")
-sense_app = typer.Typer(
-    help="👃 Sensory Commands (Exteroceptive Organ Ingestion Handles)"
-)
+cognitive_app = typer.Typer(help="Cognitive Commands (CNS Execution Pathways)")
+somatic_app = typer.Typer(help="Somatic Commands (Autonomic Reflex Arcs)")
+sense_app = typer.Typer(help="Sensory Commands (Exteroceptive Organ Ingestion Handles)")
 
 app.add_typer(cognitive_app, name="cognitive")
 app.add_typer(somatic_app, name="somatic")
@@ -109,7 +108,7 @@ def main(
     if verbose:
         os.environ["CORETEX_VERBOSE"] = "1"
         console.print(
-            "[dim cyan]🔊 Verbose sensory mode enabled. Somatic logging active.[/dim cyan]"
+            "[dim cyan]Verbose sensory mode enabled. Somatic logging active.[/dim cyan]"
         )
 
     queue_file = ROOT_DIR / "System" / "execution_queue.json"
@@ -134,24 +133,24 @@ def setup() -> None:
 
 @app.command()
 def live():
-    """⚡ Synaptic Resonance: Boots background multi-agent daemons and establishes continuous somatic loops."""
+    """Synaptic Resonance: Boots background multi-agent daemons and establishes continuous somatic loops."""
     from System.neuroanatomy.systemic.thymus import ThymusGland
 
     console.print(
-        "[bold green]⚡ Booting Thymus Watchdog & Resuscitating Medulla...[/bold green]"
+        "[bold green]Booting Thymus Watchdog & Resuscitating Medulla...[/bold green]"
     )
     thymus = ThymusGland()
     try:
         thymus.boot()
     except KeyboardInterrupt:
-        console.print("\n[bold red]🛑 System interrupt received (Ctrl+C).[/bold red]")
+        console.print("\n[bold red]System interrupt received (Ctrl+C).[/bold red]")
         if thymus.medulla_process and thymus.medulla_process.poll() is None:
             thymus.medulla_process.terminate()
 
 
 @app.command()
 def halt():
-    """🛑 Emergency Brake: Instantly kills all active background daemon processes and file watchers."""
+    """Emergency Brake: Instantly kills all active background daemon processes and file watchers."""
     from System.neuroanatomy.autonomic.vagus_nerve import trigger_halt
 
     trigger_halt()
@@ -159,7 +158,7 @@ def halt():
 
 @app.command()
 def recover():
-    """🩹 Autonomic Recovery: Reboots the systemic daemons and clears locked memory states."""
+    """Autonomic Recovery: Reboots the systemic daemons and clears locked memory states."""
     from System.neuroanatomy.autonomic.vagus_nerve import trigger_recover
 
     trigger_recover()
@@ -167,7 +166,7 @@ def recover():
 
 @app.command()
 def approve():
-    """✅ Dopaminergic Release: Approves pending agentic tasks waiting in the workspace."""
+    """Dopaminergic Release: Approves pending agentic tasks waiting in the workspace."""
     queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
     md_queue = ROOT_DIR / "Meta" / "Pending_Actions.md"
     approved_flag = ROOT_DIR / "Meta" / ".approved"
@@ -182,18 +181,18 @@ def approve():
     if md_queue.exists():
         with open(md_queue, "w", encoding="utf-8") as f:
             f.write(
-                "# 🟢 Swarm Action Approved\n*The task has been approved. The Medulla daemon will begin background execution shortly.*\n\n"
+                "# Swarm Action Approved\n*The task has been approved. The Medulla daemon will begin background execution shortly.*\n\n"
             )
     console.print(
-        "[bold green]🔓 Inhibition Released: Task approved for execution![/bold green]"
+        "[bold green]Inhibition Released: Task approved for execution![/bold green]"
     )
 
 
 @app.command()
 def destroy() -> None:
-    """💀 Systemic Apoptosis: Zero-Residue Uninstaller to completely purge local logs and configurations."""
+    """Systemic Apoptosis: Zero-Residue Uninstaller to completely purge local logs and configurations."""
     console.print(
-        "[bold red]⚠️ WARNING: You are about to initiate Systemic Apoptosis.[/bold red]"
+        "[bold red]WARNING: You are about to initiate Systemic Apoptosis.[/bold red]"
     )
     console.print(
         "This will permanently erase all memory ledgers, token usage logs, and environment API keys."
@@ -210,26 +209,26 @@ def destroy() -> None:
         if log_dir.exists():
             shutil.rmtree(log_dir, ignore_errors=True)
             console.print(
-                "[dim]✔ Deleted episodic ledgers, token tracking, and system logs.[/dim]"
+                "[dim]Deleted episodic ledgers, token tracking, and system logs.[/dim]"
             )
 
         env_file = ROOT_DIR / ".env"
         if env_file.exists():
             env_file.unlink()
-            console.print("[dim]✔ Deleted environment credentials and API keys.[/dim]")
+            console.print("[dim]Deleted environment credentials and API keys.[/dim]")
 
         queue_file = ROOT_DIR / "System" / "execution_queue.json"
         if queue_file.exists():
             queue_file.unlink()
-            console.print("[dim]✔ Flushed pending motor execution queues.[/dim]")
+            console.print("[dim]Flushed pending motor execution queues.[/dim]")
 
     console.print(
-        "\n[bold green]✅ Systemic Apoptosis complete. CoreTex OS has been purged.[/bold green]"
+        "\n[bold green]Systemic Apoptosis complete. CoreTex OS has been purged.[/bold green]"
     )
 
 
 # ==============================================================================
-# DUAL REGISTRATION MATRIX
+# DUAL REGISTRATION MATRIX (Unhidden to expose shortcuts in root help menu)
 # ==============================================================================
 
 # Cognitive Registry Hooks
@@ -240,12 +239,12 @@ cognitive_app.command(name="forage")(forage)
 cognitive_app.command(name="compile")(compile)
 cognitive_app.command(name="absorb")(absorb)
 
-app.command(name="task", hidden=True)(task)
-app.command(name="daydream", hidden=True)(daydream)
-app.command(name="evolve", hidden=True)(evolve)
-app.command(name="forage", hidden=True)(forage)
-app.command(name="compile", hidden=True)(compile)
-app.command(name="absorb", hidden=True)(absorb)
+app.command(name="task")(task)
+app.command(name="daydream")(daydream)
+app.command(name="evolve")(evolve)
+app.command(name="forage")(forage)
+app.command(name="compile")(compile)
+app.command(name="absorb")(absorb)
 
 # Somatic Registry Hooks
 somatic_app.command(name="map-topology")(map_topology)
@@ -258,22 +257,24 @@ somatic_app.command(name="watch")(watch)
 somatic_app.command(name="observe")(observe)
 somatic_app.command(name="sync-mirror")(sync_mirror)
 somatic_app.command(name="imitate")(imitate)
+somatic_app.command(name="expose-dermis")(expose_dermis)
 
-app.command(name="map-topology", hidden=True)(map_topology)
-app.command(name="status", hidden=True)(status)
-app.command(name="list-reflexes", hidden=True)(list_reflexes)
-app.command(name="reflex", hidden=True)(reflex)
-app.command(name="sleep", hidden=True)(sleep)
-app.command(name="assimilate", hidden=True)(assimilate)
-app.command(name="watch", hidden=True)(watch)
-app.command(name="observe", hidden=True)(observe)
-app.command(name="sync-mirror", hidden=True)(sync_mirror)
-app.command(name="imitate", hidden=True)(imitate)
+app.command(name="map-topology")(map_topology)
+app.command(name="status")(status)
+app.command(name="list-reflexes")(list_reflexes)
+app.command(name="reflex")(reflex)
+app.command(name="sleep")(sleep)
+app.command(name="assimilate")(assimilate)
+app.command(name="watch")(watch)
+app.command(name="observe")(observe)
+app.command(name="sync-mirror")(sync_mirror)
+app.command(name="imitate")(imitate)
+app.command(name="expose-dermis")(expose_dermis)
 
 
 # Standalone Sensory Package Route Mapping Proxy Ingestion Handles
 @sense_app.command(name="scrape")
-@app.command(name="scrape", hidden=True)
+@app.command(name="scrape")
 def sense_scrape(url: str = typer.Argument(..., help="Web link target URL.")):
     try:
         result = transduce_web_page(url)
@@ -289,13 +290,13 @@ def sense_scrape(url: str = typer.Argument(..., help="Web link target URL.")):
 
 
 @sense_app.command(name="screenshot")
-@app.command(name="screenshot", hidden=True)
+@app.command(name="screenshot")
 def sense_screenshot(url: str, output: str = "screenshot.png"):
     console.print(take_screenshot(url, output))
 
 
 @sense_app.command(name="perceive")
-@app.command(name="perceive", hidden=True)
+@app.command(name="perceive")
 def sense_perceive(
     image_path: str, query: str = "Describe this image in extreme detail."
 ):
@@ -303,7 +304,7 @@ def sense_perceive(
 
 
 @sense_app.command(name="listen")
-@app.command(name="listen", hidden=True)
+@app.command(name="listen")
 def sense_listen(duration: int = 5, output: str = "recording.wav"):
     target = Path(output)
     out_path = (
@@ -313,48 +314,44 @@ def sense_listen(duration: int = 5, output: str = "recording.wav"):
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     console.print(
-        f"[bold cyan]🎤 Hardware Mic Active: Recording for {duration} seconds...[/bold cyan]"
+        f"[bold cyan]Hardware Mic Active: Recording for {duration} seconds...[/bold cyan]"
     )
     console.print(f"[green]{record_audio(str(out_path), duration)}[/green]")
 
 
 @sense_app.command(name="speak")
-@app.command(name="speak", hidden=True)
+@app.command(name="speak")
 def sense_speak(file: str):
     target = Path(file).resolve()
     if not target.exists():
         console.print(f"[bold red]File not found: {file}[/bold red]")
         return
-    console.print(
-        f"[bold cyan]🔊 Physical Speaker Active: Playing {file}...[/bold cyan]"
-    )
+    console.print(f"[bold cyan]Physical Speaker Active: Playing {file}...[/bold cyan]")
     play_audio(str(target))
 
 
 @sense_app.command(name="smell")
-@app.command(name="smell", hidden=True)
+@app.command(name="smell")
 def sense_smell(directory: str = "Studio"):
     console.print(
-        f"[bold cyan]👃 Olfactory Bulb smelling '{directory}' for anomalies...[/bold cyan]"
+        f"[bold cyan]Olfactory Bulb smelling '{directory}' for anomalies...[/bold cyan]"
     )
     if "status='clean'" in process_scent_profile(directory):
-        console.print(
-            "[bold green]✅ Vault smells clean. No rot detected.[/bold green]"
-        )
+        console.print("[bold green]Vault smells clean. No rot detected.[/bold green]")
     else:
         console.print(
-            "[bold yellow]⚠️  Anomalies Detected! Scent report written to Meta/Olfactory_Anomalies.md[/bold yellow]"
+            "[bold yellow]Anomalies Detected! Scent report written to Meta/Olfactory_Anomalies.md[/bold yellow]"
         )
 
 
 @sense_app.command(name="taste")
-@app.command(name="taste", hidden=True)
+@app.command(name="taste")
 def sense_taste(filepath: str):
     console.print_json(json.dumps(sample_file(filepath)))
 
 
 @sense_app.command(name="flush")
-@app.command(name="flush", hidden=True)
+@app.command(name="flush")
 def sense_flush():
     from System.neuroanatomy.systemic.lymphatic import flush_waste
 
@@ -362,7 +359,7 @@ def sense_flush():
 
 
 @sense_app.command(name="purge")
-@app.command(name="purge", hidden=True)
+@app.command(name="purge")
 def sense_purge():
     from System.neuroanatomy.systemic.lymphatic import purge_waste
 
