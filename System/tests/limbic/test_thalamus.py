@@ -43,6 +43,8 @@ async def test_thalamus_pydantic_fallback(mocker, monkeypatch):
     mocker.patch(
         "System.neuroanatomy.systemic.enteric.get_gut_reaction", return_value=None
     )
+    mocker.patch("System.neuroanatomy.systemic.enteric.save_gut_reaction")
+    mocker.patch("System.neuroanatomy.autonomic.interoception.log_metabolism")
     mocker.patch(
         "System.neuroanatomy.limbic.amygdala.scan_prompt", return_value=(True, "Safe")
     )
@@ -66,7 +68,6 @@ async def test_thalamus_pydantic_fallback(mocker, monkeypatch):
         "Write some code."
     )
 
-    # Pydantic validation failures degrade safely to True/UNKNOWN to keep the OS alive
     assert is_valid is True
     assert route == "UNKNOWN"
     assert domain == "NONE"

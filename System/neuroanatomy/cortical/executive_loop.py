@@ -119,7 +119,7 @@ async def execute_pipeline(
     available_tools = get_dna_config().get("tools", {})
 
     code_execution_enabled = os.environ.get(
-        "BRAIN_ENABLE_CODE_EXECUTION", "false"
+        "CORETEX_ENABLE_CODE_EXECUTION", "false"
     ).lower() in ("true", "1", "yes")
 
     if not code_execution_enabled:

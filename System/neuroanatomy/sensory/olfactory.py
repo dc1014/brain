@@ -1,4 +1,4 @@
-from System.tools import ROOT_DIR
+from System.core.paths import ROOT_DIR
 from Sense.receptors.smell import smell_environment
 
 

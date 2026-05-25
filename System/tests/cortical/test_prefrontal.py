@@ -114,6 +114,7 @@ async def test_synaptic_consolidation_commits_mid_pipeline(
     """Proves intermediate milestones are written directly to safe storage layers."""
     mocker.patch("System.neuroanatomy.cortical.executive_loop.ROOT_DIR", tmp_path)
     mocker.patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state")
+    mocker.patch("System.neuroanatomy.cortical.executive_loop.clear_pipeline_state")
 
     mocker.patch(
         "System.neuroanatomy.cortical.executive_loop.get_dna_config",
@@ -235,6 +236,9 @@ async def test_cognitive_tool_pruning_hides_execution_tools(
 
     mocker.patch("System.neuroanatomy.cortical.executive_loop.ROOT_DIR", tmp_path)
     mocker.patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state")
+    mocker.patch(
+        "System.neuroanatomy.cortical.executive_loop.clear_pipeline_state"
+    )  # ⚡ ADD THIS
 
     (tmp_path / "logs").mkdir(parents=True, exist_ok=True)
 

@@ -1,4 +1,3 @@
-# --- System/tests/core/test_onboarding_path_binding.py ---
 from pathlib import Path
 from System.core.onboarding.path_binding import bind_global_alias
 
@@ -15,7 +14,7 @@ def test_bind_global_alias_linux_zsh(mocker, tmp_path: Path):
 
     zshrc = tmp_path / ".zshrc"
     assert zshrc.exists()
-    assert 'alias brain="cd' in zshrc.read_text(encoding="utf-8")
+    assert 'alias ctx="cd' in zshrc.read_text(encoding="utf-8")
 
 
 def test_bind_global_alias_windows_powershell(mocker, tmp_path: Path):
@@ -34,7 +33,7 @@ def test_bind_global_alias_windows_powershell(mocker, tmp_path: Path):
         / "Microsoft.PowerShell_profile.ps1"
     )
     assert ps_profile.exists()
-    assert "function brain {" in ps_profile.read_text(encoding="utf-8")
+    assert "function ctx {" in ps_profile.read_text(encoding="utf-8")
 
 
 def test_bind_global_alias_idempotency(mocker, tmp_path: Path):
@@ -47,7 +46,7 @@ def test_bind_global_alias_idempotency(mocker, tmp_path: Path):
 
     # Pre-populate the mock bashrc with an existing alias
     bashrc = tmp_path / ".bashrc"
-    bashrc.write_text('alias brain="cd /fake/path"\n', encoding="utf-8")
+    bashrc.write_text('alias ctx="cd /fake/path"\n', encoding="utf-8")
 
     # Mock the atomic writer so we can assert it is NEVER called
     mock_write = mocker.patch("System.core.onboarding.path_binding._atomic_write_text")

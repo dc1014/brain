@@ -13,6 +13,7 @@ from rich.console import Console
 from System.core.paths import ROOT_DIR
 from System.neuroanatomy.systemic.immune_system import vault
 from System.neuroanatomy.systemic.endocrine import EndocrineSystem
+from System.neuroanatomy.autonomic.interoception import check_energy_levels
 
 from litellm import acompletion  # type: ignore
 
@@ -50,6 +51,10 @@ async def log_interaction(
     domain: str = "NONE",
     origin: str = "HUMAN",
 ) -> None:
+    # Mask secrets BEFORE constructing the log entry object
+    safe_response_content = vault.mask_secrets(response_content)
+    safe_user_prompt = vault.mask_secrets(user_prompt)
+
     log_entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "origin": origin,
@@ -58,8 +63,8 @@ async def log_interaction(
         "agent": role_name,
         "model": model_string,
         "system_prompt": system_prompt,
-        "user_prompt": user_prompt,
-        "response": response_content,
+        "user_prompt": safe_user_prompt,
+        "response": safe_response_content,
         "tokens": usage,
     }
 
@@ -69,9 +74,8 @@ async def log_interaction(
 
         def _write():
             raw_json = json.dumps(log_entry, default=str)
-            safe_json = vault.mask_secrets(raw_json)
             with open(LOG_FILE, "a", encoding="utf-8") as f:
-                f.write(safe_json + "\n")
+                f.write(raw_json + "\n")
 
         await asyncio.to_thread(_write)
 
@@ -106,7 +110,7 @@ def get_system_context(
         pass
 
     code_execution_enabled = os.environ.get(
-        "BRAIN_ENABLE_CODE_EXECUTION", "false"
+        "CORETEX_ENABLE_CODE_EXECUTION", "false"
     ).lower() in ("true", "1", "yes")
     if not code_execution_enabled:
         base_prompt += (
@@ -153,6 +157,16 @@ async def run_agent_async(
     tools: list[dict[str, Any]] | None = None,
     origin: str = "HUMAN",
 ) -> AgentResponse:
+
+    # Pre-execution token budget enforcement
+    is_exhausted, _ = check_energy_levels()
+    if is_exhausted:
+        return AgentResponse(
+            text="API SECURITY BLOCK: Daily token budget exhausted. System is in refractory sleep state.",
+            actions=[],
+            usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        )
+
     mod_model, mod_temp, mod_tokens = apply_humoral_modulation(model_string)
 
     messages: list[dict[str, Any]] = []
@@ -214,7 +228,6 @@ async def run_agent_async(
 
             routed_model, api_key = vault.resolve_routing(current_target_model)
 
-            # Enforce dict[str, Any] typing to satisfy mypy strict mapping assignment
             completion_kwargs: Dict[str, Any] = {
                 "model": routed_model,
                 "messages": pruned_messages,

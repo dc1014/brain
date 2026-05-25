@@ -8,7 +8,7 @@ from System.core.onboarding.security import _atomic_write_text
 
 def bind_global_alias() -> bool:
     """
-    Safely injects a global 'brain' alias into the user's shell profile
+    Safely injects a global 'ctx' alias into the user's shell profile
     so they can access the OS from anywhere on their machine.
     """
     os_name = platform.system()
@@ -25,7 +25,7 @@ def bind_global_alias() -> bool:
             / "WindowsPowerShell"
             / "Microsoft.PowerShell_profile.ps1"
         )
-        alias_cmd = f"\nfunction brain {{ Set-Location '{abs_root}'; uv run python -m System.cli $args }}\n"
+        alias_cmd = f"\nfunction ctx {{ Set-Location '{abs_root}'; uv run python -m System.cli $args }}\n"
     else:
         # Mac/Linux (zsh is default on Mac, bash on Linux)
         shell = os.environ.get("SHELL", "")
@@ -34,9 +34,7 @@ def bind_global_alias() -> bool:
         else:
             profile_path = home / ".bashrc"
 
-        alias_cmd = (
-            f"\nalias brain=\"cd '{abs_root}' && uv run python -m System.cli\"\n"
-        )
+        alias_cmd = f"\nalias ctx=\"cd '{abs_root}' && uv run python -m System.cli\"\n"
 
     # Ensure the parent directory exists (especially for Windows)
     profile_path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,7 +43,7 @@ def bind_global_alias() -> bool:
     existing_content = ""
     if profile_path.exists():
         existing_content = profile_path.read_text(encoding="utf-8")
-        if "alias brain=" in existing_content or "function brain" in existing_content:
+        if "alias ctx=" in existing_content or "function ctx" in existing_content:
             return True  # Already installed
 
     # Shift-Left: Append safely

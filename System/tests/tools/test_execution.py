@@ -115,7 +115,9 @@ def test_tier_0_timeout_orphan_pruning(mocker, tmp_path, bypass_immune_system):
         mocker.patch("os.getpgid", return_value=9999, create=True)
 
     sleep_script = bypass_immune_system / "sleep.py"
-    sleep_script.write_text("import time\ntime.sleep(300)")
+
+    # ⚡ FIX: Use an infinite loop without imports to avoid triggering the AST security block
+    sleep_script.write_text("while True:\n    pass")
 
     result = execute_command(["python", "sleep.py"], "Studio")
 

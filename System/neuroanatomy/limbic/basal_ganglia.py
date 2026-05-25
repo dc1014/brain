@@ -96,7 +96,7 @@ def tick_habits() -> None:
                     from System.neuroanatomy.systemic.blood_brain_barrier import (
                         validate_execution_path,
                     )
-                    from System.tools import ROOT_DIR
+                    from System.core.paths import ROOT_DIR
 
                     # SHIFT-LEFT: Sandbox Enforcement for Background Habits
 

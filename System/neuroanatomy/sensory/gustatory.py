@@ -1,5 +1,5 @@
 from Sense.receptors.taste import sample_file
-from System.tools import ROOT_DIR
+from System.core.paths import ROOT_DIR
 
 
 def process_taste_profile(filepath: str) -> str:

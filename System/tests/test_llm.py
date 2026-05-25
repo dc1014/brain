@@ -371,8 +371,8 @@ def test_get_system_context_injects_advisory_mode_when_execution_disabled(
 
 def test_get_system_context_skips_advisory_mode_when_execution_enabled(mocker) -> None:
     """Proves the system removes the advisory warning when the user explicitly opts in."""
-    # Simulate a user opting in via their setup config
-    mocker.patch.dict(os.environ, {"BRAIN_ENABLE_CODE_EXECUTION": "true"}, clear=True)
+    # ⚡ FIX: Update to the new CORETEX environment variable
+    mocker.patch.dict(os.environ, {"CORETEX_ENABLE_CODE_EXECUTION": "true"}, clear=True)
 
     mocker.patch(
         "System.core.dna.get_dna_config",

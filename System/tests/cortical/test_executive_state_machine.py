@@ -140,6 +140,11 @@ async def test_executive_state_machine_vagus_abort(
 async def test_executive_loop_embedded_system_halt(mocker, tmp_path):
     """Ensure the pipeline aborts even if the SYSTEM HALT string is buried inside verbose model text."""
 
+    mocker.patch(
+        "System.neuroanatomy.cortical.working_memory.QUEUE_FILE_PATH",
+        tmp_path / "execution_queue.json",
+    )
+
     # Mock the LLM to return a buried halt string
     mock_response = MagicMock()
     mock_response.text = "I tried to run this command, but I got a security error.\n\n[SYSTEM HALT] SECURITY BLOCK: Unauthorized directory access."
