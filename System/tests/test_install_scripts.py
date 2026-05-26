@@ -11,11 +11,19 @@ def run_script(*args: str, path: str | None = None) -> subprocess.CompletedProce
     env = os.environ.copy()
     if path is not None:
         env["PATH"] = path
+    cmd = [str(ROOT / args[0]), *args[1:]]
+    if os.name == "nt":
+        git_bash = r"C:\Program Files\Git\bin\bash.exe"
+        if os.path.exists(git_bash):
+            cmd = [git_bash, *cmd]
+        else:
+            cmd = ["bash", *cmd]
     return subprocess.run(
-        [str(ROOT / args[0]), *args[1:]],
+        cmd,
         cwd=ROOT,
         env=env,
         text=True,
+        encoding="utf-8",
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         timeout=30,
