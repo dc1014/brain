@@ -14,14 +14,22 @@ Write-Host "Biomimetic Agentic OS // Initialization Probe" -ForegroundColor Dark
 Write-Host ""
 
 # 1. Probe for Air-Gapped AI (Ollama)
+$OllamaFound = $false
 try {
-    $OllamaCheck = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
-    if ($OllamaCheck.StatusCode -eq 200) {
-        Write-Host "[+] Local Ollama Engine Detected. Air-gapped execution is available." -ForegroundColor Green
-    } else {
-        Write-Host "[-] No local Ollama detected. Cloud LLM keys will be required." -ForegroundColor Yellow
-    }
-} catch {
+    $OllamaCheck = Invoke-WebRequest -Uri "http://127.0.0.1:11434/api/tags" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
+    if ($OllamaCheck.StatusCode -eq 200) { $OllamaFound = $true }
+} catch { }
+
+if (-not $OllamaFound) {
+    try {
+        $OllamaCheck2 = Invoke-WebRequest -Uri "http://localhost:11434/api/tags" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
+        if ($OllamaCheck2.StatusCode -eq 200) { $OllamaFound = $true }
+    } catch { }
+}
+
+if ($OllamaFound) {
+    Write-Host "[+] Local Ollama Engine Detected. Air-gapped execution is available." -ForegroundColor Green
+} else {
     Write-Host "[-] No local Ollama detected. Cloud LLM keys will be required." -ForegroundColor Yellow
 }
 Write-Host ""
@@ -69,20 +77,20 @@ if ($DeployChoice -eq "2" -and $DockerAvailable) {
 
 Write-Host "`n[*] Initializing Pure Local Environment..." -ForegroundColor Cyan
 
-# Helper function to dynamically pull the latest PATH variables after an installation
 function Refresh-EnvPath {
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
 }
 
 if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
     if ($AutoInstall) {
-        Write-Host "[*] Installing uv automatically in headless mode..." -ForegroundColor Cyan
+        Write-Host "[*] Downloading 'uv' package manager (this may take a moment)..." -ForegroundColor Cyan
         Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
         irm https://astral.sh/uv/install.ps1 | iex
     } else {
         $InstallUV = Read-Host "The uv package manager is missing. Install it? (y/n) [y]"
         if ([string]::IsNullOrEmpty($InstallUV)) { $InstallUV = "y" }
         if ($InstallUV -match "^[Yy]$") {
+            Write-Host "[*] Downloading 'uv' package manager (this may take a moment)..." -ForegroundColor Cyan
             irm https://astral.sh/uv/install.ps1 | iex
         } else {
             Write-Error -Message "Aborting. uv is required for local installation."
@@ -92,7 +100,6 @@ if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
     Refresh-EnvPath
 }
 
-# Dynamically resolve the binary path using Get-Command
 $UvCmd = Get-Command uv -ErrorAction SilentlyContinue
 if ($null -eq $UvCmd) {
     Write-Error "uv installation failed or could not be found in PATH. Please restart your terminal."
@@ -101,7 +108,7 @@ if ($null -eq $UvCmd) {
 $UvBin = $UvCmd.Source
 
 if ($null -eq (Get-Command deno -ErrorAction SilentlyContinue)) {
-    Write-Host "`n[*] Installing Deno WASM Sandbox locally..." -ForegroundColor Cyan
+    Write-Host "`n[*] Downloading Deno WASM Sandbox locally (this may take a moment)..." -ForegroundColor Cyan
     irm https://deno.land/install.ps1 | iex
     Refresh-EnvPath
 }
@@ -112,12 +119,11 @@ if ($null -eq $DenoCmd) {
     exit 1
 }
 
-# ⚡ FIX: Explicitly create required folders BEFORE running Genesis
 foreach ($dir in "logs", "System\config", "Meta") {
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force > $null }
 }
 
-# ⚡ FIX: Use the modern uv workspace synchronization
+Write-Host "`n[*] Synchronizing CoreTex dependencies (this may take a moment)..." -ForegroundColor Cyan
 & $UvBin sync --all-extras
 
 Write-Host "`n[+] Local environment synchronized." -ForegroundColor Green

@@ -104,13 +104,17 @@ async def test_harvest_credentials_local_slm_discovery(mocker):
 def test_bind_workspace_local(mocker, tmp_path):
     """Proves the local workspace builder constructs Obsidian domains properly."""
     mocker.patch("System.core.onboarding.genesis.IS_DOCKER_RUNTIME", False)
-    mocker.patch("System.core.onboarding.genesis.Path.home", return_value=tmp_path)
+
+    # ⚡ FIX: Mock ROOT_DIR to the ephemeral tmp_path so it stays sandboxed
+    mocker.patch("System.core.onboarding.genesis.ROOT_DIR", tmp_path)
+
     mocker.patch("System.core.onboarding.genesis.Prompt.ask", return_value="")
     mocker.patch("System.core.onboarding.genesis.Confirm.ask", return_value=False)
 
     path_str = bind_workspace()
 
-    expected_path = tmp_path / "CoreTex"
+    # ⚡ FIX: Assert the new local "Vault" structure constraint
+    expected_path = tmp_path / "Vault"
     assert path_str == str(expected_path)
     assert (expected_path / "Studio").exists()
     assert (expected_path / "Meta").exists()

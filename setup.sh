@@ -21,7 +21,6 @@ done
 
 if [ ${#MISSING_UTILS[@]} -ne 0 ]; then
     echo -e "\033[1;33m[!] Missing required system utilities: ${MISSING_UTILS[*]}\033[0m"
-
     PKG_MANAGER=""
     INSTALL_CMD=""
     UPDATE_CMD=""
@@ -80,7 +79,8 @@ if [ ${#MISSING_UTILS[@]} -ne 0 ]; then
     fi
 fi
 
-if curl -s http://localhost:11434/api/tags > /dev/null; then
+# ⚡ FIX: Dual-probe localhost and 127.0.0.1 to prevent IPv6 loopback failures
+if curl -s http://127.0.0.1:11434/api/tags > /dev/null || curl -s http://localhost:11434/api/tags > /dev/null; then
     echo -e "[+] \033[1;32mLocal Ollama Engine Detected.\033[0m Private inference interface available."
 else
     echo -e "[-] \033[1;33mNo local Ollama detected.\033[0m Cloud infrastructure access keys required."
@@ -89,7 +89,6 @@ echo ""
 
 DOCKER_AVAILABLE=false
 if command -v docker &> /dev/null; then
-    # Verify the Docker Daemon is actually running
     if docker info >/dev/null 2>&1; then
         DOCKER_AVAILABLE=true
     fi
@@ -134,12 +133,14 @@ echo -e "\n[*] \033[1;36mInitializing Pure Local Environment...\033[0m"
 
 UV_BIN="uv"
 if ! command -v uv &> /dev/null; then
+    echo -e "\033[36m[*] Downloading 'uv' package manager (this may take a moment)...\033[0m"
     curl -LsSf https://astral.sh/uv/install.sh | sh
     export PATH="$HOME/.local/bin:$PATH"
     UV_BIN="$HOME/.local/bin/uv"
 fi
 
 if ! command -v deno &> /dev/null; then
+    echo -e "\033[36m[*] Downloading Deno WASM Sandbox (this may take a moment)...\033[0m"
     curl -fsSL https://deno.land/install.sh | sh
     export PATH="$HOME/.deno/bin:$PATH"
 fi
@@ -151,6 +152,7 @@ fi
 
 mkdir -p logs System/config Meta
 
+echo -e "\033[36m[*] Synchronizing CoreTex dependencies (this may take a moment)...\033[0m"
 $UV_BIN sync --all-extras
 
 echo -e "\n[+] Local environment synchronized."

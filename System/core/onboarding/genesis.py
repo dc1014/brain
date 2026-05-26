@@ -1,7 +1,12 @@
 # --- System/core/onboarding/genesis.py ---
+import os
+
+# ⚡ SHIFT-LEFT: Suppress third-party LiteLLM AWS/Botocore warnings before downstream imports
+os.environ["SUPPRESS_LITELLM_LOGS"] = "True"
+os.environ["LITELLM_LOG"] = "ERROR"
+
 import json
 import asyncio
-import os
 import urllib.request
 from pathlib import Path
 
@@ -86,7 +91,7 @@ def configure_security_gate() -> bool:
     )
 
     choice = Prompt.ask(
-        "\nSelect Profile\n[1] Cognitive Mode\n[2] Agentic Mode",
+        "\nSelect Profile\n[1] Cognitive Mode\n[2] Agentic Mode\n",
         choices=["1", "2"],
         default="1",
     )
@@ -196,16 +201,17 @@ async def harvest_credentials() -> dict:
     if brave_key:
         valid_keys["BRAVE_API_KEY"] = brave_key
 
-    # ⚡ NEW: AUTONOMOUS LOCAL SLM PROBE
     ollama_detected = False
-    try:
-        urllib.request.urlopen("http://localhost:11434/api/tags", timeout=1.0)
-        ollama_detected = True
-        console.print(
-            "\n[bold green][+] Corpus Callosum: Local Ollama instance detected on localhost:11434![/bold green]"
-        )
-    except Exception:
-        pass
+    for url in ["http://127.0.0.1:11434/api/tags", "http://localhost:11434/api/tags"]:
+        try:
+            urllib.request.urlopen(url, timeout=2.0)
+            ollama_detected = True
+            console.print(
+                f"\n[bold green][+] Corpus Callosum: Local Ollama instance detected on {url}![/bold green]"
+            )
+            break
+        except Exception:
+            continue
 
     console.print(
         "\n[dim]CoreTex can route analytical tasks (reading files, filtering text) to a local Small Language Model (SLM) for zero-cost, high-privacy execution.[/dim]"
@@ -235,7 +241,8 @@ def bind_workspace() -> str:
             (workspace_path / domain).mkdir(parents=True, exist_ok=True)
         return "/workspace"
 
-    default_path = str(Path.home() / "CoreTex")
+    # ⚡ FIX: Bind the default vault directly inside the cloned CoreTex repository
+    default_path = str(ROOT_DIR / "Vault")
     console.print(
         Panel(
             "This folder becomes your knowledge vault. CoreTex will create Personal/, Professional/, "
