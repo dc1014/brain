@@ -214,7 +214,8 @@ async def harvest_credentials() -> dict:
             continue
 
     console.print(
-        "\n[dim]CoreTex can route analytical tasks (reading files, filtering text) to a local Small Language Model (SLM) for zero-cost, high-privacy execution.[/dim]"
+        "\n[dim]CoreTex can route 'background thinking' (reading files, scanning logs, filtering text) "
+        "to a local Small Language Model (SLM). This keeps your data completely private and reduces cloud API costs to $0 for routine tasks.[/dim]"
     )
 
     if Confirm.ask("[?] Enable Local SLM routing?", default=ollama_detected):
@@ -336,14 +337,30 @@ async def main():
             "\n[dim yellow][*] Global shell alias mapping bypassed inside Docker context.[/dim yellow]\n"
         )
 
-    next_steps = f"""Vault:    [bold green]{workspace_path}[/bold green]
-Command:  [bold cyan]ctx task "summarize my week"[/bold cyan]
+    ollama_msg = ""
+    if valid_keys.get("USE_LOCAL_SLM") == "true":
+        ollama_msg = "\n[dim]* Local SLM is active. Background tasks (summarization, file reading) will use 0 API tokens.[/dim]\n"
+
+    if IS_DOCKER_RUNTIME:
+        next_steps = f"""Vault:    [bold green]Your local ./Workspace folder[/bold green]
+Command:  [bold cyan].\\ctx.bat --docker task "Audit the System directory"[/bold cyan] (Windows)
+          [bold cyan]./ctx --docker task "Audit the System directory"[/bold cyan] (Mac/Linux)
 
 Next steps:
-  - Open your Vault folder in Obsidian
-  - Run: [cyan]ctx status[/cyan]
-  - Docs: [blue]https://github.com/mrdanielcasper/coretex/wiki[/blue]
+  1. Open the [green]./Workspace[/green] folder as a vault in Obsidian.
+  2. Check your system vitals: [cyan]./ctx --docker status[/cyan] (or .\\ctx.bat on Windows)
+  3. Absorb your first files: [cyan]./ctx --docker absorb ./System[/cyan]
+{ollama_msg}
+[italic]CoreTex is watching. Think out loud.[/italic]"""
+    else:
+        next_steps = f"""Vault:    [bold green]{workspace_path}[/bold green]
+Command:  [bold cyan]ctx task "Audit the System directory"[/bold cyan]
 
+Next steps:
+  1. Open your Vault folder in Obsidian.
+  2. Check your system vitals: [cyan]ctx status[/cyan]
+  3. Absorb your first files: [cyan]ctx absorb ./System[/cyan]
+{ollama_msg}
 [italic]CoreTex is watching. Think out loud.[/italic]"""
 
     console.print("\n")
