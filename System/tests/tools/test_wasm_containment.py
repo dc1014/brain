@@ -128,7 +128,7 @@ async def test_os_level_network_guillotine(tmp_path: Path, mocker):
     mocker.patch("asyncio.create_subprocess_exec", side_effect=mock_worker)
 
     result = await execute_in_sandbox(
-        command=["-c", "print('test')"],
+        command="-c \"print('test')\"",
         workspace_path=workspace,
         env_secrets={},
         route="CODE_GENERATION",

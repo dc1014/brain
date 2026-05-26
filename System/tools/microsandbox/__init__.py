@@ -4,7 +4,7 @@ import shutil
 import asyncio
 from pathlib import Path
 from typing import Optional, List
-from System.core.paths import ROOT_DIR  # ⚡ NEW: Import the project root path
+from System.core.paths import ROOT_DIR
 
 _PRE_WARMED_WORKER: Optional[asyncio.subprocess.Process] = None
 _WARMING_TASK: Optional[asyncio.Task] = None

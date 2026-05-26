@@ -22,14 +22,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      # THE FIX: Removed fragile base/head delta math entirely.
-      # TruffleHog will now confidently and rapidly scan the entire repository
-      # on every single push, ensuring it never skips or crashes on branch boundaries.
-      - name: TruffleHog Secret Scanner
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          extra_args: --debug
+      - name: TruffleHog Secret Scanner (Filesystem)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /tmp
+          /tmp/trufflehog filesystem ./ --fail
 
       # THE FIX: Changed @v2 to @v1. The v2 action tag is currently broken on GitHub's
       # backend (causing the 404 tar.gz error). v1 safely installs deno v2.x.

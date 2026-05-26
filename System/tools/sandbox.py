@@ -167,13 +167,29 @@ ALLOWED_NATIVE_ROUTES: Set[str] = {
 
 
 async def execute_in_sandbox(
-    command: list[str] | str,
+    command: str,
     workspace_path: Path,
     env_secrets: Dict[str, str],
-    route: str = "UNKNOWN",
+    route: str,
 ) -> ExecutionResult:
 
-    # 🔐 SAFE-BY-DEFAULT: Global kill-switch for autonomous code execution. Must be explicitly opted-in.
+    # 1. OPT-IN GUARDRAIL (Must be absolutely first!)
+    if os.environ.get("CORETEX_ENABLE_CODE_EXECUTION", "false").lower() != "true":
+        return ExecutionResult(
+            success=False,
+            output="[System] Code execution is currently disabled. CoreTex is running in Safe-by-Default (Advisory) mode.",
+            block_reason="OPT-IN REQUIRED: You must explicitly set CORETEX_ENABLE_CODE_EXECUTION=true to authorize active shell and script execution.",
+        )
+
+    # 2. DENO RUNTIME GUARDRAIL (Must be second!)
+    if not shutil.which("deno"):
+        return ExecutionResult(
+            success=False,
+            output="[System] Deno WASM runtime not found in PATH.",
+            block_reason="CRITICAL SECURITY TERMINATION: Deno runtime is required for secure WebAssembly isolation.",
+        )
+
+    # SAFE-BY-DEFAULT: Global kill-switch for autonomous code execution. Must be explicitly opted-in.
     code_execution_enabled = os.environ.get(
         "CORETEX_ENABLE_CODE_EXECUTION", "false"
     ).lower() in ("true", "1", "yes")
@@ -185,14 +201,13 @@ async def execute_in_sandbox(
             block_reason="CRITICAL SECURITY TERMINATION: Attempted out-of-bounds workspace execution access.",
         )
 
-    # ⚡ ZERO-DEBT FIXED: Initialize and normalize parsed_args at the top function scope
     if isinstance(command, str):
         parsed_args = shlex.split(command)
     else:
         parsed_args = [str(arg) for arg in command]
 
     if route in REQUIRES_CONTAINMENT:
-        # 🛡️ THE GATEKEEPER: Abort instantly if the user hasn't enabled code execution
+        # Abort instantly if the user hasn't enabled code execution
         if not code_execution_enabled:
             console.print(
                 f"\n[bold red]❌ SECURITY BLOCK: Containment requested for route '{route}', but execution is disabled.[/bold red]"

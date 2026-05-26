@@ -2,6 +2,39 @@
 # --- setup.sh ---
 set -e
 
+# --- FIX 03: Bootstrap PATH for fresh installs so documented commands work instantly ---
+export PATH="$HOME/.local/bin:$HOME/.deno/bin:$HOME/.cargo/bin:$PATH"
+
+# --- FIX 02: Handle --help and --check safely without mutating the system ---
+if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
+    echo "CoreTex OS Setup Utility"
+    echo "Usage: ./setup.sh [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help    Show this help message and exit"
+    echo "  --check       Verify system dependencies without installing anything"
+    exit 0
+fi
+
+if [[ "$1" == "--check" ]]; then
+    echo "[*] Checking CoreTex OS dependencies..."
+    MISSING=0
+    for cmd in curl unzip file uv deno docker; do
+        if command -v $cmd &> /dev/null; then
+            echo "[+] $cmd is installed."
+        else
+            echo "[-] $cmd is NOT installed."
+            MISSING=1
+        fi
+    done
+    if [ $MISSING -eq 1 ]; then
+        echo -e "\n⚠️ Some dependencies are missing. Run ./setup.sh to install them."
+        exit 1
+    fi
+    echo -e "\n✅ All required dependencies are present."
+    exit 0
+fi
+
 echo -e "\033[1;36m"
 echo " ██████╗ ██████╗ ██████╗ ███████╗████████╗███████╗██╗  ██╗"
 echo "██╔════╝██╔═══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝╚██╗██╔╝"
@@ -10,7 +43,7 @@ echo "██║     ██║   ██║██╔══██╗██╔══
 echo "╚██████╗╚██████╔╝██║  ██║███████╗   ██║   ███████╗██╔╝ ██╗"
 echo " ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚═╝"
 echo -e "\033[0m"
-echo -e "\033[2mBiomimetic Agentic OS // Initialization Probe\033[0m\\n"
+echo -e "\033[2mBiomimetic Agentic OS // Initialization Probe\033[0m\n"
 
 MISSING_UTILS=()
 for util in curl unzip file; do
@@ -79,7 +112,6 @@ if [ ${#MISSING_UTILS[@]} -ne 0 ]; then
     fi
 fi
 
-# ⚡ FIX: Dual-probe localhost and 127.0.0.1 to prevent IPv6 loopback failures
 if curl -s http://127.0.0.1:11434/api/tags > /dev/null || curl -s http://localhost:11434/api/tags > /dev/null; then
     echo -e "[+] \033[1;32mLocal Ollama Engine Detected.\033[0m Private inference interface available."
 else
@@ -132,35 +164,20 @@ fi
 echo -e "\n[*] \033[1;36mInitializing Pure Local Environment...\033[0m"
 
 if ! command -v uv &> /dev/null; then
-    if [ -f "$HOME/.local/bin/uv" ]; then
-        export PATH="$HOME/.local/bin:$PATH"
-    elif [ -f "$HOME/.cargo/bin/uv" ]; then
-        export PATH="$HOME/.cargo/bin:$PATH"
-    else
-        echo -e "${RED}❌ uv installation failed or could not be found in PATH. Please restart your terminal.${NC}"
-        exit 1
-    fi
+    echo -e "\033[1;31m❌ uv installation failed or could not be found in PATH. Please restart your terminal.\033[0m"
+    exit 1
 fi
 
 if ! command -v deno &> /dev/null; then
-    if [ -f "$HOME/.deno/bin/deno" ]; then
-        export PATH="$HOME/.deno/bin:$PATH"
-    else
-        echo -e "${RED}❌ deno installation failed or could not be found in PATH. Please restart your terminal.${NC}"
-        exit 1
-    fi
-fi
-
-if ! command -v deno &> /dev/null && ! [ -f "$HOME/.deno/bin/deno" ]; then
-    echo -e "\033[1;31mERROR: Deno installation failed or is missing from PATH. Please restart your terminal and try again.\033[0m"
+    echo -e "\033[1;31m❌ deno installation failed or could not be found in PATH. Please restart your terminal.\033[0m"
     exit 1
 fi
 
 mkdir -p logs System/config Meta
 
 echo -e "\033[36m[*] Synchronizing CoreTex dependencies (this may take a moment)...\033[0m"
-$UV_BIN sync --all-extras
+uv sync --all-extras
 
 echo -e "\n[+] Local environment synchronized."
 echo -e "[*] Booting Synaptic Genesis...\n"
-$UV_BIN run python -m System.cli setup
+uv run python -m System.cli setup
