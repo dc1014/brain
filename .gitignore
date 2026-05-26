@@ -16,10 +16,13 @@ dist/
 build/
 .next/
 out/
+htmlcov/
+
 
 # Python stuff
 __pycache__/
 .pytest_cache/
+.mypy_cache/
 .venv
 .ruff_cache
 *.py[cod]
@@ -119,4 +122,8 @@ System/vendor/
 *.db-shm
 System/snapshot_ledger.json
 System/snapshots/
-coretex.egg-info/
+System/queue.jsonl
+System/.vagus_abort_signal
+
+# Python Build Artifacts
+*.egg-info/

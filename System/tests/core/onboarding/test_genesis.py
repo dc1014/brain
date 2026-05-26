@@ -102,7 +102,7 @@ async def test_harvest_credentials_local_slm_discovery(mocker):
 
 
 def test_bind_workspace_local(mocker, tmp_path):
-    """Proves the local workspace builder constructs Obsidian domains properly."""
+    """Proves the local workspace builder constructs Obsidian domains and seeds memory ledgers."""
     mocker.patch("System.core.onboarding.genesis.IS_DOCKER_RUNTIME", False)
 
     mocker.patch("System.core.onboarding.genesis.ROOT_DIR", tmp_path)
@@ -111,12 +111,33 @@ def test_bind_workspace_local(mocker, tmp_path):
     mocker.patch("System.core.onboarding.genesis.Confirm.ask", return_value=False)
 
     path_str = bind_workspace()
-
     expected_path = tmp_path
 
+    # Verify Unified Root Pathing
     assert path_str == str(expected_path)
+
+    # Verify Domain Folder Creation
     assert (expected_path / "Studio").exists()
     assert (expected_path / "Meta").exists()
+    assert (expected_path / "Media").exists()
+
+    personal_ledger = expected_path / "Personal" / "personal-memory.md"
+    assert personal_ledger.exists()
+
+    content = personal_ledger.read_text(encoding="utf-8")
+    assert "# Personal Context" in content
+    assert "Synaptic Ledger initialized" in content
+
+    # Verify custom mapping for Meta
+    meta_ledger = expected_path / "Meta" / "global-memory.md"
+    assert meta_ledger.exists()
+    assert "# Meta Context" in meta_ledger.read_text(encoding="utf-8")
+
+    # Prove Media correctly skips ledger creation
+    media_ledger_matches = list((expected_path / "Media").glob("*.md"))
+    assert len(media_ledger_matches) == 0, (
+        "Media folder should not contain a text ledger"
+    )
 
 
 def test_bind_workspace_docker_override(mocker):

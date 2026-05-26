@@ -276,9 +276,28 @@ def bind_workspace() -> str:
     workspace_path = Path(final_path).resolve()
     workspace_path.mkdir(parents=True, exist_ok=True)
 
-    # This will now create the folders directly in the root!
-    for domain in ["Personal", "Professional", "Studio", "Meta", "Media"]:
-        (workspace_path / domain).mkdir(parents=True, exist_ok=True)
+    domain_seeds = {
+        "Personal": "personal-memory.md",
+        "Professional": "professional-memory.md",
+        "Studio": "studio-memory.md",
+        "Meta": "global-memory.md",
+        "Media": None,  # Media doesn't need a text ledger
+    }
+
+    for domain, filename in domain_seeds.items():
+        domain_dir = workspace_path / domain
+        domain_dir.mkdir(parents=True, exist_ok=True)
+
+        if filename:
+            memory_file = domain_dir / filename
+            if not memory_file.exists():
+                header = (
+                    f"# {domain} Context\n\n*CoreTex OS Synaptic Ledger initialized.*\n"
+                )
+                try:
+                    memory_file.write_text(header, encoding="utf-8")
+                except OSError:
+                    pass
 
     obsidian_panel = f"""Your vault is ready at: [bold green]{workspace_path}[/bold green]
 
@@ -298,6 +317,7 @@ CoreTex will write structured Markdown notes here automatically."""
     ):
         import platform
         import subprocess
+        import os
 
         os_name = platform.system()
         try:
