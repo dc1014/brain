@@ -19,7 +19,7 @@ fi
 if [[ "$1" == "--check" ]]; then
     echo "[*] Checking CoreTex OS dependencies..."
     MISSING=0
-    for cmd in curl unzip file uv deno docker; do
+    for cmd in curl unzip file uv deno; do
         if command -v $cmd &> /dev/null; then
             echo "[+] $cmd is installed."
         else
@@ -86,7 +86,7 @@ if [ ${#MISSING_UTILS[@]} -ne 0 ]; then
         fi
 
         AUTO_INSTALL=false
-        if [ "$(id -u)" -eq 0 ] || [ "$CORETEX_HEADLESS" == "1" ]; then
+        if [ "$(id -u)" -eq 0 ] || [ "${CORETEX_HEADLESS:-}" = "1" ]; then
             AUTO_INSTALL=true
         else
             read -p "Would you like to install them via $PKG_MANAGER? (y/n) [y]: " CONFIRM_PKG
@@ -126,6 +126,20 @@ if command -v docker &> /dev/null; then
     fi
 fi
 
+if [ "$CHECK_ONLY" = true ]; then
+    echo "Prerequisite check:"
+    echo "  curl: $(command -v curl || echo missing)"
+    echo "  unzip: $(command -v unzip || echo missing)"
+    echo "  file: $(command -v file || echo missing)"
+    echo "  uv: $(command -v uv || echo missing)"
+    echo "  deno: $(command -v deno || echo missing)"
+    echo "  docker: $DOCKER_AVAILABLE"
+    if [ ${#MISSING_UTILS[@]} -ne 0 ] || ! command -v uv >/dev/null 2>&1 || ! command -v deno >/dev/null 2>&1; then
+        exit 1
+    fi
+    exit 0
+fi
+
 echo -e "\033[1mSelect your preferred deployment architecture:\033[0m"
 echo "  [1] Pure Local (Requires 'uv' and Python 3.12+)"
 if [ "$DOCKER_AVAILABLE" = true ]; then
@@ -134,7 +148,7 @@ else
     echo "  [2] Isolated Container (UNAVAILABLE - Docker engine not running)"
 fi
 
-if [ "$CORETEX_HEADLESS" == "1" ]; then
+if [ "${CORETEX_HEADLESS:-}" = "1" ]; then
     DEPLOY_CHOICE="1"
 else
     read -p "Enter choice [1]: " DEPLOY_CHOICE

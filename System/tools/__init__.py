@@ -52,6 +52,8 @@ from .sensory import (
 )
 
 # COGNITIVE COUPLING
+from .topology import map_system_topology as map_system_topology
+
 from .cognitive import (
     read_file_signatures as read_file_signatures,
     search_safe_directory as search_safe_directory,
