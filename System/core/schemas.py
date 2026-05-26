@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Any
 
 
 class NeuroplasticityRule(BaseModel):
@@ -96,10 +96,9 @@ class ToolCallSchema(BaseModel):
     """Schema for a single tool execution request."""
 
     tool_name: str = Field(..., description="The exact name of the tool to execute.")
-    # 🛡️ THE FIX: Replaced Dict[str, Any] with str. Strict Structured Outputs ban open dictionaries!
-    parameters: str = Field(
+    parameters: dict[str, Any] | str = Field(
         ...,
-        description="A stringified JSON object containing the arguments for the tool.",
+        description="The arguments for the tool. Prefer a JSON object; legacy stringified JSON is still accepted.",
     )
     reasoning: str = Field(
         ..., description="Internal monologue explaining why this tool is being called."

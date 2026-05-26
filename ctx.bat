@@ -5,6 +5,7 @@ set "CORETEX_DIR=%~dp0"
 cd /d "%CORETEX_DIR%"
 
 :: Check if the user explicitly requested Docker
+
 if "%1"=="--docker" (
     shift
     goto run_docker
