@@ -22,25 +22,38 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 🛡️ THE FIX: Smart bash script that handles PRs, pushes, AND branch creations perfectly
       - name: Determine TruffleHog Scope
         id: scope
         run: |
+          echo "Calculating scan boundaries..."
+
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            echo "base=${{ github.event.pull_request.base.sha }}" >> $GITHUB_OUTPUT
-            echo "head=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ]; then
-            # Brand new branch! Diff against the default branch (e.g., main)
-            echo "base=${{ github.event.repository.default_branch }}" >> $GITHUB_OUTPUT
-            echo "head=${{ github.sha }}" >> $GITHUB_OUTPUT
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           else
-            # Standard commit push
-            echo "base=${{ github.event.before }}" >> $GITHUB_OUTPUT
-            echo "head=${{ github.sha }}" >> $GITHUB_OUTPUT
+            if [ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ]; then
+              # Brand new branch! Diff against the default branch (e.g., main)
+              # We use git rev-parse to get the actual raw SHA of the default branch
+              BASE_SHA=$(git rev-parse origin/${{ github.event.repository.default_branch }})
+            else
+              BASE_SHA="${{ github.event.before }}"
+            fi
+            HEAD_SHA="${{ github.sha }}"
+          fi
+
+          echo "base=$BASE_SHA" >> $GITHUB_OUTPUT
+          echo "head=$HEAD_SHA" >> $GITHUB_OUTPUT
+
+          # If there are 0 new commits to scan, gracefully flag the step to skip so it doesn't crash!
+          if [ "$BASE_SHA" == "$HEAD_SHA" ]; then
+            echo "Base and Head SHAs are identical. Skipping scanner to prevent crash."
+            echo "run_trufflehog=false" >> $GITHUB_OUTPUT
+          else
+            echo "run_trufflehog=true" >> $GITHUB_OUTPUT
           fi
 
       - name: TruffleHog Secret Scanner
-        if: steps.scope.outputs.base != steps.scope.outputs.head
+        if: steps.scope.outputs.run_trufflehog == 'true'
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
