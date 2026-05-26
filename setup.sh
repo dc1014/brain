@@ -51,6 +51,62 @@ fi
 # --- FIX 03: Bootstrap PATH for fresh installs so documented commands work instantly ---
 export PATH="$HOME/.local/bin:$HOME/.deno/bin:$HOME/.cargo/bin:$PATH"
 
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+confirm_default_yes() {
+    local prompt="$1"
+    if [ "${CORETEX_HEADLESS:-}" = "1" ]; then
+        return 0
+    fi
+    read -r -p "$prompt (y/n) [y]: " reply
+    reply=${reply:-y}
+    [[ "$reply" =~ ^[Yy]$ ]]
+}
+
+install_uv_runtime() {
+    if command_exists uv; then
+        return 0
+    fi
+    if ! command_exists curl; then
+        echo -e "\033[1;31mERROR: curl is required to install uv.\033[0m" >&2
+        return 1
+    fi
+    if ! confirm_default_yes "The uv package manager is missing. Install it now?"; then
+        echo -e "\033[1;31mAborting. uv is required for local installation.\033[0m" >&2
+        return 1
+    fi
+    echo -e "\033[36m[*] Installing uv package manager...\033[0m"
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+    if ! command_exists uv; then
+        echo -e "\033[1;31mERROR: uv installation completed but uv was not found in PATH. Restart your terminal or add ~/.local/bin to PATH.\033[0m" >&2
+        return 1
+    fi
+}
+
+install_deno_runtime() {
+    if command_exists deno; then
+        return 0
+    fi
+    if ! command_exists curl || ! command_exists unzip; then
+        echo -e "\033[1;31mERROR: curl and unzip are required to install Deno.\033[0m" >&2
+        return 1
+    fi
+    if ! confirm_default_yes "The Deno WASM sandbox runtime is missing. Install it now?"; then
+        echo -e "\033[1;31mAborting. deno is required for local installation.\033[0m" >&2
+        return 1
+    fi
+    echo -e "\033[36m[*] Installing Deno WASM sandbox runtime...\033[0m"
+    curl -fsSL https://deno.land/install.sh | sh
+    export PATH="$HOME/.deno/bin:$PATH"
+    if ! command_exists deno; then
+        echo -e "\033[1;31mERROR: Deno installation completed but deno was not found in PATH. Restart your terminal or add ~/.deno/bin to PATH.\033[0m" >&2
+        return 1
+    fi
+}
+
 echo -e "\033[1;36m"
 echo " ██████╗ ██████╗ ██████╗ ███████╗████████╗███████╗██╗  ██╗"
 echo "██╔════╝██╔═══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝╚██╗██╔╝"
@@ -63,7 +119,7 @@ echo -e "\033[2mBiomimetic Agentic OS // Initialization Probe\033[0m\n"
 
 MISSING_UTILS=()
 for util in curl unzip file; do
-    if ! command -v "$util" &> /dev/null; then
+    if ! command_exists "$util"; then
         MISSING_UTILS+=("$util")
     fi
 done
@@ -74,30 +130,30 @@ if [ ${#MISSING_UTILS[@]} -ne 0 ]; then
     INSTALL_CMD=""
     UPDATE_CMD=""
 
-    if command -v apt-get &> /dev/null; then
+    if command_exists apt-get; then
         PKG_MANAGER="apt"
         UPDATE_CMD="apt-get update -y"
         INSTALL_CMD="apt-get install -y ${MISSING_UTILS[*]}"
-    elif command -v dnf &> /dev/null; then
+    elif command_exists dnf; then
         PKG_MANAGER="dnf"
         INSTALL_CMD="dnf install -y ${MISSING_UTILS[*]}"
-    elif command -v yum &> /dev/null; then
+    elif command_exists yum; then
         PKG_MANAGER="yum"
         INSTALL_CMD="yum install -y ${MISSING_UTILS[*]}"
-    elif command -v pacman &> /dev/null; then
+    elif command_exists pacman; then
         PKG_MANAGER="pacman"
         INSTALL_CMD="pacman -Sy --noconfirm ${MISSING_UTILS[*]}"
-    elif command -v apk &> /dev/null; then
+    elif command_exists apk; then
         PKG_MANAGER="apk"
         INSTALL_CMD="apk add ${MISSING_UTILS[*]}"
-    elif command -v brew &> /dev/null; then
+    elif command_exists brew; then
         PKG_MANAGER="homebrew"
         INSTALL_CMD="brew install ${MISSING_UTILS[*]}"
     fi
 
     if [ -n "$PKG_MANAGER" ]; then
         SUDO=""
-        if [ "$PKG_MANAGER" != "homebrew" ] && [ "$(id -u)" -ne 0 ] && command -v sudo &> /dev/null; then
+        if [ "$PKG_MANAGER" != "homebrew" ] && [ "$(id -u)" -ne 0 ] && command_exists sudo; then
             SUDO="sudo"
         fi
 
@@ -138,13 +194,13 @@ echo ""
 DOCKER_AVAILABLE=false
 DOCKER_COMPOSE_AVAILABLE=false
 DOCKER_COMPOSE_CMD=(docker compose)
-if command -v docker &> /dev/null; then
+if command_exists docker; then
     if docker info >/dev/null 2>&1; then
         DOCKER_AVAILABLE=true
         if docker compose version >/dev/null 2>&1; then
             DOCKER_COMPOSE_AVAILABLE=true
             DOCKER_COMPOSE_CMD=(docker compose)
-        elif command -v docker-compose >/dev/null 2>&1; then
+        elif command_exists docker-compose; then
             DOCKER_COMPOSE_AVAILABLE=true
             DOCKER_COMPOSE_CMD=(docker-compose)
         fi
@@ -201,6 +257,10 @@ if [ -f "./ctx" ]; then
 fi
 
 if [ "$DEPLOY_CHOICE" == "2" ]; then
+    if ! command_exists docker; then
+        echo -e "\033[1;31mERROR: Docker is not installed. Install Docker Desktop/Engine and retry, or run ./setup.sh --local.\033[0m" >&2
+        exit 1
+    fi
     if [ "$DOCKER_AVAILABLE" != true ]; then
         echo -e "\033[1;31mERROR: Docker is installed but the engine is not reachable. Start Docker and retry, or run ./setup.sh --local.\033[0m" >&2
         exit 1
@@ -227,15 +287,8 @@ fi
 
 echo -e "\n[*] \033[1;36mInitializing Pure Local Environment...\033[0m"
 
-if ! command -v uv &> /dev/null; then
-    echo -e "\033[1;31m❌ uv installation failed or could not be found in PATH. Please restart your terminal.\033[0m"
-    exit 1
-fi
-
-if ! command -v deno &> /dev/null; then
-    echo -e "\033[1;31m❌ deno installation failed or could not be found in PATH. Please restart your terminal.\033[0m"
-    exit 1
-fi
+install_uv_runtime
+install_deno_runtime
 
 mkdir -p logs System/config Meta
 

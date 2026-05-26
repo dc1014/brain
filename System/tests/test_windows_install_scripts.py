@@ -17,6 +17,17 @@ def test_setup_ps1_exposes_parity_flags_and_check_output() -> None:
     assert "Choose either -Docker or -Local" in setup
 
 
+def test_setup_ps1_can_install_missing_local_runtimes() -> None:
+    setup = (ROOT / "setup.ps1").read_text(encoding="utf-8")
+
+    assert "Install-UvRuntime" in setup
+    assert "https://astral.sh/uv/install.ps1" in setup
+    assert "Install-DenoRuntime" in setup
+    assert "https://deno.land/install.ps1" in setup
+    assert "uv installation failed or could not be found in PATH" in setup
+    assert "deno installation failed or could not be found in PATH" in setup
+
+
 def test_setup_ps1_docker_path_requires_compose_and_uses_wrapper() -> None:
     setup = (ROOT / "setup.ps1").read_text(encoding="utf-8")
 

@@ -40,6 +40,17 @@ def test_setup_help_advertises_docker_and_local_flags() -> None:
     assert "--local" in result.stdout
 
 
+def test_setup_can_install_missing_local_runtimes() -> None:
+    setup = (ROOT / "setup.sh").read_text(encoding="utf-8")
+
+    assert "install_uv_runtime" in setup
+    assert "https://astral.sh/uv/install.sh" in setup
+    assert "install_deno_runtime" in setup
+    assert "https://deno.land/install.sh" in setup
+    assert "uv installation completed but uv was not found in PATH" in setup
+    assert "Deno installation completed but deno was not found in PATH" in setup
+
+
 def test_setup_rejects_mutually_exclusive_runtime_flags() -> None:
     result = run_script("setup.sh", "--docker", "--local")
 
