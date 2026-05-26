@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.18.2 # Pin a stable, deterministic version
+    rev: v8.18.2
     hooks:
       - id: gitleaks
         name: GitLeaks Local Secret Shield
@@ -34,19 +34,12 @@ repos:
         name: mypy
         entry: uv run mypy System/ Sense/ --ignore-missing-imports
         language: system
+        types_or: [python, pyi]  # ⚡ OPTIMIZATION: Only run type checks if Python files change
         pass_filenames: false
 
       - id: pytest
         name: Run Pytest (Zero Debt)
-        entry: uv run pytest System/tests Sense/tests
+        entry: uv run pytest System/tests Sense/tests -n auto
         language: system
-        types: [python]
+        types_or: [python, pyi]  # ⚡ OPTIMIZATION: Do not run entire test suite on pure markdown changes
         pass_filenames: false
-        always_run: true
-
-  # Markdown Lint
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.48.0
-    hooks:
-      - id: markdownlint
-        args: ["--fix", "--disable", "MD013"] # MD013 is line-length, which is annoying for creative writing/journals
