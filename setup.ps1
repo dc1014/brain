@@ -25,6 +25,76 @@ function Test-DockerComposeAvailable {
     return $LASTEXITCODE -eq 0
 }
 
+function Test-CommandAvailable {
+    param([Parameter(Mandatory = $true)][string]$Name)
+    return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
+function Confirm-DefaultYes {
+    param([Parameter(Mandatory = $true)][string]$Prompt)
+    if ($env:CORETEX_HEADLESS -eq "1") { return $true }
+    $Reply = Read-Host "$Prompt (y/n) [y]"
+    if ([string]::IsNullOrEmpty($Reply)) { $Reply = "y" }
+    return $Reply -match "^[Yy]$"
+}
+
+function Refresh-EnvPath {
+    $MachinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+    $UserPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+    $LocalUv = Join-Path $env:USERPROFILE ".local\bin"
+    $CargoBin = Join-Path $env:USERPROFILE ".cargo\bin"
+    $DenoBin = Join-Path $env:USERPROFILE ".deno\bin"
+    $env:Path = "$LocalUv;$CargoBin;$DenoBin;$MachinePath;$UserPath"
+}
+
+function Resolve-InstalledUv {
+    $UvCmd = Get-Command uv -ErrorAction SilentlyContinue
+    if ($null -ne $UvCmd) { return $UvCmd.Source }
+    foreach ($Candidate in @(
+        (Join-Path $env:USERPROFILE ".local\bin\uv.exe"),
+        (Join-Path $env:USERPROFILE ".cargo\bin\uv.exe")
+    )) {
+        if (Test-Path $Candidate) { return $Candidate }
+    }
+    return $null
+}
+
+function Install-UvRuntime {
+    $Existing = Resolve-InstalledUv
+    if ($null -ne $Existing) { return $Existing }
+    if (-not (Confirm-DefaultYes "The uv package manager is missing. Install it now?")) {
+        Write-Error -Message "Aborting. uv is required for local installation."
+        exit 1
+    }
+    Write-Host "[*] Downloading uv package manager (this may take a moment)..." -ForegroundColor Cyan
+    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+    irm https://astral.sh/uv/install.ps1 | iex
+    Refresh-EnvPath
+    $Installed = Resolve-InstalledUv
+    if ($null -eq $Installed) {
+        Write-Error "uv installation failed or could not be found in PATH. Restart your terminal or add .local\bin to PATH."
+        exit 1
+    }
+    return $Installed
+}
+
+function Install-DenoRuntime {
+    if (Test-CommandAvailable "deno") { return }
+    if (-not (Confirm-DefaultYes "The Deno WASM sandbox runtime is missing. Install it now?")) {
+        Write-Error -Message "Aborting. deno is required for local installation."
+        exit 1
+    }
+    Write-Host "`n[*] Downloading Deno WASM Sandbox locally (this may take a moment)..." -ForegroundColor Cyan
+    irm https://deno.land/install.ps1 | iex
+    Refresh-EnvPath
+    if (Test-CommandAvailable "deno") { return }
+    $DefaultDeno = Join-Path $env:USERPROFILE ".deno\bin\deno.exe"
+    if (-not (Test-Path $DefaultDeno)) {
+        Write-Error "deno installation failed or could not be found in PATH. Restart your terminal or add .deno\bin to PATH."
+        exit 1
+    }
+}
+
 function Invoke-DockerCompose {
     param([Parameter(ValueFromRemainingArguments = $true)][string[]]$ComposeArgs)
     & docker compose @ComposeArgs
@@ -149,62 +219,8 @@ if ($DeployChoice -eq "2") {
 
 Write-Host "`n[*] Initializing Pure Local Environment..." -ForegroundColor Cyan
 
-function Refresh-EnvPath {
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-}
-
-if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
-    if ($AutoInstall) {
-        Write-Host "[*] Downloading 'uv' package manager (this may take a moment)..." -ForegroundColor Cyan
-        Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-        irm https://astral.sh/uv/install.ps1 | iex
-    } else {
-        $InstallUV = Read-Host "The uv package manager is missing. Install it? (y/n) [y]"
-        if ([string]::IsNullOrEmpty($InstallUV)) { $InstallUV = "y" }
-        if ($InstallUV -match "^[Yy]$") {
-            Write-Host "[*] Downloading 'uv' package manager (this may take a moment)..." -ForegroundColor Cyan
-            irm https://astral.sh/uv/install.ps1 | iex
-        } else {
-            Write-Error -Message "Aborting. uv is required for local installation."
-            exit 1
-        }
-    }
-    Refresh-EnvPath
-}
-
-$UvCmd = Get-Command uv -ErrorAction SilentlyContinue
-if ($null -eq $UvCmd) {
-    # Check standard astral-sh installation paths if registry or PATH cache is delayed
-    $DefaultUv = Join-Path $env:USERPROFILE ".local\bin\uv.exe"
-    $CargoUv = Join-Path $env:USERPROFILE ".cargo\bin\uv.exe"
-
-    if (Test-Path $DefaultUv) {
-        $UvBin = $DefaultUv
-    } elseif (Test-Path $CargoUv) {
-        $UvBin = $CargoUv
-    } else {
-        Write-Error "uv installation failed or could not be found in PATH. Please restart your terminal."
-        exit 1
-    }
-} else {
-    $UvBin = $UvCmd.Source
-}
-
-if ($null -eq (Get-Command deno -ErrorAction SilentlyContinue)) {
-    Write-Host "`n[*] Downloading Deno WASM Sandbox locally (this may take a moment)..." -ForegroundColor Cyan
-    irm https://deno.land/install.ps1 | iex
-    Refresh-EnvPath
-}
-
-$DenoCmd = Get-Command deno -ErrorAction SilentlyContinue
-if ($null -eq $DenoCmd) {
-    # Check standard deno installation path if PATH cache is delayed
-    $DefaultDeno = Join-Path $env:USERPROFILE ".deno\bin\deno.exe"
-    if (-not (Test-Path $DefaultDeno)) {
-        Write-Error "deno installation failed or could not be found in PATH. Please restart your terminal."
-        exit 1
-    }
-}
+$UvBin = Install-UvRuntime
+Install-DenoRuntime
 
 foreach ($dir in "logs", "System\config", "Meta") {
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force > $null }
