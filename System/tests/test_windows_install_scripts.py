@@ -12,9 +12,11 @@ def test_setup_ps1_exposes_parity_flags_and_check_output() -> None:
     assert "[switch]$Docker" in setup
     assert "[switch]$Local" in setup
     assert "[switch]$Help" in setup
+    assert "python_${CoreTexMinPython}_plus:" in setup
     assert "docker_engine:" in setup
     assert "docker_compose:" in setup
     assert "Choose either -Docker or -Local" in setup
+    assert ".\\setup.ps1 -Check" in setup
 
 
 def test_setup_ps1_can_install_missing_local_runtimes() -> None:
@@ -35,6 +37,15 @@ def test_setup_ps1_docker_path_requires_compose_and_uses_wrapper() -> None:
     assert "Docker Compose is unavailable" in setup
     assert "Invoke-DockerCompose build" in setup
     assert ".\\ctx.bat --docker setup" in setup
+    assert "Show-NextSteps" in setup
+
+
+def test_setup_ps1_local_path_checks_python_before_sync() -> None:
+    setup = (ROOT / "setup.ps1").read_text(encoding="utf-8")
+
+    assert "Test-PythonVersionAvailable" in setup
+    assert "Python ${CoreTexMinPython}+ is required for local setup" in setup
+    assert ".\\setup.ps1 -Docker" in setup
 
 
 def test_ctx_bat_docker_path_fails_fast_when_image_missing() -> None:
@@ -43,4 +54,6 @@ def test_ctx_bat_docker_path_fails_fast_when_image_missing() -> None:
     assert "docker image inspect coretex" in ctx
     assert "Docker runtime requested" in ctx
     assert ".\\setup.ps1 -Docker" in ctx
-    assert "docker compose run --rm coretex" in ctx
+    assert "docker compose version" in ctx
+    assert "docker-compose version" in ctx
+    assert "%DOCKER_COMPOSE_CMD% run --rm coretex" in ctx

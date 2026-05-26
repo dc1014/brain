@@ -38,6 +38,7 @@ def test_setup_help_advertises_docker_and_local_flags() -> None:
     assert "--check" in result.stdout
     assert "--docker" in result.stdout
     assert "--local" in result.stdout
+    assert "./setup.sh --check" in result.stdout
 
 
 def test_setup_can_install_missing_local_runtimes() -> None:
@@ -61,8 +62,20 @@ def test_setup_rejects_mutually_exclusive_runtime_flags() -> None:
 def test_setup_check_reports_docker_compose_status() -> None:
     result = run_script("setup.sh", "--check")
 
+    assert "python3_3.12_plus:" in result.stdout
     assert "docker_engine:" in result.stdout
     assert "docker_compose:" in result.stdout
+    assert "Result:" in result.stdout
+
+
+def test_setup_local_path_checks_python_before_sync() -> None:
+    setup = (ROOT / "setup.sh").read_text(encoding="utf-8")
+
+    assert "CORETEX_MIN_PYTHON" in setup
+    assert "python_version_available" in setup
+    assert "Python ${CORETEX_MIN_PYTHON}+ is required for local setup" in setup
+    assert "run ./setup.sh --docker" in setup
+    assert "print_next_steps" in setup
 
 
 def test_ctx_docker_flag_fails_fast_when_image_is_not_built(tmp_path: Path) -> None:

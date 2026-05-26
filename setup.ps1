@@ -7,6 +7,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$CoreTexMinPython = $env:CORETEX_MIN_PYTHON
+if ([string]::IsNullOrEmpty($CoreTexMinPython)) { $CoreTexMinPython = "3.12" }
 
 function Show-Usage {
     Write-Host "CoreTex OS Setup Utility"
@@ -17,6 +19,11 @@ function Show-Usage {
     Write-Host "  -Check     Verify dependencies without installing or mutating state"
     Write-Host "  -Docker    Build/use the isolated Docker runtime without prompting"
     Write-Host "  -Local     Use the local uv/Deno runtime without prompting"
+    Write-Host ""
+    Write-Host "Examples:"
+    Write-Host "  .\setup.ps1 -Check"
+    Write-Host "  .\setup.ps1 -Docker"
+    Write-Host "  .\setup.ps1 -Local"
 }
 
 function Test-DockerComposeAvailable {
@@ -28,6 +35,28 @@ function Test-DockerComposeAvailable {
 function Test-CommandAvailable {
     param([Parameter(Mandatory = $true)][string]$Name)
     return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
+function Test-PythonVersionAvailable {
+    $PythonCmd = Get-Command python -ErrorAction SilentlyContinue
+    if ($null -eq $PythonCmd) { $PythonCmd = Get-Command py -ErrorAction SilentlyContinue }
+    if ($null -eq $PythonCmd) { return $false }
+
+    $Script = "import sys; need=tuple(map(int, '$CoreTexMinPython'.split('.'))); raise SystemExit(0 if sys.version_info[:2] >= need else 1)"
+    if ($PythonCmd.Name -eq "py.exe" -or $PythonCmd.Name -eq "py") {
+        & py -3 -c $Script >$null 2>&1
+    } else {
+        & $PythonCmd.Source -c $Script >$null 2>&1
+    }
+    return $LASTEXITCODE -eq 0
+}
+
+function Show-NextSteps {
+    Write-Host ""
+    Write-Host "Next steps:"
+    Write-Host "  1. Run: .\ctx.bat status"
+    Write-Host "  2. Try: .\ctx.bat task \"Summarize this repository in five bullets\""
+    Write-Host "  3. Re-run diagnostics anytime with: .\setup.ps1 -Check"
 }
 
 function Confirm-DefaultYes {
@@ -154,19 +183,26 @@ if ($null -ne (Get-Command docker -ErrorAction SilentlyContinue)) {
 $DockerComposeAvailable = $DockerAvailable -and (Test-DockerComposeAvailable)
 
 if ($Check) {
+    $CheckFailed = $false
     Write-Host "Prerequisite check:"
+    Write-Host "  python_${CoreTexMinPython}_plus: $(Test-PythonVersionAvailable)"
     Write-Host "  uv: $($null -ne (Get-Command uv -ErrorAction SilentlyContinue))"
     Write-Host "  deno: $($null -ne (Get-Command deno -ErrorAction SilentlyContinue))"
     Write-Host "  docker_engine: $DockerAvailable"
     Write-Host "  docker_compose: $DockerComposeAvailable"
 
     if ($Docker) {
-        if (-not ($DockerAvailable -and $DockerComposeAvailable)) { exit 1 }
+        if (-not ($DockerAvailable -and $DockerComposeAvailable)) { $CheckFailed = $true }
     } elseif ($Local) {
-        if (($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) -or ($null -eq (Get-Command deno -ErrorAction SilentlyContinue))) { exit 1 }
-    } elseif (($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) -or ($null -eq (Get-Command deno -ErrorAction SilentlyContinue))) {
+        if ((-not (Test-PythonVersionAvailable)) -or ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) -or ($null -eq (Get-Command deno -ErrorAction SilentlyContinue))) { $CheckFailed = $true }
+    } elseif ((-not (Test-PythonVersionAvailable)) -or ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) -or ($null -eq (Get-Command deno -ErrorAction SilentlyContinue))) {
+        $CheckFailed = $true
+    }
+    if ($CheckFailed) {
+        Write-Host "Result: missing required prerequisites for the selected setup path."
         exit 1
     }
+    Write-Host "Result: ready."
     exit 0
 }
 
@@ -210,6 +246,7 @@ if ($DeployChoice -eq "2") {
 
     Invoke-DockerCompose build
     Write-Host "`n[+] Build complete." -ForegroundColor Green
+    Show-NextSteps
     Write-Host "[*] Booting Synaptic Genesis inside container context...`n" -ForegroundColor Cyan
 
     # Force docker fallback execution to prevent missing venv crash
@@ -218,6 +255,11 @@ if ($DeployChoice -eq "2") {
 }
 
 Write-Host "`n[*] Initializing Pure Local Environment..." -ForegroundColor Cyan
+
+if (-not (Test-PythonVersionAvailable)) {
+    Write-Error "Python ${CoreTexMinPython}+ is required for local setup. Install Python ${CoreTexMinPython}+ or run .\setup.ps1 -Docker."
+    exit 1
+}
 
 $UvBin = Install-UvRuntime
 Install-DenoRuntime
@@ -230,6 +272,7 @@ Write-Host "`n[*] Synchronizing CoreTex dependencies (this may take a moment)...
 & $UvBin sync --all-extras
 
 Write-Host "`n[+] Local environment synchronized." -ForegroundColor Green
+Show-NextSteps
 Write-Host "[*] Booting Synaptic Genesis...`n" -ForegroundColor Cyan
 
 & $UvBin run python -m System.cli setup

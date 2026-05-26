@@ -41,15 +41,23 @@ CoreTex features a unified, self-healing installation pipeline that automates al
 
 ### 🍏 macOS & 🐧 Linux
 ```bash
-chmod +x setup.sh && ./setup.sh
+chmod +x setup.sh
+./setup.sh --check      # optional preflight diagnostics
+./setup.sh              # interactive setup
 ```
-*Note: The script automatically evaluates your localized package manager (`apt`, `dnf`, `pacman`, `apk`, or `brew`) to resolve missing system dependencies like `unzip` headlessly.*
+
+For a non-interactive runtime choice, use `./setup.sh --local` or `./setup.sh --docker`.
+
+*Note: The script automatically evaluates your localized package manager (`apt`, `dnf`, `yum`, `pacman`, `apk`, or `brew`) to resolve missing system dependencies like `curl`, `unzip`, and `file`.*
 
 ### 🔷 Windows (PowerShell)
 To bypass native Windows script execution restrictions safely without modifying your global system security profile, execute the script via this process-isolated command:
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\setup.ps1
+powershell -ExecutionPolicy Bypass -File .\setup.ps1 -Check  # optional preflight diagnostics
+powershell -ExecutionPolicy Bypass -File .\setup.ps1         # interactive setup
 ```
+
+For a non-interactive runtime choice, use `-Local` or `-Docker`.
 
 ### 🛡️ Enterprise API Gateways & Proxies
 CoreTex OS natively supports routing your LLM traffic through enterprise API Gateways (like **Cloudflare AI Gateway**, **Portkey**, or **Helicone**) to centralize observability, rate-limiting, and cost tracking.
@@ -63,10 +71,10 @@ During the interactive `ctx setup` phase, simply select `[Gateway]` to provide y
 The setup utility will probe your environment and offer two distinct runtime architectures:
 
 ### 1. Pure Local Deployment (Recommended)
-Installs Astral's hyper-fast `uv` package manager and the `deno` secure runtime natively on your host machine. CoreTex executes directly on your file system, using local loops while isolating third-party code blocks inside a secure cryptographic WebAssembly jail.
+Requires Python 3.12+. Installs Astral's hyper-fast `uv` package manager and the `deno` secure runtime when they are missing. CoreTex executes directly on your file system, using local loops while isolating third-party code blocks inside a secure cryptographic WebAssembly jail.
 
 ### 2. Isolated Container Deployment (Zero-Dependency)
-Requires Docker. The script handles all host user UID/GID mapping permissions natively to avoid root-owned directory pollution, seeds local environment states, and transparently pipes your session directly into the interactive setup plane.
+Requires Docker Engine plus Docker Compose (`docker compose` or legacy `docker-compose`). The script handles host user UID/GID mapping permissions to avoid root-owned directory pollution, seeds local environment state, and transparently pipes your session into the interactive setup plane.
 
 ---
 
@@ -79,9 +87,11 @@ Regardless of the installation route selected above, you will be launched into t
 3. **Synaptic Handshake:** Securely link cloud providers (OpenAI, Anthropic, Gemini) or local private backends (Ollama).
 4. **Workspace Binding:** Wire CoreTex to any local directory or an Obsidian vault (which automatically injects custom hotkey configurations).
 
-Once complete, restart your terminal app to load environment changes, and control the entire operating plane using the global shorthand command:
+Once complete, restart your terminal app if your shell needs PATH changes, and control the operating plane using the shorthand command:
 ```bash
 ctx --help
+ctx status
+ctx task "Summarize this repository in five bullets"
 ```
 
 ---
