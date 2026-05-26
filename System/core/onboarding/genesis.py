@@ -283,7 +283,8 @@ CoreTex will write structured Markdown notes here automatically."""
         os_name = platform.system()
         try:
             if os_name == "Windows":
-                os.startfile(str(workspace_path))
+                # Safe reflection avoids static-checking type failures on non-Windows CI environments
+                getattr(os, "startfile")(str(workspace_path))
             elif os_name == "Darwin":
                 subprocess.Popen(["open", str(workspace_path)])
             else:

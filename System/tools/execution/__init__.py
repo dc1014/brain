@@ -122,8 +122,12 @@ def analyze_safe_syntax(filepath: str) -> ExecutionResult:
         )
     if target_path.suffix == ".py":
         try:
+            # 🛡️ CROSS-PLATFORM REFLECTION FIX:
+            # Safe attribute capture shields non-Windows compiler type-checkers from missing attributes
             creationflags = (
-                subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
+                getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                if sys.platform == "win32"
+                else 0
             )
 
             res = subprocess.run(
