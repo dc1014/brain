@@ -2,38 +2,54 @@
 # --- setup.sh ---
 set -e
 
+CHECK_ONLY=false
+FORCE_DOCKER=false
+FORCE_LOCAL=false
+
+usage() {
+    cat <<'EOF'
+CoreTex OS Setup Utility
+Usage: ./setup.sh [OPTIONS]
+
+Options:
+  -h, --help    Show this help message and exit
+  --check       Verify dependencies without installing or mutating state
+  --docker      Build/use the isolated Docker runtime without prompting
+  --local       Use the local uv/Deno runtime without prompting
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --check)
+            CHECK_ONLY=true
+            ;;
+        --docker)
+            FORCE_DOCKER=true
+            ;;
+        --local)
+            FORCE_LOCAL=true
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            usage >&2
+            exit 2
+            ;;
+    esac
+    shift
+done
+
+if [ "$FORCE_DOCKER" = true ] && [ "$FORCE_LOCAL" = true ]; then
+    echo "ERROR: choose either --docker or --local, not both." >&2
+    exit 2
+fi
+
 # --- FIX 03: Bootstrap PATH for fresh installs so documented commands work instantly ---
 export PATH="$HOME/.local/bin:$HOME/.deno/bin:$HOME/.cargo/bin:$PATH"
-
-# --- FIX 02: Handle --help and --check safely without mutating the system ---
-if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
-    echo "CoreTex OS Setup Utility"
-    echo "Usage: ./setup.sh [OPTIONS]"
-    echo ""
-    echo "Options:"
-    echo "  -h, --help    Show this help message and exit"
-    echo "  --check       Verify system dependencies without installing anything"
-    exit 0
-fi
-
-if [[ "$1" == "--check" ]]; then
-    echo "[*] Checking CoreTex OS dependencies..."
-    MISSING=0
-    for cmd in curl unzip file uv deno; do
-        if command -v $cmd &> /dev/null; then
-            echo "[+] $cmd is installed."
-        else
-            echo "[-] $cmd is NOT installed."
-            MISSING=1
-        fi
-    done
-    if [ $MISSING -eq 1 ]; then
-        echo -e "\n⚠️ Some dependencies are missing. Run ./setup.sh to install them."
-        exit 1
-    fi
-    echo -e "\n✅ All required dependencies are present."
-    exit 0
-fi
 
 echo -e "\033[1;36m"
 echo " ██████╗ ██████╗ ██████╗ ███████╗████████╗███████╗██╗  ██╗"
@@ -120,9 +136,18 @@ fi
 echo ""
 
 DOCKER_AVAILABLE=false
+DOCKER_COMPOSE_AVAILABLE=false
+DOCKER_COMPOSE_CMD=(docker compose)
 if command -v docker &> /dev/null; then
     if docker info >/dev/null 2>&1; then
         DOCKER_AVAILABLE=true
+        if docker compose version >/dev/null 2>&1; then
+            DOCKER_COMPOSE_AVAILABLE=true
+            DOCKER_COMPOSE_CMD=(docker compose)
+        elif command -v docker-compose >/dev/null 2>&1; then
+            DOCKER_COMPOSE_AVAILABLE=true
+            DOCKER_COMPOSE_CMD=(docker-compose)
+        fi
     fi
 fi
 
@@ -133,8 +158,20 @@ if [ "$CHECK_ONLY" = true ]; then
     echo "  file: $(command -v file || echo missing)"
     echo "  uv: $(command -v uv || echo missing)"
     echo "  deno: $(command -v deno || echo missing)"
-    echo "  docker: $DOCKER_AVAILABLE"
-    if [ ${#MISSING_UTILS[@]} -ne 0 ] || ! command -v uv >/dev/null 2>&1 || ! command -v deno >/dev/null 2>&1; then
+    echo "  docker_engine: $DOCKER_AVAILABLE"
+    echo "  docker_compose: $DOCKER_COMPOSE_AVAILABLE"
+    if [ ${#MISSING_UTILS[@]} -ne 0 ]; then
+        exit 1
+    fi
+    if [ "$FORCE_DOCKER" = true ]; then
+        if [ "$DOCKER_AVAILABLE" != true ] || [ "$DOCKER_COMPOSE_AVAILABLE" != true ]; then
+            exit 1
+        fi
+    elif [ "$FORCE_LOCAL" = true ]; then
+        if ! command -v uv >/dev/null 2>&1 || ! command -v deno >/dev/null 2>&1; then
+            exit 1
+        fi
+    elif ! command -v uv >/dev/null 2>&1 || ! command -v deno >/dev/null 2>&1; then
         exit 1
     fi
     exit 0
@@ -142,13 +179,17 @@ fi
 
 echo -e "\033[1mSelect your preferred deployment architecture:\033[0m"
 echo "  [1] Pure Local (Requires 'uv' and Python 3.12+)"
-if [ "$DOCKER_AVAILABLE" = true ]; then
+if [ "$DOCKER_AVAILABLE" = true ] && [ "$DOCKER_COMPOSE_AVAILABLE" = true ]; then
     echo "  [2] Isolated Container (Requires Docker - ZERO host dependencies)"
 else
     echo "  [2] Isolated Container (UNAVAILABLE - Docker engine not running)"
 fi
 
-if [ "${CORETEX_HEADLESS:-}" = "1" ]; then
+if [ "$FORCE_DOCKER" = true ]; then
+    DEPLOY_CHOICE="2"
+elif [ "$FORCE_LOCAL" = true ]; then
+    DEPLOY_CHOICE="1"
+elif [ "${CORETEX_HEADLESS:-}" = "1" ]; then
     DEPLOY_CHOICE="1"
 else
     read -p "Enter choice [1]: " DEPLOY_CHOICE
@@ -159,20 +200,29 @@ if [ -f "./ctx" ]; then
     chmod +x ./ctx
 fi
 
-if [ "$DEPLOY_CHOICE" == "2" ] && [ "$DOCKER_AVAILABLE" = true ]; then
+if [ "$DEPLOY_CHOICE" == "2" ]; then
+    if [ "$DOCKER_AVAILABLE" != true ]; then
+        echo -e "\033[1;31mERROR: Docker is installed but the engine is not reachable. Start Docker and retry, or run ./setup.sh --local.\033[0m" >&2
+        exit 1
+    fi
+    if [ "$DOCKER_COMPOSE_AVAILABLE" != true ]; then
+        echo -e "\033[1;31mERROR: Docker Compose is unavailable. Install the Docker Compose plugin or docker-compose, then retry.\033[0m" >&2
+        exit 1
+    fi
+
     echo -e "\n[*] \033[1;34mBuilding Isolated Docker Sandbox...\033[0m"
 
     touch .env
-    mkdir -p logs System/config Meta
+    mkdir -p logs System/config Meta Workspace
 
-    export UID=$(id -u)
-    export GID=$(id -g)
-    docker compose build
+    export HOST_UID=$(id -u)
+    export HOST_GID=$(id -g)
+    ${DOCKER_COMPOSE_CMD[@]} build
 
     echo -e "\n[+] \033[1;32mBuild complete.\033[0m"
     echo -e "[*] Booting Synaptic Genesis inside container context...\n"
 
-    exec ./ctx setup
+    exec ./ctx --docker setup
 fi
 
 echo -e "\n[*] \033[1;36mInitializing Pure Local Environment...\033[0m"

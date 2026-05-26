@@ -2,10 +2,21 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DIR"
 
+DOCKER_REQUESTED=false
+if [[ "${1:-}" == "--docker" ]]; then
+    DOCKER_REQUESTED=true
+    shift
+fi
+
+DOCKER_COMPOSE_CMD=(docker compose)
+if ! docker compose version >/dev/null 2>&1 && command -v docker-compose >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD=(docker-compose)
+fi
+
 # FIX: Expects 'coretex' image to match docker-compose.yml
 if command -v docker &> /dev/null && docker image inspect coretex &> /dev/null; then
-    export UID=$(id -u)
-    export GID=$(id -g)
+    export HOST_UID=$(id -u)
+    export HOST_GID=$(id -g)
 
     # Natively build fallback directory to preserve host user ownership boundaries
     export CORETEX_WORKSPACE_MOUNT="$(pwd)/Workspace"
@@ -28,7 +39,13 @@ if command -v docker &> /dev/null && docker image inspect coretex &> /dev/null; 
         fi
     done
 
-    exec docker compose run --rm coretex "${ARGS[@]}"
+    exec "${DOCKER_COMPOSE_CMD[@]}" run --rm coretex "${ARGS[@]}"
+fi
+
+if [ "$DOCKER_REQUESTED" = true ]; then
+    echo -e "\033[1;31m[!] Docker runtime requested, but the 'coretex' image is not built.\033[0m"
+    echo -e "Run \033[1;36m./setup.sh --docker\033[0m first, or build with your Compose installation."
+    exit 1
 fi
 
 if [ ! -f ./.venv/bin/python ]; then
