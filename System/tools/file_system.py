@@ -41,12 +41,26 @@ def write_safe_file(filepath: str, content: str) -> ExecutionResult:
 
         create_snapshot(filepath)
 
-        target_path.parent.mkdir(parents=True, exist_ok=True)
+        # 🛡️ ANTI-ORPHAN FILTER: Check directory existence prior to mutations
+        target_dir = target_path.parent
+        created_new_dir = not target_dir.exists()
+
+        target_dir.mkdir(parents=True, exist_ok=True)
         target_path.write_text(content, encoding="utf-8")
-        return ExecutionResult(
-            success=True,
-            output=f"SUCCESS: File safely written to {target_path.relative_to(ROOT_DIR)}",
+
+        output_msg = (
+            f"SUCCESS: File safely written to {target_path.relative_to(ROOT_DIR)}"
         )
+
+        if created_new_dir:
+            output_msg += (
+                f"\n[SYSTEM ADVISORY]: The parent directory did not exist, so '{target_dir.name}/' "
+                f"was automatically created. If you hallucinated this path instead of checking the "
+                f"existing project structure via list_safe_directory, you MUST immediately call "
+                f"delete_safe_file to clean up this orphan folder and self-correct!"
+            )
+
+        return ExecutionResult(success=True, output=output_msg)
     except Exception as e:
         reason = f"ERROR: Failed to write file - {str(e)}"
         return ExecutionResult(success=False, output=reason, block_reason=reason)
@@ -59,9 +73,15 @@ def read_safe_file(filepath: str) -> ExecutionResult:
         if not is_safe_path(target_path):
             reason = f"SECURITY BLOCK: Access denied to read at {target_path}."
             return ExecutionResult(success=False, output=reason, block_reason=reason)
+
+        # ANTI-HALLUCINATION ROUTING: Redirect blind misses to sensory mapping tools
         if not target_path.exists():
-            reason = f"ERROR: File not found at {target_path.relative_to(ROOT_DIR)}"
+            reason = (
+                f"ERROR: File not found at '{filepath}'. You hallucinated or guessed this path. "
+                f"STOP guessing paths. Use list_safe_directory on the parent folder to see what actually exists."
+            )
             return ExecutionResult(success=False, output=reason, block_reason=reason)
+
         if not target_path.is_file():
             reason = "ERROR: Target is not a file."
             return ExecutionResult(success=False, output=reason, block_reason=reason)
@@ -81,7 +101,6 @@ def list_safe_directory(directory_path: str) -> ExecutionResult:
         target_path: Path = normalize_path(ROOT_DIR / directory_path)
 
         if target_path == normalize_path(ROOT_DIR):
-            # ALLOWED_DIRECTORIES are strings. Wrap them in (ROOT_DIR / d) to use Path methods!
             items = [
                 f"[DIR] {Path(ROOT_DIR / d).name}"
                 for d in ALLOWED_DIRECTORIES
@@ -132,14 +151,21 @@ def rename_safe_file(old_filepath: str, new_filepath: str) -> ExecutionResult:
             return ExecutionResult(success=False, output=reason, block_reason=reason)
 
         if not old_path.exists():
-            reason = f"ERROR: File not found at {old_path.relative_to(ROOT_DIR)}"
+            reason = f"ERROR: Source file not found at {old_path.relative_to(ROOT_DIR)}"
             return ExecutionResult(success=False, output=reason, block_reason=reason)
 
-        new_path.parent.mkdir(parents=True, exist_ok=True)
+        #  ANTI-ORPHAN FILTER: Check destination path bounds
+        new_dir = new_path.parent
+        created_new_dir = not new_dir.exists()
+
+        new_dir.mkdir(parents=True, exist_ok=True)
         old_path.rename(new_path)
-        return ExecutionResult(
-            success=True, output=f"SUCCESS: Renamed to {new_path.relative_to(ROOT_DIR)}"
-        )
+
+        output_msg = f"SUCCESS: Renamed to {new_path.relative_to(ROOT_DIR)}"
+        if created_new_dir:
+            output_msg += f"\n[SYSTEM ADVISORY]: Missing destination directory path '{new_dir.name}/' was synthesized to fulfill this move operation."
+
+        return ExecutionResult(success=True, output=output_msg)
     except Exception as e:
         reason = f"ERROR: Failed to rename file - {str(e)}"
         return ExecutionResult(success=False, output=reason, block_reason=reason)
@@ -158,6 +184,15 @@ def append_safe_file(filepath: str, content: str) -> ExecutionResult:
             reason = f"SECURITY BLOCK: Cannot modify ADRs. Human approval required for {filepath}."
             return ExecutionResult(success=False, output=reason, block_reason=reason)
 
+        # CRITICAL HALLUCINATION BLOCKER: Prevent silent fake file initialization during appends
+        if not target_path.exists():
+            reason = (
+                f"ERROR: Cannot append to '{filepath}' because the file does not exist. "
+                f"You are hallucinating this path target. If you intended to initialize a brand-new file, "
+                f"you MUST use write_safe_file instead."
+            )
+            return ExecutionResult(success=False, output=reason, block_reason=reason)
+
         from System.neuroanatomy.systemic.immune_system import scan_for_pathogens
 
         is_clean, immune_reason = scan_for_pathogens(content)
@@ -172,11 +207,10 @@ def append_safe_file(filepath: str, content: str) -> ExecutionResult:
 
         target_path.parent.mkdir(parents=True, exist_ok=True)
         prefix = ""
-        if target_path.exists():
-            with open(target_path, encoding="utf-8") as f:
-                current_content = f.read()
-                if current_content and not current_content.endswith("\n"):
-                    prefix = "\n"
+        with open(target_path, encoding="utf-8") as f:
+            current_content = f.read()
+            if current_content and not current_content.endswith("\n"):
+                prefix = "\n"
 
         with open(target_path, "a", encoding="utf-8") as f:
             f.write(prefix + content + "\n")
@@ -210,11 +244,18 @@ def copy_safe_file(source_filepath: str, dest_filepath: str) -> ExecutionResult:
             reason = "SECURITY BLOCK: Cannot copy ADRs."
             return ExecutionResult(success=False, output=reason, block_reason=reason)
 
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        # ANTI-ORPHAN FILTER: Track target directory structures
+        dest_dir = dest_path.parent
+        created_new_dir = not dest_dir.exists()
+
+        dest_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source_path, dest_path)
-        return ExecutionResult(
-            success=True, output=f"SUCCESS: Copied to {dest_path.relative_to(ROOT_DIR)}"
-        )
+
+        output_msg = f"SUCCESS: Copied to {dest_path.relative_to(ROOT_DIR)}"
+        if created_new_dir:
+            output_msg += f"\n[SYSTEM ADVISORY]: Target parent folder configuration '{dest_dir.name}/' did not exist and was generated to anchor this copy command."
+
+        return ExecutionResult(success=True, output=output_msg)
     except Exception as e:
         reason = f"ERROR: Failed to copy file - {str(e)}"
         return ExecutionResult(success=False, output=reason, block_reason=reason)
@@ -276,7 +317,18 @@ def write_multiple_files(files: list[dict]) -> str:
 
         res = write_safe_file(filepath, content)
         if res.success:
-            results.append(f"Successfully wrote: {filepath}")
+            # Test Backwards-Compatibility Layer
+            msg = f"Successfully wrote: {filepath}"
+
+            # If an orphan directory advisory was generated, bubble it up inline
+            if "[SYSTEM ADVISORY]" in res.output:
+                advisory_part = (
+                    res.output.split("\n", 1)[1] if "\n" in res.output else ""
+                )
+                if advisory_part:
+                    msg += f"\n{advisory_part}"
+
+            results.append(msg)
         else:
             if "SECURITY BLOCK" in res.output:
                 results.append(

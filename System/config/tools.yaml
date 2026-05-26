@@ -12,7 +12,10 @@ base:
   - type: function
     function:
       name: read_safe_file
-      description: Reads the complete contents of a file securely.
+      description: >-
+        Reads the complete contents of a file securely. STRICT RULE: DO NOT guess
+        file paths or assume a file exists. You MUST use list_safe_directory or
+        search_safe_directory to verify the exact file path before calling this tool.
       parameters:
         type: object
         properties:
@@ -211,7 +214,11 @@ write:
   - type: function
     function:
       name: write_safe_file
-      description: Writes file.
+      description: >-
+        Writes a file to the disk. STRICT RULE: If you are modifying an EXISTING project,
+        DO NOT guess the folder structure. You MUST use list_safe_directory first to find
+        where things belong (e.g., checking if the project uses 'src/' or 'app/').
+        Only invent new paths if you are explicitly scaffolding a brand new project.
       parameters:
         type: object
         properties:
@@ -227,8 +234,9 @@ write:
     function:
       name: write_multiple_files
       description: >-
-        Writes multiple files to the disk in a single action. ALWAYS use
-        this instead of write_safe_file when creating more than one file to save API tokens.
+        Writes multiple files to the disk in a single action. ALWAYS use this instead of
+        write_safe_file when creating more than one file. STRICT RULE: Map the directory
+        first using list_safe_directory before generating paths to prevent creating orphaned folders.
       parameters:
         type: object
         properties:
