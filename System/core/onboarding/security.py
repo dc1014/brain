@@ -27,15 +27,20 @@ def is_valid_key_format(provider: str, api_key: str) -> bool:
 def _atomic_write_text(target_path: Path, text_content: str) -> None:
     """
     Safely writes text to a file.
-    SHIFT-LEFT: Automatically backs up the existing file to .bak to prevent data loss.
+    Automatically backs up the existing file to .bak to prevent data loss.
     """
-    if target_path.exists():
-        backup_path = target_path.with_suffix(target_path.suffix + ".bak")
-        shutil.copy(str(target_path), str(backup_path))
+    try:
+        if target_path.exists():
+            backup_path = target_path.with_suffix(target_path.suffix + ".bak")
+            shutil.copy(str(target_path), str(backup_path))
 
-    tmp_path = target_path.with_suffix(".tmp")
-    tmp_path.write_text(text_content, encoding="utf-8")
-    shutil.move(str(tmp_path), str(target_path))
+        tmp_path = target_path.with_suffix(".tmp")
+        tmp_path.write_text(text_content, encoding="utf-8")
+        shutil.move(str(tmp_path), str(target_path))
+    except (PermissionError, OSError):
+        # Prevents crash when the user lacks permission to create sibling .tmp/.bak files
+        # in the container root, and prevents atomic renaming from breaking single-file bind mounts.
+        target_path.write_text(text_content, encoding="utf-8")
 
 
 def verify_deno_sandbox() -> bool:
