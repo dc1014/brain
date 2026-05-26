@@ -14,7 +14,10 @@ def test_bind_global_alias_linux_zsh(mocker, tmp_path: Path):
 
     zshrc = tmp_path / ".zshrc"
     assert zshrc.exists()
-    assert 'alias ctx="cd' in zshrc.read_text(encoding="utf-8")
+
+    file_content = zshrc.read_text(encoding="utf-8")
+    assert 'alias ctx="' in file_content
+    assert "-m System.cli" in file_content
 
 
 def test_bind_global_alias_windows_powershell(mocker, tmp_path: Path):
