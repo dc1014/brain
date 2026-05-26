@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 # --- System/cli.py ---
 import io
 import json
@@ -5,7 +6,16 @@ import os
 import shutil
 import sys
 import traceback
+import warnings
 from pathlib import Path
+
+# Suppress noisy third-party provider warnings (like LiteLLM / AWS Bedrock)
+# before importing any downstream cognitive modules that trigger them.
+os.environ["LITELLM_LOG"] = "ERROR"
+os.environ["SUPPRESS_LITELLM_WARNINGS"] = "True"
+warnings.filterwarnings("ignore", category=UserWarning, module="litellm")
+warnings.filterwarnings("ignore", message=".*botocore.*")
+warnings.filterwarnings("ignore", message=".*boto3.*")
 
 import typer
 from rich.console import Console

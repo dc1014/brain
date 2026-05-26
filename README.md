@@ -10,6 +10,12 @@
 
 ---
 
+### 🏗️ Architectural Highlights
+1. **0-Token Ingestion:** Absorb and index your local workspace using local embeddings (`uv` + local python scripts) with **0 external API calls**. You can read, index, and organize your private vault without spending money or leaking data.
+2. **Safe-by-Default Execution:** The default "Cognitive Mode" is strictly read/write advisory. Active shell or script execution requires explicit user consent, and is hard-isolated inside an offline Deno-hosted V8 WebAssembly jail with strict CPU/memory caps and filesystem masking. Or just run it in Docker.
+
+---
+
 ## ⚡ The "Aha!" Moment (Quickstart)
 
 CoreTex operates on pure text and local embeddings, meaning you can parse your entire codebase before spending a single API token.

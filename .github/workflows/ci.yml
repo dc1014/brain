@@ -22,19 +22,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Determine TruffleHog scope using inline YAML.
-      # Scans the PR diff if it is a pull request.
-      # Scans the latest commit (HEAD~1 to HEAD) if it is a direct push or a new branch.
+      # THE FIX: Removed fragile base/head delta math entirely.
+      # TruffleHog will now confidently and rapidly scan the entire repository
+      # on every single push, ensuring it never skips or crashes on branch boundaries.
       - name: TruffleHog Secret Scanner
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || 'HEAD~1' }}
-          head: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'HEAD' }}
           extra_args: --debug
 
+      # THE FIX: Changed @v2 to @v1. The v2 action tag is currently broken on GitHub's
+      # backend (causing the 404 tar.gz error). v1 safely installs deno v2.x.
       - name: Setup Deno
-        uses: denoland/setup-deno@v2
+        uses: denoland/setup-deno@v1
         with:
           deno-version: v2.x
 

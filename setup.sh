@@ -131,18 +131,24 @@ fi
 
 echo -e "\n[*] \033[1;36mInitializing Pure Local Environment...\033[0m"
 
-UV_BIN="uv"
 if ! command -v uv &> /dev/null; then
-    echo -e "\033[36m[*] Downloading 'uv' package manager (this may take a moment)...\033[0m"
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    export PATH="$HOME/.local/bin:$PATH"
-    UV_BIN="$HOME/.local/bin/uv"
+    if [ -f "$HOME/.local/bin/uv" ]; then
+        export PATH="$HOME/.local/bin:$PATH"
+    elif [ -f "$HOME/.cargo/bin/uv" ]; then
+        export PATH="$HOME/.cargo/bin:$PATH"
+    else
+        echo -e "${RED}❌ uv installation failed or could not be found in PATH. Please restart your terminal.${NC}"
+        exit 1
+    fi
 fi
 
 if ! command -v deno &> /dev/null; then
-    echo -e "\033[36m[*] Downloading Deno WASM Sandbox (this may take a moment)...\033[0m"
-    curl -fsSL https://deno.land/install.sh | sh
-    export PATH="$HOME/.deno/bin:$PATH"
+    if [ -f "$HOME/.deno/bin/deno" ]; then
+        export PATH="$HOME/.deno/bin:$PATH"
+    else
+        echo -e "${RED}❌ deno installation failed or could not be found in PATH. Please restart your terminal.${NC}"
+        exit 1
+    fi
 fi
 
 if ! command -v deno &> /dev/null && ! [ -f "$HOME/.deno/bin/deno" ]; then
