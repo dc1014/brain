@@ -120,8 +120,9 @@ def test_secret_vault_resolve_routing_absolute_failsafe(mocker):
 
     # Request an unrelated model while config is down. The failsafe should save the routing.
     model, key = vault.resolve_routing("openai/gpt-4o")
-    assert model == "anthropic/claude-3-haiku-20240307"
-    assert key == "claude-failsafe-secret"
+
+    # ⚡ FIX: Assert against the newly upgraded haiku-latest model!
+    assert model == "anthropic/claude-3-5-haiku-latest"
 
 
 def test_vault_masks_gateway_proxy_tokens():

@@ -2,6 +2,7 @@
 import json
 import asyncio
 import os
+import urllib.request
 from pathlib import Path
 
 from rich.console import Console
@@ -150,7 +151,7 @@ async def harvest_credentials() -> dict:
     valid_keys = {}
 
     choice = Prompt.ask(
-        "\nSelect credential strategy:\n"
+        "\nSelect cloud credential strategy:\n"
         "[1] OpenRouter (Recommended)\n"
         "[2] Raw provider keys (OpenAI / Anthropic / Gemini)\n"
         "[3] Gateway/Broker (Portkey, Cloudflare AI Gateway)\n"
@@ -195,6 +196,31 @@ async def harvest_credentials() -> dict:
     if brave_key:
         valid_keys["BRAVE_API_KEY"] = brave_key
 
+    # ⚡ NEW: AUTONOMOUS LOCAL SLM PROBE
+    ollama_detected = False
+    try:
+        urllib.request.urlopen("http://localhost:11434/api/tags", timeout=1.0)
+        ollama_detected = True
+        console.print(
+            "\n[bold green][+] Corpus Callosum: Local Ollama instance detected on localhost:11434![/bold green]"
+        )
+    except Exception:
+        pass
+
+    console.print(
+        "\n[dim]CoreTex can route analytical tasks (reading files, filtering text) to a local Small Language Model (SLM) for zero-cost, high-privacy execution.[/dim]"
+    )
+
+    if Confirm.ask("[?] Enable Local SLM routing?", default=ollama_detected):
+        valid_keys["USE_LOCAL_SLM"] = "true"
+        local_model = Prompt.ask(
+            "[cyan]Local Model Name (Requires 'ollama/' prefix for LiteLLM)[/cyan]",
+            default="ollama/llama3.2",
+        )
+        valid_keys["LOCAL_MODEL_NAME"] = local_model
+    else:
+        valid_keys["USE_LOCAL_SLM"] = "false"
+
     return valid_keys
 
 
@@ -209,7 +235,6 @@ def bind_workspace() -> str:
             (workspace_path / domain).mkdir(parents=True, exist_ok=True)
         return "/workspace"
 
-    # ⚡ FIX: Sleeker, punchier default vault name
     default_path = str(Path.home() / "CoreTex")
     console.print(
         Panel(

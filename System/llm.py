@@ -208,24 +208,6 @@ async def run_agent_async(
             messages = await compress_message_array(messages, model_string)
             pruned_messages = messages
 
-            _has_anthropic = bool(vault.get_secret("ANTHROPIC_API_KEY"))
-            _has_openai = bool(vault.get_secret("OPENAI_API_KEY"))
-
-            if (
-                "anthropic" in current_target_model.lower()
-                and not _has_anthropic
-                and _has_openai
-            ):
-                if iteration == 0:
-                    console.print(
-                        "[yellow]Anthropic key missing. Falling back to configured heavy model.[/yellow]"
-                    )
-                from System.core.dna import get_dna_config
-
-                current_target_model = (
-                    get_dna_config().get("models", {}).get("heavy", "openai/gpt-4o")
-                )
-
             routed_model, api_key = vault.resolve_routing(current_target_model)
 
             gateway_url = vault.get_secret("GATEWAY_BASE_URL")

@@ -43,9 +43,16 @@ def test_run_agent_error_handling(mocker) -> None:
     assert "API/Execution Error" in result.text
 
 
-def test_run_os_retry_circuit_breaker(mocker, monkeypatch) -> None:
+def test_run_os_retry_circuit_breaker(mocker, monkeypatch, tmp_path) -> None:
     monkeypatch.delenv("CORETEX_HEADLESS", raising=False)
     monkeypatch.setenv("CORETEX_BYPASS_PFC", "1")
+
+    mocker.patch(
+        "System.neuroanatomy.cortical.working_memory.QUEUE_FILE_PATH",
+        tmp_path / "execution_queue.json",
+    )
+    mocker.patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state")
+    mocker.patch("System.neuroanatomy.cortical.working_memory.clear_pipeline_state")
 
     mocker.patch("System.neuroanatomy.autonomic.vestibular.commit_transaction")
     mocker.patch("System.neuroanatomy.autonomic.vestibular.restore_balance")

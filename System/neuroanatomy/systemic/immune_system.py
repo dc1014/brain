@@ -1,6 +1,6 @@
 import os
 import re
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Set
 from rich.console import Console
 
 console = Console()
@@ -34,14 +34,9 @@ def scan_for_pathogens(content: str) -> tuple[bool, str]:
 
 
 # --- TIER 2: THE NUCLEAR OPTION (Environment Scrubbing) ---
-# --- Replacing SecretVault inside System/neuroanatomy/systemic/immune_system.py ---
-
-
-# --- In System/neuroanatomy/systemic/immune_system.py ---
 class SecretVault:
     def __init__(self) -> None:
         self._secrets: Dict[str, str] = {}
-        # The specific biological targets we must protect from the Swarm's environment
         self._keys_to_protect = [
             "OPENAI_API_KEY",
             "ANTHROPIC_API_KEY",
@@ -51,6 +46,8 @@ class SecretVault:
             "GATEWAY_BASE_URL",
             "GATEWAY_API_KEY",
         ]
+        # ⚡ ZERO DEBT: Track warned mutations to prevent terminal spam
+        self._notified_fallbacks: Set[str] = set()
 
     def secure_environment(self) -> None:
         """Ingests secrets securely without mutating the global host environment."""
@@ -61,13 +58,8 @@ class SecretVault:
 
     def resolve_routing(self, model: str) -> Tuple[str, Optional[str]]:
         """
-        🧠 Thalamic Cross-Modal Routing:
-        Auto-discovers available keys and dynamically mutates the model string and key assignment.
-        1. Native Key Match
-        2. OpenRouter Aggregation Fallback
-        3. User-Configured Global Default Model Fallback (DNA Config)
-        4. Single-Key Universal Auto-Discovery Fallback
-        5. Absolute Hardcoded Failsafe Fallback
+        🧠 Thalamic Cross-Modal Routing Waterfall:
+        100% Dependable model discovery. Evaluates Gateways, Native Keys, and Fallbacks.
         """
         model_lower = model.lower()
         req_provider = None
@@ -81,13 +73,16 @@ class SecretVault:
         elif model_lower.startswith("openrouter/"):
             req_provider = "OPENROUTER_API_KEY"
 
-        # 1. Native Provider Match
+        # --- 1. GATEWAY BROKER (Absolute Priority) ---
+        if "GATEWAY_BASE_URL" in self._secrets:
+            return model, self._secrets.get("GATEWAY_API_KEY", "")
+
+        # --- 2. NATIVE PROVIDER MATCH ---
         if req_provider and req_provider in self._secrets:
             return model, self._secrets[req_provider]
 
-        # 2. OpenRouter Fallback Mutation
+        # --- 3. OPENROUTER UNIVERSAL FALLBACK ---
         if "OPENROUTER_API_KEY" in self._secrets:
-            # Litellm needs the 'openrouter/' prefix to route aggregator keys correctly
             routed_model = (
                 f"openrouter/{model}"
                 if not model_lower.startswith("openrouter/")
@@ -95,7 +90,7 @@ class SecretVault:
             )
             return routed_model, self._secrets["OPENROUTER_API_KEY"]
 
-        # 3. User-Configured Global Default Model Fallback (Defends against Circular Boot Cycles)
+        # --- 4. DNA CONFIG GLOBAL DEFAULT ---
         try:
             from System.core.dna import get_dna_config
 
@@ -103,37 +98,45 @@ class SecretVault:
             if global_default and global_default != model:
                 def_model, def_key = self.resolve_routing(global_default)
                 if def_key:
+                    mutation_key = f"{model}->{def_model}"
+                    if mutation_key not in self._notified_fallbacks:
+                        console.print(
+                            f"\n[bold yellow]⚠️ ROUTING OVERRIDE:[/bold yellow] [dim]Missing keys for '{model}'. Falling back to global default '{def_model}'.[/dim]"
+                        )
+                        self._notified_fallbacks.add(mutation_key)
                     return def_model, def_key
         except Exception:
-            pass  # Suppress circular drift if core paths are loading synchronously
+            pass
 
-        # 4. Single-Key Universal Fallback (Auto-discovery match for single-key setups)
-        available_providers = [
-            k
-            for k in self._secrets.keys()
-            if k.endswith("_API_KEY") and k != "OPENROUTER_API_KEY"
-        ]
-        if len(available_providers) == 1:
-            sole_provider = available_providers[0]
-            if sole_provider == "GEMINI_API_KEY":
-                return "gemini/gemini-2.5-flash", self._secrets[sole_provider]
-            elif sole_provider == "OPENAI_API_KEY":
-                return "openai/gpt-4o-mini", self._secrets[sole_provider]
-            elif sole_provider == "ANTHROPIC_API_KEY":
-                return "anthropic/claude-3-haiku-20240307", self._secrets[sole_provider]
+        # --- 5. BEST AVAILABLE NATIVE FALLBACK (System Survival) ---
+        fallback_model = None
+        fallback_key = None
+        if "OPENAI_API_KEY" in self._secrets:
+            fallback_model, fallback_key = (
+                "openai/gpt-4o-mini",
+                self._secrets["OPENAI_API_KEY"],
+            )
+        elif "ANTHROPIC_API_KEY" in self._secrets:
+            fallback_model, fallback_key = (
+                "anthropic/claude-3-5-haiku-latest",
+                self._secrets["ANTHROPIC_API_KEY"],
+            )
+        elif "GEMINI_API_KEY" in self._secrets:
+            fallback_model, fallback_key = (
+                "gemini/gemini-2.5-flash",
+                self._secrets["GEMINI_API_KEY"],
+            )
 
-        # 5. Absolute Hardcoded Failsafe Fallback (If all matching channels are de-innervated)
-        # Check if ANY key is available to execute a generic, desperate routing save
-        for provider_key, secret_val in self._secrets.items():
-            if provider_key.endswith("_API_KEY") and secret_val:
-                if provider_key == "GEMINI_API_KEY":
-                    return "gemini/gemini-2.5-flash", secret_val
-                elif provider_key == "OPENAI_API_KEY":
-                    return "openai/gpt-4o-mini", secret_val
-                elif provider_key == "ANTHROPIC_API_KEY":
-                    return "anthropic/claude-3-haiku-20240307", secret_val
+        if fallback_model and fallback_key:
+            mutation_key = f"{model}->{fallback_model}"
+            if mutation_key not in self._notified_fallbacks:
+                console.print(
+                    f"\n[bold yellow]⚠️ ROUTING OVERRIDE:[/bold yellow] [dim]Missing native credentials for '{model}'. Falling back to '{fallback_model}' to prevent system crash.[/dim]"
+                )
+                self._notified_fallbacks.add(mutation_key)
+            return fallback_model, fallback_key
 
-        # Resolution Failure (Completely sterile environment)
+        # Resolution Failure (Sterile environment / Airgapped)
         return model, None
 
     def get_api_key_for_model(self, model: str) -> Optional[str]:
@@ -148,7 +151,6 @@ class SecretVault:
     def mask_secrets(self, text: str) -> str:
         """
         🛡️ EFFERENT SHIELD: Scrubs loaded vault secrets from any outbound text stream.
-        Prevents plain-text credential leaks to the console or log files.
         """
         if not text:
             return text
