@@ -89,3 +89,49 @@ def test_taste_semantic_csv_markdown(tmp_path):
     data = sample_file(csv_file)
     assert "Alice" in data["content_sample"]
     assert "Bob" in data["content_sample"]
+
+
+def test_taste_file_not_found(tmp_path):
+    data = sample_file(tmp_path / "ghost.txt")
+    assert "error" in data
+    assert "File not found" in data["error"]
+
+
+def test_taste_gag_reflex_massive_file(tmp_path, mocker):
+    massive_file = tmp_path / "huge.txt"
+    massive_file.write_text("A")
+    mock_stat = mocker.MagicMock(st_size=20 * 1024 * 1024, st_mode=33188)
+    mocker.patch("pathlib.Path.stat", return_value=mock_stat)
+
+    data = sample_file(massive_file)
+    assert data["format_type"] == "indigestible"
+    assert "exceeds safe context window" in data["content_sample"]
+
+
+def test_taste_zip_archive(tmp_path):
+    zip_path = tmp_path / "test.zip"
+    with zipfile.ZipFile(zip_path, "w") as z:
+        z.writestr("test_file.txt", "data")
+    data = sample_file(zip_path)
+    assert data["format_type"] == "archive"
+    assert "test_file.txt" in data["content_sample"]
+
+
+def test_taste_sqlite_db(tmp_path):
+    import sqlite3
+
+    db_path = tmp_path / "test.db"
+    conn = sqlite3.connect(db_path)
+    conn.execute("CREATE TABLE users (id INTEGER);")
+    conn.close()
+    data = sample_file(db_path)
+    assert data["format_type"] == "database_schema"
+    assert "Table: users" in data["content_sample"]
+
+
+def test_taste_raw_text_omission(tmp_path):
+    massive_log = tmp_path / "heavy.txt"
+    massive_log.write_text("A" * 12000)
+    data = sample_file(massive_log)
+    assert data["format_type"] == "raw_text"
+    assert "[OMITTED:" in data["content_sample"]

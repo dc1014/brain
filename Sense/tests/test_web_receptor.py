@@ -85,3 +85,16 @@ def test_transduce_web_page_token_guillotine(mocker):
 
     assert len(result) < 30000
     assert "[TRUNCATED BY CORETEX OS TO PREVENT TOKEN EXHAUSTION]" in result
+
+
+def test_transduce_web_page_missing_playwright(mocker):
+    import sys
+
+    # Force an ImportError when trying to load playwright
+    mocker.patch.dict(sys.modules, {"playwright.sync_api": None})
+
+    mocker.patch("socket.gethostbyname", return_value="8.8.8.8")
+    result = transduce_web_page("https://example.com")
+
+    assert "<sensory_error" in result
+    assert "Vision extras not installed" in result

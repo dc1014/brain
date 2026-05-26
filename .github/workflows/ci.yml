@@ -22,19 +22,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: TruffleHog Secret Scanner (Filesystem)
+      # 🛡️ THE FIX: Indestructible Bash-based TruffleHog that ignores the temporary GitHub Actions .git token
+      - name: TruffleHog Secret Scanner
         run: |
           curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /tmp
-          /tmp/trufflehog filesystem ./ --fail
+          echo "\.git/.*" > .thignore
+          /tmp/trufflehog filesystem ./ --exclude-paths .thignore --fail
 
-      # THE FIX: Changed @v2 to @v1. The v2 action tag is currently broken on GitHub's
-      # backend (causing the 404 tar.gz error). v1 safely installs deno v2.x.
+      # 🛡️ THE FIX: Reverted to setup-deno@v1 to prevent GitHub's backend 404 tarball errors
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
           deno-version: v2.x
 
       - name: Install uv
+        id: uv_install
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -55,14 +57,15 @@ jobs:
       - name: Run Ruff (Formatting & Linting)
         run: uv run ruff check .
 
+      # 🛡️ THE FIX: Smart Gates. These will still run if a previous test fails, but will gracefully skip if `uv` failed to install!
       - name: Run Ruff (Format Check)
-        if: success() || failure()
+        if: (success() || failure()) && steps.uv_install.outcome == 'success'
         run: uv run ruff format --check .
 
       - name: Run Mypy (Type Checking)
-        if: success() || failure()
+        if: (success() || failure()) && steps.uv_install.outcome == 'success'
         run: uv run mypy System/ Sense/ --ignore-missing-imports
 
       - name: Run Pytest with Strict Coverage (Gate Enforcement)
-        if: success() || failure()
+        if: (success() || failure()) && steps.uv_install.outcome == 'success'
         run: uv run pytest System/tests Sense/tests --cov -n auto --cov-fail-under=80
