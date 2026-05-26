@@ -52,7 +52,7 @@ def test_bind_workspace_local(mocker, tmp_path):
 
     path_str = bind_workspace()
 
-    expected_path = tmp_path / "CoreTex_Workspace"
+    expected_path = tmp_path / "CoreTex"
     assert path_str == str(expected_path)
 
     # Assert structural integrity for Obsidian compliance

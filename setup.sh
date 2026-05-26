@@ -144,6 +144,11 @@ if ! command -v deno &> /dev/null; then
     export PATH="$HOME/.deno/bin:$PATH"
 fi
 
+if ! command -v deno &> /dev/null && ! [ -f "$HOME/.deno/bin/deno" ]; then
+    echo -e "\033[1;31mERROR: Deno installation failed or is missing from PATH. Please restart your terminal and try again.\033[0m"
+    exit 1
+fi
+
 mkdir -p logs System/config Meta
 
 $UV_BIN sync --all-extras

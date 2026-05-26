@@ -189,7 +189,7 @@ async def harvest_credentials() -> dict:
                 valid_keys["GATEWAY_API_KEY"] = gateway_key
 
     brave_key = Prompt.ask(
-        "\n[cyan]Brave Search API Key (Optional - Required for web search tools)[/cyan]",
+        "\n[cyan]Brave Search API Key (Optional — enables web search)[/cyan]",
         password=True,
     )
     if brave_key:
@@ -209,7 +209,8 @@ def bind_workspace() -> str:
             (workspace_path / domain).mkdir(parents=True, exist_ok=True)
         return "/workspace"
 
-    default_path = str(Path.home() / "CoreTex_Workspace")
+    # ⚡ FIX: Sleeker, punchier default vault name
+    default_path = str(Path.home() / "CoreTex")
     console.print(
         Panel(
             "This folder becomes your knowledge vault. CoreTex will create Personal/, Professional/, "
