@@ -5,7 +5,9 @@ set "CORETEX_DIR=%~dp0"
 cd /d "%CORETEX_DIR%"
 
 :: Check if the user explicitly requested Docker
+set "DOCKER_REQUESTED=false"
 if "%1"=="--docker" (
+    set "DOCKER_REQUESTED=true"
     shift
     goto run_docker
 )
@@ -49,5 +51,12 @@ shift
 goto loop
 
 :run_docker_cmd
+docker image inspect coretex >nul 2>&1
+if errorlevel 1 (
+    echo [!] Docker runtime requested, but the coretex image is not built.
+    echo Run .\setup.ps1 -Docker first, or build with Docker Compose.
+    exit /b 1
+)
+
 docker compose run --rm coretex !NEW_ARGS!
 endlocal
