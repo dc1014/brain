@@ -5,6 +5,7 @@ set -e
 CHECK_ONLY=false
 FORCE_DOCKER=false
 FORCE_LOCAL=false
+CORETEX_MIN_PYTHON="${CORETEX_MIN_PYTHON:-3.12}"
 
 usage() {
     cat <<'EOF'
@@ -16,6 +17,11 @@ Options:
   --check       Verify dependencies without installing or mutating state
   --docker      Build/use the isolated Docker runtime without prompting
   --local       Use the local uv/Deno runtime without prompting
+
+Examples:
+  ./setup.sh --check
+  ./setup.sh --docker
+  ./setup.sh --local
 EOF
 }
 
@@ -53,6 +59,24 @@ export PATH="$HOME/.local/bin:$HOME/.deno/bin:$HOME/.cargo/bin:$PATH"
 
 command_exists() {
     command -v "$1" >/dev/null 2>&1
+}
+
+python_version_available() {
+    command_exists python3 && python3 - <<PY >/dev/null 2>&1
+import sys
+need = tuple(int(part) for part in "$CORETEX_MIN_PYTHON".split("."))
+sys.exit(0 if sys.version_info[:2] >= need else 1)
+PY
+}
+
+print_next_steps() {
+    cat <<'EOF'
+
+Next steps:
+  1. Run: ctx status
+  2. Try: ctx task "Summarize this repository in five bullets"
+  3. Re-run diagnostics anytime with: ./setup.sh --check
+EOF
 }
 
 confirm_default_yes() {
@@ -208,28 +232,35 @@ if command_exists docker; then
 fi
 
 if [ "$CHECK_ONLY" = true ]; then
+    CHECK_FAILED=false
     echo "Prerequisite check:"
     echo "  curl: $(command -v curl || echo missing)"
     echo "  unzip: $(command -v unzip || echo missing)"
     echo "  file: $(command -v file || echo missing)"
+    echo "  python3_${CORETEX_MIN_PYTHON}_plus: $(python_version_available && echo true || echo false)"
     echo "  uv: $(command -v uv || echo missing)"
     echo "  deno: $(command -v deno || echo missing)"
     echo "  docker_engine: $DOCKER_AVAILABLE"
     echo "  docker_compose: $DOCKER_COMPOSE_AVAILABLE"
     if [ ${#MISSING_UTILS[@]} -ne 0 ]; then
-        exit 1
+        CHECK_FAILED=true
     fi
     if [ "$FORCE_DOCKER" = true ]; then
         if [ "$DOCKER_AVAILABLE" != true ] || [ "$DOCKER_COMPOSE_AVAILABLE" != true ]; then
-            exit 1
+            CHECK_FAILED=true
         fi
     elif [ "$FORCE_LOCAL" = true ]; then
-        if ! command -v uv >/dev/null 2>&1 || ! command -v deno >/dev/null 2>&1; then
-            exit 1
+        if ! python_version_available || ! command -v uv >/dev/null 2>&1 || ! command -v deno >/dev/null 2>&1; then
+            CHECK_FAILED=true
         fi
-    elif ! command -v uv >/dev/null 2>&1 || ! command -v deno >/dev/null 2>&1; then
+    elif ! python_version_available || ! command -v uv >/dev/null 2>&1 || ! command -v deno >/dev/null 2>&1; then
+        CHECK_FAILED=true
+    fi
+    if [ "$CHECK_FAILED" = true ]; then
+        echo "Result: missing required prerequisites for the selected setup path."
         exit 1
     fi
+    echo "Result: ready."
     exit 0
 fi
 
@@ -280,12 +311,19 @@ if [ "$DEPLOY_CHOICE" == "2" ]; then
     ${DOCKER_COMPOSE_CMD[@]} build
 
     echo -e "\n[+] \033[1;32mBuild complete.\033[0m"
+    print_next_steps
+
     echo -e "[*] Booting Synaptic Genesis inside container context...\n"
 
     exec ./ctx --docker setup
 fi
 
 echo -e "\n[*] \033[1;36mInitializing Pure Local Environment...\033[0m"
+
+if ! python_version_available; then
+    echo -e "\033[1;31mERROR: Python ${CORETEX_MIN_PYTHON}+ is required for local setup. Install Python ${CORETEX_MIN_PYTHON}+ or run ./setup.sh --docker.\033[0m" >&2
+    exit 1
+fi
 
 install_uv_runtime
 install_deno_runtime
@@ -296,5 +334,7 @@ echo -e "\033[36m[*] Synchronizing CoreTex dependencies (this may take a moment)
 uv sync --all-extras
 
 echo -e "\n[+] Local environment synchronized."
+print_next_steps
+
 echo -e "[*] Booting Synaptic Genesis...\n"
 uv run python -m System.cli setup

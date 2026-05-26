@@ -4,6 +4,17 @@ setlocal enabledelayedexpansion
 set "CORETEX_DIR=%~dp0"
 cd /d "%CORETEX_DIR%"
 
+set "DOCKER_COMPOSE_CMD=docker compose"
+docker compose version >nul 2>&1
+if errorlevel 1 (
+    docker-compose version >nul 2>&1
+    if errorlevel 1 (
+        set "DOCKER_COMPOSE_CMD="
+    ) else (
+        set "DOCKER_COMPOSE_CMD=docker-compose"
+    )
+)
+
 :: Check if the user explicitly requested Docker
 
 if "%1"=="--docker" (
@@ -57,5 +68,11 @@ if errorlevel 1 (
     exit /b 1
 )
 
-docker compose run --rm coretex !NEW_ARGS!
+if "%DOCKER_COMPOSE_CMD%"=="" (
+    echo [!] Docker runtime requested, but Docker Compose is unavailable.
+    echo Install Docker Desktop with Compose support, then run .\setup.ps1 -Docker.
+    exit /b 1
+)
+
+%DOCKER_COMPOSE_CMD% run --rm coretex !NEW_ARGS!
 endlocal
