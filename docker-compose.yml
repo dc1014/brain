@@ -8,6 +8,8 @@ services:
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     environment:
       - PYTHONUNBUFFERED=1
+      - PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
+      - DENO_INSTALL=/opt/deno
     volumes:
       # Mount the configuration and memory state securely
       - ./System/config:/opt/coretex/System/config

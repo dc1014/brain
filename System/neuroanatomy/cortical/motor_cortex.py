@@ -71,6 +71,9 @@ async def execute_tools(
             except Exception:
                 args = {}
 
+        if not isinstance(args, dict):
+            args = {}
+
         # 🛡️ THE FIX: Flatten nested 'parameters' hallucinations caused by schema confusion
         if "parameters" in args and isinstance(args["parameters"], dict):
             nested = args.pop("parameters")

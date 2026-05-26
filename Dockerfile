@@ -6,8 +6,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-ENV DENO_INSTALL="/root/.deno"
-RUN curl -fsSL https://deno.land/install.sh | sh
+ENV DENO_INSTALL="/opt/deno"
+RUN mkdir -p "$DENO_INSTALL"     && curl -fsSL https://deno.land/install.sh | sh     && ln -s "$DENO_INSTALL/bin/deno" /usr/local/bin/deno
 ENV PATH="$DENO_INSTALL/bin:$PATH"
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
