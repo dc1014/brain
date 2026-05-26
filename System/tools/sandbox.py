@@ -1,4 +1,3 @@
-# --- System/tools/sandbox.py ---
 import os
 import json
 import shlex
@@ -21,7 +20,7 @@ console = Console()
 MAX_BYTES = 5 * 1024 * 1024  # 5 MB ceiling
 
 # =====================================================================
-# 🛡️ SHIFT LEFT SECURITY: DYNAMIC OS DIRECTORY BOUNDARY PROXIES
+# DYNAMIC OS DIRECTORY BOUNDARY PROXIES
 # =====================================================================
 
 
@@ -71,7 +70,7 @@ def _is_windows_junction(path: Path) -> bool:
         try:
             import ctypes
 
-            # ⚡ FIXED: Added explicit mypy ignore rule to survive Linux CI environment static analysis passes
+            # FIXED: Added explicit mypy ignore rule to survive Linux CI environment static analysis passes
             attrs = ctypes.windll.kernel32.GetFileAttributesW(str(path))  # type: ignore[attr-defined]
             return attrs != -1 and bool(attrs & 0x400)
         except Exception:
@@ -150,7 +149,7 @@ def _get_directory_size(path: Path) -> int:
 
 
 # =====================================================================
-# 🐳 THE CONTAINMENT MATRIX (SHELL EXECUTION ISOLATION)
+# THE CONTAINMENT MATRIX (SHELL EXECUTION ISOLATION)
 # =====================================================================
 
 REQUIRES_CONTAINMENT: Set[str] = {
@@ -167,33 +166,18 @@ ALLOWED_NATIVE_ROUTES: Set[str] = {
 
 
 async def execute_in_sandbox(
-    command: str,
+    command: list[str] | str,
     workspace_path: Path,
     env_secrets: Dict[str, str],
-    route: str,
+    route: str = "UNKNOWN",
 ) -> ExecutionResult:
 
-    # 1. OPT-IN GUARDRAIL (Must be absolutely first!)
-    if os.environ.get("CORETEX_ENABLE_CODE_EXECUTION", "false").lower() != "true":
-        return ExecutionResult(
-            success=False,
-            output="[System] Code execution is currently disabled. CoreTex is running in Safe-by-Default (Advisory) mode.",
-            block_reason="OPT-IN REQUIRED: You must explicitly set CORETEX_ENABLE_CODE_EXECUTION=true to authorize active shell and script execution.",
-        )
-
-    # 2. DENO RUNTIME GUARDRAIL (Must be second!)
-    if not shutil.which("deno"):
-        return ExecutionResult(
-            success=False,
-            output="[System] Deno WASM runtime not found in PATH.",
-            block_reason="CRITICAL SECURITY TERMINATION: Deno runtime is required for secure WebAssembly isolation.",
-        )
-
-    # SAFE-BY-DEFAULT: Global kill-switch for autonomous code execution. Must be explicitly opted-in.
+    # Global kill-switch check for autonomous code execution
     code_execution_enabled = os.environ.get(
         "CORETEX_ENABLE_CODE_EXECUTION", "false"
     ).lower() in ("true", "1", "yes")
 
+    # 1. Path Safety Check (Must be first to reject out-of-bounds traversal)
     if not is_safe_path(workspace_path, require_write=True):
         return ExecutionResult(
             success=False,
@@ -201,24 +185,23 @@ async def execute_in_sandbox(
             block_reason="CRITICAL SECURITY TERMINATION: Attempted out-of-bounds workspace execution access.",
         )
 
+    # Initialize and normalize parsed_args at function scope
     if isinstance(command, str):
         parsed_args = shlex.split(command)
     else:
         parsed_args = [str(arg) for arg in command]
 
+    # 2. Route Containment Check
     if route in REQUIRES_CONTAINMENT:
-        # Abort instantly if the user hasn't enabled code execution
+        # Check authorization opt-in before loading the container execution runtime
         if not code_execution_enabled:
             console.print(
                 f"\n[bold red]❌ SECURITY BLOCK: Containment requested for route '{route}', but execution is disabled.[/bold red]"
             )
-            console.print(
-                "[dim]For your safety, CoreTex OS runs in a read-only state by default. To enable autonomous execution, set CORETEX_ENABLE_CODE_EXECUTION=true.[/dim]\n"
-            )
             return ExecutionResult(
                 success=False,
-                output="",
-                block_reason="OPT-IN REQUIRED: Autonomous code execution is disabled by default.",
+                output="[System] Code execution is currently disabled. CoreTex is running in Safe-by-Default (Advisory) mode.",
+                block_reason="OPT-IN REQUIRED: You must explicitly set CORETEX_ENABLE_CODE_EXECUTION=true to authorize active shell and script execution.",
             )
 
         console.print(
@@ -240,30 +223,24 @@ async def execute_in_sandbox(
                 (arg for arg in parsed_args if arg.endswith((".js", ".ts", ".py"))), ""
             )
 
-        has_deno = shutil.which("deno") is not None
-
-        if not has_deno:
+        # Deno Runtime Check (Executes only if execution is authorized)
+        if not shutil.which("deno"):
             return ExecutionResult(
                 success=False,
-                output="",
-                block_reason="CRITICAL SECURITY TERMINATION: Deno runtime is required for secure WebAssembly isolation. Please install Deno.",
+                output="[System] Deno WASM runtime not found in PATH.",
+                block_reason="CRITICAL SECURITY TERMINATION: Deno runtime is required for secure WebAssembly isolation.",
             )
 
-        # 🛡️ ZERO-DEBT: Separate URI schemas for JS imports vs. Pyodide internal loaders
+        # Separate URI schemas for JS imports vs. Pyodide internal loaders
         real_system_dir = Path(__file__).resolve().parent.parent
         vendor_resolved = normalize_path(
             real_system_dir / "vendor" / "pyodide"
         ).resolve()
 
-        vendor_import_url = (
-            vendor_resolved.as_uri()
-        )  # file:///C:/... (For Deno JS import)
-        vendor_index_path = (
-            vendor_resolved.as_posix()
-        )  # C:/... (For Pyodide internal FS loader)
+        vendor_import_url = vendor_resolved.as_uri()
+        vendor_index_path = vendor_resolved.as_posix()
 
         static_js_runner = f"""
-// ⚡ 100% OFFLINE VENDOR LOAD: No network required.
 import {{ createRequire }} from "node:module";
 import {{ fileURLToPath }} from "node:url";
 import {{ dirname }} from "node:path";
@@ -272,7 +249,6 @@ globalThis.require = createRequire(import.meta.url);
 globalThis.__filename = fileURLToPath(import.meta.url);
 globalThis.__dirname = dirname(globalThis.__filename);
 
-// Deno requires the strict file:/// URI for module importing
 import {{ loadPyodide }} from "{vendor_import_url}/pyodide.mjs";
 
 async function runWasmPython() {{
@@ -291,15 +267,11 @@ async function runWasmPython() {{
             code = Deno.readTextFileSync(targetPath);
         }}
 
-        // Pyodide requires the raw POSIX path to locate WASM binaries via Node FS APIs
         const pyodide = await loadPyodide({{
             indexURL: "{vendor_index_path}/",
             env: {json.dumps(env_secrets)}
         }});
 
-        // 🛡️ ZERO-DEBT: Lobotomize the FFI (Foreign Function Interface)
-        // We explicitly block Python from accessing the JavaScript host environment
-        // by blackholing the Pyodide JS bindings before the user code runs.
         await pyodide.runPythonAsync(`
 import sys
 sys.modules['js'] = None
@@ -336,7 +308,6 @@ runWasmPython();
             bytes_read = 0
             execution_completed = False
 
-            # 🛡️ DEFCON PROOF 11: The Storage Guillotine
             initial_disk_weight = _get_directory_size(workspace_path)
             MAX_INFLATION_BYTES = 100 * 1024 * 1024
 
@@ -406,17 +377,14 @@ runWasmPython();
             output_str = b"".join(output_chunks).decode(errors="replace")
             replenish_worker_pool_detached(workspace_path)
 
-            # ⚡ SHIFT-LEFT TOKEN ECONOMICS: Apply deterministic compaction to WASM streams
             from System.neuroanatomy.sensory.somatosensory import SensoryTransducer
 
             output_str = SensoryTransducer().compact_terminal_output(
                 parsed_args, output_str
             )
 
-            # 🛡️ THE SECRET SCRUBBER: Shift-Left Data Leak Prevention
             if env_secrets:
                 for secret_key, secret_value in env_secrets.items():
-                    # Only scrub meaningful secrets to prevent accidental stripping of common chars like '0' or 'A'
                     if secret_value and len(secret_value) > 4:
                         output_str = output_str.replace(
                             secret_value, f"[REDACTED_SECRET:{secret_key}]"
@@ -447,7 +415,6 @@ runWasmPython();
 
         result = await execute_native_isolated(parsed_args, workspace_path, env_secrets)
 
-        # TOKEN ECONOMICS: Compact native sandbox bypass route output streams
         from System.neuroanatomy.sensory.somatosensory import SensoryTransducer
 
         result.output = SensoryTransducer().compact_terminal_output(
@@ -455,6 +422,7 @@ runWasmPython();
         )
         return result
 
+    # Unmapped Route Check (Triggers only if path is safe and route is unknown)
     else:
         return ExecutionResult(
             success=False,
