@@ -254,12 +254,12 @@ def bind_workspace() -> str:
             (workspace_path / domain).mkdir(parents=True, exist_ok=True)
         return "/workspace"
 
-    # ⚡ FIX: Bind the default vault directly inside the cloned CoreTex repository
-    default_path = str(ROOT_DIR / "Vault")
+    default_path = str(ROOT_DIR)
+
     console.print(
         Panel(
-            "This folder becomes your knowledge vault. CoreTex will create Personal/, Professional/, "
-            "Studio/, and Media/ inside it.\n\nIt's a plain Markdown folder — open it in Obsidian to get the full experience.\n\n"
+            "Your entire CoreTex repository will act as your knowledge vault. CoreTex will create Personal/, Professional/, "
+            "Studio/, and Media/ folders directly alongside your System/ code.\n\nOpen the root folder in Obsidian to get the full omniscient experience.\n\n"
             f"Default: {default_path}",
             title="[ WORKSPACE BINDING ]",
             border_style="cyan",
@@ -276,6 +276,7 @@ def bind_workspace() -> str:
     workspace_path = Path(final_path).resolve()
     workspace_path.mkdir(parents=True, exist_ok=True)
 
+    # This will now create the folders directly in the root!
     for domain in ["Personal", "Professional", "Studio", "Meta", "Media"]:
         (workspace_path / domain).mkdir(parents=True, exist_ok=True)
 

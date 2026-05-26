@@ -105,7 +105,6 @@ def test_bind_workspace_local(mocker, tmp_path):
     """Proves the local workspace builder constructs Obsidian domains properly."""
     mocker.patch("System.core.onboarding.genesis.IS_DOCKER_RUNTIME", False)
 
-    # ⚡ FIX: Mock ROOT_DIR to the ephemeral tmp_path so it stays sandboxed
     mocker.patch("System.core.onboarding.genesis.ROOT_DIR", tmp_path)
 
     mocker.patch("System.core.onboarding.genesis.Prompt.ask", return_value="")
@@ -113,8 +112,8 @@ def test_bind_workspace_local(mocker, tmp_path):
 
     path_str = bind_workspace()
 
-    # ⚡ FIX: Assert the new local "Vault" structure constraint
-    expected_path = tmp_path / "Vault"
+    expected_path = tmp_path
+
     assert path_str == str(expected_path)
     assert (expected_path / "Studio").exists()
     assert (expected_path / "Meta").exists()

@@ -186,16 +186,22 @@ async def test_executive_loop_embedded_system_halt(mocker, tmp_path):
 @patch("System.neuroanatomy.cortical.executive_loop.restore_balance")
 @patch("System.neuroanatomy.cortical.executive_loop.clear_pipeline_state")
 @patch("System.neuroanatomy.cortical.executive_loop.run_agent_async")
+# 🛡️ THE FIX: Add the commit_transaction patch as a decorator here to guarantee interception
+@patch("System.neuroanatomy.cortical.executive_loop.commit_transaction")
 async def test_executive_loop_metabolic_budget_halt(
-    mock_run_agent, mock_clear, mock_restore, mock_clearance, mocker, tmp_path
+    mock_commit,
+    mock_run_agent,
+    mock_clear,
+    mock_restore,
+    mock_clearance,
+    mocker,
+    tmp_path,
 ):
     """Proves that a breached metabolic budget completely halts the pipeline and rolls back."""
     mocker.patch("System.neuroanatomy.cortical.executive_loop.ROOT_DIR", tmp_path)
 
-    # 🛡️ THE FIX: Mock the commit_transaction call so it doesn't try to touch the real Windows disk!
     mocker.patch("System.neuroanatomy.cortical.executive_loop.commit_transaction")
 
-    # ⚡ Force the clearance check to fail
     mock_clearance.return_value = (False, "Metabolic budget exhausted.")
 
     mocker.patch(
