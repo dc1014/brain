@@ -83,8 +83,8 @@ async def test_auditor_headless_retry_bypass(mocker, tmp_path: Path) -> None:
         if "QA" in role_name:
             call_count["qa_auditor"] += 1
             if call_count["qa_auditor"] == 1:
-                return MockResp('{"audit_result": "FAIL", "reasoning": "Missing code"}')
-            return MockResp('{"audit_result": "PASS", "reasoning": "Looks good"}')
+                return MockResp("Missing code. <AUDIT_FAIL>")
+            return MockResp("Looks good. <AUDIT_PASS>")
         return MockResp("Here is code.")
 
     mocker.patch(
@@ -143,7 +143,7 @@ async def test_synaptic_consolidation_commits_mid_pipeline(
 
     class MockResponse:
         def __init__(self):
-            self.text = '{"audit_result": "PASS", "reasoning": "Looks good"}'
+            self.text = "Looks good. <AUDIT_PASS>"
             self.actions = []
             self.usage = {}
 

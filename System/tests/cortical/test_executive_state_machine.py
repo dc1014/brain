@@ -192,6 +192,9 @@ async def test_executive_loop_metabolic_budget_halt(
     """Proves that a breached metabolic budget completely halts the pipeline and rolls back."""
     mocker.patch("System.neuroanatomy.cortical.executive_loop.ROOT_DIR", tmp_path)
 
+    # 🛡️ THE FIX: Mock the commit_transaction call so it doesn't try to touch the real Windows disk!
+    mocker.patch("System.neuroanatomy.cortical.executive_loop.commit_transaction")
+
     # ⚡ Force the clearance check to fail
     mock_clearance.return_value = (False, "Metabolic budget exhausted.")
 
@@ -208,7 +211,6 @@ async def test_executive_loop_metabolic_budget_halt(
 
     # Run the pipeline
     await execute_pipeline("Test budget halt", "TEST", "STUDIO")
-
     # Assert 1: The agent MUST NOT have been invoked (zero token cost)
     mock_run_agent.assert_not_called()
 

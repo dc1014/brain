@@ -84,11 +84,48 @@ async def execute_tools(
             args["filepath"] = args.pop("path")
         if "file_path" in args and "filepath" not in args:
             args["filepath"] = args.pop("file_path")
+        # ... (previous normalization code) ...
         if "directory" in args and "directory_path" not in args:
             args["directory_path"] = args.pop("directory")
 
         is_halted = False
         raw_output = ""
+
+        # ---------------------------------------------------------
+        # UI OBSERVABILITY ENHANCEMENT: Real-time action logging
+        # ---------------------------------------------------------
+        try:
+            if func_name == "write_safe_file":
+                content_len = len(str(args.get("content", "")))
+                console.print(
+                    f"[bold blue]➤ Writing:[/bold blue] [cyan]{args.get('filepath', 'Unknown')}[/cyan] [dim]({content_len} chars)[/dim]"
+                )
+            elif func_name == "read_safe_file":
+                console.print(
+                    f"[bold yellow]➤ Reading:[/bold yellow] [cyan]{args.get('filepath', 'Unknown')}[/cyan]"
+                )
+            elif func_name == "write_multiple_files":
+                file_list = args.get("files", [])
+                console.print(
+                    f"[bold blue]➤ Writing {len(file_list)} files:[/bold blue]"
+                )
+                for f_obj in file_list:
+                    c_len = len(str(f_obj.get("content", "")))
+                    console.print(
+                        f"   [dim]↳[/dim] [cyan]{f_obj.get('filepath', 'Unknown')}[/cyan] [dim]({c_len} chars)[/dim]"
+                    )
+            elif func_name in ["execute_command", "run_sandbox_command"]:
+                console.print(
+                    f"[bold magenta]➤ Executing:[/bold magenta] [white]{args.get('command', 'Unknown')}[/white]"
+                )
+            elif func_name == "delete_safe_file":
+                console.print(
+                    f"[bold red]➤ Deleting:[/bold red] [cyan]{args.get('filepath', 'Unknown')}[/cyan]"
+                )
+            else:
+                console.print(f"[dim]➤ Tool Called: {func_name}[/dim]")
+        except Exception:
+            pass  # Failsafe so UI logging never crashes the actual execution
 
         try:
             if not hasattr(os_tools, func_name):
