@@ -112,9 +112,13 @@ if ($null -eq $DenoCmd) {
     exit 1
 }
 
-& $UvBin venv
-& $UvBin pip install -e .
-& $UvBin pip install -e ./Sense
+# ⚡ FIX: Explicitly create required folders BEFORE running Genesis
+foreach ($dir in "logs", "System\config", "Meta") {
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force > $null }
+}
+
+# ⚡ FIX: Use the modern uv workspace synchronization
+& $UvBin sync --all-extras
 
 Write-Host "`n[+] Local environment synchronized." -ForegroundColor Green
 Write-Host "[*] Booting Synaptic Genesis...`n" -ForegroundColor Cyan

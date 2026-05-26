@@ -118,7 +118,7 @@ if [ "$DEPLOY_CHOICE" == "2" ] && [ "$DOCKER_AVAILABLE" = true ]; then
     echo -e "\n[*] \033[1;34mBuilding Isolated Docker Sandbox...\033[0m"
 
     touch .env
-    mkdir -p logs System/config Meta Workspace
+    mkdir -p logs System/config Meta
 
     export UID=$(id -u)
     export GID=$(id -g)
@@ -144,9 +144,9 @@ if ! command -v deno &> /dev/null; then
     export PATH="$HOME/.deno/bin:$PATH"
 fi
 
-$UV_BIN venv
-$UV_BIN pip install -e .
-$UV_BIN pip install -e ./Sense
+mkdir -p logs System/config Meta
+
+$UV_BIN sync --all-extras
 
 echo -e "\n[+] Local environment synchronized."
 echo -e "[*] Booting Synaptic Genesis...\n"

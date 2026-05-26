@@ -28,7 +28,6 @@ IS_DOCKER_RUNTIME = (
 )
 
 
-# --- 1. THE AWAKENING ---
 def draw_coretex():
     console.clear()
     coretex_art = """[bold cyan]
@@ -69,7 +68,6 @@ def draw_coretex():
     console.print("\n")
 
 
-# --- 2. SECURITY GATE ---
 def configure_security_gate() -> bool:
     if IS_DOCKER_RUNTIME:
         console.print(
@@ -103,7 +101,6 @@ def configure_security_gate() -> bool:
         return verify_deno_sandbox()
 
 
-# --- 3. SENSES ---
 def innervate_senses() -> dict:
     features = {
         "vision": {
@@ -144,20 +141,39 @@ def innervate_senses() -> dict:
 async def harvest_credentials() -> dict:
     console.print(
         Panel(
-            "Leave blank to skip provider mapping registers.",
+            "Recommended: OpenRouter gives you access to every major model\n"
+            "with a single key and no vendor lock-in. Get one at openrouter.ai",
             title="[ SYNAPTIC HANDSHAKE ]",
             border_style="magenta",
         )
     )
     valid_keys = {}
 
-    routing_choice = Prompt.ask(
-        "\n[?] Route safely through an AI Gateway/Broker, or provide raw provider keys? [Gateway / Raw]",
-        choices=["Raw", "Gateway", "raw", "gateway", "RAW", "GATEWAY"],
-        default="Raw",
-    ).lower()
+    choice = Prompt.ask(
+        "\nSelect credential strategy:\n"
+        "[1] OpenRouter (Recommended)\n"
+        "[2] Raw provider keys (OpenAI / Anthropic / Gemini)\n"
+        "[3] Gateway/Broker (Portkey, Cloudflare AI Gateway)\n"
+        "[4] Skip (Local LLMs Only)",
+        choices=["1", "2", "3", "4"],
+        default="1",
+    )
 
-    if routing_choice == "gateway":
+    if choice == "1":
+        key = Prompt.ask("[cyan]OpenRouter API Key[/cyan]", password=True)
+        if key:
+            valid_keys["OPENROUTER_API_KEY"] = key
+    elif choice == "2":
+        providers = {
+            "OPENAI": "OpenAI API Key",
+            "ANTHROPIC": "Anthropic API Key",
+            "GEMINI": "Google Gemini API Key",
+        }
+        for prov, prompt_text in providers.items():
+            key = Prompt.ask(f"[cyan]{prompt_text}[/cyan]", password=True)
+            if key:
+                valid_keys[f"{prov}_API_KEY"] = key
+    elif choice == "3":
         console.print(
             "[dim]A custom broker intercepts traffic to providers like OpenAI or Anthropic.[/dim]"
         )
@@ -171,31 +187,9 @@ async def harvest_credentials() -> dict:
             )
             if gateway_key:
                 valid_keys["GATEWAY_API_KEY"] = gateway_key
-    else:
-        # Original provider polling logic
-        providers = {
-            "OPENAI": {"prompt": "OpenAI API Key", "model": "openai/gpt-4o-mini"},
-            "ANTHROPIC": {
-                "prompt": "Anthropic API Key",
-                "model": "anthropic/claude-3-5-haiku-20241022",
-            },
-            "GEMINI": {
-                "prompt": "Google Gemini API Key",
-                "model": "gemini/gemini-2.5-flash",
-            },
-            "OPENROUTER": {
-                "prompt": "OpenRouter API Key",
-                "model": "openrouter/auto",
-            },
-        }
-
-        for prov, data in providers.items():
-            key = Prompt.ask(f"[cyan]{data['prompt']}[/cyan]", password=True)
-            if key:
-                valid_keys[f"{prov}_API_KEY"] = key
 
     brave_key = Prompt.ask(
-        "\n[cyan]Brave Search API Key (Required for web search tools)[/cyan]",
+        "\n[cyan]Brave Search API Key (Optional - Required for web search tools)[/cyan]",
         password=True,
     )
     if brave_key:
@@ -204,7 +198,6 @@ async def harvest_credentials() -> dict:
     return valid_keys
 
 
-# --- 5. WORKSPACE BINDING ---
 def bind_workspace() -> str:
     if IS_DOCKER_RUNTIME:
         console.print(
@@ -212,33 +205,64 @@ def bind_workspace() -> str:
         )
         workspace_path = Path("/workspace")
         workspace_path.mkdir(parents=True, exist_ok=True)
-        # Restore scaffolding regression
         for domain in ["Personal", "Professional", "Studio", "Meta", "Media"]:
             (workspace_path / domain).mkdir(parents=True, exist_ok=True)
         return "/workspace"
 
+    default_path = str(Path.home() / "CoreTex_Workspace")
     console.print(
         Panel(
-            "CoreTex OS operates on plain text. Bind it to any local folder.",
+            "This folder becomes your knowledge vault. CoreTex will create Personal/, Professional/, "
+            "Studio/, and Media/ inside it.\n\nIt's a plain Markdown folder — open it in Obsidian to get the full experience.\n\n"
+            f"Default: {default_path}",
             title="[ WORKSPACE BINDING ]",
             border_style="cyan",
         )
     )
-    final_path = Prompt.ask("Drag-and-drop or write a folder destination path string")
-    if not final_path:
-        final_path = str(Path.home() / "CoreTex_Workspace")
 
-    workspace_path = Path(final_path)
+    final_path = Prompt.ask("Enter destination path (or press Enter for default)")
+    if not final_path:
+        final_path = default_path
+
+    workspace_path = Path(final_path).resolve()
     workspace_path.mkdir(parents=True, exist_ok=True)
 
-    # Restore scaffolding regression
     for domain in ["Personal", "Professional", "Studio", "Meta", "Media"]:
         (workspace_path / domain).mkdir(parents=True, exist_ok=True)
+
+    obsidian_panel = f"""Your vault is ready at: [bold green]{workspace_path}[/bold green]
+
+  1. Open Obsidian
+  2. Click "Open folder as vault"
+  3. Select the path above
+
+CoreTex will write structured Markdown notes here automatically."""
+
+    console.print("\n")
+    console.print(
+        Panel(obsidian_panel, title="[ OBSIDIAN INTEGRATION ]", border_style="green")
+    )
+
+    if Confirm.ask("\n[?] Open this folder now?", default=True):
+        import platform
+        import subprocess
+
+        os_name = platform.system()
+        try:
+            if os_name == "Windows":
+                os.startfile(str(workspace_path))
+            elif os_name == "Darwin":
+                subprocess.Popen(["open", str(workspace_path)])
+            else:
+                subprocess.Popen(["xdg-open", str(workspace_path)])
+        except Exception:
+            console.print(
+                "[dim red]Could not automatically open the directory.[/dim red]"
+            )
 
     return str(workspace_path)
 
 
-# --- MASTER EXECUTION ORCHESTRATOR ---
 async def main():
     draw_coretex()
 
@@ -278,7 +302,18 @@ async def main():
             "\n[dim yellow][*] Global shell alias mapping bypassed inside Docker context.[/dim yellow]\n"
         )
 
-    console.print("\n[bold green][+] SYNAPTIC GENESIS COMPLETE [+][/bold green]\n")
+    next_steps = f"""Vault:    [bold green]{workspace_path}[/bold green]
+Command:  [bold cyan]ctx task "summarize my week"[/bold cyan]
+
+Next steps:
+  - Open your Vault folder in Obsidian
+  - Run: [cyan]ctx status[/cyan]
+  - Docs: [blue]https://github.com/mrdanielcasper/coretex/wiki[/blue]
+
+[italic]CoreTex is watching. Think out loud.[/italic]"""
+
+    console.print("\n")
+    console.print(Panel(next_steps, title="[ YOU'RE LIVE ]", border_style="green"))
 
 
 if __name__ == "__main__":
