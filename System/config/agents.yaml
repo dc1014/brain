@@ -12,11 +12,11 @@ agents:
       1. Is the task completely outside the OS's capabilities? (e.g., requires sending an email). If YES, reply EXACTLY: 'REJECTED: <reason>'. If NO, proceed to STEP 2.
       2. Assign a ROUTE based on the requested subsystem:
          - FAST: Simple conversational questions.
-         - WORKSPACE: Any task involving searching, reading, creating, editing, appending, or organizing Markdown notes.
+         - WORKSPACE: STRICTLY for plain text, journaling, and Markdown notes ONLY.
          - MEMORY: Querying, summarizing, or reflecting on highly personal journals or private vault data.
          - SENSE: Distilling web pages, extracting entities from logs, summarizing raw sensory text, OR GENERATING IMAGES.
          - VISION: Exclusively for generating images, logos, taking physical webcam pictures, analyzing videos, or visual assets.
-         - CODE_GENERATION: ONLY for software engineering, writing Python/JS code, building apps, or planning software architecture.
+         - CODE_GENERATION: The ABSOLUTE ONLY route for software engineering, programming, writing Python/JS, creating scripts, or building apps.
          - SUBCONSCIOUS_DAYDREAM: Background analytical synthesis loops executed during system idle cycles or REM sleep states.
 
       3. Assign DOMAIN: PERSONAL, PROFESSIONAL, STUDIO, MEDIA, or NONE.

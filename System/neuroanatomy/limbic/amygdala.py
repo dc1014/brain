@@ -29,7 +29,7 @@ Text to analyze:
 {text}
 """
     try:
-        # 🧠 CORPUS CALLOSUM: Route the Amygdala to the Left Brain (Local SLM) if enabled
+        # CORPUS CALLOSUM: Route the Amygdala to the Left Brain (Local SLM) if enabled
         # Default fallback is gpt-4o-mini if local routing is disabled
         target_model = route_hemisphere("AMYGDALA", "openai/gpt-4o-mini")
 
@@ -41,7 +41,9 @@ Text to analyze:
         )
 
         result = str(response.choices[0].message.content).strip()
-        if result == "SAFE":
+
+        # 🛡️ THE FIX: Use .startswith() to forgive chatty LLMs that append reasoning
+        if result.startswith("SAFE"):
             return True, "Safe."
         else:
             return False, f"AMYGDALA BLOCK: {result}"

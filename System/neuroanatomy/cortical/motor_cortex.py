@@ -43,6 +43,7 @@ async def execute_tools(
         console.print(f"\n[dim]{role_name} is thinking and acting...[/dim]")
 
     for tool_call in tool_calls:
+        # --- RESTORED: Tool extraction logic that defines args, func_name, and tool_id ---
         if isinstance(tool_call, dict):
             if "tool_name" in tool_call:
                 args = tool_call.get("parameters", {})
@@ -62,6 +63,7 @@ async def execute_tools(
             args = getattr(tool_call.function, "arguments", "{}")
             func_name = str(getattr(tool_call.function, "name", "unknown"))
             tool_id = str(getattr(tool_call, "id", f"call_{uuid.uuid4().hex[:8]}"))
+        # ---------------------------------------------------------------------------------
 
         if isinstance(args, str):
             try:
@@ -69,14 +71,23 @@ async def execute_tools(
             except Exception:
                 args = {}
 
+        # 🛡️ THE FIX: Flatten nested 'parameters' hallucinations caused by schema confusion
+        if "parameters" in args and isinstance(args["parameters"], dict):
+            nested = args.pop("parameters")
+            args.update(nested)
+
+        # 🛡️ THE FIX: Normalize common key hallucinations across the board
         if "path" in args and "filepath" not in args:
             args["filepath"] = args.pop("path")
+        if "file_path" in args and "filepath" not in args:
+            args["filepath"] = args.pop("file_path")
+        if "directory" in args and "directory_path" not in args:
+            args["directory_path"] = args.pop("directory")
 
         is_halted = False
         raw_output = ""
 
         try:
-            # FIX: Check if the tool exists FIRST before enforcing strict parameter payloads
             if not hasattr(os_tools, func_name):
                 raw_output = f"ERROR: Unknown tool '{func_name}' in System.tools"
             else:
@@ -105,7 +116,6 @@ async def execute_tools(
                             get_isolated_executor(), func_call
                         )
 
-                # Execute directly without the redundant MotorCortex locks
                 result = await _run_tool()
 
                 if isinstance(result, ExecutionResult):
