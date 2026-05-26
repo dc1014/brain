@@ -34,6 +34,10 @@ IS_DOCKER_RUNTIME = (
 )
 
 
+def is_headless_setup() -> bool:
+    return os.environ.get("CORETEX_HEADLESS", "").lower() in {"1", "true", "yes"}
+
+
 def draw_coretex():
     console.clear()
     coretex_art = """[bold cyan]
@@ -80,6 +84,11 @@ def configure_security_gate() -> bool:
             "[dim green][+] Containerized isolation active. Security Mode locked to Agentic Runtime.[/dim green]\n"
         )
         return True
+    if is_headless_setup():
+        console.print(
+            "[dim green][+] Headless setup: Cognitive Mode selected by default.[/dim green]\n"
+        )
+        return False
 
     gate_text = (
         "CoreTex operates as a [bold green]Cognitive Assistant[/bold green] by default. "
@@ -116,7 +125,7 @@ def innervate_senses() -> dict:
         },
         "audio": {"enabled": False, "selected": False, "name": "Cochlear Audio"},
     }
-    if IS_DOCKER_RUNTIME:
+    if IS_DOCKER_RUNTIME or is_headless_setup():
         return features
 
     if Confirm.ask(
@@ -145,6 +154,9 @@ def innervate_senses() -> dict:
 
 
 async def harvest_credentials() -> dict:
+    if is_headless_setup():
+        return {"USE_LOCAL_SLM": "false"}
+
     console.print(
         Panel(
             "Recommended: OpenRouter gives you access to every major model\n"
@@ -253,9 +265,12 @@ def bind_workspace() -> str:
         )
     )
 
-    final_path = Prompt.ask("Enter destination path (or press Enter for default)")
-    if not final_path:
+    if is_headless_setup():
         final_path = default_path
+    else:
+        final_path = Prompt.ask("Enter destination path (or press Enter for default)")
+        if not final_path:
+            final_path = default_path
 
     workspace_path = Path(final_path).resolve()
     workspace_path.mkdir(parents=True, exist_ok=True)
@@ -276,7 +291,9 @@ CoreTex will write structured Markdown notes here automatically."""
         Panel(obsidian_panel, title="[ OBSIDIAN INTEGRATION ]", border_style="green")
     )
 
-    if Confirm.ask("\n[?] Open this folder now?", default=True):
+    if (not is_headless_setup()) and Confirm.ask(
+        "\n[?] Open this folder now?", default=True
+    ):
         import platform
         import subprocess
 
@@ -327,7 +344,7 @@ async def main():
         _atomic_write_text(FEATURES_PATH, json.dumps(features, indent=4))
 
     if not IS_DOCKER_RUNTIME:
-        if Confirm.ask(
+        if (not is_headless_setup()) and Confirm.ask(
             "\n[?] Make 'ctx' globally accessible in your shell profile?", default=True
         ):
             bind_global_alias()

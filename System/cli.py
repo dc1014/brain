@@ -11,8 +11,9 @@ from pathlib import Path
 
 # Suppress noisy third-party provider warnings (like LiteLLM / AWS Bedrock)
 # before importing any downstream cognitive modules that trigger them.
-os.environ["LITELLM_LOG"] = "ERROR"
-os.environ["SUPPRESS_LITELLM_WARNINGS"] = "True"
+os.environ.setdefault("LITELLM_LOG", "ERROR")
+os.environ.setdefault("LITELLM_TELEMETRY", "False")
+os.environ.setdefault("SUPPRESS_LITELLM_WARNINGS", "True")
 warnings.filterwarnings("ignore", category=UserWarning, module="litellm")
 warnings.filterwarnings("ignore", message=".*botocore.*")
 warnings.filterwarnings("ignore", message=".*boto3.*")
@@ -29,7 +30,6 @@ from Sense.receptors.vision import take_screenshot
 from Sense.receptors.web import transduce_web_page
 
 # Import domain function blocks
-from System.cli_cognitive import absorb, compile, daydream, evolve, forage, task
 from System.cli_somatic import (
     assimilate,
     expose_dermis,
@@ -45,7 +45,6 @@ from System.cli_somatic import (
 )
 from System.core.concurrency import lock_concurrency_defaults
 from System.core.file_transaction import read_state_sync
-from System.neuroanatomy.cortical.occipital import perceive_image
 from System.neuroanatomy.sensory.olfactory import process_scent_profile
 
 # Secure prioritize root folder mapping
@@ -238,6 +237,47 @@ def destroy() -> None:
 
 
 # ==============================================================================
+# LAZY COMMAND WRAPPERS
+# ==============================================================================
+
+
+def task(*args, **kwargs):
+    from System.cli_cognitive import task as _task
+
+    return _task(*args, **kwargs)
+
+
+def daydream(*args, **kwargs):
+    from System.cli_cognitive import daydream as _daydream
+
+    return _daydream(*args, **kwargs)
+
+
+def evolve(*args, **kwargs):
+    from System.cli_cognitive import evolve as _evolve
+
+    return _evolve(*args, **kwargs)
+
+
+def forage(*args, **kwargs):
+    from System.cli_cognitive import forage as _forage
+
+    return _forage(*args, **kwargs)
+
+
+def compile(*args, **kwargs):
+    from System.cli_cognitive import compile as _compile
+
+    return _compile(*args, **kwargs)
+
+
+def absorb(*args, **kwargs):
+    from System.cli_cognitive import absorb as _absorb
+
+    return _absorb(*args, **kwargs)
+
+
+# ==============================================================================
 # DUAL REGISTRATION MATRIX (Unhidden to expose shortcuts in root help menu)
 # ==============================================================================
 
@@ -310,6 +350,8 @@ def sense_screenshot(url: str, output: str = "screenshot.png"):
 def sense_perceive(
     image_path: str, query: str = "Describe this image in extreme detail."
 ):
+    from System.neuroanatomy.cortical.occipital import perceive_image
+
     console.print(perceive_image(image_path, query))
 
 
