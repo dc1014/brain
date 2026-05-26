@@ -13,6 +13,9 @@ def get_system_vitals() -> Panel:
     INTEROCEPTION: Compiles real-time structural, immune, and metabolic vitals
     of CoreTex OS into an absolute-zero debt telemetry report.
     """
+    import urllib.request
+    import urllib.error
+
     # 🛡️ 1. Evaluate Membrane Integrity
     bbb_headless = os.environ.get("BRAIN_OS_HEADLESS") == "1"
     membrane_status = (
@@ -29,7 +32,22 @@ def get_system_vitals() -> Panel:
         else "[yellow]Unindexed (Rebuild Pending)[/yellow]"
     )
 
-    # 🦠 2. Gather Immune/Microglia Interventions
+    # 🧠 2. Check Local LLM (Corpus Callosum) Connectivity
+    use_local = os.environ.get("USE_LOCAL_SLM", "false").lower() in ("true", "1", "yes")
+    local_model = os.environ.get("LOCAL_MODEL_NAME", "Ollama")
+    local_llm_status = "[dim white]Disabled (Cloud Routing Active)[/dim white]"
+
+    if use_local:
+        try:
+            # Ping standard Ollama local server port with a fast 1-second timeout
+            urllib.request.urlopen("http://localhost:11434/", timeout=1.0)
+            local_llm_status = f"[bold green]Connected ({local_model})[/bold green]"
+        except (urllib.error.URLError, ConnectionRefusedError, TimeoutError):
+            local_llm_status = (
+                "[bold red]Disconnected (Cannot reach localhost:11434)[/bold red]"
+            )
+
+    # 🦠 3. Gather Immune/Microglia Interventions
     log_file = ROOT_DIR / "logs" / "agent_interactions.jsonl"
     immune_heal_count = 0
     total_tokens_burned = 0
@@ -58,19 +76,20 @@ def get_system_vitals() -> Panel:
         except Exception:
             pass
 
-    # 🧠 3. Count Consolidated Engrams
+    # 🧠 4. Count Consolidated Engrams
     engram_dir = ROOT_DIR / "Meta" / "Engrams"
     engram_count = 0
     if engram_dir.exists():
         engram_count = len(list(engram_dir.glob("*.json")))
 
-    # 📊 4. Assemble Telemetry Table
+    # 📊 5. Assemble Telemetry Table
     table = Table(show_header=False, box=None, padding=(0, 2))
     table.add_column("Vital Sign", style="cyan")
     table.add_column("Current Measurement", style="white")
 
     table.add_row("Circadian Rhythm Status", membrane_status)
     table.add_row("Hippocampus Core (FTS5)", db_status)
+    table.add_row("Corpus Callosum (Local SLM)", local_llm_status)  # <-- Added row here
     table.add_row("Consolidated Muscle Memories", f"{engram_count} active Engrams")
     table.add_row(
         "Immune System Interventions",

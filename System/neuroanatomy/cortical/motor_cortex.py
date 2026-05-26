@@ -3,13 +3,14 @@ import asyncio
 import json
 import uuid
 import inspect
-from typing import Any, Dict, Tuple, Union
-
+import functools
+from typing import Any, Tuple, Union, Dict
 from pathlib import Path
 from rich.console import Console
 
 import System.tools as os_tools
 from System.core.schemas import ExecutionResult, ToolCallSchema
+from System.core.concurrency import get_isolated_executor
 
 console = Console()
 
@@ -86,14 +87,6 @@ async def execute_tools(
 
                 tool_func = getattr(os_tools, func_name)
 
-                WRITE_TOOLS = {
-                    "write_safe_file",
-                    "append_safe_file",
-                    "delete_safe_file",
-                    "rename_safe_file",
-                    "copy_safe_file",
-                }
-
                 EXECUTION_TOOLS = {
                     "execute_shell_command",
                     "run_sandbox_command",
@@ -106,19 +99,14 @@ async def execute_tools(
                     if inspect.iscoroutinefunction(tool_func):
                         return await tool_func(**args)
                     else:
-                        return await asyncio.to_thread(tool_func, **args)
+                        loop = asyncio.get_running_loop()
+                        func_call = functools.partial(tool_func, **args)
+                        return await loop.run_in_executor(
+                            get_isolated_executor(), func_call
+                        )
 
-                if func_name in WRITE_TOOLS:
-                    target_path = (
-                        args.get("filepath")
-                        or args.get("dest_filepath")
-                        or args.get("new_filepath")
-                        or "global_write"
-                    )
-                    async with MotorCortex.get_lock(target_path):
-                        result = await _run_tool()
-                else:
-                    result = await _run_tool()
+                # Execute directly without the redundant MotorCortex locks
+                result = await _run_tool()
 
                 if isinstance(result, ExecutionResult):
                     raw_output = result.output
