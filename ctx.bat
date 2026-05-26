@@ -49,5 +49,12 @@ shift
 goto loop
 
 :run_docker_cmd
+docker image inspect coretex >nul 2>&1
+if errorlevel 1 (
+    echo [!] Docker runtime requested, but the coretex image is not built.
+    echo Run .\setup.ps1 -Docker first, or build with Docker Compose.
+    exit /b 1
+)
+
 docker compose run --rm coretex !NEW_ARGS!
 endlocal
