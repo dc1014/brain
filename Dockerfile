@@ -12,13 +12,14 @@ ENV PATH="$DENO_INSTALL/bin:$PATH"
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# FIX: Explicit environment variable to insulate container orchestration
+# Explicit environment variable to insulate container orchestration
 ENV CORETEX_CONTAINER_TRACK="1"
 
 WORKDIR /opt/coretex
 
-COPY pyproject.toml .
-COPY Sense/pyproject.toml ./Sense/
+# Copy configuration along with documentation to pass metadata validation
+COPY pyproject.toml README.md ./
+COPY Sense/pyproject.toml Sense/README.md ./Sense/
 
 RUN uv pip install --system -e .
 RUN uv pip install --system -e ./Sense

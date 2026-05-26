@@ -22,14 +22,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 🛡️ THE FIX: Indestructible Bash-based TruffleHog that ignores the temporary GitHub Actions .git token
+      # Use a filesystem scan and exclude the internal .git folder to ignore the temporary GitHub token.
       - name: TruffleHog Secret Scanner
         run: |
           curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /tmp
-          echo "\.git/.*" > .thignore
+          echo ".*\.git/.*" > .thignore
           /tmp/trufflehog filesystem ./ --exclude-paths .thignore --fail
 
-      # 🛡️ THE FIX: Reverted to setup-deno@v1 to prevent GitHub's backend 404 tarball errors
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
@@ -57,7 +56,7 @@ jobs:
       - name: Run Ruff (Formatting & Linting)
         run: uv run ruff check .
 
-      # 🛡️ THE FIX: Smart Gates. These will still run if a previous test fails, but will gracefully skip if `uv` failed to install!
+      # Smart Gates. These will still run if a previous test fails, but will gracefully skip if uv failed to install.
       - name: Run Ruff (Format Check)
         if: (success() || failure()) && steps.uv_install.outcome == 'success'
         run: uv run ruff format --check .
