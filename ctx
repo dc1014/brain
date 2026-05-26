@@ -1,9 +1,9 @@
 #!/bin/bash
-# ⚡ ZERO-DEBT: Unix Spinal Cord with Absolute Path Virtualization
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DIR"
 
-if command -v docker &> /dev/null && docker image inspect coretex-os &> /dev/null; then
+# FIX: Expects 'coretex' image to match docker-compose.yml
+if command -v docker &> /dev/null && docker image inspect coretex &> /dev/null; then
     export UID=$(id -u)
     export GID=$(id -g)
 
@@ -29,6 +29,12 @@ if command -v docker &> /dev/null && docker image inspect coretex-os &> /dev/nul
     done
 
     exec docker compose run --rm coretex "${ARGS[@]}"
+fi
+
+if [ ! -f ./.venv/bin/python ]; then
+    echo -e "\033[1;31m[!] CoreTex Environment Core Not Found.\033[0m"
+    echo -e "Please run \033[1;36m./setup.sh\033[0m to configure your isolated container or local venv architecture."
+    exit 1
 fi
 
 exec ./.venv/bin/python -m System.cli "$@"

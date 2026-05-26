@@ -11,6 +11,16 @@ if "%1"=="--docker" (
 )
 
 :run_local
+if not exist ".venv\Scripts\python.exe" (
+    echo [!] Local environment ^(.venv^) not found.
+    echo.
+    echo If you installed CoreTex via Docker, you must run it with the Docker flag:
+    echo    .\ctx.bat --docker [commands]
+    echo.
+    echo Otherwise, please run .\setup.ps1 to initialize the local environment.
+    exit /b 1
+)
+
 ".venv\Scripts\python.exe" -u -m System.cli %*
 goto :eof
 

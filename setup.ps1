@@ -71,7 +71,8 @@ if ($DeployChoice -eq "2" -and $DockerAvailable) {
     Write-Host "`n[+] Build complete." -ForegroundColor Green
     Write-Host "[*] Booting Synaptic Genesis inside container context...`n" -ForegroundColor Cyan
 
-    .\ctx.bat setup
+    # FIX: Correctly forces docker fallback execution to prevent missing venv crash
+    .\ctx.bat --docker setup
     exit
 }
 
