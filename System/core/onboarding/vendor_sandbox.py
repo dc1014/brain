@@ -36,4 +36,9 @@ def vendor_offline_sandbox(root_dir: Path):
             "[bold green]✅ Strict Offline WASM boundaries enforced.[/bold green]"
         )
     except Exception as e:
-        console.print(f"[bold red]❌ Failed to vendor Pyodide: {e}[/bold red]")
+        console.print(
+            f"[bold yellow]⚠️ Pyodide Offline Vendoring Skipped: {e}[/bold yellow]"
+        )
+        console.print(
+            "[dim]Note: Sandboxed Python execution will be unavailable, but Cognitive Mode is fully ready.[/dim]"
+        )

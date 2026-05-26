@@ -1,6 +1,6 @@
 # 🧠 CoreTex: Biomimetic Agentic Control Plane and Knowledge Engine
 
-![Architecture](https://img.shields.io/badge/Architecture-Biomimetic--Multiagent-purple.svg) ![Security](https://img.shields.io/badge/Sandbox-Deno_WASM-red.svg) ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg) ![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
+![Architecture](https://img.shields.io/badge/Architecture-Biomimetic--Multiagent-purple.svg) ![Security](https://img.shields.io/badge/Sandbox-Deno_WASM-red.svg) ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg) ![Coverage](https://img.shields.io/badge/Coverage-80%25-green.svg) ![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
 > **Note to Systems Engineers:** I took the biomimicry domain-driven design quite far (e.g., the master daemon is the `Medulla`, short-term memory is the `Hippocampus`). It might look eccentric, but underneath is (arguably) a highly optimized, concurrent, lock-safe, and zero-debt execution engine.
 

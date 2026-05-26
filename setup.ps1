@@ -71,7 +71,7 @@ if ($DeployChoice -eq "2" -and $DockerAvailable) {
     Write-Host "`n[+] Build complete." -ForegroundColor Green
     Write-Host "[*] Booting Synaptic Genesis inside container context...`n" -ForegroundColor Cyan
 
-    # FIX: Correctly forces docker fallback execution to prevent missing venv crash
+    # Force docker fallback execution to prevent missing venv crash
     .\ctx.bat --docker setup
     exit
 }
@@ -103,10 +103,21 @@ if ($null -eq (Get-Command uv -ErrorAction SilentlyContinue)) {
 
 $UvCmd = Get-Command uv -ErrorAction SilentlyContinue
 if ($null -eq $UvCmd) {
-    Write-Error "uv installation failed or could not be found in PATH. Please restart your terminal."
-    exit 1
+    # Check standard astral-sh installation paths if registry or PATH cache is delayed
+    $DefaultUv = Join-Path $env:USERPROFILE ".local\bin\uv.exe"
+    $CargoUv = Join-Path $env:USERPROFILE ".cargo\bin\uv.exe"
+
+    if (Test-Path $DefaultUv) {
+        $UvBin = $DefaultUv
+    } elseif (Test-Path $CargoUv) {
+        $UvBin = $CargoUv
+    } else {
+        Write-Error "uv installation failed or could not be found in PATH. Please restart your terminal."
+        exit 1
+    }
+} else {
+    $UvBin = $UvCmd.Source
 }
-$UvBin = $UvCmd.Source
 
 if ($null -eq (Get-Command deno -ErrorAction SilentlyContinue)) {
     Write-Host "`n[*] Downloading Deno WASM Sandbox locally (this may take a moment)..." -ForegroundColor Cyan
@@ -116,8 +127,12 @@ if ($null -eq (Get-Command deno -ErrorAction SilentlyContinue)) {
 
 $DenoCmd = Get-Command deno -ErrorAction SilentlyContinue
 if ($null -eq $DenoCmd) {
-    Write-Error "deno installation failed or could not be found in PATH. Please restart your terminal."
-    exit 1
+    # Check standard deno installation path if PATH cache is delayed
+    $DefaultDeno = Join-Path $env:USERPROFILE ".deno\bin\deno.exe"
+    if (-not (Test-Path $DefaultDeno)) {
+        Write-Error "deno installation failed or could not be found in PATH. Please restart your terminal."
+        exit 1
+    }
 }
 
 foreach ($dir in "logs", "System\config", "Meta") {

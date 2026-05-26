@@ -25,9 +25,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# 🤖 AI CACHE
+# AI CACHE
 .claude/
 .windsurf/
+.claude.json
+claude.json
 
 # ==============================================================================
 # 🧠 OBSIDIAN WORKSPACE STATE & PRIVACY GUARDS
