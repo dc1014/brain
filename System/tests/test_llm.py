@@ -29,7 +29,8 @@ def test_token_truncator_protects_context(mocker) -> None:
         "tool_calls": [
             {
                 "tool_name": "read_safe_file",
-                "parameters": {"filepath": "huge.log"},
+                # 🛡️ THE FIX: Stringified JSON payload for parameters!
+                "parameters": '{"filepath": "huge.log"}',
                 "reasoning": "Inspecting data to verify environment.",
             }
         ],
@@ -272,7 +273,8 @@ async def test_run_agent_async_json_structured_output_bridge(mocker):
         "tool_calls": [
             {
                 "tool_name": "read_safe_file",
-                "parameters": {"filepath": "defcon_test.txt"},
+                # 🛡️ THE FIX: Stringified JSON payload to bypass Pydantic crash
+                "parameters": '{"filepath": "defcon_test.txt"}',
                 "reasoning": "Need file data.",
             }
         ],
@@ -335,16 +337,12 @@ async def test_run_agent_async_json_structured_output_bridge(mocker):
 
     # 5. ASSERTION 2: Prove the Synthetic Tool Call was generated and passed to the Motor Cortex correctly
     mock_execute_tools.assert_called_once()
-    synthetic_tools = mock_execute_tools.call_args[0][
-        0
-    ]  # The first argument passed to execute_tools
+    synthetic_tools = mock_execute_tools.call_args[0][0]
 
     assert len(synthetic_tools) == 1
     assert synthetic_tools[0].tool_name == "read_safe_file"
 
-    # Parameters are natively parsed dictionaries inside ToolCallSchema.
-    # No more legacy inner class properties or redundant json.loads deserialization!
-    parsed_args = synthetic_tools[0].parameters
+    parsed_args = json.loads(synthetic_tools[0].parameters)
     assert parsed_args["filepath"] == "defcon_test.txt"
 
 
@@ -371,7 +369,7 @@ def test_get_system_context_injects_advisory_mode_when_execution_disabled(
 
 def test_get_system_context_skips_advisory_mode_when_execution_enabled(mocker) -> None:
     """Proves the system removes the advisory warning when the user explicitly opts in."""
-    # ⚡ FIX: Update to the new CORETEX environment variable
+    # Update to the new CORETEX environment variable
     mocker.patch.dict(os.environ, {"CORETEX_ENABLE_CODE_EXECUTION": "true"}, clear=True)
 
     mocker.patch(

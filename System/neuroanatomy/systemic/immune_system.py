@@ -46,8 +46,21 @@ class SecretVault:
             "GATEWAY_BASE_URL",
             "GATEWAY_API_KEY",
         ]
-        # ⚡ ZERO DEBT: Track warned mutations to prevent terminal spam
+        # ZERO DEBT: Track warned mutations to prevent terminal spam
         self._notified_fallbacks: Set[str] = set()
+
+        # Auto-hydrate the vault the absolute second it is born!
+        # This guarantees background sleep cycles and daemons have access to your .env keys.
+        # However, we bypass load_dotenv if we detect an active Pytest session to preserve hermetic test isolation.
+        try:
+            if "PYTEST_CURRENT_TEST" not in os.environ:
+                from dotenv import load_dotenv
+
+                load_dotenv()
+        except ImportError:
+            pass
+
+        self.secure_environment()
 
     def secure_environment(self) -> None:
         """Ingests secrets securely without mutating the global host environment."""
@@ -58,7 +71,7 @@ class SecretVault:
 
     def resolve_routing(self, model: str) -> Tuple[str, Optional[str]]:
         """
-        🧠 Thalamic Cross-Modal Routing Waterfall:
+        Cross-Modal Routing Waterfall:
         100% Dependable model discovery. Evaluates Gateways, Native Keys, and Fallbacks.
         """
         model_lower = model.lower()
@@ -158,7 +171,10 @@ class SecretVault:
         scrubbed_text = text
         for key, secret in self._secrets.items():
             if secret and len(secret) > 4:
-                scrubbed_text = scrubbed_text.replace(secret, f"[{key}_REDACTED]")
+                # Safely replace only if 'scrubbed_text' is a string
+                # (Prevents .replace() crashes on AsyncMock outputs from Pytest)
+                if isinstance(scrubbed_text, str):
+                    scrubbed_text = scrubbed_text.replace(secret, f"[{key}_REDACTED]")
 
         return scrubbed_text
 

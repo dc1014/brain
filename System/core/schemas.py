@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 
 
 class NeuroplasticityRule(BaseModel):
@@ -92,17 +92,14 @@ class CircadianConfig(BaseModel):
     deep_sleep_enabled: bool = True
 
 
-# =====================================================================
-# ⚡ THE NEW STRUCTURED OUTPUT COGNITIVE SCHEMAS
-# =====================================================================
-
-
 class ToolCallSchema(BaseModel):
     """Schema for a single tool execution request."""
 
     tool_name: str = Field(..., description="The exact name of the tool to execute.")
-    parameters: Dict[str, Any] = Field(
-        ..., description="The JSON arguments for the tool."
+    # 🛡️ THE FIX: Replaced Dict[str, Any] with str. Strict Structured Outputs ban open dictionaries!
+    parameters: str = Field(
+        ...,
+        description="A stringified JSON object containing the arguments for the tool.",
     )
     reasoning: str = Field(
         ..., description="Internal monologue explaining why this tool is being called."
@@ -138,7 +135,7 @@ class EpiphanySchema(BaseModel):
 
 
 # =====================================================================
-# ⚡ THE OBSIDIAN TRANSLATION LAYER (JSON -> Markdown Bridge)
+# THE OBSIDIAN TRANSLATION LAYER (JSON -> Markdown Bridge)
 # =====================================================================
 
 
@@ -169,7 +166,16 @@ class MarkdownTranslator:
         if response.tool_calls:
             md += "**Actions:**\n"
             for call in response.tool_calls:
-                param_str = json.dumps(call.parameters, indent=2)
+                param_str = ""
+                if isinstance(call.parameters, str):
+                    try:
+                        parsed_json = json.loads(call.parameters)
+                        param_str = json.dumps(parsed_json, indent=2)
+                    except Exception:
+                        param_str = call.parameters
+                else:
+                    param_str = json.dumps(call.parameters, indent=2)
+
                 md += f"- `[ {call.tool_name} ]`\n```json\n{param_str}\n```\n"
 
         if response.final_response:

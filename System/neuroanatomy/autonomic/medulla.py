@@ -195,7 +195,7 @@ class MedullaOblongata:
         acc = AnteriorCingulateCortex()
 
         console.print(
-            f"[bold purple]🫁 Medulla WAL: Found {len(interrupted_tasks)} interrupted tasks. Triggering closed-loop recovery...[/bold purple]"
+            f"[bold purple]🫁 Medulla Daemon WAL: Found {len(interrupted_tasks)} interrupted tasks. Triggering closed-loop recovery...[/bold purple]"
         )
 
         for task in interrupted_tasks:
@@ -205,7 +205,7 @@ class MedullaOblongata:
                 continue
 
             console.print(
-                f"[bold yellow]🫁 Medulla WAL: Recovering interrupted task transaction {task_id}...[/bold yellow]"
+                f"[bold yellow]🫁 Medulla Daemon WAL: Recovering interrupted task transaction {task_id}...[/bold yellow]"
             )
             medulla_logger.info(f"WAL Recovery triggered for task {task_id}: {cmd_str}")
 
@@ -420,7 +420,7 @@ class MedullaOblongata:
                     if now - watcher_last_restart > 60:
                         watcher_last_restart = now
                         console.print(
-                            "[bold yellow]🫁 Medulla: Watcher respiratory arrest detected! Reviving somatosensory cortex...[/bold yellow]"
+                            "[bold yellow]🫁 Medulla Daemon: Watcher respiratory arrest detected! Reviving somatosensory cortex...[/bold yellow]"
                         )
                         try:
                             import System.cli_somatic as somatic
@@ -479,7 +479,7 @@ class MedullaOblongata:
         self.is_alive = True
         self.cognitive_state = "IDLE_READY"
 
-        start_msg = "Medulla Oblongata initialized to IDLE_READY state."
+        start_msg = "Medulla Daemon initialized to IDLE_READY state."
         console.print(f"[bold green]🧠 {start_msg}[/bold green]")
         medulla_logger.info(start_msg)
 
@@ -499,7 +499,7 @@ class MedullaOblongata:
 
     def pre_sleep_sequence(self) -> None:
         console.print(
-            "\n[bold magenta]💤 Medulla: Initiating PRE_SLEEP_SEQUENCE handshake...[/bold magenta]"
+            "\n[bold magenta]💤 Medulla Daemon: Initiating PRE_SLEEP_SEQUENCE handshake...[/bold magenta]"
         )
         medulla_logger.info(
             "Executing graceful disengagement protocol across dependent channels."
@@ -511,7 +511,9 @@ class MedullaOblongata:
             try:
                 distress_signal()
             except Exception as e:
-                medulla_logger.error(f"Failed to signal Dermis disengagement: {e}")
+                medulla_logger.error(
+                    f"Failed to signal dermis webhook disengagement: {e}"
+                )
 
         start_wait = time.time()
         while time.time() - start_wait < 3.0:
@@ -534,14 +536,14 @@ class MedullaOblongata:
 
         if os.environ.get("BRAIN_OS_TESTING") == "1":
             medulla_logger.info(
-                "Medulla sleep phase: Daydream loop bypassed inside testing environment."
+                "Medulla daemon sleep phase: Daydream loop bypassed inside testing environment."
             )
         else:
             try:
                 from System.neuroanatomy.autonomic.dmn import trigger_daydreams
 
                 medulla_logger.info(
-                    "Medulla brainstem sleep phase: Invoking default mode network distillation loop."
+                    "Medulla daemon brainstem sleep phase: Invoking default mode network distillation loop."
                 )
 
                 daydream_payload = trigger_daydreams(topic=None, domain="STUDIO")
@@ -559,7 +561,7 @@ class MedullaOblongata:
 
         if os.environ.get("BRAIN_OS_TESTING") == "1":
             medulla_logger.info(
-                "Medulla sleep phase: Bypassed recursive psutil child process sweeps inside testing track."
+                "Medulla daemon sleep phase: Bypassed recursive psutil child process sweeps inside testing track."
             )
         else:
             try:
@@ -576,9 +578,7 @@ class MedullaOblongata:
             except Exception as e:
                 medulla_logger.error(f"Process cleanup warning: {str(e)}")
 
-        stop_msg = (
-            "Medulla Oblongata entering sleep state. All systems spun down cleanly."
-        )
+        stop_msg = "Medulla daemon entering sleep state. All systems spun down cleanly."
         console.print(f"[bold yellow]💤 {stop_msg}[/bold yellow]")
         medulla_logger.info(stop_msg)
 

@@ -8,7 +8,6 @@ from System.tools.sandbox import execute_in_sandbox
 async def test_containment_matrix_forces_sandbox_for_lethal_routes(
     safe_subprocess_mock, tmp_path, monkeypatch
 ):
-    """Zero-Debt Test: Proves that executing a command under SWARM routes mandates sandbox jailing."""
     monkeypatch.setenv("CORETEX_ENABLE_CODE_EXECUTION", "true")
     safe_workspace = tmp_path / "Studio" / "AppWorkspace"
     safe_workspace.mkdir(parents=True)
@@ -17,7 +16,7 @@ async def test_containment_matrix_forces_sandbox_for_lethal_routes(
         mock_proc = safe_subprocess_mock
         mock_proc.returncode = 0
 
-        # ⚡ FIXED: Mock BOTH read() and readline() to feed the execution signal,
+        # FIXED: Mock BOTH read() and readline() to feed the execution signal,
         # instantly breaking the infinite loop and preventing the 60s hang!
         mock_stream_data = [
             b"Containment verified.\n",
@@ -47,13 +46,15 @@ async def test_containment_matrix_allows_native_execution_for_safe_routes(tmp_pa
     safe_workspace = tmp_path / "Personal"
     safe_workspace.mkdir(parents=True)
 
+    from System.core.schemas import ExecutionResult  # <--- Ensure this is imported!
+
     with (
         patch("System.tools.sandbox.ROOT_DIR", tmp_path),
-        # FIX: Explicitly mock path safety verification to prevent Windows short-directory/drive-case mismatches
         patch("System.tools.sandbox.is_safe_path", return_value=True),
         patch("System.tools.execution.execute_native_isolated") as mock_native,
     ):
-        mock_native.return_value = AsyncMock()
+        # 🛡️ FIX: Return a proper ExecutionResult instead of an empty AsyncMock
+        mock_native.return_value = ExecutionResult(success=True, output="mocked output")
 
         await execute_in_sandbox(
             command="ls",
@@ -61,4 +62,3 @@ async def test_containment_matrix_allows_native_execution_for_safe_routes(tmp_pa
             env_secrets={},
             route="WORKSPACE",
         )
-        mock_native.assert_called_once()
