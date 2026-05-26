@@ -281,20 +281,87 @@ def absorb(*args, **kwargs):
 # DUAL REGISTRATION MATRIX (Unhidden to expose shortcuts in root help menu)
 # ==============================================================================
 
-# Cognitive Registry Hooks
-cognitive_app.command(name="task")(task)
-cognitive_app.command(name="daydream")(daydream)
-cognitive_app.command(name="evolve")(evolve)
-cognitive_app.command(name="forage")(forage)
-cognitive_app.command(name="compile")(compile)
-cognitive_app.command(name="absorb")(absorb)
 
-app.command(name="task")(task)
-app.command(name="daydream")(daydream)
-app.command(name="evolve")(evolve)
-app.command(name="forage")(forage)
-app.command(name="compile")(compile)
-app.command(name="absorb")(absorb)
+# Cognitive Registry Hooks
+@cognitive_app.command(name="task")
+@app.command(name="task")
+def run_task(
+    description: str = typer.Argument(
+        ..., help="The objective for the Swarm to accomplish."
+    ),
+    domain: str = typer.Option(
+        "AUTO", help="The environmental domain (e.g., STUDIO, PERSONAL)."
+    ),
+    route: str = typer.Option(
+        "AUTO", help="The targeted neuro-route (e.g., WORKSPACE, TERMINAL)."
+    ),
+    obsidian: bool = typer.Option(
+        False,
+        "--obsidian",
+        help="Queues the task into Obsidian instead of running immediately.",
+    ),
+):
+    """🧠 Engages the Prefrontal Cortex to execute a cognitive task."""
+    task(description=description, domain=domain, route=route, obsidian=obsidian)
+
+
+@cognitive_app.command(name="daydream")
+@app.command(name="daydream")
+def run_daydream(
+    topic: str = typer.Argument(
+        None,
+        help="An optional topic or theme to anchor the Daydreamer's cognitive focus.",
+    ),
+    domain: str = typer.Option(
+        None, "--domain", "-d", help="Explicitly scope the daydream destination vault."
+    ),
+):
+    """🌌 Activates the Default Mode Network to process thoughts and generate strategic insights."""
+    daydream(topic=topic, domain=domain)
+
+
+@cognitive_app.command(name="evolve")
+@app.command(name="evolve")
+def run_evolve():
+    """🧬 Analyzes System/logs and codebase evolution routines."""
+    evolve()
+
+
+@cognitive_app.command(name="forage")
+@app.command(name="forage")
+def run_forage(
+    topic: str = typer.Argument(..., help="The search query or URL to forage."),
+    domain: str = typer.Option(
+        "GENERAL", help="The environmental domain (e.g., STUDIO)."
+    ),
+):
+    """Information foraging and web scraping for a specific topic."""
+    forage(topic=topic, domain=domain)
+
+
+@cognitive_app.command(name="compile")
+@app.command(name="compile")
+def run_compile():
+    """⚙️ Compiles the most recent successful memory into a Zero-Token Engram."""
+    compile()
+
+
+@cognitive_app.command(name="absorb")
+@app.command(name="absorb")
+def run_absorb(
+    path: Path = typer.Argument(
+        ..., help="Path to the folder, codebase, or file to absorb into memory."
+    ),
+    domain: str = typer.Option(
+        "Personal", "--domain", "-d", help="Target domain segment."
+    ),
+    tags: str = typer.Option(
+        None, "--tags", "-t", help="Comma-separated conceptual metadata labels."
+    ),
+):
+    """🧫 Phagocytosis: Ingests external data, codebases, or documents into long-term structures."""
+    absorb(path=path, domain=domain, tags=tags)
+
 
 # Somatic Registry Hooks
 somatic_app.command(name="map-topology")(map_topology)

@@ -21,10 +21,10 @@ def task(
         ..., help="The objective for the Swarm to accomplish."
     ),
     domain: str = typer.Option(
-        "GENERAL", help="The environmental domain (e.g., STUDIO, PERSONAL)."
+        "AUTO", help="The environmental domain (e.g., STUDIO, PERSONAL)."
     ),
     route: str = typer.Option(
-        "WORKSPACE", help="The targeted neuro-route (e.g., WORKSPACE, TERMINAL)."
+        "AUTO", help="The targeted neuro-route (e.g., WORKSPACE, TERMINAL)."
     ),
     obsidian: bool = typer.Option(
         False,
@@ -34,23 +34,24 @@ def task(
 ):
     """🧠 Engages the Prefrontal Cortex to execute a cognitive task."""
 
-    if obsidian:
+    if route == "AUTO" or domain == "AUTO":
         from System.neuroanatomy.limbic.thalamus import route_sensory_input
 
         console.print(
-            "[dim cyan]🧠 Thalamus is analyzing the pending task...[/dim cyan]"
+            "[dim cyan]🧠 Thalamus is analyzing the master objective...[/dim cyan]"
         )
         try:
             _, reason, calc_route, calc_domain, _ = asyncio.run(
                 route_sensory_input(description)
             )
+            route = calc_route if route == "AUTO" else route
+            domain = calc_domain if domain == "AUTO" else domain
         except Exception as e:
-            reason, calc_route, calc_domain = (
-                f"Analysis bypassed: {e}",
-                route,
-                domain,
-            )
+            console.print(f"[dim red]Thalamus bypass: {e}[/dim red]")
+            route = route if route != "AUTO" else "WORKSPACE"
+            domain = domain if domain != "AUTO" else "GENERAL"
 
+    if obsidian:
         queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
         pending_file = ROOT_DIR / "Meta" / "Pending_Actions.md"
 
@@ -59,9 +60,7 @@ def task(
 
         with open(queue_file, "a", encoding="utf-8") as f:
             f.write(
-                json.dumps(
-                    {"prompt": description, "route": calc_route, "domain": calc_domain}
-                )
+                json.dumps({"prompt": description, "route": route, "domain": domain})
                 + "\n"
             )
 
@@ -70,8 +69,8 @@ def task(
             f.write(
                 f"### ⏳ Pending Task ({timestamp})\n"
                 f"**Prompt:** {description}\n"
-                f"**Thalamus Route:** `{calc_route}` | **Domain:** `{calc_domain}`\n"
-                f"> **Threat Analysis & Reasoning:** {reason}\n---\n"
+                f"**Thalamus Route:** `{route}` | **Domain:** `{domain}`\n"
+                f"> **Threat Analysis & Reasoning:** Route auto-calculated.\n---\n"
             )
 
         console.print(

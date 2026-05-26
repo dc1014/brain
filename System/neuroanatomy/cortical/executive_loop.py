@@ -242,6 +242,8 @@ async def execute_pipeline(
             console.print(
                 "\n[bold green]Synaptic Consolidation: Swarm milestone committed to disk.[/bold green]"
             )
+
+            current_state_idx += 1
             continue
 
         agent_cfg = get_dna_config()["agents"][step["agent"]]
@@ -331,20 +333,15 @@ async def execute_pipeline(
                 )
 
         if step["agent"] == "qa_auditor":
-            from System.neuroanatomy.cortical.broca import validate_qa_audit
-
-            is_valid, critique_msg = validate_qa_audit(step_result.text)
+            text_upper = step_result.text.upper()
+            is_valid = "<AUDIT_PASS>" in text_upper
+            critique_msg = step_result.text
 
             if not is_valid:
                 if eval_retries < MAX_RETRIES:
-                    if "BROCA FORMATTING ERROR" in critique_msg:
-                        console.print(
-                            "\n[bold yellow]Broca's Area intercepted malformed JSON. Forcing retry.[/bold yellow]"
-                        )
-                    else:
-                        console.print(
-                            "\n[bold red]Audit Failed! The Product Manager needs to fix the code.[/bold red]\n"
-                        )
+                    console.print(
+                        "\n[bold red]Audit Failed! The Product Manager needs to fix the code.[/bold red]\n"
+                    )
 
                     if os.environ.get("BRAIN_OS_HEADLESS") == "1":
                         retry_auth = "y"

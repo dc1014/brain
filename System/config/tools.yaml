@@ -129,7 +129,7 @@ base:
             type: string
             description: The relative path to map (e.g., 'System' for code, or 'Personal' for notes).
           output_format:
-            type: object
+            type: string
             enum:
               - json
               - mermaid
@@ -636,14 +636,14 @@ vision:
       parameters:
         type: object
         properties:
-          directory_path:
+          path:
             type: string
             description: The path to the project directory to deploy (e.g., 'Studio/Brain-Website').
           provider:
             type: string
             description: "The deployment provider to use. Supported options: 'custom', 'vercel', 'netlify'. Defaults to 'custom'."
         required:
-          - directory_path
+          - path
 
   - type: function
     function:
@@ -689,7 +689,7 @@ vision:
             description: >-
               Optional key-value variables to inject into the engram (e.g.,
               passing {'message': 'fix bug'} replaces ${message} inside the engram script).
-            additionalProperties: true
+            additionalProperties: false
         required:
           - name
           - target_dir

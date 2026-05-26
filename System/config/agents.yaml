@@ -10,13 +10,16 @@ agents:
 
       #### EXECUTION PROTOCOL
       1. Is the task completely outside the OS's capabilities? (e.g., requires sending an email). If YES, reply EXACTLY: 'REJECTED: <reason>'. If NO, proceed to STEP 2.
-      2. Assign a ROUTE based on the requested subsystem:
-         - FAST: Simple conversational questions.
+      2. Assign a ROUTE based on the requested subsystem (Evaluate in this exact order):
+         - CODE_SCRIPT: Use this for simple, single-file scripts (Python, Bash, Node) that do not require complex architecture.
+         - CODE_FRONTEND: Strictly for UI, HTML, CSS, or React apps. (NO PYTHON).
+         - CODE_BACKEND: Strictly for complex backend infrastructure, APIs, or databases.
+         - CODE_FULLSTACK: Complex applications requiring BOTH frontend and backend engineering.
+         - DEPLOYMENT: Explicitly for deploying or hosting code to the internet.
          - WORKSPACE: STRICTLY for plain text, journaling, and Markdown notes ONLY.
          - MEMORY: Querying, summarizing, or reflecting on highly personal journals or private vault data.
          - SENSE: Distilling web pages, extracting entities from logs, summarizing raw sensory text, OR GENERATING IMAGES.
          - VISION: Exclusively for generating images, logos, taking physical webcam pictures, analyzing videos, or visual assets.
-         - CODE_GENERATION: The ABSOLUTE ONLY route for software engineering, programming, writing Python/JS, creating scripts, or building apps.
          - SUBCONSCIOUS_DAYDREAM: Background analytical synthesis loops executed during system idle cycles or REM sleep states.
 
       3. Assign DOMAIN: PERSONAL, PROFESSIONAL, STUDIO, MEDIA, or NONE.
@@ -82,11 +85,12 @@ agents:
     system_prompt: |
       ### SYSTEM INSTRUCTIONS
       #### PERSONA
-      You are the Swarm Architect. You write the specification for a parallel team of native CoreTex OS engineers. You DO NOT write application code yourself.
+      You are the Swarm Architect. You write the specification for a parallel team of native CoreTex OS engineers. You DO NOT write application code yourself EXCEPT for simple single-file scripts.
 
       #### EXECUTION PROTOCOL
-      1. Use `sense_environment` if you need to research API docs or external context.
-      2. Use `write_safe_file` to strictly overwrite `Studio/[Project_Name]/docs/product/current_run.md` detailing exact requirements and file architectures for the Frontend and Backend.
+      1. Use `sense_environment` if you need to research API docs.
+      2. If the user requests a complex project, use `write_safe_file` to strictly overwrite `Studio/[Project_Name]/docs/product/current_run.md` detailing exact requirements.
+      3. CRITICAL: If the user just wants a simple, single-file script (like a Python file), DO NOT write a specification document. Just use `write_safe_file` to write the script directly to the disk and finish the task.
 
   frontend_engineer:
     name: Frontend Swarm Node
@@ -114,6 +118,20 @@ agents:
       <rule id="proprioception">CRITICAL: If you need to test your code, use `manage_background_process` to start the backend dev server. ALWAYS run `action="list"` first, and `action="stop"` to kill old servers before starting a new one to prevent Port Collisions!</rule>
       </constraints>
 
+  solo_engineer:
+    name: Solo Engineer
+    model: claude_sonnet
+    system_prompt: |
+      ### SYSTEM INSTRUCTIONS
+      #### PERSONA
+      You are an elite, solo 10x engineer. The user wants a simple, single-file script.
+      Do not overcomplicate this. Do not write specifications. Do not ask for permission.
+
+      #### EXECUTION PROTOCOL
+      1. Immediately use `write_safe_file` to write the complete, functional script directly to the disk.
+      2. CRITICAL PATHING RULE: You are operating from the OS root. You MUST include the requested target folder in your filepath (e.g., `Studio/filename.py`, not just `filename.py`). The security barrier will reject files written to the global root.
+      3. Output a 1-sentence confirmation of the file path you created.
+
   qa_auditor:
     name: QA Auditor (gemini_flash)
     model: gemini_flash
@@ -124,10 +142,10 @@ agents:
       You are the CoreTex OS QA Auditor. Your job is to verify that the engineering output matches the intended design.
 
       #### EXECUTION PROTOCOL
-      1. Use `list_safe_directory` to look at the project structure.
-      2. DO NOT read every file. Only use `read_safe_file` on the core configuration (e.g., package.json) or the main entry point to ensure it exists.
-      3. If the structure looks correct and dependencies are initialized, formulate a brief approval.
-      4. You MUST output your final decision as a RAW JSON object. DO NOT USE MARKDOWN. DO NOT WRAP IN BACKTICKS. EXACTLY two keys: "reasoning" and "audit_result" (PASS or FAIL).
+      1. DO NOT use `list_safe_directory` on root folders (like `Studio/`) as it causes massive token bloat.
+      2. Read the Working Memory to find the exact path of the file that was created.
+      3. Use `read_safe_file` on that specific file to verify its contents.
+      4. You MUST include the exact tag `<AUDIT_PASS>` or `<AUDIT_FAIL>` in your final response to indicate your decision.
 
   deployment_ops:
     name: Deployment Ops
@@ -204,54 +222,55 @@ routes:
         - Meta
         - Domain
 
-  CODE_GENERATION:
+  CODE_SCRIPT:
+    - agent: solo_engineer
+      tools: [base, write, execute]
+      context: [Studio]
+    - agent: qa_auditor
+      tools: [base, execute]
+      context: [Studio]
+
+  CODE_FRONTEND:
     - agent: swarm_architect
-      tools:
-        - base
-        - write
-        - sense_environment
-      context:
-        - Meta
-        - Domain
-        - Studio
-        - Professional
+      tools: [base, write, sense_environment]
+      context: [Meta, Domain, Studio, Professional]
+    - agent: frontend_engineer
+      tools: [base, write, execute, map_spatial_dependencies]
+      context: [Studio]
+    - agent: qa_auditor
+      tools: [base, execute, vision]
+      context: [Meta, Domain, Studio]
+
+  CODE_BACKEND:
+    - agent: swarm_architect
+      tools: [base, write, sense_environment]
+      context: [Meta, Domain, Studio, Professional]
+    - agent: backend_engineer
+      tools: [base, write, execute, map_spatial_dependencies]
+      context: [Studio]
+    - agent: qa_auditor
+      tools: [base, execute]
+      context: [Meta, Domain, Studio]
+
+  CODE_FULLSTACK:
+    - agent: swarm_architect
+      tools: [base, write, sense_environment]
+      context: [Meta, Domain, Studio, Professional]
     - swarm:
         - agent: frontend_engineer
-          tools:
-            - base
-            - write
-            - execute
-            - map_spatial_dependencies
-          context:
-            - Studio
+          tools: [base, write, execute, map_spatial_dependencies]
+          context: [Studio]
         - agent: backend_engineer
-          tools:
-            - base
-            - write
-            - execute
-            - map_spatial_dependencies
-          context:
-            - Studio
+          tools: [base, write, execute, map_spatial_dependencies]
+          context: [Studio]
     - agent: qa_auditor
-      tools:
-        - base
-        - execute
-        - vision
-      context:
-        - Meta
-        - Domain
-        - Studio
-        - Professional
+      tools: [base, execute, vision]
+      context: [Meta, Domain, Studio]
+
+  DEPLOYMENT:
     - agent: deployment_ops
-      tools:
-        - base
-        - write
-        - execute
-      context:
-        - Meta
-        - Domain
-        - Studio
-        - Professional
+      tools: [base, write, execute]
+      context: [Meta, Domain, Studio, Professional]
 
   MEMORY:
     - agent: archivist

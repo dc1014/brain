@@ -5,13 +5,12 @@ import re
 from rich.console import Console
 from litellm import acompletion  # type: ignore
 
-# ⚡ TECH DEBT RESOLVED: Consolidated split paths imports into a unified entry point
 from System.core.dna import get_dna_config
 from System.neuroanatomy.autonomic.interoception import (
     log_metabolism,
 )
 from System.neuroanatomy.systemic.immune_system import vault
-from System.neuroanatomy.limbic.episodic import recall_recent_episodes, encode_episode
+from System.neuroanatomy.limbic.episodic import recall_recent_episodes
 
 console = Console()
 
@@ -20,7 +19,6 @@ class PrefrontalCortex:
     """The Seat of Consciousness (Executive Function)."""
 
     def __init__(self) -> None:
-        # ⚡ SEMANTIC FIX: Renamed from working_memory to pulse_history to resolve name collisions
         self.pulse_history: list[str] = []
         self.max_memory: int = 5
 
@@ -50,7 +48,6 @@ class PrefrontalCortex:
             return "No previous steps executed."
         return "\n".join(f"- {mem}" for mem in self.pulse_history)
 
-    # ⚡ ASYNC FIX: Promoted to async def to eliminate blocking network thread I/O states
     async def decompose_goal(
         self, objective: str, past_experiences: str = ""
     ) -> list[str]:
@@ -75,7 +72,7 @@ class PrefrontalCortex:
                 .get("models", {})
                 .get("fast", "gemini/gemini-2.5-flash")
             )
-            # ⚡ OPTIMIZATION: Non-blocking call protects multi-agent loops from hanging
+            # Non-blocking call protects multi-agent loops from hanging
             response = await acompletion(
                 model=model_name,
                 messages=[{"role": "user", "content": prompt}],
@@ -84,7 +81,7 @@ class PrefrontalCortex:
             )
             raw_text = response.choices[0].message.content.strip()
 
-            # ⚡ METABOLIC FIX: Track and account for tokens burned during decomposition
+            # Track and account for tokens burned during decomposition
             step_tokens = (
                 response.usage.get("total_tokens", 0)
                 if hasattr(response, "usage")
@@ -105,7 +102,7 @@ class PrefrontalCortex:
             if fence in clean_str:
                 clean_str = clean_str.replace(fence, "")
 
-            # ⚡ OPTIMIZATION: Call the isolated text parsing utility to enforce single-responsibility principles
+            # Call the isolated text parsing utility to enforce single-responsibility principles
             clean_str = self._clean_json_payload(raw_text)
 
             tasks = json.loads(clean_str)
@@ -138,7 +135,11 @@ class PrefrontalCortex:
             context = self.get_working_memory_context()
             augmented_prompt = f"GOAL: {objective}\nDOMAIN/ROUTE PREFERENCE: {domain} / {route}\nWORKING MEMORY:\n{context}\n\nCURRENT TASK: {pulse_desc}"
             try:
-                await dispatch_task(augmented_prompt)
+                # Pass the master route and domain to dispatch_task so Thalamus
+                # doesn't override them when evaluating fragmented shell commands!
+                await dispatch_task(
+                    augmented_prompt, predefined_route=route, predefined_domain=domain
+                )
                 self._remember(f"Pulse {i + 1} Executed: {pulse_desc}")
             except Exception as e:
                 mocker_msg = (
@@ -148,5 +149,4 @@ class PrefrontalCortex:
                 final_outcome = f"Failed on Step {i + 1}: {str(e)}"
                 break
 
-        encode_episode(objective, tasks, final_outcome)
-        return f"Consolidated {len(tasks)} pulses. Final state: {final_outcome}"
+        return final_outcome

@@ -46,7 +46,7 @@ async def test_agent_can_generate_simple_python_file_with_object_tool_parameters
         tool_calls=[
             ToolCallSchema(
                 tool_name="write_safe_file",
-                parameters={"filepath": target, "content": source},
+                parameters=json.dumps({"filepath": target, "content": source}),
                 reasoning="Write the generated Python file to disk.",
             )
         ],

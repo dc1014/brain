@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import Optional, List, Any
+from typing import Optional, List
 
 
 class NeuroplasticityRule(BaseModel):
@@ -93,27 +93,29 @@ class CircadianConfig(BaseModel):
 
 
 class ToolCallSchema(BaseModel):
-    """Schema for a single tool execution request."""
+    model_config = {"extra": "forbid"}
 
-    tool_name: str = Field(..., description="The exact name of the tool to execute.")
-    parameters: dict[str, Any] | str = Field(
-        ...,
-        description="The arguments for the tool. Prefer a JSON object; legacy stringified JSON is still accepted.",
+    tool_name: str
+
+    # Anthropic strictly rejects open-ended 'dict' objects.
+    # Force the LLM to output a JSON-formatted string instead.
+    parameters: str = Field(
+        default="{}",
+        description="A JSON-formatted string containing the exact arguments for the tool.",
     )
-    reasoning: str = Field(
-        ..., description="Internal monologue explaining why this tool is being called."
-    )
+
+    reasoning: Optional[str] = None
+    id: Optional[str] = None
 
 
 class AgentResponseSchema(BaseModel):
-    """The standard structured output for all agent tool loops."""
+    # Ensure the root response wrapper also satisfies Anthropic's strictness
+    model_config = {"extra": "forbid"}
 
-    thought_process: str = Field(
-        ..., description="The agent's internal reasoning before acting."
-    )
-    tool_calls: List[ToolCallSchema] = Field(
-        default_factory=list, description="A list of tools to execute in this turn."
-    )
+    thought_process: str
+
+    tool_calls: Optional[List[ToolCallSchema]] = Field(default_factory=list)
+
     final_response: Optional[str] = Field(
         None, description="The final text to show the user if no tools are needed."
     )

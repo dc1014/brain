@@ -223,7 +223,9 @@ async def test_execute_goal(mocker):
     )
 
     res = await pfc.execute_goal("Do work")
-    assert "Consolidated 1 pulses" in res
+
+    assert res == "Success"
+
     mock_dispatch.assert_called_once()
 
 
