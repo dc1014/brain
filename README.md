@@ -35,6 +35,18 @@ cat error.log | grep "Timeout" | ctx task "Explain this failure cascade"
 
 ---
 
+### Context Archaeology
+
+CoreTex can scan a local vault/project for hidden leverage patterns and write an evidence-backed brief:
+
+```bash
+ctx archaeology ./notes --goal "Find the next useful artifact"
+```
+
+See [`docs/Context-Archaeology.md`](docs/Context-Archaeology.md).
+
+---
+
 ## 🚀 Installation (Zero-Debt & Frictionless)
 
 CoreTex features a unified, self-healing installation pipeline that automates all prerequisite matching, virtual environments, and secure container structures out of the box. Clone the repository and run the setup utility matching your host environment:

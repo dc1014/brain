@@ -271,6 +271,12 @@ def compile(*args, **kwargs):
     return _compile(*args, **kwargs)
 
 
+def archaeology(*args, **kwargs):
+    from System.cli_cognitive import archaeology as _archaeology
+
+    return _archaeology(*args, **kwargs)
+
+
 def absorb(*args, **kwargs):
     from System.cli_cognitive import absorb as _absorb
 
@@ -344,6 +350,26 @@ def run_forage(
 def run_compile():
     """⚙️ Compiles the most recent successful memory into a Zero-Token Engram."""
     compile()
+
+
+@cognitive_app.command(name="archaeology")
+@app.command(name="archaeology")
+def run_archaeology(
+    path: Path = typer.Argument(
+        ..., help="Path to a local vault, project folder, or note file to inspect."
+    ),
+    goal: str = typer.Option(
+        None, "--goal", "-g", help="Optional objective to bias the archaeology brief."
+    ),
+    output: Path = typer.Option(
+        Path("Professional/context-archaeology-brief.md"),
+        "--output",
+        "-o",
+        help="Markdown file where the generated brief should be written.",
+    ),
+):
+    """🗿 Scans local context for hidden leverage patterns and writes an actionable brief."""
+    archaeology(path=path, goal=goal, output=output)
 
 
 @cognitive_app.command(name="absorb")
