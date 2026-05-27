@@ -98,6 +98,16 @@ During the interactive `ctx setup` phase, simply select `[Gateway]` to provide y
 
 ---
 
+> [!IMPORTANT]
+> **Safe-by-Default Architecture**
+> Out of the box, CoreTex OS ships in **Advisory Mode**. It can write code, analyze data, and plan tasks, but it *cannot* execute code or terminal commands automatically.
+>
+> If you ask it to run a script, it will intentionally fail. **To enable autonomous code execution, you must explicitly opt-in:**
+> 1. Open your `.env` file.
+> 2. Change `CORETEX_ENABLE_CODE_EXECUTION=false` to `true`.
+
+---
+
 ## 🪐 The Deployment Pathways
 
 The setup utility will probe your environment and offer two distinct runtime architectures:

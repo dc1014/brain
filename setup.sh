@@ -131,6 +131,10 @@ Next steps:
   1. Run: ctx status
   2. Try: ctx task "Summarize this repository in five bullets"
   3. Re-run diagnostics anytime with: ./setup.sh --check
+
+🔒 SECURITY NOTICE: CoreTex OS installs in "Safe-by-Default" (Advisory) mode.
+To allow the agent to autonomously execute code, scripts, or terminal commands:
+Open your `.env` file and set CORETEX_ENABLE_CODE_EXECUTION=true
 EOF
 }
 
