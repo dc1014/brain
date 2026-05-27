@@ -1,6 +1,6 @@
 [project]
 name = "coretex"
-version = "0.1.0-prealpha"
+version = "0.1.0-0a0"
 description = "CoreTex is the biomimetic control plane for AI - interoperable, safe, token efficient, self-healing, and self-improving."
 readme = "README.md"
 requires-python = ">=3.12, <3.15"

@@ -1,6 +1,6 @@
 [project]
 name = "coretex-sense"
-version = "0.1.0-prealpha"
+version = "0.1.0-0a0"
 description = "The Sensory Nervous System for AI Agents. Transduces web/git stimuli into safe LLM context."
 readme = "README.md"
 requires-python = ">=3.12"
