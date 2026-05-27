@@ -42,15 +42,6 @@ def is_headless_setup() -> bool:
 
 def draw_coretex():
     console.clear()
-    coretex_art = """[bold cyan]
- ██████╗ ██████╗ ██████╗ ███████╗████████╗███████╗██╗  ██╗
-██╔════╝██╔═══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝╚██╗██╔╝
-██║     ██║   ██║██████╔╝█████╗     ██║   █████╗   ╚███╔╝
-██║     ██║   ██║██╔══██╗██╔══╝     ██║   ██╔══╝   ██╔██╗
-╚██████╗╚██████╔╝██║  ██║███████╗   ██║   ███████╗██╔╝ ██╗
- ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚══╝
-    [/bold cyan]"""
-    console.print(coretex_art)
     console.print(
         f"       [dim]Biomimetic AI Control Plane And Obsidian Vault // Synaptic Genesis [Context: {'Docker' if IS_DOCKER_RUNTIME else 'Host'}] [/dim]\n"
     )
