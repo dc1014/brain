@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     unzip \
+    file \
     && rm -rf /var/lib/apt/lists/*
 
 ENV DENO_INSTALL="/opt/deno"
