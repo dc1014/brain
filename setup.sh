@@ -114,6 +114,8 @@ install_python_runtime() {
         $SUDO apk add python3 py3-pip
     elif command_exists brew; then
         brew install "python@${CORETEX_MIN_PYTHON}"
+        export PATH="/opt/homebrew/opt/python@${CORETEX_MIN_PYTHON}/libexec/bin:$PATH"
+        export PATH="/usr/local/opt/python@${CORETEX_MIN_PYTHON}/libexec/bin:$PATH"
     else
         echo -e "\033[1;31mERROR: unsupported package manager. $hint\033[0m" >&2
         return 1
