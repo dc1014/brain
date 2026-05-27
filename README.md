@@ -33,6 +33,19 @@ ctx task "Audit ./my_project for concurrency race conditions and output to audit
 cat error.log | grep "Timeout" | ctx task "Explain this failure cascade"
 ```
 
+
+### Show HN demo loop
+
+For a dynamic local-vault demo that does not require an LLM key, run:
+
+```bash
+python3 scripts/show_hn_serendipity_demo.py
+cat Professional/show-hn-serendipity-brief.md
+```
+
+For the full CoreTex loop with your provider configured, see
+[`docs/ShowHN-Serendipity-Demo.md`](docs/ShowHN-Serendipity-Demo.md).
+
 ---
 
 ## 🚀 Installation (Zero-Debt & Frictionless)
@@ -51,13 +64,24 @@ For a non-interactive runtime choice, use `./setup.sh --local` or `./setup.sh --
 *Note: The script automatically evaluates your localized package manager (`apt`, `dnf`, `yum`, `pacman`, `apk`, or `brew`) to resolve missing system dependencies like `curl`, `unzip`, and `file`.*
 
 ### 🔷 Windows (PowerShell)
-To bypass native Windows script execution restrictions safely without modifying your global system security profile, execute the script via this process-isolated command:
+CoreTex local setup requires Python 3.12+. If Python is missing, or Windows is routing `python` to the Microsoft Store alias, install Python first and reopen PowerShell:
+
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\setup.ps1 -Check  # optional preflight diagnostics
-powershell -ExecutionPolicy Bypass -File .\setup.ps1         # interactive setup
+winget install Python.Python.3.12
 ```
 
-For a non-interactive runtime choice, use `-Local` or `-Docker`.
+Then run setup through a process-local execution-policy bypass:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1 -Check  # optional preflight diagnostics
+powershell -ExecutionPolicy Bypass -File .\setup.ps1 -Local  # pure local setup
+```
+
+For Docker setup, start Docker Desktop first, then run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1 -Docker
+```
 
 ### 🛡️ Enterprise API Gateways & Proxies
 CoreTex OS natively supports routing your LLM traffic through enterprise API Gateways (like **Cloudflare AI Gateway**, **Portkey**, or **Helicone**) to centralize observability, rate-limiting, and cost tracking.
