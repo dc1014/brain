@@ -4,7 +4,7 @@
 
 > **Note to Systems Engineers:** I took the biomimicry domain-driven design quite far (e.g., the master daemon is the `Medulla`, short-term memory is the `Hippocampus`). It is eccentric, but underneath is (arguably) a highly optimized, concurrent, lock-safe, and execution engine that runs purely on flat files.
 
-**CoreTex** is a UNIX-inspired, biomimetic agent harness and knowledge engine intended to help you use AI safely, cost-effectively, and in a way that helps you integrate the whole of your life. Borrowing deeply from [human neuroanatomy](docs/Biomimesis.md), CoreTex lets you organize and synthesize information (supercharing Obsidian Vaults), write and execute code in a hardened environment, and utilize peripherals (camera, mic, etc.) alongside webhooks and browsing to study the outside world. Over time, CoreTex is intended to be an always-on daemon, understanding your goals and helping you achieve them.
+**CoreTex** is a UNIX-inspired, biomimetic agent harness and knowledge engine intended to help you use AI safely, cost-effectively, and in a way that helps you integrate the whole of your life. Borrowing deeply from [human neuroanatomy](docs/Biomimesis.md), CoreTex lets you organize and synthesize information (supercharging Obsidian Vaults), write and execute code in a hardened environment, and utilize peripherals (camera, mic, etc.) alongside webhooks and browsing to study the outside world. CoreTex is also intended to be an always-on daemon, understanding your goals and helping you achieve them over time.
 
 ![CoreTex ctx-only local workflow demo](docs/assets/coretex-ctx-demo.gif)
 
@@ -12,7 +12,7 @@
 
 ### 🏗️ Architectural Highlights & What Makes It Different
 
-1. **UNIX Philosophy:** Everything is a file like it's the 1970s! State, IPC, data, and queue files are guarded by OS-level locks. Databases are banished to the shadow realm (exluding the Python's FTS5 DB which reads the flat files for performance). Composability with standard operators is supported - pipe, redirect, etc.
+1. **UNIX Philosophy:** Everything is a file like it's the 1970s! State, IPC, data, and queue files are guarded by OS-level locks. Databases are banished to the shadow realm (excluding the Python's FTS5 DB which reads the flat files for performance). Composability with standard operators is supported - pipe, redirect, etc.
 2. **Cerebellar Muscle Memory (Zero-Token Execution):** When CoreTex successfully completes writing code, e.g. setting up a project, the Cerebellum can make it an engram to rerun at 0-cost. Highly experimental and will need improvements. [Roadmap item](ROADMAP.md) to enable engram sharing.
 3. **5-Tier Biomimetic Memory Stack:**
     * **Working Memory** - token aware compression inserted between active head and tail for infinite task continuity without amnesia.
@@ -28,9 +28,10 @@
 
 CoreTex operates on text files and local embeddings, meaning you can parse your entire codebase before spending a single API token.
 
-**1. Absorb a workspace (0 Token Cost - Local Embeddings)**
+**1. Absorb data (0 Token Cost - Local SQLite Indexing)**
 ```bash
-./ctx absorb ./my_project
+./ctx absorb ./my_old_project -d Studio/MyProject -t "legacy, python"
+./ctx absorb ./journal -d Personal/Journal -t "journal, writing"
 ```
 **2. Execute a sandboxed agentic task**
 ```bash
@@ -40,7 +41,6 @@ CoreTex operates on text files and local embeddings, meaning you can parse your 
 ```bash
 cat error.log | grep "Timeout" | ctx task "Explain this failure cascade"
 ```
-
 **4. Daydreaming**
 ```bash
 ./ctx daydream
@@ -53,15 +53,12 @@ cat error.log | grep "Timeout" | ctx task "Explain this failure cascade"
 The README GIF uses only CoreTex commands:
 
 ```bash
-ctx status
-ctx absorb examples/show-hn-mini-project --domain Professional --tags show-hn,demo
-ctx daydream "Review the absorbed demo context and identify the next useful action" --domain Professional
-ctx print-daydream --lines 40
+./ctx status # healhtcheck
+./ctx live # engage main daemon
+./ctx task "do a thing" # executes along route + domain
+./ctx absorb examples/show-hn-mini-project --domain Professional --tags show-hn,demo
+./ctx daydream
 ```
-
-`ctx print-daydream` writes the DMN ledger to stdout, so it composes naturally with Unix tools and pipes.
-
-For a deterministic non-LLM fallback demo, see [`docs/quick-start.md`](docs/quick-start.md).
 
 ---
 
@@ -110,10 +107,10 @@ ctx task "Summarize this repository in five bullets"
 Running LLM-generated code locally is inherently dangerous. CoreTex ships in **Cognitive Mode** by default—it can write code and plan tasks, but it *cannot* execute scripts. If you explicitly opt-in (`CORETEX_ENABLE_CODE_EXECUTION=true` in your `.env`), CoreTex activates a strict containment matrix:
 
 1. **The Deno + WASM Jail:** CoreTex does *not* run generated code in your native Python or Bash environment. It forces the LLM to write code executed inside an ephemeral, unprivileged **Deno + WebAssembly** instance.
+    1. Firecracker support is on the horizon
 2. **The Volume Mask:** The agent is physically incapable of seeing files outside the specific directory bound during setup.
 3. **Cognitive Fallback:** If Deno is missing or unreachable, the system safely degrades back to *Cognitive Mode*, immediately stripping the agent's subprocess execution tools entirely.
 
-Firecracker is on the horizon.
 ---
 
 ## 📁 Optional Obsidian Integration
@@ -158,4 +155,4 @@ uv run ruff check .
 
 ## ⭐️ Star the Project
 
-If you believe in local, flat-file AI and want to see where this biological experiment goes, please consider giving the repo a star! It is the best way to help other developers discover the project and it heavily fuels my midnight coding sessions.
+If you believe in a local, flat-file AI harness and want to see where this biological experiment goes, please consider giving the repo a star! It is the best way to help other developers discover the project which will help me keep it going.

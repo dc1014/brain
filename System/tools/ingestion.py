@@ -13,20 +13,25 @@ class KnowledgeIngestor:
         self.root_dir = ROOT_DIR
         self.domain_dir = ROOT_DIR / target_domain
         self.default_tags = default_tags
-        self.ignore_patterns = [
-            r"\.git",
-            r"node_modules",
-            r"\.venv",
-            r"__pycache__",
-            r"\.DS_Store",
-            r"\.obsidian",
-            r"build",
-            r"dist",
-        ]
+
+        # Use a set for exact name matching rather than loose regex
+        self.ignore_names = {
+            ".git",
+            "node_modules",
+            ".venv",
+            "__pycache__",
+            ".DS_Store",
+            ".obsidian",
+            "build",
+            "dist",
+            ".pytest_cache",
+            ".ruff_cache",
+            "logs",
+        }
 
     def should_ignore(self, path: Path) -> bool:
-        path_str = path.as_posix()
-        return any(re.search(pattern, path_str) for pattern in self.ignore_patterns)
+        # Check if any exact folder or file name in the path tree is in our ignore list
+        return any(part in self.ignore_names for part in path.parts)
 
     def format_to_hybrid_contract(
         self, file_path: Path, relative_origin: Path, content: str
@@ -70,7 +75,9 @@ class KnowledgeIngestor:
             return self._process_file(source_path, source_path.parent)
 
         for root, dirs, files in os.walk(source_path):
+            # Prune hidden/ignored directories in-place so os.walk doesn't even traverse them
             dirs[:] = [d for d in dirs if not self.should_ignore(Path(root) / d)]
+
             for file in files:
                 current_file = Path(root) / file
                 if self.should_ignore(current_file):
@@ -93,6 +100,9 @@ class KnowledgeIngestor:
                 ".tar",
                 ".gz",
                 ".exe",
+                ".mp4",
+                ".mp3",
+                ".wav",
             ]:
                 return 0, 0
 

@@ -13,13 +13,22 @@ def temp_workspace(tmp_path):
     return root
 
 
-def test_should_ignore_rules(temp_workspace, monkeypatch):
+def test_should_ignore_rules_exact_matching(temp_workspace, monkeypatch):
     monkeypatch.setattr("System.core.paths.ROOT_DIR", temp_workspace)
     ingestor = KnowledgeIngestor("Personal", ["test"])
 
+    # 1. Standard ignored directories should still be blocked
     assert ingestor.should_ignore(Path("src/.git/config")) is True
     assert ingestor.should_ignore(Path("src/node_modules/package/index.js")) is True
+    assert ingestor.should_ignore(Path("dist/bundle.js")) is True
+
+    # 2. Standard safe files should pass
     assert ingestor.should_ignore(Path("src/components/Button.tsx")) is False
+
+    # 3. 🛡️ BUG FIX TEST: Files containing ignore strings in their name should PASS
+    assert ingestor.should_ignore(Path("src/utils/distance_calculator.py")) is False
+    assert ingestor.should_ignore(Path("src/building_materials.md")) is False
+    assert ingestor.should_ignore(Path("distribution_logic.py")) is False
 
 
 def test_format_handles_nested_backticks(temp_workspace, monkeypatch):
@@ -33,7 +42,7 @@ def test_format_handles_nested_backticks(temp_workspace, monkeypatch):
     result = ingestor.format_to_hybrid_contract(file_path, origin, complex_content)
 
     # Outer block fence dynamically grows to four backticks to escape nested three-backtick fences
-    assert "````md" in result  # ✅ Matches the .md extension of file_path
+    assert "````md" in result
     assert "````" in result
     assert '<ingested_source path="test_code.md">' in result
 
