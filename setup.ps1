@@ -37,18 +37,36 @@ function Test-CommandAvailable {
     return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
-function Test-PythonVersionAvailable {
-    $PythonCmd = Get-Command python -ErrorAction SilentlyContinue
-    if ($null -eq $PythonCmd) { $PythonCmd = Get-Command py -ErrorAction SilentlyContinue }
-    if ($null -eq $PythonCmd) { return $false }
-
+function Resolve-PythonCandidate {
     $Script = "import sys; need=tuple(map(int, '$CoreTexMinPython'.split('.'))); raise SystemExit(0 if sys.version_info[:2] >= need else 1)"
-    if ($PythonCmd.Name -eq "py.exe" -or $PythonCmd.Name -eq "py") {
-        & py -3 -c $Script >$null 2>&1
-    } else {
-        & $PythonCmd.Source -c $Script >$null 2>&1
+    $Candidates = @()
+
+    foreach ($CommandName in @("python", "python3", "py")) {
+        $Cmd = Get-Command $CommandName -ErrorAction SilentlyContinue
+        if ($null -ne $Cmd) { $Candidates += $Cmd.Source }
     }
-    return $LASTEXITCODE -eq 0
+
+    $WindowsAppsPython = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\python.exe"
+    foreach ($Candidate in $Candidates) {
+        if ([string]::IsNullOrEmpty($Candidate)) { continue }
+        if ($Candidate -eq $WindowsAppsPython) { continue }
+        & $Candidate -c $Script >$null 2>&1
+        if ($LASTEXITCODE -eq 0) { return @{ Command = $Candidate; LauncherArgs = @() } }
+    }
+
+    $PyLauncher = Get-Command py -ErrorAction SilentlyContinue
+    if ($null -ne $PyLauncher) {
+        foreach ($VersionArg in @("-3.14", "-3.13", "-3.12", "-3")) {
+            & py $VersionArg -c $Script >$null 2>&1
+            if ($LASTEXITCODE -eq 0) { return @{ Command = $PyLauncher.Source; LauncherArgs = @($VersionArg) } }
+        }
+    }
+
+    return $null
+}
+
+function Test-PythonVersionAvailable {
+    return $null -ne (Resolve-PythonCandidate)
 }
 
 function Show-NextSteps {
@@ -207,7 +225,7 @@ if ($Check) {
 }
 
 Write-Host "Select your preferred deployment architecture:" -ForegroundColor White
-Write-Host "  [1] Pure Local (Requires uv and Python 3.12+)"
+Write-Host "  [1] Pure Local (Requires uv and Python ${CoreTexMinPython}+)"
 if ($DockerAvailable -and $DockerComposeAvailable) {
     Write-Host "  [2] Isolated Container (Requires Docker - ZERO host dependencies)"
 } else {
@@ -256,10 +274,12 @@ if ($DeployChoice -eq "2") {
 
 Write-Host "`n[*] Initializing Pure Local Environment..." -ForegroundColor Cyan
 
-if (-not (Test-PythonVersionAvailable)) {
-    Write-Error "Python ${CoreTexMinPython}+ is required for local setup. Install Python ${CoreTexMinPython}+ or run .\setup.ps1 -Docker."
+$PythonCandidate = Resolve-PythonCandidate
+if ($null -eq $PythonCandidate) {
+    Write-Error "Python ${CoreTexMinPython}+ is required for local setup. On Windows, install it with: winget install Python.Python.3.12 ; then reopen PowerShell and run .\setup.ps1 -Local. Or start Docker Desktop and run .\setup.ps1 -Docker."
     exit 1
 }
+Write-Host "[+] Python ${CoreTexMinPython}+ detected at $($PythonCandidate.Command)" -ForegroundColor Green
 
 $UvBin = Install-UvRuntime
 Install-DenoRuntime
