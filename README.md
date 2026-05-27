@@ -6,7 +6,7 @@
 
 **CoreTex** is a fully local, headless AI operating system inspired by human neuroanatomy and the Unix Philosophy. It operates directly in a sandbox, supercharges your Obsidian vault, orchestrates multi-agent swarms, and executes code within strict Deno / WebAssembly sandboxes. Docker and Firecracker support soon.
 
-*(📸 PLACE YOUR SPLIT-SCREEN TERMINAL GIF HERE SHOWING A 0-TOKEN TASK EXECUTION)*
+![CoreTex ctx-only local workflow demo](docs/assets/coretex-ctx-demo.gif)
 
 ---
 
