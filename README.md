@@ -4,7 +4,9 @@
 
 > **Note to Systems Engineers:** I took the biomimicry domain-driven design quite far (e.g., the master daemon is the `Medulla`, short-term memory is the `Hippocampus`). It might look eccentric, but underneath is (arguably) a highly optimized, concurrent, lock-safe, and zero-debt execution engine that runs purely on flat files.
 
-**CoreTex** is a fully local, headless AI operating system inspired by human neuroanatomy and the Unix Philosophy. It operates directly in a sandbox, supercharges your Obsidian vault, orchestrates multi-agent swarms, and executes code within strict Deno / WebAssembly sandboxes. Docker and Firecracker support soon.
+**CoreTex** is a local-first control plane for turning a messy workspace into an operating surface: notes become memory, commands become reflexes, and agentic work stays behind explicit safety rails. It borrows its language from neuroanatomy, but the contract is Unix-simple: ingest local context, expose clear commands, write auditable artifacts, and sandbox anything risky.
+
+It is not trying to be another chat tab. CoreTex is the nervous system around your repo or vault: sensory commands read the environment, cognitive commands reason over it, somatic commands do deterministic maintenance, and the Deno/WASM boundary keeps generated execution from casually touching the host.
 
 ![CoreTex ctx-only local workflow demo](docs/assets/coretex-ctx-demo.gif)
 
@@ -13,6 +15,13 @@
 ### 🏗️ Architectural Highlights
 1. **0-Token Ingestion:** Absorb and index your local workspace using local embeddings (`uv` + local python scripts) with **0 external API calls**. You can read, index, and organize your private vault without spending money or leaking data.
 2. **Safe-by-Default Execution:** The default "Cognitive Mode" is strictly read/write advisory. Active shell or script execution requires explicit user consent, and is hard-isolated inside an offline Deno-hosted V8 WebAssembly jail with strict CPU/memory caps and filesystem masking. Or just run it in Docker.
+
+### What makes it different
+
+- **Local context first:** CoreTex starts with files you own, not a blank prompt box.
+- **CLI-native by default:** The useful surface is `ctx`, so it can be scripted, piped, tested, and inspected.
+- **Metaphor with teeth:** the biomimetic model is not decoration; it maps to real command layers, memory paths, routing, and safety boundaries.
+- **Artifacts over vibes:** the end state is a file, report, ledger entry, topology map, or reproducible command trail.
 
 ---
 
