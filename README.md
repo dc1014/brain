@@ -33,6 +33,19 @@ ctx task "Audit ./my_project for concurrency race conditions and output to audit
 cat error.log | grep "Timeout" | ctx task "Explain this failure cascade"
 ```
 
+
+### Show HN demo loop
+
+For a deterministic first-value demo that does not require an LLM key, run:
+
+```bash
+python3 scripts/show_hn_demo.py
+cat Professional/show-hn-demo-checklist.md
+```
+
+For the full CoreTex loop with your provider configured, see
+[`docs/ShowHN-Demo.md`](docs/ShowHN-Demo.md).
+
 ---
 
 ## 🚀 Installation (Zero-Debt & Frictionless)

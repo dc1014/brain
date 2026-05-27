@@ -1,0 +1,4 @@
+2026-05-26T22:10:01Z INFO setup started
+2026-05-26T22:10:02Z WARN deno not found in PATH
+2026-05-26T22:10:03Z ERROR quickstart command failed: Permission denied: ./ctx
+2026-05-26T22:10:04Z INFO setup exited before running tests
