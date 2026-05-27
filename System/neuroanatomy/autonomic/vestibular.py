@@ -1,4 +1,3 @@
-# --- System/neuroanatomy/autonomic/vestibular.py ---
 import json
 import shutil
 from pathlib import Path
@@ -22,7 +21,21 @@ def create_snapshot(directory_path: str | Path) -> None:
         shutil.rmtree(snap_target, ignore_errors=True)
 
     try:
-        shutil.copytree(target, snap_target, dirs_exist_ok=True)
+        ignore_patterns = shutil.ignore_patterns(
+            "node_modules",
+            ".git",
+            ".venv",
+            "__pycache__",
+            ".mypy_cache",
+            ".pytest_cache",
+            "htmlcov",
+            "build",
+            "dist",
+            "*.egg-info",
+        )
+
+        shutil.copytree(target, snap_target, dirs_exist_ok=True, ignore=ignore_patterns)
+
         # Update the workspace state snapshot ledger atomically
         ledger = read_state_sync(LEDGER_FILE, dict)
         ledger[str(target)] = str(snap_target)
@@ -45,8 +58,10 @@ def restore_balance() -> None:
     for original_path_str, snap_path_str in ledger.items():
         original = Path(original_path_str)
         snap = Path(snap_path_str)
-        if snap.exists():
-            if original.exists():
+        if snap.exists() and original.exists():
+            try:
                 shutil.rmtree(original, ignore_errors=True)
-            shutil.copytree(snap, original, dirs_exist_ok=True)
+                shutil.copytree(snap, original, dirs_exist_ok=True)
+            except OSError:
+                pass
     commit_transaction()

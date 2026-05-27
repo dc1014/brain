@@ -79,3 +79,46 @@ def test_restore_balance_rollback_workflow(tmp_path):
 
     # Assert snapshots are cleared post-rollback
     assert not vestibular_mod.SNAPSHOT_DIR.exists()
+
+
+def test_create_snapshot_ignores_heavy_directories(mocker, tmp_path):
+    """Proves that the Vestibular system ignores heavy dependency folders to prevent extreme latency."""
+    # 1. Mock the file paths to stay completely isolated in Pytest's tmp_path
+    mocker.patch("System.neuroanatomy.autonomic.vestibular.ROOT_DIR", tmp_path)
+    mocker.patch(
+        "System.neuroanatomy.autonomic.vestibular.SNAPSHOT_DIR",
+        tmp_path / "System" / "snapshots",
+    )
+    mocker.patch(
+        "System.neuroanatomy.autonomic.vestibular.LEDGER_FILE",
+        tmp_path / "System" / "snapshot_ledger.json",
+    )
+
+    # 2. Setup a fake Studio domain with good files and heavy noise
+    studio_dir = tmp_path / "Studio"
+    studio_dir.mkdir()
+
+    # Good files that should be copied
+    (studio_dir / "app.py").write_text("print('hello')", encoding="utf-8")
+
+    # Heavy noise that must be ignored
+    for noise_dir in ["node_modules", ".git", ".venv", "__pycache__"]:
+        bad_dir = studio_dir / noise_dir
+        bad_dir.mkdir()
+        (bad_dir / "garbage.txt").write_text("bloat", encoding="utf-8")
+
+    # 3. Trigger the snapshot
+    create_snapshot("Studio")
+
+    # 4. Verify snapshot exists
+    snap_dir = tmp_path / "System" / "snapshots" / "Studio"
+    assert snap_dir.exists()
+
+    # 5. Verify good files were copied
+    assert (snap_dir / "app.py").exists()
+
+    # 6. Verify heavy noise was successfully ignored!
+    assert not (snap_dir / "node_modules").exists()
+    assert not (snap_dir / ".git").exists()
+    assert not (snap_dir / ".venv").exists()
+    assert not (snap_dir / "__pycache__").exists()
