@@ -37,6 +37,7 @@ from System.cli_somatic import (
     list_reflexes,
     map_topology,
     observe,
+    print_daydream,
     reflex,
     sleep,
     status,
@@ -367,6 +368,8 @@ def run_absorb(
 somatic_app.command(name="map-topology")(map_topology)
 somatic_app.command(name="status")(status)
 somatic_app.command(name="list-reflexes")(list_reflexes)
+somatic_app.command(name="print-daydream")(print_daydream)
+app.command(name="print-daydream")(print_daydream)
 somatic_app.command(name="reflex")(reflex)
 somatic_app.command(name="sleep")(sleep)
 somatic_app.command(name="assimilate")(assimilate)

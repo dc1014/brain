@@ -2,7 +2,7 @@
 
 ![Pre-Alpha](https://img.shields.io/badge/Status-PreAlpha-orange.svg) ![Architecture](https://img.shields.io/badge/Architecture-Biomimetic--Multiagent-purple.svg) ![Security](https://img.shields.io/badge/Sandbox-Deno_+_WASM_or_Docker-red.svg) ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg) ![Coverage](https://img.shields.io/badge/Coverage-80%25-green.svg) ![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg) [![Discord](https://img.shields.io/discord/1507810266711068712?logo=discord&logoColor=white&color=7289da)](https://discord.gg/7x9BpVv3)
 
-> **Note to Systems Engineers:** I took the biomimicry domain-driven design quite far (e.g., the master daemon is the `Medulla`, short-term memory is the `Hippocampus`). It might look eccentric, but underneath is (arguably) a highly optimized, concurrent, lock-safe, and zero-debt execution engine that runs purely on flat files.
+> **Note to Systems Engineers:** I took the biomimicry domain-driven design quite far (e.g., the master daemon is the `Medulla`, short-term memory is the `Hippocampus`). It might look eccentric, but underneath is (arguably) a highly optimized, concurrent, lock-safe, and zero-debt-oriented execution engine that runs purely on flat files.
 
 **CoreTex** is a fully local, headless AI operating system inspired by human neuroanatomy and the Unix Philosophy. It operates directly in a sandbox, supercharges your Obsidian vault, orchestrates multi-agent swarms, and executes code within strict Deno / WebAssembly sandboxes. Docker and Firecracker support soon.
 
@@ -13,6 +13,14 @@
 ### 🏗️ Architectural Highlights
 1. **0-Token Ingestion:** Absorb and index your local workspace using local embeddings (`uv` + local python scripts) with **0 external API calls**. You can read, index, and organize your private vault without spending money or leaking data.
 2. **Safe-by-Default Execution:** The default "Cognitive Mode" is strictly read/write advisory. Active shell or script execution requires explicit user consent, and is hard-isolated inside an offline Deno-hosted V8 WebAssembly jail with strict CPU/memory caps and filesystem masking. Or just run it in Docker.
+
+### Threat model, briefly
+
+- **Read scope:** CoreTex reads files you explicitly point it at through commands like `ctx absorb`, sensory tools, or configured workspace paths.
+- **Write scope:** File writes are routed through safe-file helpers and constrained to project/vault paths rather than arbitrary host mutation.
+- **Execution scope:** Advisory/cognitive flows do not execute generated code by default. Agentic execution requires an explicit mode/tool path and routes untrusted code through the Deno/WASM sandbox or Docker runtime.
+- **If Deno is missing:** setup prompts to install it for local sandboxing; Docker remains the isolated fallback path.
+
 
 ---
 
@@ -36,19 +44,22 @@ cat error.log | grep "Timeout" | ctx task "Explain this failure cascade"
 
 ### Show HN demo loop
 
-For a deterministic first-value demo that does not require an LLM key, run:
+The README GIF uses only CoreTex commands:
 
 ```bash
-python3 scripts/show_hn_demo.py
-cat Professional/show-hn-demo-checklist.md
+ctx status
+ctx absorb examples/show-hn-mini-project --domain Professional --tags show-hn,demo
+ctx daydream "Review the absorbed demo context and identify the next useful action" --domain Professional
+ctx print-daydream --lines 40
 ```
 
-For the full CoreTex loop with your provider configured, see
-[`docs/ShowHN-Demo.md`](docs/ShowHN-Demo.md).
+`ctx print-daydream` writes the DMN ledger to stdout, so it composes naturally with Unix tools and pipes.
+
+For a deterministic non-LLM fallback demo, see [`docs/ShowHN-Demo.md`](docs/ShowHN-Demo.md).
 
 ---
 
-## 🚀 Installation (Zero-Debt & Frictionless)
+## 🚀 Installation (Low-Friction Setup)
 
 CoreTex features a unified, self-healing installation pipeline that automates all prerequisite matching, virtual environments, and secure container structures out of the box. Clone the repository and run the setup utility matching your host environment:
 
@@ -61,7 +72,7 @@ chmod +x setup.sh
 
 For a non-interactive runtime choice, use `./setup.sh --local` or `./setup.sh --docker`.
 
-*Note: The script automatically evaluates your localized package manager (`apt`, `dnf`, `yum`, `pacman`, `apk`, or `brew`) to resolve missing system dependencies like `curl`, `unzip`, and `file`.*
+*Note: The script automatically evaluates your localized package manager (`apt`, `dnf`, `yum`, `pacman`, `apk`, or `brew`) to resolve missing system dependencies like `curl`, `unzip`, `file`, and Python prerequisites when possible.*
 
 ### 🔷 Windows (PowerShell)
 To bypass native Windows script execution restrictions safely without modifying your global system security profile, execute the script via this process-isolated command:
@@ -153,7 +164,7 @@ ctx destroy
 ---
 
 ## 🤝 Contributing
-CoreTex values Shift-Left engineering. We enforce strict 100% test coverage on all security, file locking, and execution bypass logic. To verify your PR against our automated gates:
+CoreTex values Shift-Left engineering. We enforce focused regression coverage around security, file locking, and execution bypass logic. To verify your PR against our automated gates:
 ```bash
 uv run pytest System/tests Sense/tests -v
 uv run ruff check .
