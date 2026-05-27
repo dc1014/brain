@@ -69,6 +69,7 @@ from .cognitive import (
 )
 
 execute_engram = execute_engram_tool
+list_engrams = list_engrams_tool
 
 # PROJECT FORGE LAYER
 from .forge import bootstrap_project as bootstrap_project

@@ -91,6 +91,7 @@ System/config/hippocampus.db
 System/config/stylistic_fingerprint.json
 System/config/long_term_engram.json
 System/config/*.tmp
+System/config/features.json
 System/tools/engrams
 
 Meta/

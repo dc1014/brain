@@ -248,6 +248,13 @@ if [ ${#MISSING_UTILS[@]} -ne 0 ]; then
         fi
 
         if [ "$AUTO_INSTALL" = true ]; then
+            if [ "$PKG_MANAGER" != "homebrew" ] && [ "$(id -u)" -ne 0 ] && [ -z "$SUDO" ]; then
+                echo -e "\033[1;31mCannot install system dependencies: non-root user and sudo is unavailable.\033[0m" >&2
+                echo "Run manually as an admin/root user:" >&2
+                if [ -n "$UPDATE_CMD" ]; then echo "  $UPDATE_CMD" >&2; fi
+                echo "  $INSTALL_CMD" >&2
+                exit 1
+            fi
             echo "[*] Installing system dependencies natively..."
             if [ -n "$UPDATE_CMD" ]; then
                 $SUDO $UPDATE_CMD
