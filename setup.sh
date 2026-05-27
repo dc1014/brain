@@ -128,8 +128,9 @@ print_next_steps() {
     cat <<'EOF'
 
 Next steps:
-  1. Run: ctx status
-  2. Try: ctx task "Summarize this repository in five bullets"
+  0. RESTART YOUR TERMINAL (or run: source ~/.bashrc / source ~/.zshrc)
+  1. Run: ./ctx status
+  2. Try: ./ctx task "Summarize this repository in five bullets"
   3. Re-run diagnostics anytime with: ./setup.sh --check
 
 🔒 SECURITY NOTICE: CoreTex OS installs in "Safe-by-Default" (Advisory) mode.

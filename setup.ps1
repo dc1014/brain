@@ -54,8 +54,9 @@ function Test-PythonVersionAvailable {
 function Show-NextSteps {
     Write-Host ""
     Write-Host "Next steps:"
+    Write-Host "  0. RESTART YOUR TERMINAL (to load new PATH variables)" -ForegroundColor Yellow
     Write-Host "  1. Run: .\ctx.bat status"
-    Write-Host "  2. Try: .\ctx.bat task \"Summarize this repository in five bullets\""
+    Write-Host "  2. Try: .\ctx.bat task `"Summarize this repository in five bullets`""
     Write-Host "  3. Re-run diagnostics anytime with: .\setup.ps1 -Check"
 }
 
