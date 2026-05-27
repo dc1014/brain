@@ -128,3 +128,4 @@ System/.vagus_abort_signal
 
 # Python Build Artifacts
 *.egg-info/
+*.bak

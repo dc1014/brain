@@ -161,7 +161,7 @@ async def harvest_credentials() -> dict:
     valid_keys = {}
 
     choice = Prompt.ask(
-        "\nSelect cloud credential strategy:\n"
+        "\nSelect cloud credential strategy (inputs are hidden):\n"
         "[1] OpenRouter (Recommended)\n"
         "[2] Raw provider keys (OpenAI / Anthropic / Gemini)\n"
         "[3] Gateway/Broker (Portkey, Cloudflare AI Gateway)\n"
@@ -199,7 +199,6 @@ async def harvest_credentials() -> dict:
             if gateway_key:
                 valid_keys["GATEWAY_API_KEY"] = gateway_key
 
-    # 🛡️ THE FIX: Allow users to map their default model directly during setup
     console.print(
         "\n[dim]CoreTex routes general intelligence tasks to a default global model.\n"
         "You can format it like 'openai/gpt-4o-mini', 'anthropic/claude-3-5-sonnet-latest', or 'openrouter/anthropic/claude-3.5-sonnet'.[/dim]"
@@ -358,7 +357,6 @@ async def main():
     ) as progress:
         progress.add_task("", total=None)
 
-        # 🛡️ THE FIX: Intercept the default model to mutate system.yaml directly
         default_model = valid_keys.pop("__DEFAULT_MODEL__", "openai/gpt-4o-mini")
         if SYSTEM_YAML_PATH.exists():
             try:
@@ -406,7 +404,7 @@ Next steps:
   2. Check your system vitals: [cyan]./ctx --docker status[/cyan] (or .\\ctx.bat on Windows)
   3. Absorb your first files: [cyan]./ctx --docker absorb ./System[/cyan]
 {ollama_msg}
-[italic]CoreTex is watching. Think out loud.[/italic]"""
+[italic]Enjoy Cortex! Go do some thinking.[/italic]"""
     else:
         next_steps = f"""Vault:    [bold green]{workspace_path}[/bold green]
 Command:  [bold cyan]ctx task "Audit the System directory"[/bold cyan]
@@ -416,7 +414,7 @@ Next steps:
   2. Check your system vitals: [cyan]ctx status[/cyan]
   3. Absorb your first files: [cyan]ctx absorb ./System[/cyan]
 {ollama_msg}
-[italic]CoreTex is watching. Think out loud.[/italic]"""
+[italic]Enjoy Cortex! Go do some thinking.[/italic]"""
 
     console.print("\n")
     console.print(Panel(next_steps, title="[ YOU'RE LIVE ]", border_style="green"))
