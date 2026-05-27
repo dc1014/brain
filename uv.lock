@@ -388,7 +388,7 @@ wheels = [
 
 [[package]]
 name = "coretex"
-version = "0.1.0"
+version = "0.1.0a0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -478,7 +478,7 @@ dev = [
 
 [[package]]
 name = "coretex-sense"
-version = "0.1.0"
+version = "0.1.0a0"
 source = { editable = "Sense" }
 dependencies = [
     { name = "beautifulsoup4" },

@@ -353,7 +353,29 @@ async def run_agent_async(
         )
 
     except Exception as e:
-        error_msg = vault.mask_secrets(f"API/Execution Error: {str(e)}")
+        raw_error = str(e).lower()
+        hint = ""
+
+        # Catch common API key / Authentication issues
+        if (
+            "authentication" in raw_error
+            or "api key" in raw_error
+            or "unauthorized" in raw_error
+            or "401" in raw_error
+        ):
+            hint = (
+                "\n\n💡 **[Configuration Hint]**: Your LLM API key was rejected or missing. "
+                "Check your `.env` file. If you are not using OpenRouter (the default), ensure you have provided the correct standard keys (e.g., OPENAI_API_KEY, ANTHROPIC_API_KEY) and that they are active."
+            )
+        # Catch downtime / routing failures
+        elif "connection" in raw_error or "timeout" in raw_error or "502" in raw_error:
+            hint = (
+                "\n\n💡 **[Network Hint]**: The upstream LLM provider might be down or unreachable. "
+                "If you enabled `USE_LOCAL_SLM=true`, ensure your local Ollama engine is actually running."
+            )
+
+        error_msg = vault.mask_secrets(f"API/Execution Error: {str(e)}{hint}")
+
         usage_data = {
             "prompt_tokens": total_prompt,
             "completion_tokens": total_comp,
