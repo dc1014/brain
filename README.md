@@ -36,15 +36,18 @@ cat error.log | grep "Timeout" | ctx task "Explain this failure cascade"
 
 ### Show HN demo loop
 
-For a deterministic first-value demo that does not require an LLM key, run:
+The README GIF uses only CoreTex commands:
 
 ```bash
-python3 scripts/show_hn_demo.py
-cat Professional/show-hn-demo-checklist.md
+ctx status
+ctx absorb examples/show-hn-mini-project --domain Professional --tags show-hn,demo
+ctx daydream "Review the absorbed demo context and identify the next useful action" --domain Professional
+ctx print-daydream --lines 40
 ```
 
-For the full CoreTex loop with your provider configured, see
-[`docs/ShowHN-Demo.md`](docs/ShowHN-Demo.md).
+`ctx print-daydream` writes the DMN ledger to stdout, so it composes naturally with Unix tools and pipes.
+
+For a deterministic non-LLM fallback demo, see [`docs/ShowHN-Demo.md`](docs/ShowHN-Demo.md).
 
 ---
 
@@ -61,7 +64,7 @@ chmod +x setup.sh
 
 For a non-interactive runtime choice, use `./setup.sh --local` or `./setup.sh --docker`.
 
-*Note: The script automatically evaluates your localized package manager (`apt`, `dnf`, `yum`, `pacman`, `apk`, or `brew`) to resolve missing system dependencies like `curl`, `unzip`, and `file`.*
+*Note: The script automatically evaluates your localized package manager (`apt`, `dnf`, `yum`, `pacman`, `apk`, or `brew`) to resolve missing system dependencies like `curl`, `unzip`, `file`, and Python prerequisites when possible.*
 
 ### 🔷 Windows (PowerShell)
 To bypass native Windows script execution restrictions safely without modifying your global system security profile, execute the script via this process-isolated command:

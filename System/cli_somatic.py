@@ -44,6 +44,28 @@ def status():
     console.print("\n")
 
 
+def print_daydream(
+    path: Path = typer.Option(
+        ROOT_DIR / "Meta" / "DMN" / "daydreams.md",
+        "--path",
+        "-p",
+        help="Daydream ledger path to print.",
+    ),
+    lines: Optional[int] = typer.Option(
+        None, "--lines", "-n", help="Only print the last N lines."
+    ),
+):
+    """Prints the DMN daydream ledger to stdout for Unix pipes."""
+    if not path.exists():
+        console.print(f"[bold yellow]No daydream ledger found at {path}[/bold yellow]")
+        raise typer.Exit(code=1)
+
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if lines is not None:
+        text = "\n".join(text.splitlines()[-lines:])
+    console.print(text)
+
+
 def list_reflexes():
     """Reflex Arc: Lists all consolidated muscle memories (Engrams) in the Cerebellum."""
     from System.tools import list_engrams
