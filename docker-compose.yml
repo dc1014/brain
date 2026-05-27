@@ -10,6 +10,7 @@ services:
       - PYTHONUNBUFFERED=1
       - PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
       - DENO_INSTALL=/opt/deno
+      - DENO_DIR=/tmp/deno_cache
     volumes:
       # Mount the configuration and memory state securely
       - ./System/config:/opt/coretex/System/config
