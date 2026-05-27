@@ -1,5 +1,5 @@
 {
-  "name": "CoreTex",
+  "name": "coretex",
   "private": true,
   "dependencies": {
     "@modelcontextprotocol/server-filesystem": "^2026.1.14"

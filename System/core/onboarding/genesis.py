@@ -6,6 +6,7 @@ os.environ["SUPPRESS_LITELLM_LOGS"] = "True"
 os.environ["LITELLM_LOG"] = "ERROR"
 
 import json
+import re
 import asyncio
 import urllib.request
 from pathlib import Path
@@ -28,6 +29,7 @@ from System.core.onboarding.vendor_sandbox import vendor_offline_sandbox
 console = Console()
 ENV_PATH = ROOT_DIR / ".env"
 FEATURES_PATH = ROOT_DIR / "System" / "config" / "features.json"
+SYSTEM_YAML_PATH = ROOT_DIR / "System" / "config" / "system.yaml"
 
 IS_DOCKER_RUNTIME = (
     Path("/.dockerenv").exists() or os.environ.get("CORETEX_CONTAINER_TRACK") == "1"
@@ -170,7 +172,7 @@ async def harvest_credentials() -> dict:
     choice = Prompt.ask(
         "\nSelect cloud credential strategy:\n"
         "[1] OpenRouter (Recommended)\n"
-        "[2] Raw provider keys (OpenAI / Anthropic / Gemini). Entries are hidden from view.\n"
+        "[2] Raw provider keys (OpenAI / Anthropic / Gemini)\n"
         "[3] Gateway/Broker (Portkey, Cloudflare AI Gateway)\n"
         "[4] Skip (Local LLMs Only)",
         choices=["1", "2", "3", "4"],
@@ -205,6 +207,17 @@ async def harvest_credentials() -> dict:
             )
             if gateway_key:
                 valid_keys["GATEWAY_API_KEY"] = gateway_key
+
+    # 🛡️ THE FIX: Allow users to map their default model directly during setup
+    console.print(
+        "\n[dim]CoreTex routes general intelligence tasks to a default global model.\n"
+        "You can format it like 'openai/gpt-4o-mini', 'anthropic/claude-3-5-sonnet-latest', or 'openrouter/anthropic/claude-3.5-sonnet'.[/dim]"
+    )
+    default_model = Prompt.ask(
+        "[cyan]Default Cloud Model[/cyan]",
+        default="openai/gpt-4o-mini",
+    )
+    valid_keys["__DEFAULT_MODEL__"] = default_model
 
     brave_key = Prompt.ask(
         "\n[cyan]Brave Search API Key (Optional — enables web search)[/cyan]",
@@ -353,6 +366,19 @@ async def main():
         transient=True,
     ) as progress:
         progress.add_task("", total=None)
+
+        # 🛡️ THE FIX: Intercept the default model to mutate system.yaml directly
+        default_model = valid_keys.pop("__DEFAULT_MODEL__", "openai/gpt-4o-mini")
+        if SYSTEM_YAML_PATH.exists():
+            try:
+                sys_content = SYSTEM_YAML_PATH.read_text(encoding="utf-8")
+                # Surgically updates the global default model in the YAML schema
+                sys_content = re.sub(
+                    r"(\n\s+default:\s+).*", rf"\g<1>{default_model}", sys_content
+                )
+                _atomic_write_text(SYSTEM_YAML_PATH, sys_content)
+            except Exception:
+                pass
 
         env_content = (
             f"CORETEX_ENABLE_CODE_EXECUTION={str(code_execution_enabled).lower()}\n"

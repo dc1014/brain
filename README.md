@@ -104,6 +104,18 @@ Once complete, restart your terminal and command the swarm:
 
 ---
 
+## ⚙️ Configuration & Model Tuning
+
+Declarative configs via YAML (these will be cleaned up). After setup, you can freely customize your agents, tools, and models without touching code:
+
+* **`System/config/system.yaml`**: Change default cloud models (e.g. swap `gpt-4o-mini` for `claude-3-5-sonnet-latest`), set maximum daily token limits, or tweak system behavioral conditions like `dopamine` (increases temperature) and `cortisol` (ignores token budgets).
+* **`System/config/agents.yaml`**: Definitions of system prompts, execution routes, agents (like `fast_responder` or `qa_auditor`), and tool calling lives here.
+* **`System/config/tools.yaml`**: The physical capability registry. Expose new bash commands, define webhooks, or add JSON schemas for entirely new sensory organs.
+
+*(Note: The `setup` script will automatically map your preferred default AI model to `system.yaml` during installation!)*
+
+---
+
 ## 🔐 [Security](docs/Security.md) & Sandboxing (Safe-by-Default)
 
 Running LLM-generated code locally is inherently dangerous. CoreTex ships in **Cognitive Mode** by default—it can write code and plan tasks, but it *cannot* execute scripts. If you explicitly opt-in (`CORETEX_ENABLE_CODE_EXECUTION=true` in your `.env`), CoreTex activates a strict containment matrix:

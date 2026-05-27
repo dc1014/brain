@@ -10,14 +10,14 @@ async def test_harvest_credentials_openrouter(mocker):
     )
     mocker.patch(
         "System.core.onboarding.genesis.Prompt.ask",
-        side_effect=["1", "sk-or-1234", "brave-key"],
+        # 🛡️ THE FIX: Added "default-model" to the mocked user inputs
+        side_effect=["1", "sk-or-1234", "default-model", "brave-key"],
     )
-    mocker.patch(
-        "System.core.onboarding.genesis.Confirm.ask", return_value=False
-    )  # ⚡ FIX: Mock boolean prompt
+    mocker.patch("System.core.onboarding.genesis.Confirm.ask", return_value=False)
 
     keys = await harvest_credentials()
     assert keys["OPENROUTER_API_KEY"] == "sk-or-1234"
+    assert keys["__DEFAULT_MODEL__"] == "default-model"
     assert keys["BRAVE_API_KEY"] == "brave-key"
     assert keys["USE_LOCAL_SLM"] == "false"
 
@@ -30,15 +30,15 @@ async def test_harvest_credentials_raw(mocker):
     )
     mocker.patch(
         "System.core.onboarding.genesis.Prompt.ask",
-        side_effect=["2", "sk-oa", "sk-ant", "", ""],
+        # 🛡️ THE FIX: Added "default-model" to the mocked user inputs
+        side_effect=["2", "sk-oa", "sk-ant", "", "default-model", ""],
     )
-    mocker.patch(
-        "System.core.onboarding.genesis.Confirm.ask", return_value=False
-    )  # ⚡ FIX: Mock boolean prompt
+    mocker.patch("System.core.onboarding.genesis.Confirm.ask", return_value=False)
 
     keys = await harvest_credentials()
     assert keys["OPENAI_API_KEY"] == "sk-oa"
     assert keys["ANTHROPIC_API_KEY"] == "sk-ant"
+    assert keys["__DEFAULT_MODEL__"] == "default-model"
     assert "GEMINI_API_KEY" not in keys
     assert keys["USE_LOCAL_SLM"] == "false"
 
@@ -51,15 +51,15 @@ async def test_harvest_credentials_gateway(mocker):
     )
     mocker.patch(
         "System.core.onboarding.genesis.Prompt.ask",
-        side_effect=["3", "https://proxy", "proxy-key", ""],
+        # 🛡️ THE FIX: Added "default-model" to the mocked user inputs
+        side_effect=["3", "https://proxy", "proxy-key", "default-model", ""],
     )
-    mocker.patch(
-        "System.core.onboarding.genesis.Confirm.ask", return_value=False
-    )  # ⚡ FIX: Mock boolean prompt
+    mocker.patch("System.core.onboarding.genesis.Confirm.ask", return_value=False)
 
     keys = await harvest_credentials()
     assert keys["GATEWAY_BASE_URL"] == "https://proxy"
     assert keys["GATEWAY_API_KEY"] == "proxy-key"
+    assert keys["__DEFAULT_MODEL__"] == "default-model"
     assert keys["USE_LOCAL_SLM"] == "false"
 
 
@@ -69,15 +69,18 @@ async def test_harvest_credentials_skip_local_only(mocker):
     mocker.patch(
         "System.core.onboarding.genesis.urllib.request.urlopen", side_effect=Exception
     )
-    mocker.patch("System.core.onboarding.genesis.Prompt.ask", side_effect=["4", ""])
+    # 🛡️ THE FIX: Added "default-model" to the mocked user inputs
     mocker.patch(
-        "System.core.onboarding.genesis.Confirm.ask", return_value=False
-    )  # ⚡ FIX: Mock boolean prompt
+        "System.core.onboarding.genesis.Prompt.ask",
+        side_effect=["4", "default-model", ""],
+    )
+    mocker.patch("System.core.onboarding.genesis.Confirm.ask", return_value=False)
 
     keys = await harvest_credentials()
     # Cloud keys must be empty, and since they said False to SLMs, USE_LOCAL_SLM is false
     assert "OPENAI_API_KEY" not in keys
     assert "OPENROUTER_API_KEY" not in keys
+    assert keys["__DEFAULT_MODEL__"] == "default-model"
     assert keys["USE_LOCAL_SLM"] == "false"
 
 
@@ -88,16 +91,18 @@ async def test_harvest_credentials_local_slm_discovery(mocker):
     mocker.patch("System.core.onboarding.genesis.urllib.request.urlopen")
     mocker.patch(
         "System.core.onboarding.genesis.Prompt.ask",
-        side_effect=["4", "", "ollama/llama3.2"],
+        # 🛡️ THE FIX: Added "default-model" to the mocked user inputs
+        side_effect=["4", "default-model", "", "ollama/llama3.2"],
     )
 
-    # ⚡ FIX: Simulate user answering "Yes" to enabling the Local SLM
+    # Simulate user answering "Yes" to enabling the Local SLM
     mocker.patch("System.core.onboarding.genesis.Confirm.ask", return_value=True)
 
     keys = await harvest_credentials()
 
     assert keys["USE_LOCAL_SLM"] == "true"
     assert keys["LOCAL_MODEL_NAME"] == "ollama/llama3.2"
+    assert keys["__DEFAULT_MODEL__"] == "default-model"
     assert "OPENROUTER_API_KEY" not in keys
 
 
