@@ -170,7 +170,7 @@ async def harvest_credentials() -> dict:
     choice = Prompt.ask(
         "\nSelect cloud credential strategy:\n"
         "[1] OpenRouter (Recommended)\n"
-        "[2] Raw provider keys (OpenAI / Anthropic / Gemini)\n"
+        "[2] Raw provider keys (OpenAI / Anthropic / Gemini). Entries are hidden from view.\n"
         "[3] Gateway/Broker (Portkey, Cloudflare AI Gateway)\n"
         "[4] Skip (Local LLMs Only)",
         choices=["1", "2", "3", "4"],

@@ -75,6 +75,10 @@ class SecretVault:
         100% Dependable model discovery. Evaluates Gateways, Native Keys, and Fallbacks.
         """
         model_lower = model.lower()
+
+        if model_lower.startswith("ollama/") or model_lower.startswith("local/"):
+            return model, None
+
         req_provider = None
 
         if model_lower.startswith("openai/") or model_lower.startswith("gpt"):

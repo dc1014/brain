@@ -247,11 +247,11 @@ if ($DeployChoice -eq "2") {
 
     Invoke-DockerCompose build
     Write-Host "`n[+] Build complete." -ForegroundColor Green
-    Show-NextSteps
     Write-Host "[*] Booting Synaptic Genesis inside container context...`n" -ForegroundColor Cyan
 
     # Force docker fallback execution to prevent missing venv crash
     .\ctx.bat --docker setup
+    Show-NextSteps
     exit
 }
 
@@ -273,7 +273,7 @@ Write-Host "`n[*] Synchronizing CoreTex dependencies (this may take a moment)...
 & $UvBin sync --all-extras
 
 Write-Host "`n[+] Local environment synchronized." -ForegroundColor Green
-Show-NextSteps
 Write-Host "[*] Booting Synaptic Genesis...`n" -ForegroundColor Cyan
 
 & $UvBin run python -m System.cli setup
+Show-NextSteps

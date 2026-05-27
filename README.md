@@ -17,7 +17,7 @@ CoreTex is also intended to be an always-on daemon, understanding your goals and
 ### 🏗️ Architectural Highlights & What Makes It Different
 
 1. **UNIX Philosophy:** Everything is a file like it's the 1970s! State, IPC, data, and queue files are guarded by OS-level locks. Databases are banished to the shadow realm (excluding the SQLite FTS5 DB which reads the flat files for performance). Composability with standard operators is supported - pipe, redirect, etc.
-2. **Cerebellar Muscle Memory (Zero-Token Execution):** When CoreTex successfully completes writing code, e.g. setting up a project, the Cerebellum can make it an engram to rerun at 0-cost. Highly experimental and will need improvements. [Roadmap item](ROADMAP.md) to enable engram sharing. [Token economics](docs/Token-Economics.md) is a major concern for CoreTex
+2. **Cerebellar Muscle Memory (Zero-Token Execution):** When CoreTex successfully completes writing code, e.g. setting up a project, the Cerebellum can make it an engram to rerun at 0-cost. _Highly experimental_ and will need improvements. [Roadmap item](ROADMAP.md) to enable engram sharing. [Token economics](docs/Token-Economics.md) is a major concern for CoreTex.
 3. **5-Tier Biomimetic [Memory Stack](docs/Memory.md):**
     * **Working Memory** - token aware compression inserted between active head and tail for infinite task continuity without amnesia.
     * **Short-Term Recall (Vectorless Search):** Replace the DB with a local SQLite FTS5 index and BM25 ranking. Snippet truncation finds code matches without bloating the context window.
@@ -48,7 +48,7 @@ cat error.log | grep "Timeout" | ./ctx task "Explain this failure cascade"
 **4. Daydreaming**
 ```bash
 ./ctx daydream
-# WILL DAYDREAM ABOUT ITSELF
+# NOTE: CURRENTLY ONLY DAYDREAMS ABOUT ITSELF, SELFISH MACHINE.
 # TOPIC-BASED DREAMING IS AN IMMEDIATE TO-DO
 ```
 

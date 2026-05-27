@@ -378,11 +378,11 @@ if [ "$DEPLOY_CHOICE" == "2" ]; then
     ${DOCKER_COMPOSE_CMD[@]} build
 
     echo -e "\n[+] \033[1;32mBuild complete.\033[0m"
-    print_next_steps
-
     echo -e "[*] Booting Synaptic Genesis inside container context...\n"
 
-    exec ./ctx --docker setup
+    ./ctx --docker setup
+    print_next_steps
+    exit 0
 fi
 
 echo -e "\n[*] \033[1;36mInitializing Pure Local Environment...\033[0m"
@@ -398,7 +398,7 @@ echo -e "\033[36m[*] Synchronizing CoreTex dependencies (this may take a moment)
 uv sync --all-extras
 
 echo -e "\n[+] Local environment synchronized."
-print_next_steps
-
 echo -e "[*] Booting Synaptic Genesis...\n"
+
 uv run python -m System.cli setup
+print_next_steps
