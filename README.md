@@ -28,6 +28,12 @@
 
 CoreTex operates on pure text and local embeddings, meaning you can parse your entire codebase before spending a single API token.
 
+**No API key smoke test**
+```bash
+ctx absorb README.md
+ctx status
+```
+
 **1. Absorb a workspace (0 Token Cost - Local Embeddings)**
 ```bash
 ctx absorb ./my_project
