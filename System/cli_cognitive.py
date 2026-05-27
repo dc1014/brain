@@ -184,6 +184,31 @@ def compile():
         )
 
 
+def archaeology(
+    path: Path = typer.Argument(
+        ..., help="Path to a local vault, project folder, or note file to inspect."
+    ),
+    goal: Optional[str] = typer.Option(
+        None, "--goal", "-g", help="Optional objective to bias the archaeology brief."
+    ),
+    output: Path = typer.Option(
+        Path("Professional/context-archaeology-brief.md"),
+        "--output",
+        "-o",
+        help="Markdown file where the generated brief should be written.",
+    ),
+):
+    """🗿 Scans local context for hidden leverage patterns and writes an actionable brief."""
+    from System.tools.context_archaeology import analyze_context, write_report
+
+    report = analyze_context(path, goal=goal)
+    written = write_report(report, output)
+    console.print(report.to_markdown())
+    console.print(
+        f"[bold green]✅ Context archaeology brief written to {written}[/bold green]"
+    )
+
+
 def absorb(
     path: Path = typer.Argument(
         ..., help="Path to the folder, codebase, or file to absorb into memory."
