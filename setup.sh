@@ -69,6 +69,61 @@ sys.exit(0 if sys.version_info[:2] >= need else 1)
 PY
 }
 
+python_install_hint() {
+    if command_exists apt-get; then
+        echo "sudo apt-get update && sudo apt-get install -y python3 python3-venv"
+    elif command_exists dnf; then
+        echo "sudo dnf install -y python3"
+    elif command_exists yum; then
+        echo "sudo yum install -y python3"
+    elif command_exists pacman; then
+        echo "sudo pacman -Sy --noconfirm python"
+    elif command_exists apk; then
+        echo "sudo apk add python3 py3-pip"
+    elif command_exists brew; then
+        echo "brew install python@${CORETEX_MIN_PYTHON}"
+    else
+        echo "Install Python ${CORETEX_MIN_PYTHON}+ from https://www.python.org/downloads/"
+    fi
+}
+
+install_python_runtime() {
+    if python_version_available; then
+        return 0
+    fi
+    local hint
+    hint="$(python_install_hint)"
+    echo -e "\033[1;33m[!] Python ${CORETEX_MIN_PYTHON}+ is required for local setup.\033[0m"
+    echo "Suggested install command: $hint"
+    if ! confirm_default_yes "Install Python prerequisites now?"; then
+        echo -e "\033[1;31mAborting. Install Python ${CORETEX_MIN_PYTHON}+ manually, or run ./setup.sh --docker.\033[0m" >&2
+        return 1
+    fi
+    SUDO=""
+    if [ "$(id -u)" -ne 0 ] && command_exists sudo; then SUDO="sudo"; fi
+    if command_exists apt-get; then
+        $SUDO apt-get update -y
+        $SUDO apt-get install -y python3 python3-venv
+    elif command_exists dnf; then
+        $SUDO dnf install -y python3
+    elif command_exists yum; then
+        $SUDO yum install -y python3
+    elif command_exists pacman; then
+        $SUDO pacman -Sy --noconfirm python
+    elif command_exists apk; then
+        $SUDO apk add python3 py3-pip
+    elif command_exists brew; then
+        brew install "python@${CORETEX_MIN_PYTHON}"
+    else
+        echo -e "\033[1;31mERROR: unsupported package manager. $hint\033[0m" >&2
+        return 1
+    fi
+    if ! python_version_available; then
+        echo -e "\033[1;31mERROR: Python ${CORETEX_MIN_PYTHON}+ still unavailable after install. Try opening a new terminal or run ./setup.sh --docker.\033[0m" >&2
+        return 1
+    fi
+}
+
 print_next_steps() {
     cat <<'EOF'
 
@@ -320,10 +375,7 @@ fi
 
 echo -e "\n[*] \033[1;36mInitializing Pure Local Environment...\033[0m"
 
-if ! python_version_available; then
-    echo -e "\033[1;31mERROR: Python ${CORETEX_MIN_PYTHON}+ is required for local setup. Install Python ${CORETEX_MIN_PYTHON}+ or run ./setup.sh --docker.\033[0m" >&2
-    exit 1
-fi
+install_python_runtime
 
 install_uv_runtime
 install_deno_runtime
