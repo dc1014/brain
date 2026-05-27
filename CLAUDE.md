@@ -1,4 +1,4 @@
-# BRAIN OS: CLAUDE HANDOFF & EXECUTION DIRECTIVES
+# CoreTex: CLAUDE HANDOFF & EXECUTION DIRECTIVES
 
 ## 1. The Core Philosophy
 - **Biomimetic Architecture:** This is an agentic swarm orchestrator modeled after human neuroanatomy. Respect the terminology (Prefrontal Cortex = Routing/Swarm, Amygdala = Security/Threat Detection, Blood-Brain Barrier = Sandboxing, Microglia = Bug Fixing).

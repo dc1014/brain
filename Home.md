@@ -3,7 +3,7 @@ banner: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=forma
 banner_y: 0.4
 ---
 
-# 🧠 BRAIN OS — MAIN OPERATIONS CONTROL ROOM
+# 🧠 CoreTex — MAIN OPERATIONS CONTROL ROOM
 
 > [!meta] **SYSTEM TELEMETRY CORE**
 > * **Sandbox Engine Status**: `SECURE / ZERO-DEBT` 🟢

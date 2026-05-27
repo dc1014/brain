@@ -1,14 +1,14 @@
-# Contributing to Brain
+# Contributing to CoreTex
 
 Thank you for your interest! Here, *everyone*  is welcome to contribute their ideas and code.
 
-Please have patience with the (singular) maintainer of Brain as this is his first time maintaining a repo let alone an OSS project. Help is welcome!
+Please have patience with the (singular) maintainer of CoreTex as this is his first time maintaining a repo let alone an OSS project. Help is welcome!
 
-I've set forth this contributing standard to make sure we're all on the same page and Brain can evolve.
+I've set forth this contributing standard to make sure we're all on the same page and CoreTex can evolve.
 
 ## Code of Conduct
 
-By participating in Brain, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md). Please report any unacceptable or cruel behavior to Brain's maintainers.
+By participating in CoreTex, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md). Please report any unacceptable or cruel behavior to CoreTex's maintainers.
 
 ## How Can I Contribute?
 

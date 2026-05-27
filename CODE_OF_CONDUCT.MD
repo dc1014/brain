@@ -1,7 +1,7 @@
 # Contributor Covenant Code of Conduct
 
 ## Our Pledge
-We at Brain promise to make our community a kind, thoughtful, collaborative, and harassment-free experience for everyone, regardless of anything about you - your experience, your beliefs, or your identity.
+We at CoreTex promise to make our community a kind, thoughtful, collaborative, and harassment-free experience for everyone, regardless of anything about you - your experience, your beliefs, or your identity.
 
 We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community <3
 
