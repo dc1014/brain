@@ -16,9 +16,9 @@ def record_audio(filepath: str, duration: int = 5) -> str:
         sf.write(filepath, myrecording, fs)
         return f"SUCCESS: Audio recorded to {filepath}"
     except ImportError:
-        return "ERROR: Missing drivers. Run: uv add sounddevice soundfile numpy"
+        return "<sensory_error>Missing drivers. Run: uv add sounddevice soundfile numpy</sensory_error>"
     except Exception as e:
-        return f"HEARING ERROR: {str(e)}"
+        return f"<sensory_error>HEARING ERROR: {str(e)}</sensory_error>"
 
 
 def play_audio(filepath: str) -> str:
@@ -33,4 +33,4 @@ def play_audio(filepath: str) -> str:
         sd.wait()
         return "SUCCESS: Audio playback complete."
     except Exception as e:
-        return f"PLAYBACK ERROR: {str(e)}"
+        return f"<sensory_error>PLAYBACK ERROR: {str(e)}</sensory_error>"
