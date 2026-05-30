@@ -52,17 +52,8 @@ def task(
             domain = domain if domain != "AUTO" else "GENERAL"
 
     if obsidian:
-        queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
         pending_file = ROOT_DIR / "Meta" / "Pending_Actions.md"
-
-        queue_file.parent.mkdir(parents=True, exist_ok=True)
         pending_file.parent.mkdir(parents=True, exist_ok=True)
-
-        with open(queue_file, "a", encoding="utf-8") as f:
-            f.write(
-                json.dumps({"prompt": description, "route": route, "domain": domain})
-                + "\n"
-            )
 
         with open(pending_file, "a", encoding="utf-8") as f:
             timestamp = time.strftime("%Y-%m-%d %H:%M")
@@ -74,7 +65,7 @@ def task(
             )
 
         console.print(
-            "[bold green]✅ Task safely queued into Obsidian vault![/bold green]"
+            "[bold green]✅ Task safely queued into Obsidian vault (Pending_Actions.md)![/bold green]"
         )
         return
 

@@ -175,25 +175,26 @@ def recover():
 
 @app.command()
 def approve():
-    """Approves pending agentic tasks waiting in the workspace queue."""
-    queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
+    """Dopaminergic Release: Approves pending agentic tasks waiting in the Obsidian workspace."""
     md_queue = ROOT_DIR / "Meta" / "Pending_Actions.md"
     approved_flag = ROOT_DIR / "Meta" / ".approved"
 
-    if not queue_file.exists() or os.path.getsize(queue_file) == 0:
+    if not md_queue.exists() or os.path.getsize(md_queue) == 0:
         console.print(
-            "[dim yellow]No pending tasks found in the queue to approve.[/dim yellow]"
+            "[dim yellow]No pending tasks found in Meta/Pending_Actions.md to approve.[/dim yellow]"
+        )
+        return
+
+    content = md_queue.read_text(encoding="utf-8")
+    if "### ⏳ Pending Task" not in content:
+        console.print(
+            "[dim yellow]No valid task blocks found in Meta/Pending_Actions.md.[/dim yellow]"
         )
         return
 
     approved_flag.touch()
-    if md_queue.exists():
-        with open(md_queue, "w", encoding="utf-8") as f:
-            f.write(
-                "# Swarm Action Approved\n*The task has been approved. The Medulla daemon will begin background execution shortly.*\n\n"
-            )
     console.print(
-        "[bold green]Inhibition Released: Task approved for execution![/bold green]"
+        "[bold green]Inhibition Released: Tasks approved! The Medulla will begin background processing.[/bold green]"
     )
 
 

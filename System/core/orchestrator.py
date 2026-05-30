@@ -1,11 +1,12 @@
 import asyncio
+import re
+import time
 from rich.console import Console
 from rich.panel import Panel
 
 from System.neuroanatomy.limbic.thalamus import route_sensory_input
 from System.core.paths import ROOT_DIR
 from System.neuroanatomy.cortical.executive_loop import execute_pipeline
-from System.core.file_transaction import read_and_clear_queue
 
 console = Console()
 
@@ -46,20 +47,64 @@ async def dispatch_task(
 
 async def run_pending_queue() -> None:
     """
-    Checks the Meta/queue.jsonl ledger for approved Swarm instructions.
-    Uses lock-free atomic file swapping to read and clear the queue safely.
+    Checks Meta/Pending_Actions.md for approved Swarm instructions.
+    Uses lock-free atomic file swapping to read and clear the markdown queue safely.
     """
-    queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
+    pending_file = ROOT_DIR / "Meta" / "Pending_Actions.md"
+    completed_file = ROOT_DIR / "Meta" / "Completed_Actions.md"
 
-    # Safely pop the queue off the disk in one atomic pass
-    tasks_to_run = read_and_clear_queue(queue_file)
+    if not pending_file.exists() or pending_file.stat().st_size == 0:
+        return
+
+    # ⚡ UNIX PHILOSOPHY: Safely pop the queue off the disk in one atomic pass via rename
+    temp_file = pending_file.with_suffix(".tmp")
+    try:
+        pending_file.rename(temp_file)
+        pending_file.touch()  # Keep the file visible in Obsidian
+    except OSError:
+        return  # Collision or file locked
+
+    content = temp_file.read_text(encoding="utf-8")
+    temp_file.unlink(missing_ok=True)
+
+    if not content.strip():
+        return
+
+    tasks_to_run = []
+    blocks = content.split("### ⏳ Pending Task")
+
+    for block in blocks:
+        if not block.strip():
+            continue
+
+        prompt_match = re.search(r"\*\*Prompt:\*\*\s*(.*?)\n", block)
+        route_match = re.search(r"\*\*Thalamus Route:\*\*\s*`(.*?)`", block)
+        domain_match = re.search(r"\*\*Domain:\*\*\s*`(.*?)`", block)
+
+        if prompt_match and route_match and domain_match:
+            tasks_to_run.append(
+                {
+                    "prompt": prompt_match.group(1).strip(),
+                    "route": route_match.group(1).strip(),
+                    "domain": domain_match.group(1).strip(),
+                }
+            )
 
     if not tasks_to_run:
+        # Revert if parsing failed
+        with open(pending_file, "a", encoding="utf-8") as f:
+            f.write(content)
         return
 
     console.print(
-        f"\n[bold green]🚀 Found {len(tasks_to_run)} approved tasks. Waking Prefrontal Cortex...[/bold green]"
+        f"\n[bold green]🚀 Found {len(tasks_to_run)} approved tasks in Obsidian ledger. Waking Prefrontal Cortex...[/bold green]"
     )
+
+    # Archive to completed ledger
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    completed_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(completed_file, "a", encoding="utf-8") as f:
+        f.write(f"\n\n## ✅ Completed Execution Swarm ({timestamp})\n" + content)
 
     await _process_all_tasks(tasks_to_run)
 
@@ -89,8 +134,3 @@ async def _process_all_tasks(tasks: list[dict]) -> None:
     for res in results:
         if isinstance(res, Exception):
             console.print(f"[bold red]Queue Task Failed:[/bold red] {str(res)}")
-
-    pending_file = ROOT_DIR / "Meta" / "Pending_Actions.md"
-    if pending_file.exists():
-        pending_file.unlink(missing_ok=True)
-        console.print("[dim]🧹 Cleared Pending_Actions.md from workspace.[/dim]")
