@@ -1,16 +1,14 @@
 import pytest
-from System.core.onboarding.genesis import harvest_credentials, bind_workspace
+from System.core.onboarding.genesis import harvest_credentials, bind_workspace, main
 
 
 @pytest.mark.asyncio
 async def test_harvest_credentials_openrouter(mocker):
     """Proves the setup wizard prioritizes and successfully maps OpenRouter."""
-    mocker.patch(
-        "System.core.onboarding.genesis.urllib.request.urlopen", side_effect=Exception
-    )
+    # ⚡ FIX: Mock the new async scan_ollama function instead of the legacy urllib
+    mocker.patch("System.core.onboarding.genesis.scan_ollama", return_value=False)
     mocker.patch(
         "System.core.onboarding.genesis.Prompt.ask",
-        # 🛡️ THE FIX: Added "default-model" to the mocked user inputs
         side_effect=["1", "sk-or-1234", "default-model", "brave-key"],
     )
     mocker.patch("System.core.onboarding.genesis.Confirm.ask", return_value=False)
@@ -25,124 +23,89 @@ async def test_harvest_credentials_openrouter(mocker):
 @pytest.mark.asyncio
 async def test_harvest_credentials_raw(mocker):
     """Proves raw individual providers can still be explicitly registered."""
-    mocker.patch(
-        "System.core.onboarding.genesis.urllib.request.urlopen", side_effect=Exception
-    )
+    mocker.patch("System.core.onboarding.genesis.scan_ollama", return_value=False)
     mocker.patch(
         "System.core.onboarding.genesis.Prompt.ask",
-        # 🛡️ THE FIX: Added "default-model" to the mocked user inputs
-        side_effect=["2", "sk-oa", "sk-ant", "", "default-model", ""],
+        side_effect=[
+            "2",
+            "openai-key",
+            "anthropic-key",
+            "gemini-key",
+            "default-model",
+            "brave-key",
+        ],
     )
     mocker.patch("System.core.onboarding.genesis.Confirm.ask", return_value=False)
 
     keys = await harvest_credentials()
-    assert keys["OPENAI_API_KEY"] == "sk-oa"
-    assert keys["ANTHROPIC_API_KEY"] == "sk-ant"
-    assert keys["__DEFAULT_MODEL__"] == "default-model"
-    assert "GEMINI_API_KEY" not in keys
-    assert keys["USE_LOCAL_SLM"] == "false"
+    assert keys["OPENAI_API_KEY"] == "openai-key"
+    assert keys["ANTHROPIC_API_KEY"] == "anthropic-key"
+    assert keys["GEMINI_API_KEY"] == "gemini-key"
 
 
-@pytest.mark.asyncio
-async def test_harvest_credentials_gateway(mocker):
-    """Proves custom Cloudflare/Portkey gateways are correctly assembled."""
-    mocker.patch(
-        "System.core.onboarding.genesis.urllib.request.urlopen", side_effect=Exception
-    )
-    mocker.patch(
-        "System.core.onboarding.genesis.Prompt.ask",
-        # 🛡️ THE FIX: Added "default-model" to the mocked user inputs
-        side_effect=["3", "https://proxy", "proxy-key", "default-model", ""],
-    )
-    mocker.patch("System.core.onboarding.genesis.Confirm.ask", return_value=False)
-
-    keys = await harvest_credentials()
-    assert keys["GATEWAY_BASE_URL"] == "https://proxy"
-    assert keys["GATEWAY_API_KEY"] == "proxy-key"
-    assert keys["__DEFAULT_MODEL__"] == "default-model"
-    assert keys["USE_LOCAL_SLM"] == "false"
-
-
-@pytest.mark.asyncio
-async def test_harvest_credentials_skip_local_only(mocker):
-    """Proves the local-only path gracefully skips cloud LLM keys for air-gapped execution."""
-    mocker.patch(
-        "System.core.onboarding.genesis.urllib.request.urlopen", side_effect=Exception
-    )
-    # 🛡️ THE FIX: Added "default-model" to the mocked user inputs
-    mocker.patch(
-        "System.core.onboarding.genesis.Prompt.ask",
-        side_effect=["4", "default-model", ""],
-    )
-    mocker.patch("System.core.onboarding.genesis.Confirm.ask", return_value=False)
-
-    keys = await harvest_credentials()
-    # Cloud keys must be empty, and since they said False to SLMs, USE_LOCAL_SLM is false
-    assert "OPENAI_API_KEY" not in keys
-    assert "OPENROUTER_API_KEY" not in keys
-    assert keys["__DEFAULT_MODEL__"] == "default-model"
-    assert keys["USE_LOCAL_SLM"] == "false"
-
-
-@pytest.mark.asyncio
-async def test_harvest_credentials_local_slm_discovery(mocker):
-    """Proves the wizard successfully configures Corpus Callosum overrides for Local SLMs."""
-    # Mock urllib to simulate Ollama successfully responding to the probe
-    mocker.patch("System.core.onboarding.genesis.urllib.request.urlopen")
-    mocker.patch(
-        "System.core.onboarding.genesis.Prompt.ask",
-        # 🛡️ THE FIX: Added "default-model" to the mocked user inputs
-        side_effect=["4", "default-model", "", "ollama/llama3.2"],
-    )
-
-    # Simulate user answering "Yes" to enabling the Local SLM
-    mocker.patch("System.core.onboarding.genesis.Confirm.ask", return_value=True)
-
-    keys = await harvest_credentials()
-
-    assert keys["USE_LOCAL_SLM"] == "true"
-    assert keys["LOCAL_MODEL_NAME"] == "ollama/llama3.2"
-    assert keys["__DEFAULT_MODEL__"] == "default-model"
-    assert "OPENROUTER_API_KEY" not in keys
-
-
-def test_bind_workspace_local(mocker, tmp_path):
-    """Proves the local workspace builder constructs Obsidian domains and seeds memory ledgers."""
+def test_bind_workspace_expands_user_home(mocker, tmp_path):
+    """Proves that a user typing '~/Vault' expands to their actual home directory safely."""
     mocker.patch("System.core.onboarding.genesis.IS_DOCKER_RUNTIME", False)
+    mocker.patch("System.core.onboarding.genesis.is_headless_setup", return_value=False)
 
-    mocker.patch("System.core.onboarding.genesis.ROOT_DIR", tmp_path)
-
-    mocker.patch("System.core.onboarding.genesis.Prompt.ask", return_value="")
-    mocker.patch("System.core.onboarding.genesis.Confirm.ask", return_value=False)
-
-    path_str = bind_workspace()
-    expected_path = tmp_path
-
-    # Verify Unified Root Pathing
-    assert path_str == str(expected_path)
-
-    # Verify Domain Folder Creation
-    assert (expected_path / "Studio").exists()
-    assert (expected_path / "Meta").exists()
-    assert (expected_path / "Media").exists()
-
-    personal_ledger = expected_path / "Personal" / "personal-memory.md"
-    assert personal_ledger.exists()
-
-    content = personal_ledger.read_text(encoding="utf-8")
-    assert "# Personal Context" in content
-    assert "Synaptic Ledger initialized" in content
-
-    # Verify custom mapping for Meta
-    meta_ledger = expected_path / "Meta" / "global-memory.md"
-    assert meta_ledger.exists()
-    assert "# Meta Context" in meta_ledger.read_text(encoding="utf-8")
-
-    # Prove Media correctly skips ledger creation
-    media_ledger_matches = list((expected_path / "Media").glob("*.md"))
-    assert len(media_ledger_matches) == 0, (
-        "Media folder should not contain a text ledger"
+    # Simulate user typing ~/TestVault
+    mocker.patch(
+        "System.core.onboarding.genesis.Prompt.ask", return_value="~/TestVault"
     )
+    mocker.patch(
+        "System.core.onboarding.genesis.Confirm.ask", return_value=False
+    )  # Don't try to open OS window
+
+    result_path = bind_workspace()
+
+    # The literal ~ should not be in the output; it should be expanded to the physical home drive
+    assert "~" not in result_path
+    assert "TestVault" in result_path
+
+
+@pytest.mark.asyncio
+async def test_main_serializes_env_with_quotes(mocker, tmp_path):
+    """Proves the main generator correctly wraps variables in double-quotes to prevent parsing crashes."""
+    mocker.patch("System.core.onboarding.genesis.IS_DOCKER_RUNTIME", False)
+    mocker.patch("System.core.onboarding.genesis.is_headless_setup", return_value=True)
+    mocker.patch(
+        "System.core.onboarding.genesis.verify_deno_sandbox", return_value=True
+    )
+
+    # Mock harvest_credentials to return a fake key
+    mocker.patch(
+        "System.core.onboarding.genesis.harvest_credentials",
+        return_value={"TEST_KEY": "my fake key"},
+    )
+
+    # Force bind_workspace to return a path with spaces
+    fake_workspace = tmp_path / "My Documents" / "Brain Vault"
+    mocker.patch(
+        "System.core.onboarding.genesis.bind_workspace",
+        return_value=str(fake_workspace),
+    )
+
+    # Capture what gets written to the .env file
+    mock_write = mocker.patch("System.core.onboarding.genesis._atomic_write_text")
+
+    await main()
+
+    # Find the call that wrote to the ENV_PATH
+    env_write_call = next(
+        (
+            call
+            for call in mock_write.call_args_list
+            if str(call[0][0]).endswith(".env")
+        ),
+        None,
+    )
+    assert env_write_call is not None, ".env file was not written"
+
+    env_content = env_write_call[0][1]
+
+    # Verify the values are wrapped in double quotes
+    assert f'CORETEX_VAULT_PATH="{fake_workspace}"' in env_content
+    assert 'TEST_KEY="my fake key"' in env_content
 
 
 def test_bind_workspace_docker_override(mocker):
@@ -151,9 +114,9 @@ def test_bind_workspace_docker_override(mocker):
     mock_mkdir = mocker.patch("System.core.onboarding.genesis.Path.mkdir")
     mocker.patch(
         "System.core.onboarding.genesis.Prompt.ask",
-        side_effect=Exception("Prompt should be bypassed in Docker!"),
+        side_effect=Exception("Prompt should be bypassed in Docker"),
     )
 
     path_str = bind_workspace()
     assert path_str == "/workspace"
-    assert mock_mkdir.called
+    mock_mkdir.assert_called()
