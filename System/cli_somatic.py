@@ -1,7 +1,6 @@
 # --- System/cli_somatic.py ---
 import typer
 import subprocess
-import sys
 import ast
 import json
 import time
@@ -146,7 +145,6 @@ def sleep():
 
 def expose_dermis(port: int = 8080) -> str:
     """Somatic Reflex: Opens a temporary secure tunnel to the Dermis using native SSH."""
-    import subprocess
     from rich.console import Console
 
     console = Console()
@@ -172,7 +170,10 @@ def reflex(
         ..., help="The snake_case name of the compiled engram to run."
     ),
 ):
-    """Executes a compiled, zero-token somatic reflex (Engram) safely."""
+    """Executes a compiled, zero-token somatic reflex (Engram) safely within the Deno Sandbox."""
+    import asyncio
+    from System.tools.sandbox import execute_in_sandbox
+
     engram_path = ROOT_DIR / "System" / "tools" / "engrams" / f"{engram_name}.py"
 
     if not engram_path.exists():
@@ -203,35 +204,40 @@ def reflex(
         return
 
     try:
-        runner_code = (
-            "import sys\n"
-            f"sys.path.insert(0, '{engram_path.parent}')\n"
-            f"import {engram_name}\n"
-            f"{engram_name}.execute_reflex()\n"
+        # Route LLM-generated engrams through the secure WebAssembly sandbox
+        console.print(
+            "[dim yellow]Injecting reflex into ephemeral WebAssembly sandbox...[/dim yellow]"
         )
 
-        result = subprocess.run(
-            [sys.executable, "-c", runner_code],
-            capture_output=True,
-            text=True,
-            timeout=30,
+        # Wrap the engram code to automatically call execute_reflex()
+        execution_payload = (
+            code_content + "\n\nif __name__ == '__main__':\n    execute_reflex()\n"
         )
 
-        if result.returncode == 0:
-            console.print("[bold green]Reflex completed successfully.[/bold green]")
-            if result.stdout:
-                console.print(f"[dim]{result.stdout.strip()}[/dim]")
+        # Execute the python script safely within the Pyodide/Deno WASM environment.
+        # "CODE_GENERATION" route enforces the strict WASM containment matrix natively.
+        result = asyncio.run(
+            execute_in_sandbox(
+                command=["python", "-c", execution_payload],
+                workspace_path=ROOT_DIR,
+                env_secrets={},
+                route="CODE_GENERATION",
+            )
+        )
+
+        if result.success:
+            console.print(
+                "[bold green]Reflex completed safely inside the sandbox.[/bold green]"
+            )
+            if result.output:
+                console.print(f"[dim]{result.output.strip()}[/dim]")
         else:
             console.print(
-                f"[bold red]Reflex execution failed in subprocess:[/bold red]\n{result.stderr.strip()}"
+                f"[bold red]Reflex execution failed in sandbox:[/bold red]\n{result.block_reason or result.output}"
             )
 
-    except subprocess.TimeoutExpired:
-        console.print(
-            "[bold red]Reflex timed out (30s limit exceeded). Motor path severed.[/bold red]"
-        )
     except Exception as e:
-        console.print(f"[bold red]Somatic error: {e}[/bold red]")
+        console.print(f"[bold red]Somatic sandbox error: {e}[/bold red]")
 
 
 def assimilate(

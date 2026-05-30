@@ -67,13 +67,16 @@ async def test_executive_state_machine_qa_fallback(
 @pytest.mark.asyncio
 @patch("System.neuroanatomy.cortical.executive_loop.run_agent_async")
 @patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state")
-@patch("System.neuroanatomy.cortical.executive_loop.check_energy_levels")
+@patch("System.neuroanatomy.cortical.executive_loop.validate_metabolic_clearance")
+@patch("System.neuroanatomy.cortical.executive_loop.get_current_metabolism")
 async def test_executive_state_machine_vagus_abort(
-    mock_energy, mock_persist, mock_run_agent, tmp_path
+    mock_metabolism, mock_clearance, mock_persist, mock_run_agent, tmp_path
 ):
     """Verifies that a dropped .vagus_abort_signal file mid-flight trips the state cursor."""
 
-    mock_energy.return_value = (False, 0)
+    # ⚡ FIX: Mock the new unified metabolism schema instead of the legacy tuple
+    mock_metabolism.return_value = {"exhausted": False, "tokens_burned": 0}
+    mock_clearance.return_value = (True, "Clearance approved.")
 
     # Hydrate the virtual workspace layout so lookups for tools.yaml do not crash
     tools_dir = tmp_path / "System" / "config"

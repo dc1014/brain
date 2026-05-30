@@ -7,14 +7,31 @@ from rich.console import Console
 
 from System.core.paths import ROOT_DIR
 from System.neuroanatomy.cortical.executive_loop import execute_pipeline
+from System.neuroanatomy.limbic.hippocampus import recall_memory
 
 console = Console()
 
 
-def _gather_dream_context(daydream_file: Path) -> str:
-    """Gathers recent short-term logs and past hypotheses cleanly via standard Python file reads."""
+def _gather_dream_context(daydream_file: Path, topic: Optional[str] = None) -> str:
+    """Gathers recent short-term logs, past hypotheses, and local memory via zero-token search."""
     context_pieces = []
 
+    # ⚡ ZERO-TOKEN KNOWLEDGE RETRIEVAL: If a topic is provided, search the local FTS5 SQLite index
+    # before spending API tokens. This gives the DMN agent massive context for free.
+    if topic:
+        console.print(
+            f"[dim cyan]🧠 Hippocampus: Retrieving zero-token local memories for '{topic}'...[/dim cyan]"
+        )
+        try:
+            topic_memories = recall_memory(topic, limit=5)
+            if topic_memories and "No memories found" not in topic_memories:
+                context_pieces.append(
+                    f"--- RELEVANT LOCAL KNOWLEDGE FOR '{topic.upper()}' ---\n{topic_memories}"
+                )
+        except Exception as e:
+            console.print(f"[dim red]Hippocampus recall degraded: {e}[/dim red]")
+
+    # Append standard background life-support logs
     log_file = ROOT_DIR / "System" / "logs" / "experiment_log.md"
     if log_file.exists():
         try:
@@ -72,8 +89,8 @@ def trigger_daydreams(topic: Optional[str] = None, domain: Optional[str] = None)
     daydream_file = target_workspace / "daydreams.md"
     daydream_file.parent.mkdir(parents=True, exist_ok=True)
 
-    # Ingest short-term logs safely using clean Python file streams
-    dream_context = _gather_dream_context(daydream_file)
+    # Ingest short-term logs safely using clean Python file streams, passing the topic
+    dream_context = _gather_dream_context(daydream_file, topic=topic)
     if not dream_context.strip() and not topic:
         return "No neurological context available to daydream."
 

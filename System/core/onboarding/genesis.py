@@ -8,7 +8,6 @@ os.environ["LITELLM_LOG"] = "ERROR"
 import json
 import re
 import asyncio
-import urllib.request
 from pathlib import Path
 
 from rich.console import Console
@@ -17,7 +16,7 @@ from rich.prompt import Prompt, Confirm
 from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from System.core.paths import ROOT_DIR
+from System.core.paths import ROOT_DIR, normalize_path
 from System.core.onboarding.security import verify_deno_sandbox, _atomic_write_text
 from System.core.onboarding.senses import (
     install_optional_feature,
@@ -25,6 +24,7 @@ from System.core.onboarding.senses import (
 )
 from System.core.onboarding.path_binding import bind_global_alias
 from System.core.onboarding.vendor_sandbox import vendor_offline_sandbox
+from System.core.onboarding.synapses import scan_ollama
 
 console = Console()
 ENV_PATH = ROOT_DIR / ".env"
@@ -192,7 +192,8 @@ async def harvest_credentials() -> dict:
             "[cyan]Gateway Base URL (e.g., Cloudflare/Portkey)[/cyan]"
         )
         if gateway_url:
-            valid_keys["GATEWAY_BASE_URL"] = gateway_url
+            # ⚡ FIX: Strip trailing slashes to prevent double-slash URL routing errors downstream
+            valid_keys["GATEWAY_BASE_URL"] = gateway_url.rstrip("/")
             gateway_key = Prompt.ask(
                 "[cyan]Gateway Proxy Token / API Key[/cyan]", password=True
             )
@@ -216,17 +217,12 @@ async def harvest_credentials() -> dict:
     if brave_key:
         valid_keys["BRAVE_API_KEY"] = brave_key
 
-    ollama_detected = False
-    for url in ["http://127.0.0.1:11434/api/tags", "http://localhost:11434/api/tags"]:
-        try:
-            urllib.request.urlopen(url, timeout=2.0)
-            ollama_detected = True
-            console.print(
-                f"\n[bold green][+] Corpus Callosum: Local Ollama instance detected on {url}![/bold green]"
-            )
-            break
-        except Exception:
-            continue
+    # ⚡ FIX: Uses the asynchronous, non-blocking scan to prevent event-loop lockups
+    ollama_detected = await scan_ollama()
+    if ollama_detected:
+        console.print(
+            "\n[bold green][+] Corpus Callosum: Local Ollama instance detected on default port![/bold green]"
+        )
 
     console.print(
         "\n[dim]CoreTex can route 'background thinking' (reading files, scanning logs, filtering text) "
@@ -276,7 +272,8 @@ def bind_workspace() -> str:
         if not final_path:
             final_path = default_path
 
-    workspace_path = Path(final_path).resolve()
+    # ⚡ FIX: Route through normalize_path to natively handle symlinks and ~/ user expansions
+    workspace_path = normalize_path(final_path)
     workspace_path.mkdir(parents=True, exist_ok=True)
 
     domain_seeds = {
@@ -284,7 +281,7 @@ def bind_workspace() -> str:
         "Professional": "professional-memory.md",
         "Studio": "studio-memory.md",
         "Meta": "global-memory.md",
-        "Media": None,  # Media doesn't need a text ledger
+        "Media": None,
     }
 
     for domain, filename in domain_seeds.items():
@@ -325,7 +322,6 @@ CoreTex will write structured Markdown notes here automatically."""
         os_name = platform.system()
         try:
             if os_name == "Windows":
-                # Safe reflection avoids static-checking type failures on non-Windows CI environments
                 getattr(os, "startfile")(str(workspace_path))
             elif os_name == "Darwin":
                 subprocess.Popen(["open", str(workspace_path)])
@@ -361,7 +357,6 @@ async def main():
         if SYSTEM_YAML_PATH.exists():
             try:
                 sys_content = SYSTEM_YAML_PATH.read_text(encoding="utf-8")
-                # Surgically updates the global default model in the YAML schema
                 sys_content = re.sub(
                     r"(\n\s+default:\s+).*", rf"\g<1>{default_model}", sys_content
                 )
@@ -369,12 +364,13 @@ async def main():
             except Exception:
                 pass
 
+        # ⚡ FIX: Safely encapsulate values in double-quotes to prevent parsing crashes
         env_content = (
-            f"CORETEX_ENABLE_CODE_EXECUTION={str(code_execution_enabled).lower()}\n"
+            f'CORETEX_ENABLE_CODE_EXECUTION="{str(code_execution_enabled).lower()}"\n'
         )
-        env_content += f"CORETEX_VAULT_PATH={workspace_path}\n"
+        env_content += f'CORETEX_VAULT_PATH="{workspace_path}"\n'
         for k, v in valid_keys.items():
-            env_content += f"{k}={v}\n"
+            env_content += f'{k}="{v}"\n'
 
         _atomic_write_text(ENV_PATH, env_content)
         FEATURES_PATH.parent.mkdir(parents=True, exist_ok=True)

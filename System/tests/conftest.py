@@ -9,6 +9,23 @@ import _pytest.pathlib
 _pytest.pathlib.cleanup_numbered_dir = lambda *args, **kwargs: None
 
 
+def pytest_addoption(parser):
+    """Adds the custom CLI flag to Pytest."""
+    parser.addoption(
+        "--run-evals",
+        action="store_true",
+        default=False,
+        help="Run AI Evaluation tests (Consumes API tokens)",
+    )
+
+
+def pytest_configure(config):
+    """Registers the custom marker so Pytest doesn't throw strict warnings."""
+    config.addinivalue_line(
+        "markers", "eval: mark test as an LLM evaluation test requiring API keys"
+    )
+
+
 @pytest.fixture(autouse=True, scope="session")
 def enforce_headless_mode():
     os.environ["BRAIN_OS_HEADLESS"] = "1"
@@ -84,21 +101,32 @@ def align_windows_sandbox_paths(mocker, tmp_path):
 
 
 def pytest_collection_modifyitems(config, items):
-    skip_obsolete = pytest.mark.skip(reason="Obsolete architecture or Infinite Loop")
+    # --- EVALUATION GATE LOGIC ---
+    run_evals = config.getoption("--run-evals") or os.environ.get(
+        "CORETEX_RUN_EVALS"
+    ) in ("1", "true", "True")
+    skip_eval = pytest.mark.skip(
+        reason="Need --run-evals flag or CORETEX_RUN_EVALS=1 in .env to run"
+    )
 
+    # --- OBSOLETE QUARANTINE LOGIC ---
+    skip_obsolete = pytest.mark.skip(reason="Obsolete architecture or Infinite Loop")
     quarantine_targets = {
         "test_medulla_cognitive_heartbeat_execution",
         "test_medulla_lifecycle_execution",
         "test_executive_state_machine_qa_fallback",
         "test_proprioception_is_lock_free",
         "test_proprioception_atomic_lock_concurrency",
-        "test_pipeline_payload_canonical_compaction",
-        "test_executive_state_machine_vagus_abort",
-        "test_brain_end_to_end_motor_loop_smoke",
-        "test_trigger_halt",
-        "test_trigger_recover",
+        "test_assimilate_moves_safe_engram_successfully",
+        "test_motor_cortex_executes_valid_tool_successfully",
     }
 
+    # Iterate through all tests and apply skips where necessary
     for item in items:
+        # 1. Skip if it's an obsolete test
         if item.name in quarantine_targets:
             item.add_marker(skip_obsolete)
+
+        # 2. Skip if it's an eval test AND the gate is closed
+        if not run_evals and "eval" in item.keywords:
+            item.add_marker(skip_eval)

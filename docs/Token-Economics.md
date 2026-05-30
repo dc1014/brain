@@ -75,3 +75,17 @@ Unchecked streaming data from peripheral receptors (like web page scrapers, audi
 * **Deterministic Sensory Transducer (TokenJuice Engine):** Inspired by the TokenJuice architectural model, a pure-Python deterministic sensory engine natively compacts execution traces at $0 cost before they reach cognitive layers. Pre-compiled regex matrices instantly strip ANSI color codes, transient progress spinners, and auxiliary package manager noise (e.g., `pip`, `yarn`, `bun` boilerplate), protecting context windows from verbose terminal slop.
 * **Inert Sensory Encapsulation:** Raw external signals are neutralized via `scrub_payload`. This replaces problematic character chains and locks text payloads inside static read-only token boundaries (`[[UNVERIFIED SENSORY STIMULUS]] ... [[END SENSORY INPUT]]`). This structure enforces rigid token alignment, preventing incoming web data or logs from masquerading as system instructions and causing expensive reasoning inflation.
 * **Perimeter Payload Truncation:** Subsystems (such as the FastAPI-driven web interface layer `DermisAbstraction` or web scrapers) restrict incoming text size directly at the socket level. Payloads are clipped to explicit character thresholds before they can pass to the Thalamus or Prefrontal Cortex, protecting the system's token budget.
+
+
+## How the Cerebellum Generates Code
+Code generation in the Cerebellum is not random; it is highly deterministic and relies on Episodic Memory. It happens under these specific conditions:
+
+The Trigger: The compilation process is initiated either manually when a user runs ./ctx compile OR autonomously when the system enters a deep sleep cycle via ./ctx sleep (which internally calls the compile function).
+
+Memory Extraction: The system opens your Episodic Memory ledger (agent_interactions.jsonl). It parses recent multi-agent task loops.
+
+The "Success" Gate: It filters the memory ledger exclusively for tasks where the final outcome contains the string "Success". If the Swarm failed to complete a task, the Cerebellum refuses to memorize it.
+
+Telemetry Handover: It extracts the original objective and the exact telemetry (the step-by-step commands the agents took to succeed) from the most recent successful task.
+
+Prompt Injection: This objective and telemetry are injected into a strict prompt instructing the fast model (e.g., Gemini 2.5 Flash) to write a deterministic, zero-token Python script that replicates those exact steps natively, adhering strictly to the Deno + WASM limitations we just configured.
