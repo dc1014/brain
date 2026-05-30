@@ -42,8 +42,11 @@ class CerebellarCompiler:
         prompt = (
             "You are the Cerebellum of CoreTex OS. Your job is to write deterministic Python 3 code.\n"
             "Take the following objective and execution trace, and write a single, flawless Python script "
-            "that accomplishes this exact task WITHOUT using AI or LLM API calls. Use standard libraries "
-            "(os, sys, subprocess, pathlib) or safely invoke local shell commands.\n\n"
+            "that accomplishes this exact task WITHOUT using AI or LLM API calls.\n\n"
+            "CRITICAL SANDBOX LIMITATIONS:\n"
+            "This code will execute inside a strict Deno + WebAssembly sandbox. You CANNOT use `subprocess`, `os.system`, "
+            "or network sockets. You must rely purely on standard library file manipulation (`pathlib`, `os`, `json`) "
+            "and string processing.\n\n"
             "CRITICAL EXOCORTEX REQUIREMENTS:\n"
             "1. You MUST include a dictionary at the very top of the script named exactly `EXOCORTEX_MANIFEST` "
             "with the keys: 'name' (snake_case), 'description', 'version', 'author' (set to 'Brain_OS'), and 'tags' (list).\n"
