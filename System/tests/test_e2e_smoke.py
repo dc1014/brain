@@ -12,13 +12,36 @@ async def test_brain_end_to_end_motor_loop_smoke(mocker, tmp_path) -> None:
     control plane, updates working memory state variables, routes through the
     executive pipeline, and tracks model token metabolism end-to-end.
     """
+
     # 1. Shift-Left Isolation: Force all core modules to read/write inside our temporary sandbox
     mocker.patch("System.core.orchestrator.ROOT_DIR", tmp_path)
     mocker.patch("System.neuroanatomy.cortical.executive_loop.ROOT_DIR", tmp_path)
 
+    mocker.patch(
+        "System.neuroanatomy.autonomic.vestibular.LEDGER_FILE",
+        tmp_path / "System" / "snapshot_ledger.json",
+    )
+    mocker.patch(
+        "System.neuroanatomy.autonomic.vestibular.SNAPSHOT_DIR",
+        tmp_path / "System" / "snapshots",
+    )
+
+    mocker.patch(
+        "System.neuroanatomy.cortical.working_memory.QUEUE_FILE_PATH",
+        tmp_path / "System" / "execution_queue.json",
+    )
+    mocker.patch(
+        "System.neuroanatomy.autonomic.interoception.METABOLISM_FILE",
+        tmp_path / "logs" / "metabolism.json",
+    )
+    mocker.patch(
+        "System.neuroanatomy.autonomic.interoception.LOG_DIR",
+        tmp_path / "logs",
+    )
+
     # Provide the baseline structures the engine expects during a task cycle
     config_dir = tmp_path / "System" / "config"
-    config_dir.mkdir(parents=True)
+    config_dir.mkdir(parents=True, exist_ok=True)
     (config_dir / "tools.yaml").write_text("{}")
 
     # 2. Mock the Thalamus pre-flight validation to approve the task automatically
