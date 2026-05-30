@@ -53,6 +53,32 @@ def test_gather_dream_context_fallback_option_b(tmp_path):
         assert "CORE SYSTEM CONFIGURATIONS FOR REFLECTION" in context
 
 
+@patch("System.neuroanatomy.autonomic.dmn.recall_memory")
+def test_gather_dream_context_with_topic_recalls_memory(mock_recall, tmp_path):
+    """Proves the DMN fetches zero-token FTS5 local memories before execution."""
+    mock_recall.return_value = "--- mock/path.py ---\n...def fake_function()..."
+    with patch("System.neuroanatomy.autonomic.dmn.ROOT_DIR", tmp_path):
+        daydream_file = tmp_path / "Meta" / "DMN" / "daydreams.md"
+
+        context = _gather_dream_context(daydream_file, topic="refactoring")
+
+        mock_recall.assert_called_once_with("refactoring", limit=5)
+        assert "RELEVANT LOCAL KNOWLEDGE FOR 'REFACTORING'" in context
+        assert "mock/path.py" in context
+
+
+@patch("System.neuroanatomy.autonomic.dmn.recall_memory")
+def test_gather_dream_context_with_topic_handles_db_failure(mock_recall, tmp_path):
+    """Ensures DMN degrades gracefully to standard logs if SQLite is locked."""
+    mock_recall.side_effect = Exception("SQLite Database is locked")
+    with patch("System.neuroanatomy.autonomic.dmn.ROOT_DIR", tmp_path):
+        daydream_file = tmp_path / "Meta" / "DMN" / "daydreams.md"
+
+        # Should not crash, just silently degrade
+        context = _gather_dream_context(daydream_file, topic="refactoring")
+        assert "RELEVANT LOCAL KNOWLEDGE FOR 'REFACTORING'" not in context
+
+
 def test_trigger_daydreams_autonomous_flow(tmp_path, mock_execute_pipeline):
     log_dir = tmp_path / "System" / "logs"
     log_dir.mkdir(parents=True)
@@ -65,7 +91,11 @@ def test_trigger_daydreams_autonomous_flow(tmp_path, mock_execute_pipeline):
         assert "Meta/DMN/daydreams.md" in res
 
 
-def test_trigger_daydreams_directed_topic_flow(tmp_path, mock_execute_pipeline):
+@patch("System.neuroanatomy.autonomic.dmn.recall_memory")
+def test_trigger_daydreams_directed_topic_flow(
+    mock_recall, tmp_path, mock_execute_pipeline
+):
+    mock_recall.return_value = "quantum memory facts"
     log_dir = tmp_path / "System" / "logs"
     log_dir.mkdir(parents=True)
     log_file = log_dir / "experiment_log.md"

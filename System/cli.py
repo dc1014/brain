@@ -90,15 +90,14 @@ def graceful_coretex_excepthook(exc_type, exc_value, exc_traceback):
 
 sys.excepthook = graceful_coretex_excepthook
 
-# Master Typer Configuration
 app = typer.Typer(
     help="CoreTex OS: Biomimetic Agentic Operating System", no_args_is_help=True
 )
 
 # Sub-App Domain Subcommands
-cognitive_app = typer.Typer(help="Cognitive Commands (CNS Execution Pathways)")
-somatic_app = typer.Typer(help="Somatic Commands (Autonomic Reflex Arcs)")
-sense_app = typer.Typer(help="Sensory Commands (Exteroceptive Organ Ingestion Handles)")
+cognitive_app = typer.Typer(help="Cognitive Commands (AI Task Execution & Memory)")
+somatic_app = typer.Typer(help="Somatic Commands (Background Daemons & System Status)")
+sense_app = typer.Typer(help="Sensory Commands (Hardware, Vision, and Web Scraping)")
 
 app.add_typer(cognitive_app, name="cognitive")
 app.add_typer(somatic_app, name="somatic")
@@ -134,7 +133,7 @@ def main(
 
 @app.command()
 def setup() -> None:
-    """Initializes CoreTex OS using the interactive, high-fidelity Synaptic Genesis onboarding wizard."""
+    """Initializes CoreTex OS (Interactive Onboarding Wizard)."""
     import asyncio
     from System.core.onboarding.genesis import main as run_onboarding
 
@@ -143,7 +142,7 @@ def setup() -> None:
 
 @app.command()
 def live():
-    """Synaptic Resonance: Boots background multi-agent daemons and establishes continuous somatic loops."""
+    """Boots the main background daemon and multi-agent loops (Synaptic Resonance)."""
     from System.neuroanatomy.systemic.thymus import ThymusGland
 
     console.print(
@@ -160,7 +159,7 @@ def live():
 
 @app.command()
 def halt():
-    """Emergency Brake: Instantly kills all active background daemon processes and file watchers."""
+    """Emergency Brake: Instantly kills all active background processes and file watchers."""
     from System.neuroanatomy.autonomic.vagus_nerve import trigger_halt
 
     trigger_halt()
@@ -176,7 +175,7 @@ def recover():
 
 @app.command()
 def approve():
-    """Dopaminergic Release: Approves pending agentic tasks waiting in the workspace."""
+    """Approves pending agentic tasks waiting in the workspace queue."""
     queue_file = ROOT_DIR / "Meta" / "queue.jsonl"
     md_queue = ROOT_DIR / "Meta" / "Pending_Actions.md"
     approved_flag = ROOT_DIR / "Meta" / ".approved"
@@ -302,7 +301,7 @@ def run_task(
         help="Queues the task into Obsidian instead of running immediately.",
     ),
 ):
-    """🧠 Engages the Prefrontal Cortex to execute a cognitive task."""
+    """🧠 Executes a cognitive task or objective (Prefrontal Cortex)."""
     task(description=description, domain=domain, route=route, obsidian=obsidian)
 
 
@@ -317,34 +316,8 @@ def run_daydream(
         None, "--domain", "-d", help="Explicitly scope the daydream destination vault."
     ),
 ):
-    """🌌 Activates the Default Mode Network to process thoughts and generate strategic insights."""
+    """🌌 Autonomous background processing and strategic refactoring (Default Mode Network)."""
     daydream(topic=topic, domain=domain)
-
-
-@cognitive_app.command(name="evolve")
-@app.command(name="evolve")
-def run_evolve():
-    """🧬 Analyzes System/logs and codebase evolution routines."""
-    evolve()
-
-
-@cognitive_app.command(name="forage")
-@app.command(name="forage")
-def run_forage(
-    topic: str = typer.Argument(..., help="The search query or URL to forage."),
-    domain: str = typer.Option(
-        "GENERAL", help="The environmental domain (e.g., STUDIO)."
-    ),
-):
-    """Information foraging and web scraping for a specific topic."""
-    forage(topic=topic, domain=domain)
-
-
-@cognitive_app.command(name="compile")
-@app.command(name="compile")
-def run_compile():
-    """⚙️ Compiles the most recent successful memory into a Zero-Token Engram."""
-    compile()
 
 
 @cognitive_app.command(name="absorb")
@@ -360,7 +333,7 @@ def run_absorb(
         None, "--tags", "-t", help="Comma-separated conceptual metadata labels."
     ),
 ):
-    """🧫 Phagocytosis: Ingests external data, codebases, or documents into long-term structures."""
+    """🧫 Ingests external data, codebases, or documents into long-term memory (Phagocytosis)."""
     absorb(path=path, domain=domain, tags=tags)
 
 
