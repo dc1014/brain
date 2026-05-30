@@ -90,7 +90,7 @@ def test_take_screenshot_handles_playwright_missing(monkeypatch):
     monkeypatch.setitem(sys.modules, "playwright.sync_api", None)
 
     result = take_screenshot("http://localhost:3000", "dummy.png")
-    assert "VISUAL ERROR" in result
+    assert "<sensory_error>" in result
     assert "Playwright is not installed" in result
 
 

@@ -21,7 +21,7 @@ def take_screenshot(url: str, output_path: str) -> str:
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
-        return "VISUAL ERROR: Playwright is not installed. Run `uv pip install playwright`."
+        return "<sensory_error>Playwright is not installed. Run `uv pip install playwright`.</sensory_error>"
 
     output_file = Path(output_path)
     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -40,13 +40,15 @@ def take_screenshot(url: str, output_path: str) -> str:
         console.print(f"[bold cyan]✅ Screenshot saved to {output_path}[/bold cyan]")
         return f"SUCCESS: Screenshot saved to {output_path}"
     except Exception as e:
-        return f"FATAL SENSE ERROR: Failed to take screenshot. {str(e)}"
+        return f"<sensory_error>Failed to take screenshot. {str(e)}</sensory_error>"
 
 
 def extract_video_frames(video_path: str, max_frames: int = 8) -> list[str]:
     """RETINA (Video): Extracts keyframes from a video file as base64 strings."""
     if not cv2:
-        return ["ERROR: OpenCV (cv2) is not available in this environment."]
+        return [
+            "<sensory_error>OpenCV (cv2) is not available in this environment.</sensory_error>"
+        ]
 
     path = Path(video_path)
     if not path.exists():
@@ -81,13 +83,13 @@ def extract_video_frames(video_path: str, max_frames: int = 8) -> list[str]:
 def record_webcam_video(save_path: str, duration_seconds: int = 5) -> str:
     """RETINA (Live Temporal): Records video from the physical webcam."""
     if not cv2:
-        return "ERROR: OpenCV (cv2) is not available in this environment."
+        return "<sensory_error>OpenCV (cv2) is not available in this environment.</sensory_error>"
 
     Path(save_path).parent.mkdir(parents=True, exist_ok=True)
 
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        raise ValueError("Failed to open physical webcam for recording.")
+        return "<sensory_error>Failed to open physical webcam for recording.</sensory_error>"
 
     out = None
     try:
@@ -123,11 +125,11 @@ def capture_webcam_frame(save_path: str | None = None) -> str:
     If save_path is provided, saves to disk. Otherwise, returns a base64 string.
     """
     if not cv2:
-        return "ERROR: OpenCV (cv2) is not available in this environment."
+        return "<sensory_error>OpenCV (cv2) is not available in this environment.</sensory_error>"
 
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        return "ERROR: Failed to open physical webcam."
+        return "<sensory_error>Failed to open physical webcam.</sensory_error>"
 
     for _ in range(3):
         cap.read()
@@ -145,4 +147,4 @@ def capture_webcam_frame(save_path: str | None = None) -> str:
             b64_str = base64.b64encode(buffer).decode("utf-8")
             return f"data:image/jpeg;base64,{b64_str}"
 
-    return "ERROR: Failed to capture webcam frame."
+    return "<sensory_error>Failed to capture webcam frame.</sensory_error>"
