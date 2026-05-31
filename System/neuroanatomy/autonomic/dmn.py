@@ -77,21 +77,40 @@ def _gather_dream_context(daydream_file: Path, topic: Optional[str] = None) -> s
 
 
 def trigger_daydreams(topic: Optional[str] = None, domain: Optional[str] = None) -> str:
-    """The Active Default Mode Network (DMN). Investigates subgoals and queues proactive tasks."""
+    """The Active Default Mode Network (DMN). Investigates active goals and queues proactive tasks."""
     target_domain_raw = (
         domain if domain is not None else os.environ.get("BRAIN_OS_DOMAIN", "NONE")
     )
-    assigned_domain = target_domain_raw.upper()
+    assigned_domain = str(target_domain_raw).upper()
 
     target_workspace = ROOT_DIR / "Meta" / "DMN"
     daydream_file = target_workspace / "daydreams.md"
     daydream_file.parent.mkdir(parents=True, exist_ok=True)
 
+    # ⚡ PHASE 4: Dual-Memory Context Extraction
     beliefs_file = ROOT_DIR / "Meta" / "Core_Beliefs.md"
     core_beliefs = (
         beliefs_file.read_text(encoding="utf-8")
         if beliefs_file.exists()
-        else "No Primary Goal defined."
+        else "No Core Beliefs defined."
+    )
+
+    goals_file = ROOT_DIR / "Meta" / "Goals.md"
+    active_goals = []
+    if goals_file.exists():
+        goal_lines = goals_file.read_text(encoding="utf-8").splitlines()
+        for line in goal_lines:
+            # Token Optimization: Extract ONLY headers and active/in-progress tasks
+            stripped = line.lstrip()
+            if (
+                stripped.startswith("#")
+                or stripped.startswith("- [ ]")
+                or stripped.startswith("- [-]")
+            ):
+                active_goals.append(line)
+
+    active_goals_context = (
+        "\n".join(active_goals) if active_goals else "No active goals found."
     )
 
     dream_context = _gather_dream_context(daydream_file, topic=topic)
@@ -110,14 +129,16 @@ def trigger_daydreams(topic: Optional[str] = None, domain: Optional[str] = None)
         assigned_domain, "Focus on general optimization and goal advancement."
     )
 
+    # ⚡ PHASE 5: Proactive Execution Queueing with Thread IDs
     queue_instructions = (
-        f"PHASE 1 (INVESTIGATION): If you possess tools (`read_safe_file`, `web_search`, `search_vault`), actively use them to gather context on the user's Active Subgoals. Read their project files or research external concepts.\n"
+        f"PHASE 1 (INVESTIGATION): Actively use your tools (`read_safe_file`, `web_search`, `search_vault`) to gather context on the user's Active Subgoals. Read their project files or research external concepts.\n"
         f"PHASE 2 (SYNTHESIS): Synthesize your strategic insights under a '## 🌌 Epiphany ({timestamp})' header and append it to 'Meta/DMN/daydreams.md' using `append_safe_file`.\n"
-        f"PHASE 3 (PROACTIVE EXECUTION): Decompose the current Active Subgoal into 1-2 highly specific, actionable tasks. "
+        f"PHASE 3 (PROACTIVE EXECUTION): Decompose the current Active Subgoal into 1-2 highly specific, actionable CLI tasks. "
         f"Append them to 'Meta/Pending_Actions.md' using `append_safe_file` with EXACTLY this format:\n\n"
         f"### ⏳ Pending Task ({timestamp})\n"
         f"**Prompt:** [Your specific CLI/Agent task here]\n"
         f"**Thalamus Route:** `WORKSPACE` | **Domain:** `{assigned_domain}`\n"
+        f"**Teleology Thread:** [Insert the exact #goal/UID tag from the Goals.md file]\n"
         f"> **Threat Analysis & Reasoning:** [Why this advances the subgoal]\n---\n"
     )
 
@@ -126,9 +147,10 @@ def trigger_daydreams(topic: Optional[str] = None, domain: Optional[str] = None)
     )
     input_payload = (
         f"Current Timestamp: {timestamp}\n"
-        f"Assigned Execution Domain Subsystem: {assigned_domain}\n"
+        f"Assigned Execution Domain: {assigned_domain}\n"
         f"Domain Directive: {domain_focus}\n\n"
-        f"USER CORE BELIEFS & GOALS:\n{core_beliefs}\n\n"
+        f"USER CORE BELIEFS (WHO THEY ARE):\n{core_beliefs}\n\n"
+        f"ACTIVE GOAL FRONTLINE (WHAT THEY ARE DOING):\n{active_goals_context}\n\n"
         f"BACKGROUND LOG CONTEXT:\n{dream_context}\n\n"
         f"INSTRUCTION: {queue_instructions}"
     )

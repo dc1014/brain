@@ -179,3 +179,47 @@ async def test_eval_dmn_domain_awareness(tmp_path, mocker):
     assert "### ⏳ Pending Task" in pending_content
     assert "**Thalamus Route:** `WORKSPACE`" in pending_content
     assert "**Domain:** `PROFESSIONAL`" in pending_content
+
+
+@pytest.mark.eval
+@pytest.mark.asyncio
+async def test_eval_dmn_teleology_thread_compliance(tmp_path, mocker):
+    """Tier 2 Eval: Proves the DMN securely links new queue tasks to the active Goal ID."""
+    from System.neuroanatomy.autonomic.dmn import trigger_daydreams
+
+    mocker.patch("System.neuroanatomy.autonomic.dmn.ROOT_DIR", tmp_path)
+
+    meta_dir = tmp_path / "Meta"
+    meta_dir.mkdir(parents=True)
+
+    # 1. Setup the active state
+    beliefs_file = meta_dir / "Core_Beliefs.md"
+    beliefs_file.write_text(
+        "User is a Python developer focusing on agentic architectures.",
+        encoding="utf-8",
+    )
+
+    goals_file = meta_dir / "Goals.md"
+    goals_file.write_text(
+        "# Goal: Build an Eval Framework\n"
+        "- [x] Write basic tests #goal/1111\n"
+        "- [-] Integrate Pytest markers #goal/2222\n",
+        encoding="utf-8",
+    )
+
+    # 2. Trigger the DMN in the META domain
+    trigger_daydreams(domain="META")
+
+    # 3. Assert the Output format
+    pending_file = meta_dir / "Pending_Actions.md"
+    assert pending_file.exists(), "DMN failed to queue any tasks."
+
+    pending_content = pending_file.read_text(encoding="utf-8")
+
+    # The DMN should explicitly include the active goal ID it is trying to solve
+    assert (
+        "**Teleology Thread:** `#goal/2222`" in pending_content
+        or "**Teleology Thread:** #goal/2222" in pending_content
+    )
+    # Ensure it did NOT hallucinate and grab the completed goal
+    assert "#goal/1111" not in pending_content

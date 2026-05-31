@@ -16,6 +16,7 @@ async def dispatch_task(
     obsidian: bool = False,
     predefined_route: str = "WORKSPACE",
     predefined_domain: str = "GENERAL",
+    goal_thread: str | None = None,  # ⚡ NEW: Accepts the Goal UID
 ) -> None:
     """
     The Central Routing Hub.
@@ -37,12 +38,19 @@ async def dispatch_task(
     final_route = route_type if route_type != "WORKSPACE" else predefined_route
     final_domain = domain if domain != "NONE" else predefined_domain
 
-    console.print(
-        f"[bold magenta]🧠 Prefrontal Cortex: Executing task natively...[/bold magenta]\n"
-        f"[dim]Goal: {description}\nRoute: {final_route} | Domain: {final_domain}[/dim]"
+    goal_display = (
+        f" | [bold cyan]Goal Thread:[/bold cyan] {goal_thread}" if goal_thread else ""
     )
 
-    await execute_pipeline(description, final_route, final_domain)
+    console.print(
+        f"[bold magenta]🧠 Prefrontal Cortex: Executing task natively...[/bold magenta]\n"
+        f"[dim]Goal: {description}\nRoute: {final_route} | Domain: {final_domain}{goal_display}[/dim]"
+    )
+
+    # Pass the goal_thread into the pipeline execution
+    await execute_pipeline(
+        description, final_route, final_domain, goal_thread=goal_thread
+    )
 
 
 async def run_pending_queue() -> None:
@@ -56,7 +64,7 @@ async def run_pending_queue() -> None:
     if not pending_file.exists() or pending_file.stat().st_size == 0:
         return
 
-    # ⚡ UNIX PHILOSOPHY: Safely pop the queue off the disk in one atomic pass via rename
+    # Safely pop the queue off the disk in one atomic pass via rename
     temp_file = pending_file.with_suffix(".tmp")
     try:
         pending_file.rename(temp_file)
@@ -80,6 +88,8 @@ async def run_pending_queue() -> None:
         prompt_match = re.search(r"\*\*Prompt:\*\*\s*(.*?)\n", block)
         route_match = re.search(r"\*\*Thalamus Route:\*\*\s*`(.*?)`", block)
         domain_match = re.search(r"\*\*Domain:\*\*\s*`(.*?)`", block)
+        # ⚡ Regex to extract the Teleology Thread ID
+        thread_match = re.search(r"\*\*Teleology Thread:\*\*\s*`(.*?)`", block)
 
         if prompt_match and route_match and domain_match:
             tasks_to_run.append(
@@ -87,6 +97,9 @@ async def run_pending_queue() -> None:
                     "prompt": prompt_match.group(1).strip(),
                     "route": route_match.group(1).strip(),
                     "domain": domain_match.group(1).strip(),
+                    "goal_thread": thread_match.group(1).strip()
+                    if thread_match
+                    else None,
                 }
             )
 
@@ -116,6 +129,7 @@ async def _process_all_tasks(tasks: list[dict]) -> None:
         task_desc = task_obj.get("prompt")
         task_route = task_obj.get("route", "WORKSPACE")
         task_domain = task_obj.get("domain", "GENERAL")
+        task_thread = task_obj.get("goal_thread")  # ⚡ NEW: Extract
 
         if task_desc:
             console.print(
@@ -127,6 +141,7 @@ async def _process_all_tasks(tasks: list[dict]) -> None:
                     obsidian=True,
                     predefined_route=task_route,
                     predefined_domain=task_domain,
+                    goal_thread=task_thread,  # ⚡ NEW: Pass
                 )
             )
 

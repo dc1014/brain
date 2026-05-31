@@ -115,6 +115,7 @@ async def execute_pipeline(
     domain: str,
     resume_pipeline: list | None = None,
     origin: str = "HUMAN",
+    goal_thread: str | None = None,
 ) -> None:
     commit_transaction()
     available_tools = get_dna_config().get("tools", {})
@@ -267,6 +268,7 @@ async def execute_pipeline(
             route=route_type,
             domain=domain,
             origin=origin,
+            goal_thread=goal_thread,  # Pipe the Thread ID to the final log writer
         )
 
         usage = getattr(step_result, "usage", {})

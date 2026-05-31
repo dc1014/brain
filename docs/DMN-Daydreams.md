@@ -2,77 +2,76 @@
 
 Most autonomous agent frameworks operate strictly on linear, reactive event loops. When a user stops submitting prompts, the system sits completely frozen—wasting valuable compute idle-time and ignoring the latent structural connections, optimization vectors, and conceptual patterns hidden within its recent execution logs.
 
-CoreTex OS resolves this constraint by implementing a permanent **Autonomic Default Mode Network (DMN)**. Modeled directly after human neurobiology, the DMN functions as a background, non-blocking cognitive synthesis engine that awakens during system idle cycles or simulated REM sleep states to clean, reflect on, and self-heal the active workspace environment.
+CoreTex OS resolves this constraint by implementing a permanent **Autonomic Default Mode Network (DMN)**. Modeled directly after human neurobiology, the DMN functions as a background, non-blocking cognitive synthesis engine that awakens during system idle cycles or simulated sleep states to actively investigate active goals, synthesize insights, and queue proactive tasks for the user.
 
 ---
 
-## 🎯 Summary of Token, Brain Chemistry, & Sandbox Controls
+## 🎯 Summary of Token Economics, Traceability, & Goal Alignment
 
 | Subsystem Component | Core Underlying Mechanism | Functional Optimization Strategy |
 | :--- | :--- | :--- |
-| **1. REM Paralysis Layer** | Git branch-isolation checkout loop inside `enforce_rem_paralysis()`. | Traps background modifications on an ephemeral branch (`dream/hypothesis_*`) to protect production stability. |
-| **2. Thought Incubation** | Compound tail-end file stream aggregation inside `_gather_dream_context()`. | Stitches raw experiment logs with past daydreams to construct compounding layers of long-term strategic thought. |
-| **3. Biochemical Matrix** | Telemetry tracking algorithms inside `_modulate_neurotransmitters()`. | Computes Cortisol vs. Dopamine metrics to dynamically clamp prompt execution variance based on system errors. |
-| **4. Synaptic Pruning Gate** | Automatic character threshold truncation inside `_prune_and_consolidate_memories()`. | Automatically compresses historical log files using an engine loop to stay within strict token economic constraints. |
-| **5. Thalamic Feedback Loop** | Open-ended execution pipeline routing via `execute_pipeline(route=None)`. | Passes the consolidated epiphany back to the Thalamus to autonomously trigger updates or schedule project tasks. |
+| **1. Dual-Memory Ingestion** | Reads `Core_Beliefs.md` (Epistemology) and `Goals.md` (Teleology). | Ensures the Daydreamer knows *who* you are (preferences, identity) and *what* you are actively trying to achieve. |
+| **2. Cognitive Filtering** | Zero-token Python pre-parsing of `Meta/Goals.md`. | Strips out completed tasks and irrelevant domains before feeding the LLM, reducing context token burn by up to 90%. |
+| **3. Active Investigation** | DNA-granted investigation tools (`read_safe_file`, `web_search`). | Allows the DMN to actively read workspace files and research the web to gather deep context on stalled goals while you sleep. |
+| **4. Proactive Queueing** | Formatted writes to `Meta/Pending_Actions.md`. | The DMN doesn't just think; it decomposes active goals into exact CLI/Agent tasks for the human to approve upon waking. |
+| **5. Thread Traceability** | Cryptographic `#goal/UID` injection. | Links every queued action directly back to the Master Goals Kanban board, enabling zero-token state syncing when the task is completed. |
 
 ---
 
 ## 🔄 The Subconscious Lifecycle: A Biomimetic Deep Dive
 
-When the central orchestrator registers an active workspace pause, or when a user explicitly stimulates the network via the command-line somatic interface (`./ctx daydream`), the DMN initializes a five-phase non-linear synthesis routine.
+When the central orchestrator registers an active workspace pause, or when a user explicitly stimulates the network via the command-line somatic interface (`./ctx sleep`), the DMN initializes a five-phase, highly optimized synthesis routine.
 
+```text
+[ Waking Loop Paused ] ---> Trigger Sleep Cycle
+                                       |
+                                       v
+                     [ Phase 1: Dual-Memory Context Extraction ]
+                                       |
+                                       v
+                     [ Phase 2: Cognitive Filtering & Domain Focus ]
+                                       |
+                                       v
+                     [ Phase 3: Active Tool Investigation ]
+                                       |
+                                       v
+                     [ Phase 4: Creative Synthesis & Epiphany ]
+                                       |
+                                       v
+                     [ Phase 5: Proactive Execution Queueing ]
 ```
-[ Waking Loop Paused ] ---> Circadian Fatigue Triggers Sleep Onset
-                                       |
-                                       v
-                     [ Phase 1: REM Paralysis & Branch Isolation ]
-                                       |
-                                       v
-                     [ Phase 2: Mycelial Context Ingestion ]
-                                       |
-                                       v
-                     [ Phase 3: Biochemical Matrix Modulation ]
-                                       |
-                                       v
-                     [ Phase 4: Creative Synthesis & Sandbox Run ]
-                                       |
-                                       v
-                     [ Phase 5: Consolidation & Thalamic Triage ]
-```
 
-### 🎚️ Phase 1: Cellular Isolation & REM Paralysis
-To prevent an autonomous background thought process from corrupting a stable waking codebase, the DMN enforces an absolute separation barrier using your active repository tracking tree.
-* **Active Trunk Mapping**: The network calls `_get_current_branch()` to map out where your human development momentum resides.
-* **The REM Paralysis Check**: Before any files are touched, `enforce_rem_paralysis()` creates and checks out a brand new, timestamped isolated scratch branch (`dream/hypothesis_YYYYMMDD_HHMMSS`).
-* **The Safety Guarantee**: If an agent generates an unstable modification or runs into an unhandled exception while dreaming, the change remains trapped inside the scratch branch. Waking up the system safely rolls back the tree to the master trunk, preserving complete repository integrity.
+### 🗃️ Phase 1: Dual-Memory Context Extraction
+To generate actionable insights, the DMN must balance identity with execution. It breaks open two distinct memory silos:
+* **Epistemology (`Core_Beliefs.md`)**: The system reads the long-term semantic facts extracted by the Hippocampus (e.g., "The user prefers Pytest," "The user is building a SaaS app").
+* **Teleology (`Goals.md`)**: The system reads the hierarchical Kanban board of the user's overarching Directives, Milestones, and Subgoals.
+* **Short-Term Memory (`_gather_dream_context`)**: It seamlessly integrates the tail-end of your system performance tracking data, recent command outputs, and the FTS5 SQLite index.
 
-### 🗃️ Phase 2: Mycelial Context Ingestion & Cross-Talk
-Instead of parsing prompts linearly, the DMN breaks open traditional data silos to generate non-linear conceptual leaps.
-* **Evolutionary Thought Incubation**: The system calls `_gather_dream_context()` to merge the tail-end of your system performance tracking data (`experiment_log.md`) with the past layers of its own subconscious epiphanies (`Daydreams.md`).
-* **Metaphorical Leakage**: To replicate biological dream integration, `_leak_metaphorical_cross_talk()` selects a random alternative domain (e.g., borrowing a concept from `PERSONAL` daily journals) and injects it into a technical software engineering problem space (`STUDIO`). This cross-pollination stimulates lateral problem-solving patterns.
+### ✂️ Phase 2: Cognitive Filtering & Token Economics
+Feeding a massive, multi-year goal tracker into an LLM context window every night is an economic anti-pattern.
+* **The Active Frontline**: Before the LLM turns on, a pure Python script parses the `Goals.md` file line-by-line. It completely drops any tasks marked as completed (`[x]`).
+* **Domain Isolation**: It filters out goals that do not match the current operating Domain (e.g., ignoring `PERSONAL` goals if the DMN is waking up in a `PROFESSIONAL` context). The LLM is fed only the hyper-compressed "Active Frontline."
 
-### 🧪 Phase 3: The Biochemical State Matrix
-Before invoking the model, the system samples its own operational health to calculate an emotional state vector, adjusting its behavior based on past performance metrics.
-* **Cortisol Influx (Systemic Distress)**: The network counts errors, script crashes, and exceptions in recent engrams. High failure rates cause Cortisol to rise, which automatically drops the operational temperature down to hyper-deterministic levels (Temp: `0.2`) and forces the prompt to focus strictly on structural safety, infrastructure hardening, and defensive code refactoring.
-* **Dopamine Spike (Exploratory Reward)**: Clean unit tests and success metrics drive up Dopamine levels. This expands the system's creativity limits (Temp: `0.95`), instructing the model to take calculated structural risks and propose ambitious features or broad, cross-domain architectural designs.
+### 🔎 Phase 3: Active Tool Investigation
+If the user enabled "Active Daydreaming" during setup, the DMN acts as a proactive researcher.
+* **The Investigation Loop**: Seeing an active, uncompleted subgoal, the Daydreamer agent utilizes its active tools (`read_safe_file`, `search_vault`, `web_search`) to read local project files or scrape external documentation, gaining perfect technical context on *why* the goal is stalled and *how* to advance it.
 
-### ✂️ Phase 4: Synaptic Pruning & Token Economics
-Continuous background dreaming naturally generates text bloat. Left unmanaged, growing files can saturate context windows and inflate your operational costs.
-* **The Pruning Threshold**: Every cycle evaluates file scale against a strict limit (`PRUNING_CHARACTER_THRESHOLD = 25000`).
-* **The Executive Compaction**: If file sizes cross this threshold, the DMN runs an open-ended compression pipeline. It condenses long-form prose into a bulleted, high-density `<executive_summary>` archive block, preserving critical strategic insights while freeing up space for new thoughts.
+### 🌌 Phase 4: Creative Synthesis
+Once context is gathered, the model enters its synthesis phase.
+* **The Epiphany**: It synthesizes its strategic insights, architectural proposals, and code refactoring plans into an organized markdown block, appending it under an `## Epiphany` header inside `Meta/DMN/daydreams.md` for the user to review in Obsidian.
 
-### 🧠 Phase 5: Consolidation & Thalamic Triage Feedback
-Once a daydream finishes processing, it must be securely written to the local disk and fed back into your main control loop.
-* **Biological Locking**: The epiphany is written asynchronously into your targeted folder vault (`{Domain}/Daydreams.md`) under a thread-safe `BiologicalLock` wrapper, preventing multi-process worker file collisions.
-* **Dynamic Thalamic Feedback**: Instead of hardcoding a target destination, the output string is passed back to the Prefrontal cortex with an unassigned route (`execute_pipeline(route=None)`). This forces the central Thalamus to parse the text dynamically—autonomously launching full-stack engineering runs via `CODE_GENERATION` if it dreamed up an app enhancement, or archiving notes via `WORKSPACE` if it synthesized a personal journal observation.
+### 🧠 Phase 5: Proactive Execution & Teleology Threading
+The DMN concludes its cycle by setting up the Medulla (the execution engine) for the next day.
+* **Task Decomposition**: It breaks down its Epiphany into 1-2 highly specific, actionable CLI tasks.
+* **The Execution Queue**: It appends these tasks to `Meta/Pending_Actions.md` so the user can review and approve them with `ctx approve`.
+* **The Traceability Link**: Crucially, it attaches the exact **Teleology Thread ID** (e.g., `#goal/a1b2`) to the pending task. When the system executes this task tomorrow, that ID is passed to the execution log, allowing the Hippocampus to automatically check off the goal on the Kanban board with zero LLM guesswork.
 
 ---
 
-## 🛡️ Hardened Security Boundaries & Isolation Guidelines
+## 🛡️ Hardened Security Boundaries & Cognitive Pruning
 
-The Default Mode Network runs autonomously in the background, making strict sandboxing rules essential for maintaining system safety.
+The Default Mode Network runs autonomously in the background, making strict boundaries essential for maintaining system safety and budget.
 
-* **Strict Tool Containment**: The `SUBCONSCIOUS_DAYDREAM` path inside `routes.yaml` strictly locks agent tools to basic reading and writing (`["base", "write"]`). It completely strips away command execution, terminal utilities, or internet access flags. The system can safely process thoughts, but it is physically unable to access external networks or execute shell commands.
-* **Atomic Process Execution**: Every daydream loop runs entirely inside an isolated subprocess context. All network traces are intercepted by the `disable_network_calls` testing defenses, ensuring the background network functions completely offline and in-memory.
-* **Clean Cleanup Lifecycle**: The loop concludes inside a protective `finally` structure. This ensures that no matter what errors or exceptions occur during background processing, `lift_rem_paralysis()` is always invoked to return your project repository back to its active working branch before waking up the system.
+* **The Feature Flag Gate**: Active Daydreaming is controlled via `features.json`. If a user opts out of Active Daydreaming, the DNA matrix intercepts the Daydreamer agent during boot and dynamically strips its investigation tools. It reverts to a zero-cost, passive reflection mode.
+* **Strict Tool Containment**: Even in Active Mode, the `SUBCONSCIOUS_DAYDREAM` path is tightly sandboxed. The agent possesses *investigative* tools, but is completely stripped of *execution* tools. It cannot run terminal commands, execute code, or overwrite critical system files. It can only read, search, and queue suggestions.
+* **Human-in-the-Loop Approval**: The DMN cannot autonomously mutate the active codebase. It queues its intended actions into the `Pending_Actions.md` ledger. A human must explicitly review the Threat Analysis and type `ctx approve` before the system's Prefrontal Cortex is permitted to run the code.

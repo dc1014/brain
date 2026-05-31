@@ -14,7 +14,7 @@ from System.core.orchestrator import (
 async def test_dispatch_task_success(mock_exec, mock_route):
     mock_route.return_value = (True, "OK", "FORGE", "STUDIO", {})
     await dispatch_task("Build app")
-    mock_exec.assert_called_once_with("Build app", "FORGE", "STUDIO")
+    mock_exec.assert_called_once_with("Build app", "FORGE", "STUDIO", goal_thread=None)
 
 
 @pytest.mark.asyncio
@@ -51,6 +51,7 @@ async def test_run_pending_queue_parses_markdown(mock_process, tmp_path, monkeyp
             "prompt": "Build a new feature",
             "route": "CODE_GENERATION",
             "domain": "STUDIO",
+            "goal_thread": None,
         }
     ]
     mock_process.assert_called_once_with(expected_tasks)

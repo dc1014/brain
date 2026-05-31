@@ -69,12 +69,24 @@ async def test_executive_state_machine_qa_fallback(
 @patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state")
 @patch("System.neuroanatomy.cortical.executive_loop.validate_metabolic_clearance")
 @patch("System.neuroanatomy.cortical.executive_loop.get_current_metabolism")
+@patch(
+    "System.neuroanatomy.cortical.executive_loop.commit_transaction"
+)  # ⚡ FIX: Mock commit
+@patch(
+    "System.neuroanatomy.cortical.executive_loop.restore_balance"
+)  # ⚡ FIX: Mock restore
 async def test_executive_state_machine_vagus_abort(
-    mock_metabolism, mock_clearance, mock_persist, mock_run_agent, tmp_path
+    mock_restore,
+    mock_commit,
+    mock_metabolism,
+    mock_clearance,
+    mock_persist,
+    mock_run_agent,
+    tmp_path,
 ):
     """Verifies that a dropped .vagus_abort_signal file mid-flight trips the state cursor."""
 
-    # ⚡ FIX: Mock the new unified metabolism schema instead of the legacy tuple
+    # Mock the new unified metabolism schema instead of the legacy tuple
     mock_metabolism.return_value = {"exhausted": False, "tokens_burned": 0}
     mock_clearance.return_value = (True, "Clearance approved.")
 

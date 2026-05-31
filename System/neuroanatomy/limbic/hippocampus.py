@@ -6,6 +6,7 @@ import asyncio
 import sqlite3
 import time
 import os
+import uuid
 from datetime import datetime
 from typing import Dict, Any, List
 
@@ -155,13 +156,13 @@ def rebuild_index() -> None:
                 if any(ignored in filepath.parts for ignored in ignore_dirs):
                     continue
                 try:
-                    rel_path = filepath.relative_to(ROOT_DIR).as_posix()
+                    rel_path = str(filepath.relative_to(ROOT_DIR).as_posix())
                     active_filepaths.add(rel_path)
 
                     content = filepath.read_text(encoding="utf-8")
                     new_hash = _compute_hash(content)
 
-                    # Check CAS Gatekeeper
+                    # 🛡️ Check CAS Gatekeeper
                     cursor.execute(
                         "SELECT content_hash FROM file_hashes WHERE filepath = ?",
                         (rel_path,),
@@ -267,14 +268,16 @@ def recall_memory(query: str, limit: int = 5) -> str:
             snip_row = cursor.fetchone()
             snippet_text = snip_row[0] if snip_row else "..."
 
-            # Defensive unpacking safeguards against NoneType format errors when files have zero graph connectivity links
+            # Defensive unpacking safeguards against NoneType float format errors when files have zero graph connectivity links
             boost_val = node.get("boosted_score")
-
-            final_score = boost_val if boost_val is not None else node["score"]
+            final_score = (
+                float(boost_val) if boost_val is not None else float(node["score"])
+            )
 
             formatted_results.append(
                 f"--- {path_str} (Graph Re-Rank Score: {final_score:.2f}) ---\n...{snippet_text}...\n"
             )
+
         conn.close()
         return "\n".join(formatted_results)
 
@@ -402,7 +405,11 @@ async def _compact_heavy_memory(filepath: str, content: str) -> bool:
             temperature=0.1,
             api_key=api_key,
         )
-        summary = str(response.choices[0].message.content).strip()
+        summary = (
+            response.choices[0].message.content.strip()
+            if response.choices[0].message.content
+            else ""
+        )
 
         # Save to the Semantic Sidecar
         conn = _get_conn()
@@ -426,20 +433,23 @@ async def _compact_heavy_memory(filepath: str, content: str) -> bool:
 
 def _extract_and_update_beliefs(recent_logs: str = "") -> None:
     """
-    Acts as the Project Manager: Tracks progress, completes subgoals, and generates next steps.
-    Treats Meta/Core_Beliefs.md as a collaborative multiplayer document.
+    The Epistemologist: Extracts long-term semantic beliefs, user preferences, and identity facts.
+    Treats Meta/Core_Beliefs.md as the source of truth for WHO the user is.
     """
-    from System.neuroanatomy.cortical.executive_loop import execute_pipeline
-    import asyncio
     from System.core.paths import ROOT_DIR
+    import asyncio
+    from System.llm import acompletion
+    from System.neuroanatomy.systemic.immune_system import vault
+    from System.core.dna import get_dna_config
 
     beliefs_file = ROOT_DIR / "Meta" / "Core_Beliefs.md"
     current_beliefs = ""
     if beliefs_file.exists():
         current_beliefs = beliefs_file.read_text(encoding="utf-8")
+    else:
+        current_beliefs = "*(CoreTex will autonomously learn your preferences, tech stack, and identity over time and log them here).*"
 
     if not recent_logs:
-        # Dynamically grab the latest context if none was explicitly passed
         log_path = ROOT_DIR / "System" / "logs" / "experiment_log.md"
         if log_path.exists():
             try:
@@ -449,49 +459,123 @@ def _extract_and_update_beliefs(recent_logs: str = "") -> None:
         else:
             recent_logs = "No recent logs available."
 
-    pm_prompt = (
-        f"You are the Hippocampus, acting as a strict Project Manager.\n"
-        f"CURRENT STATE (`Core_Beliefs.md`):\n{current_beliefs}\n\n"
+    epistemology_prompt = (
+        f"You are the Hippocampus. Your job is to extract long-term semantic facts about the user, their environment, and their preferences.\n"
+        f"CURRENT BELIEFS (`Core_Beliefs.md`):\n{current_beliefs}\n\n"
         f"RECENT LOGS (Today's Actions):\n{recent_logs}\n\n"
         f"INSTRUCTIONS:\n"
-        f"1. Review the recent logs. Did the user make progress toward their Primary Goal or Active Subgoals?\n"
-        f"2. If an Active Subgoal was completed, mark it with `[x]`.\n"
-        f"3. Synthesize the NEXT 1-2 logical subgoals needed to advance the Primary Goal, marking them with `[ ]`.\n"
-        f"4. If the Active Subgoals list is empty or contains placeholder text, perform a 'Zero-to-One' decomposition: break the Primary Goal into the first 3 actionable subgoals.\n"
-        f"5. Retain any other core preferences, formatting, or identity facts present in the file.\n"
-        f"OUTPUT EXACTLY the new raw markdown for `Core_Beliefs.md` and nothing else. Do not use code block markers (```markdown)."
+        f"1. Review the recent logs for any persistent facts (e.g., 'User prefers Pytest', 'Project uses React', 'User is a roofer').\n"
+        f"2. Merge these new facts into the CURRENT BELIEFS. Do NOT extract temporary tasks or goals.\n"
+        f"3. Keep it as a clean, bulleted Markdown list. Discard redundant information.\n"
+        f"OUTPUT EXACTLY the new raw markdown for `Core_Beliefs.md` and nothing else. Do not use code block markers."
     )
 
-    try:
-        # Route to standard workspace evaluation
-        result = asyncio.run(
-            execute_pipeline(pm_prompt, "WORKSPACE", "META", origin="AUTONOMIC")
+    async def _fetch():
+        model = get_dna_config().get("models", {}).get("fast", "openai/gpt-4o-mini")
+        routed_model, api_key = vault.resolve_routing(model)
+
+        if not api_key:
+            return None
+
+        kwargs = {
+            "model": routed_model,
+            "messages": [{"role": "user", "content": epistemology_prompt}],
+            "temperature": 0.1,
+            "api_key": api_key,
+        }
+        gateway_url = vault.get_secret("GATEWAY_BASE_URL")
+        if gateway_url:
+            kwargs["api_base"] = gateway_url
+
+        response = await acompletion(**kwargs)
+        return (
+            response.choices[0].message.content.strip()
+            if response.choices[0].message.content
+            else ""
         )
-        if result and "Primary Goal" in result:
-            # Clean LLM formatting artifacts
-            cleaned_markdown = (
-                result.replace("```markdown", "").replace("```", "").strip()
-            )
+
+    try:
+        result = asyncio.run(_fetch())
+        if result and len(result) > 10:
+            cleaned = result.replace("```markdown", "").replace("```", "").strip()
             beliefs_file.parent.mkdir(parents=True, exist_ok=True)
-            beliefs_file.write_text(cleaned_markdown, encoding="utf-8")
+            beliefs_file.write_text(cleaned, encoding="utf-8")
+            console.print(
+                "[bold green]🧠 Hippocampus: Core Beliefs updated.[/bold green]"
+            )
     except Exception as e:
         console.print(
             f"[dim red]Hippocampus belief update failed silently: {e}[/dim red]"
         )
 
 
-def consolidate_short_term_memory() -> None:
-    """Synchronous wrapper for the sleep cycle."""
+def _lint_and_sync_goals() -> None:
+    """
+    The Teleologist: Zero-token Python tracker that auto-tags new goals
+    and deterministically checks off completed ones based on execution logs.
+    """
+    from System.core.paths import ROOT_DIR
 
-    async def _run_all():
-        # Only await the actual async coroutine
-        await _encode_short_term_memory()
+    goals_file = ROOT_DIR / "Meta" / "Goals.md"
+    log_file = ROOT_DIR / "logs" / "agent_interactions.jsonl"
+
+    if not goals_file.exists():
+        return
+
+    console.print("[dim]🧠 Hippocampus: Linting Master Goals state machine...[/dim]")
+
+    completed_threads = set()
+    if log_file.exists():
+        try:
+            lines = log_file.read_text(encoding="utf-8").splitlines()[-500:]
+            for line in lines:
+                try:
+                    data = json.loads(line)
+                    thread = data.get("goal_thread")
+                    response = data.get("response", "")
+
+                    if thread and "API/Execution Error:" not in response:
+                        completed_threads.add(thread)
+                except json.JSONDecodeError:
+                    continue
+        except Exception:
+            pass
 
     try:
-        asyncio.run(_run_all())
-        _extract_and_update_beliefs()
+        content = goals_file.read_text(encoding="utf-8")
+        new_lines = []
+        lines = content.split("\n")
+        goal_regex = re.compile(r"(#goal/[a-zA-Z0-9_-]+)")
+
+        for line in lines:
+            stripped = line.lstrip()
+            is_active_task = stripped.startswith("- [ ]") or stripped.startswith(
+                "- [-]"
+            )
+
+            if is_active_task:
+                match = goal_regex.search(line)
+                if not match:
+                    new_id = f"#goal/{uuid.uuid4().hex[:4]}"
+                    line = f"{line} {new_id}"
+                    thread_id = new_id
+                else:
+                    thread_id = match.group(1)
+
+                if thread_id in completed_threads:
+                    line = line.replace("- [ ]", "- [x]", 1).replace(
+                        "- [-]", "- [x]", 1
+                    )
+
+            new_lines.append(line)
+
+        goals_file.write_text("\n".join(new_lines), encoding="utf-8")
+        console.print(
+            "[bold green]🎯 Hippocampus: Master Goals synced successfully. Zero tokens burned.[/bold green]"
+        )
+
     except Exception as e:
-        console.print(f"[dim red]Hippocampus async error: {e}[/dim red]")
+        console.print(f"[dim red]Goal sync failed silently: {e}[/dim red]")
 
 
 def get_core_beliefs() -> str:
@@ -570,7 +654,11 @@ async def _encode_short_term_memory() -> None:
                 temperature=0.3,
                 api_key=api_key,
             )
-            summary = str(response.choices[0].message.content).strip()
+            summary = (
+                str(response.choices[0].message.content).strip()
+                if response.choices[0].message.content
+                else ""
+            )
 
             if domain == "META":
                 memory_file = ROOT_DIR / "Meta" / "global-memory.md"
@@ -598,6 +686,21 @@ async def _encode_short_term_memory() -> None:
             )
 
 
+def consolidate_short_term_memory() -> None:
+    """Synchronous wrapper for the sleep cycle."""
+
+    async def _run_all():
+        await _encode_short_term_memory()
+
+    try:
+        # Run async first, then run sequential sync passes
+        asyncio.run(_run_all())
+        _lint_and_sync_goals()  # ⚡ Python Goal Sync (Teleology)
+        _extract_and_update_beliefs()  # ⚡ LLM Beliefs Extraction (Epistemology)
+    except Exception as e:
+        console.print(f"[dim red]Hippocampus async error: {e}[/dim red]")
+
+
 def run_semantic_compaction_sweep() -> None:
     """Scans the working memory for heavy files and asynchronously compacts them."""
     console.print("[dim]🧠 Initiating Sleep Cycle: Semantic Compaction Sweep...[/dim]")
@@ -605,15 +708,13 @@ def run_semantic_compaction_sweep() -> None:
     conn = _get_conn()
     cursor = conn.cursor()
 
-    # Find files larger than ~3000 chars that either aren't in the semantic cache,
-    # or where the index timestamp is newer than the last_summarized timestamp.
     cursor.execute("""
         SELECT m.filepath, m.content
         FROM memories m
         LEFT JOIN semantic_cache s ON m.filepath = s.filepath
         WHERE length(m.content) > 3000
         AND (s.summary IS NULL OR m.timestamp > s.last_summarized)
-        LIMIT 5  -- Only do 5 per sleep cycle to keep background processing light
+        LIMIT 5
     """)
     heavy_files = cursor.fetchall()
     conn.close()
@@ -624,7 +725,6 @@ def run_semantic_compaction_sweep() -> None:
         )
         return
 
-    # Run the compaction tasks concurrently
     async def compact_all():
         tasks = [
             _compact_heavy_memory(filepath, content)

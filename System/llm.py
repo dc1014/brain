@@ -4,8 +4,8 @@ import asyncio
 import json
 import litellm  # type: ignore
 import os
+import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 from rich.console import Console
@@ -72,22 +72,21 @@ async def log_interaction(
     route: str = "UNKNOWN",
     domain: str = "NONE",
     origin: str = "HUMAN",
+    goal_thread: str | None = None,
 ) -> None:
     # Mask secrets BEFORE constructing the log entry object
     safe_response_content = vault.mask_secrets(response_content)
     safe_user_prompt = vault.mask_secrets(user_prompt)
 
     log_entry = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "origin": origin,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "agent": role_name,
         "route": route,
         "domain": domain,
-        "agent": role_name,
-        "model": model_string,
-        "system_prompt": system_prompt,
+        "origin": origin,
+        "goal_thread": goal_thread,  # ⚡ Safely mapped
         "user_prompt": safe_user_prompt,
         "response": safe_response_content,
-        "tokens": usage,
     }
 
     from System.neuroanatomy.cortical.motor_cortex import MotorCortex
@@ -170,15 +169,15 @@ def apply_humoral_modulation(base_model: str) -> tuple[str, float, int]:
 
 async def run_agent_async(
     role_name: str,
-    model_string: str,
     system_prompt: str,
     user_prompt: str,
-    route: str = "UNKNOWN",
-    domain: str = "NONE",
-    step: int = 1,
-    tools: list[dict[str, Any]] | None = None,
+    model_string: str,
+    tools: list | None = None,
+    route: str = "WORKSPACE",
+    domain: str = "GENERAL",
     origin: str = "HUMAN",
-) -> AgentResponse:
+    goal_thread: str | None = None,
+):
 
     metabolism_data = get_current_metabolism()
     is_exhausted = metabolism_data.get("exhausted", False)
@@ -359,16 +358,21 @@ async def run_agent_async(
         safe_final_text = vault.mask_secrets(final_text.strip())
         safe_action_manifest = [vault.mask_secrets(a) for a in action_manifest]
 
+        log_content = safe_final_text
+        if safe_action_manifest:
+            log_content += "\n\nACTIONS:\n" + "\n".join(safe_action_manifest)
+
         await log_interaction(
             role_name,
             model_string,
             system_prompt,
             user_prompt,
-            safe_final_text + "\n\nACTIONS:\n" + "\n".join(safe_action_manifest),
+            log_content,
             usage_data,
             route,
             domain,
             origin,
+            goal_thread=goal_thread,
         )
         return AgentResponse(
             text=safe_final_text, actions=safe_action_manifest, usage=usage_data
@@ -396,7 +400,7 @@ async def run_agent_async(
                 "If you enabled `USE_LOCAL_SLM=true`, ensure your local Ollama engine is actually running."
             )
 
-        error_msg = vault.mask_secrets(f"API/Execution Error: {str(e)}{hint}")
+        safe_error_msg = vault.mask_secrets(f"API/Execution Error: {str(e)}{hint}")
 
         usage_data = {
             "prompt_tokens": total_prompt,
@@ -408,13 +412,16 @@ async def run_agent_async(
             model_string,
             system_prompt,
             user_prompt,
-            error_msg,
+            safe_error_msg,
             usage_data,
             route,
             domain,
             origin,
+            goal_thread=goal_thread,
         )
-        return AgentResponse(text=error_msg, actions=action_manifest, usage=usage_data)
+        return AgentResponse(
+            text=safe_error_msg, actions=action_manifest, usage=usage_data
+        )
 
 
 async def compress_memory_buffer(current_text: str) -> str | None:

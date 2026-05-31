@@ -81,3 +81,51 @@ def test_hippocampus_enables_wal_mode_for_concurrency(mocker) -> None:
     mock_conn = mock_connect.return_value
     _get_conn()
     mock_conn.execute.assert_any_call("PRAGMA journal_mode=WAL;")
+
+
+def test_hippocampus_goal_state_machine_sync(tmp_path, mocker):
+    """Proves the Python Linter auto-tags new goals and checks off completed ones deterministically."""
+    from System.neuroanatomy.limbic.hippocampus import _lint_and_sync_goals
+    import json
+
+    mocker.patch("System.neuroanatomy.limbic.hippocampus.ROOT_DIR", tmp_path)
+    meta_dir = tmp_path / "Meta"
+    meta_dir.mkdir(parents=True)
+    logs_dir = tmp_path / "logs"
+    logs_dir.mkdir(parents=True)
+
+    goals_file = meta_dir / "Goals.md"
+    log_file = logs_dir / "agent_interactions.jsonl"
+
+    # 1. Simulate user manually typing goals (one tagged, one completely untagged)
+    initial_goals = (
+        "# 🎯 Master Goals\n"
+        "## Goal: Test the OS\n"
+        "- [ ] Write unit tests #goal/ab12\n"
+        "- [ ] Write documentation\n"  # Missing tag!
+    )
+    goals_file.write_text(initial_goals, encoding="utf-8")
+
+    # 2. Simulate the Orchestrator successfully completing #goal/ab12
+    dummy_log = {
+        "timestamp": "2026-05-31 12:00:00",
+        "agent": "coder",
+        "response": "Tests written successfully.",
+        "goal_thread": "#goal/ab12",
+    }
+    log_file.write_text(json.dumps(dummy_log) + "\n", encoding="utf-8")
+
+    # 3. Run the zero-token sweep
+    _lint_and_sync_goals()
+
+    # 4. Assertions
+    new_goals = goals_file.read_text(encoding="utf-8")
+
+    # Assert it checked off the completed one
+    assert "- [x] Write unit tests #goal/ab12" in new_goals
+
+    # Assert it auto-generated a tag for the untagged one
+    assert "- [ ] Write documentation #goal/" in new_goals
+    assert (
+        "- [ ] Write documentation\n" not in new_goals
+    )  # Ensure the untagged version is gone

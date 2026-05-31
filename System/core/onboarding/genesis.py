@@ -140,7 +140,7 @@ def innervate_senses() -> dict:
         "\n[dim]The Default Mode Network (DMN) reflects on your work while you sleep to synthesize ideas.[/dim]"
     )
     if Confirm.ask(
-        "[?] Enable Active Daydreaming? (Allows the OS to use API tokens while you sleep to actively read files, search the web, and queue proactive tasks toward your goal)",
+        "[?] Enable Active Daydreaming? (Allows the OS to use API tokens while you sleep to actively read files, search the web, and queue proactive tasks toward your goals)",
         default=True,
     ):
         features["autonomous_daydreaming"]["selected"] = True
@@ -318,33 +318,50 @@ def bind_workspace() -> str:
                 except OSError:
                     pass
 
+    # ⚡ PHASE 1: Generate the Goal Schema & Resolve the Cold Boot
     console.print("\n")
     console.print(
         Panel(
             "To be a true shadow partner, CoreTex needs to know what you are trying to achieve.",
-            title="[ THE PRIMARY GOAL ]",
+            title="[ MASTER GOALS ]",
             border_style="magenta",
         )
     )
 
     if is_headless_setup():
-        primary_goal = "Continuously optimize and maintain the CoreTex OS architecture."
+        primary_goal = "Maintain and optimize the CoreTex OS architecture."
     else:
         primary_goal = Prompt.ask(
-            "[cyan]What is your Primary Goal for this workspace?[/cyan]\n[dim](e.g., 'Write a sci-fi novel', 'Build a SaaS app', 'Scale my roofing business')[/dim]"
+            "[cyan]What are your Core Goals for this workspace?[/cyan]\n[dim](e.g., '1. Scale my roofing business', '2. Finish my novel')[/dim]"
         )
         if not primary_goal:
-            primary_goal = "Optimize and maintain the workspace architecture."
+            primary_goal = "Maintain and optimize the CoreTex OS architecture."
 
-    core_beliefs_path = workspace_path / "Meta" / "Core_Beliefs.md"
+    goals_path = workspace_path / "Meta" / "Goals.md"
 
-    beliefs_content = (
-        f"# Primary Goal\n{primary_goal}\n\n"
-        f"## Active Subgoals\n*(Let the OS generate these tonight, or write your own here)*\n"
+    goals_content = (
+        "# 🎯 Master Goals\n\n"
+        "> 💡 **How to use this file:** This is your multiplayer Kanban board. Manually type your goals, milestones, and subgoals using standard checkboxes (`- [ ]`). CoreTex will automatically track them and queue motor actions to achieve them.\n"
+        "> \n"
+        "> 💡 **Active Execution Queue:** Review the tasks CoreTex queues for you in [Pending_Actions.md](./Pending_Actions.md).\n\n"
+        f"## Goal: {primary_goal}\n"
+        "*Status: Active* | *Domain: META* | *ID: #goal/init*\n"
+        "- [ ] Milestone 1: *(Let the OS generate this tonight, or write your own here)*\n"
     )
 
-    if not core_beliefs_path.exists():
-        core_beliefs_path.write_text(beliefs_content, encoding="utf-8")
+    if not goals_path.exists():
+        goals_path.parent.mkdir(parents=True, exist_ok=True)
+        goals_path.write_text(goals_content, encoding="utf-8")
+
+    # ⚡ PHASE 1 HARDENING: Initialize the Epistemic Beliefs placeholder
+    beliefs_path = workspace_path / "Meta" / "Core_Beliefs.md"
+    beliefs_content = (
+        "# 🧠 Core Beliefs & Identity\n\n"
+        "*(CoreTex will autonomously learn your preferences, tech stack, and identity over time and log them here).*\n"
+    )
+    if not beliefs_path.exists():
+        beliefs_path.parent.mkdir(parents=True, exist_ok=True)
+        beliefs_path.write_text(beliefs_content, encoding="utf-8")
 
     obsidian_panel = f"""Your vault is ready at: [bold green]{workspace_path}[/bold green]
 

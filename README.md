@@ -28,6 +28,16 @@ CoreTex is also intended to be an always-on daemon, understanding your goals and
 
 ---
 
+### 🧠 Dual-Memory Architecture (Epistemology vs. Teleology)
+CoreTex operates on a strict separation of concerns, managing your workspace state through two distinct, human-readable Obsidian ledgers:
+* **The Identity Matrix (`Meta/Core_Beliefs.md`)**: The Hippocampus continuously learns your preferences, coding style, and identity from background execution logs, appending semantic facts to shape the AI's personality over time.
+* **The Master Kanban (`Meta/Goals.md`)**: A Markdown board where you define your high-level Goals and Subgoals. The OS auto-tags tasks with unique cryptographic IDs (`#goal/UID`) and deterministically checks off completed tasks via a zero-token Python state machine.
+
+### 🌌 Proactive Default Mode Network (DMN)
+When you stop working, CoreTex doesn't just sit idle. The DMN wakes up, reads the uncompleted frontline of your `Goals.md` file, actively reads your project code to gather context, and queues highly specific CLI tasks into `Pending_Actions.md`. You simply wake up, review the Threat Analysis, and type `./ctx approve` to execute the system's daydreams.
+
+---
+
 ## ⚡ Example Usage
 
 CoreTex operates on text files and local indexing, meaning you can parse your entire codebase before spending a single API token.
