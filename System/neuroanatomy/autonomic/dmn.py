@@ -16,8 +16,7 @@ def _gather_dream_context(daydream_file: Path, topic: Optional[str] = None) -> s
     """Gathers recent short-term logs, past hypotheses, and local memory via zero-token search."""
     context_pieces = []
 
-    # ⚡ ZERO-TOKEN KNOWLEDGE RETRIEVAL: If a topic is provided, search the local FTS5 SQLite index
-    # before spending API tokens. This gives the DMN agent massive context for free.
+    # ⚡ ZERO-TOKEN KNOWLEDGE RETRIEVAL: Search the local FTS5 SQLite index before spending API tokens.
     if topic:
         console.print(
             f"[dim cyan]🧠 Hippocampus: Retrieving zero-token local memories for '{topic}'...[/dim cyan]"
@@ -78,55 +77,66 @@ def _gather_dream_context(daydream_file: Path, topic: Optional[str] = None) -> s
 
 
 def trigger_daydreams(topic: Optional[str] = None, domain: Optional[str] = None) -> str:
-    """The Hardened Default Mode Network (DMN). Synthesizes strategic insights via secure agent routing."""
-    # ⚡ DEFAULT SCOPE RESTORATION: Default clean runs globally to NONE instead of STUDIO
+    """The Active Default Mode Network (DMN). Investigates subgoals and queues proactive tasks."""
     target_domain_raw = (
         domain if domain is not None else os.environ.get("BRAIN_OS_DOMAIN", "NONE")
     )
-    assigned_domain = str(target_domain_raw).upper()
+    assigned_domain = target_domain_raw.upper()
 
     target_workspace = ROOT_DIR / "Meta" / "DMN"
     daydream_file = target_workspace / "daydreams.md"
     daydream_file.parent.mkdir(parents=True, exist_ok=True)
 
-    # Ingest short-term logs safely using clean Python file streams, passing the topic
+    beliefs_file = ROOT_DIR / "Meta" / "Core_Beliefs.md"
+    core_beliefs = (
+        beliefs_file.read_text(encoding="utf-8")
+        if beliefs_file.exists()
+        else "No Primary Goal defined."
+    )
+
     dream_context = _gather_dream_context(daydream_file, topic=topic)
     if not dream_context.strip() and not topic:
         return "No neurological context available to daydream."
 
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    if topic:
-        console.print(
-            f"\n[bold magenta]🌌 DMN ACTIVE:[/bold magenta] Directing focus onto topic: [underline]{topic}[/underline] inside [bold]{assigned_domain}[/bold]"
-        )
-        input_payload = (
-            f"Current Timestamp: {timestamp}\n"
-            f"Assigned Execution Domain Subsystem: {assigned_domain}\n"
-            f"Topic Target: {topic}\n\n"
-            f"BACKGROUND DATA CONTEXT:\n{dream_context}\n\n"
-            f"INSTRUCTION: Thoroughly analyze the context regarding '{topic}'. Synthesize your strategic insights, "
-            f"format them cleanly under a '## 🌌 Epiphany ({timestamp})' markdown header line block, and immediately "
-            f"call your `append_safe_file` tool to append your finished report content into the file path: 'Meta/DMN/daydreams.md'."
-        )
-    else:
-        console.print(
-            f"\n[bold magenta]🌌 DMN ACTIVE:[/bold magenta] Synthesizing trends for domain: [bold]{assigned_domain}[/bold]"
-        )
-        input_payload = (
-            f"Current Timestamp: {timestamp}\n"
-            f"Assigned Execution Domain Subsystem: {assigned_domain}\n\n"
-            f"BACKGROUND DATA CONTEXT:\n{dream_context}\n\n"
-            f"INSTRUCTION: Scan recent logs for anomalies, state-machine trends, or refactoring loops. Synthesize your strategic insights, "
-            f"format them cleanly under a '## 🌌 Epiphany ({timestamp})' markdown header line block, and immediately "
-            f"call your `append_safe_file` tool to append your finished report content into the file path: 'Meta/DMN/daydreams.md'."
-        )
+
+    domain_prompts = {
+        "STUDIO": "Focus on advancing active projects, writing code, drafting blueprints, and resolving technical or creative debt.",
+        "PERSONAL": "Focus on creative synthesis, life organization, personal writing, and habit tracking.",
+        "PROFESSIONAL": "Focus on career strategy, business operations, marketing vectors, and communication follow-ups.",
+        "META": "Focus on CoreTex OS maintenance, log anomalies, file organization, and system optimization.",
+    }
+    domain_focus = domain_prompts.get(
+        assigned_domain, "Focus on general optimization and goal advancement."
+    )
+
+    queue_instructions = (
+        f"PHASE 1 (INVESTIGATION): If you possess tools (`read_safe_file`, `web_search`, `search_vault`), actively use them to gather context on the user's Active Subgoals. Read their project files or research external concepts.\n"
+        f"PHASE 2 (SYNTHESIS): Synthesize your strategic insights under a '## 🌌 Epiphany ({timestamp})' header and append it to 'Meta/DMN/daydreams.md' using `append_safe_file`.\n"
+        f"PHASE 3 (PROACTIVE EXECUTION): Decompose the current Active Subgoal into 1-2 highly specific, actionable tasks. "
+        f"Append them to 'Meta/Pending_Actions.md' using `append_safe_file` with EXACTLY this format:\n\n"
+        f"### ⏳ Pending Task ({timestamp})\n"
+        f"**Prompt:** [Your specific CLI/Agent task here]\n"
+        f"**Thalamus Route:** `WORKSPACE` | **Domain:** `{assigned_domain}`\n"
+        f"> **Threat Analysis & Reasoning:** [Why this advances the subgoal]\n---\n"
+    )
+
+    console.print(
+        f"\n[bold magenta]🌌 DMN ACTIVE:[/bold magenta] Synthesizing trends for domain: [bold]{assigned_domain}[/bold]"
+    )
+    input_payload = (
+        f"Current Timestamp: {timestamp}\n"
+        f"Assigned Execution Domain Subsystem: {assigned_domain}\n"
+        f"Domain Directive: {domain_focus}\n\n"
+        f"USER CORE BELIEFS & GOALS:\n{core_beliefs}\n\n"
+        f"BACKGROUND LOG CONTEXT:\n{dream_context}\n\n"
+        f"INSTRUCTION: {queue_instructions}"
+    )
 
     try:
         console.print(
-            "[dim magenta]🧠 DMN: Awakening 'The Daydreamer (DMN)' agent within secure pipeline...[/dim magenta]"
+            "[dim magenta]🧠 DMN: Awakening 'The Daydreamer' agent within secure pipeline...[/dim magenta]"
         )
-
-        # Fire execution. The orchestrator handles displaying layout mirrors natively to your terminal screen.
         asyncio.run(
             execute_pipeline(
                 input_payload,
@@ -135,15 +145,11 @@ def trigger_daydreams(topic: Optional[str] = None, domain: Optional[str] = None)
                 origin="AUTONOMIC",
             )
         )
-
-        # Settle file system hooks
         time.sleep(0.5)
-
     except Exception as e:
         console.print(f"[bold red]❌ DMN Execution Failure: {str(e)}[/bold red]")
         return f"Failure: {str(e)}"
 
-    # ⚡ UNCONDITIONAL LEDGER LINK: Projects your clickable path reference safely at the conclusion of the track
     absolute_clickable_link = f"file:///{str(daydream_file).replace('\\', '/')}"
     return (
         f"Centralized Default Mode Network sequence complete.\n"

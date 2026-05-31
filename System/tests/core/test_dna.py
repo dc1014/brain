@@ -93,3 +93,38 @@ def test_apply_cognitive_pruning_ignores_enabled_tools(tmp_path, mocker):
     pruned_config = _apply_cognitive_pruning(dummy_config)
     assert "vision" in pruned_config["tools"]
     assert len(pruned_config["tools"]["vision"]) == 1
+
+
+def test_apply_cognitive_pruning_agent_specific_tools(tmp_path, mocker):
+    """Proves that disabling autonomous_daydreaming strips investigation tools exclusively from the DMN agent."""
+    mocker.patch("System.core.dna.ROOT_DIR", tmp_path)
+    config_dir = tmp_path / "System" / "config"
+    config_dir.mkdir(parents=True)
+
+    features_data = {"autonomous_daydreaming": {"enabled": False}}
+    (config_dir / "features.json").write_text(
+        json.dumps(features_data), encoding="utf-8"
+    )
+
+    dummy_config = {
+        "agents": {
+            "executive_assistant": {
+                "tools": ["read_safe_file", "web_search", "append_safe_file"]
+            },
+            "subconscious_daydreamer": {
+                "tools": ["read_safe_file", "web_search", "append_safe_file"]
+            },
+        },
+        "tools": {},
+    }
+
+    pruned = _apply_cognitive_pruning(dummy_config)
+
+    # Assistant should keep all tools
+    assert "read_safe_file" in pruned["agents"]["executive_assistant"]["tools"]
+    assert "web_search" in pruned["agents"]["executive_assistant"]["tools"]
+
+    # Daydreamer should have investigation tools stripped, but keep standard tools
+    assert "read_safe_file" not in pruned["agents"]["subconscious_daydreamer"]["tools"]
+    assert "web_search" not in pruned["agents"]["subconscious_daydreamer"]["tools"]
+    assert "append_safe_file" in pruned["agents"]["subconscious_daydreamer"]["tools"]

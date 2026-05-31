@@ -155,13 +155,13 @@ def rebuild_index() -> None:
                 if any(ignored in filepath.parts for ignored in ignore_dirs):
                     continue
                 try:
-                    rel_path = str(filepath.relative_to(ROOT_DIR).as_posix())
+                    rel_path = filepath.relative_to(ROOT_DIR).as_posix()
                     active_filepaths.add(rel_path)
 
                     content = filepath.read_text(encoding="utf-8")
                     new_hash = _compute_hash(content)
 
-                    # 🛡️ Check CAS Gatekeeper
+                    # Check CAS Gatekeeper
                     cursor.execute(
                         "SELECT content_hash FROM file_hashes WHERE filepath = ?",
                         (rel_path,),
@@ -267,16 +267,14 @@ def recall_memory(query: str, limit: int = 5) -> str:
             snip_row = cursor.fetchone()
             snippet_text = snip_row[0] if snip_row else "..."
 
-            # Defensive unpacking safeguards against NoneType float format errors when files have zero graph connectivity links
+            # Defensive unpacking safeguards against NoneType format errors when files have zero graph connectivity links
             boost_val = node.get("boosted_score")
-            final_score = (
-                float(boost_val) if boost_val is not None else float(node["score"])
-            )
+
+            final_score = boost_val if boost_val is not None else node["score"]
 
             formatted_results.append(
                 f"--- {path_str} (Graph Re-Rank Score: {final_score:.2f}) ---\n...{snippet_text}...\n"
             )
-
         conn.close()
         return "\n".join(formatted_results)
 
@@ -426,70 +424,74 @@ async def _compact_heavy_memory(filepath: str, content: str) -> bool:
         return False
 
 
-async def _extract_and_update_beliefs() -> None:
-    """Scans recent interactions to extract and merge long-term semantic beliefs and user preferences."""
-    log_file = ROOT_DIR / "logs" / "agent_interactions.jsonl"
-    if not log_file.exists():
-        return
+def _extract_and_update_beliefs(recent_logs: str = "") -> None:
+    """
+    Acts as the Project Manager: Tracks progress, completes subgoals, and generates next steps.
+    Treats Meta/Core_Beliefs.md as a collaborative multiplayer document.
+    """
+    from System.neuroanatomy.cortical.executive_loop import execute_pipeline
+    import asyncio
+    from System.core.paths import ROOT_DIR
 
-    try:
-        lines = log_file.read_text(encoding="utf-8").splitlines()[-50:]
-        payload = ""
-        for line in lines:
-            data = json.loads(line)
-            payload += f"User: {data.get('user_prompt', '')[:300]}\nAction: {data.get('response', '')[:300]}\n\n"
-    except Exception:
-        return
-
-    from System.core.dna import get_dna_config
-
-    model = (
-        "gemini/gemini-2.5-flash"
-        if vault.get_api_key_for_model("gemini/")
-        else get_dna_config().get("models", {}).get("fast", "openai/gpt-4o-mini")
-    )
-    api_key = vault.get_api_key_for_model(model)
-
-    if not api_key or not payload.strip():
-        return
-
-    console.print(
-        "[dim blue]🧠 Hippocampus: Scanning recent interactions for new Core Beliefs...[/dim blue]"
-    )
-
+    beliefs_file = ROOT_DIR / "Meta" / "Core_Beliefs.md"
     current_beliefs = ""
-    if BELIEFS_FILE_PATH.exists():
-        current_beliefs = BELIEFS_FILE_PATH.read_text(encoding="utf-8")
+    if beliefs_file.exists():
+        current_beliefs = beliefs_file.read_text(encoding="utf-8")
 
-    prompt = (
-        "You are the Belief Consolidator for CoreTex OS.\n"
-        "Analyze the following recent interactions and extract any PERSISTENT user preferences, "
-        "architectural rules, or long-term facts (e.g., 'The user prefers TypeScript', 'The project uses FastAPI').\n"
-        "Merge any new findings with the CURRENT BELIEFS. Discard redundant information.\n"
-        "Do NOT extract transient tasks (e.g., 'Fixed a bug in auth').\n"
-        "Return ONLY the updated complete list of beliefs as a Markdown bulleted list. If no beliefs exist, return an empty string.\n\n"
-        f"--- CURRENT BELIEFS ---\n{current_beliefs}\n\n"
-        f"--- RECENT INTERACTIONS ---\n{payload}"
+    if not recent_logs:
+        # Dynamically grab the latest context if none was explicitly passed
+        log_path = ROOT_DIR / "System" / "logs" / "experiment_log.md"
+        if log_path.exists():
+            try:
+                recent_logs = log_path.read_text(encoding="utf-8")[-3000:]
+            except Exception:
+                recent_logs = "No recent logs available."
+        else:
+            recent_logs = "No recent logs available."
+
+    pm_prompt = (
+        f"You are the Hippocampus, acting as a strict Project Manager.\n"
+        f"CURRENT STATE (`Core_Beliefs.md`):\n{current_beliefs}\n\n"
+        f"RECENT LOGS (Today's Actions):\n{recent_logs}\n\n"
+        f"INSTRUCTIONS:\n"
+        f"1. Review the recent logs. Did the user make progress toward their Primary Goal or Active Subgoals?\n"
+        f"2. If an Active Subgoal was completed, mark it with `[x]`.\n"
+        f"3. Synthesize the NEXT 1-2 logical subgoals needed to advance the Primary Goal, marking them with `[ ]`.\n"
+        f"4. If the Active Subgoals list is empty or contains placeholder text, perform a 'Zero-to-One' decomposition: break the Primary Goal into the first 3 actionable subgoals.\n"
+        f"5. Retain any other core preferences, formatting, or identity facts present in the file.\n"
+        f"OUTPUT EXACTLY the new raw markdown for `Core_Beliefs.md` and nothing else. Do not use code block markers (```markdown)."
     )
 
     try:
-        response = await acompletion(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-            api_key=api_key,
+        # Route to standard workspace evaluation
+        result = asyncio.run(
+            execute_pipeline(pm_prompt, "WORKSPACE", "META", origin="AUTONOMIC")
         )
-        new_beliefs = str(response.choices[0].message.content).strip()
-
-        if new_beliefs and new_beliefs.startswith("-"):
-            BELIEFS_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
-            with open(BELIEFS_FILE_PATH, "w", encoding="utf-8") as f:
-                f.write(new_beliefs)
-            console.print(
-                "[bold green]🧠 Hippocampus: Core Beliefs successfully updated.[/bold green]"
+        if result and "Primary Goal" in result:
+            # Clean LLM formatting artifacts
+            cleaned_markdown = (
+                result.replace("```markdown", "").replace("```", "").strip()
             )
+            beliefs_file.parent.mkdir(parents=True, exist_ok=True)
+            beliefs_file.write_text(cleaned_markdown, encoding="utf-8")
     except Exception as e:
-        console.print(f"[dim red]⚠️ Hippocampus Error extracting beliefs: {e}[/dim red]")
+        console.print(
+            f"[dim red]Hippocampus belief update failed silently: {e}[/dim red]"
+        )
+
+
+def consolidate_short_term_memory() -> None:
+    """Synchronous wrapper for the sleep cycle."""
+
+    async def _run_all():
+        # Only await the actual async coroutine
+        await _encode_short_term_memory()
+
+    try:
+        asyncio.run(_run_all())
+        _extract_and_update_beliefs()
+    except Exception as e:
+        console.print(f"[dim red]Hippocampus async error: {e}[/dim red]")
 
 
 def get_core_beliefs() -> str:
@@ -594,18 +596,6 @@ async def _encode_short_term_memory() -> None:
             console.print(
                 f"[bold red]⚠️ Hippocampus Error encoding {domain} memory: {e}[/bold red]"
             )
-
-
-def consolidate_short_term_memory() -> None:
-    """Synchronous wrapper for the sleep cycle."""
-
-    async def _run_all():
-        await asyncio.gather(_encode_short_term_memory(), _extract_and_update_beliefs())
-
-    try:
-        asyncio.run(_run_all())
-    except Exception as e:
-        console.print(f"[dim red]Hippocampus async error: {e}[/dim red]")
 
 
 def run_semantic_compaction_sweep() -> None:

@@ -117,6 +117,11 @@ def innervate_senses() -> dict:
             "name": "Occipital Vision",
         },
         "audio": {"enabled": False, "selected": False, "name": "Cochlear Audio"},
+        "autonomous_daydreaming": {
+            "enabled": True,
+            "selected": True,
+            "name": "Active Daydreaming",
+        },
     }
     if IS_DOCKER_RUNTIME or is_headless_setup():
         return features
@@ -131,8 +136,24 @@ def innervate_senses() -> dict:
     ):
         features["audio"]["selected"] = True
 
+    console.print(
+        "\n[dim]The Default Mode Network (DMN) reflects on your work while you sleep to synthesize ideas.[/dim]"
+    )
+    if Confirm.ask(
+        "[?] Enable Active Daydreaming? (Allows the OS to use API tokens while you sleep to actively read files, search the web, and queue proactive tasks toward your goal)",
+        default=True,
+    ):
+        features["autonomous_daydreaming"]["selected"] = True
+        features["autonomous_daydreaming"]["enabled"] = True
+    else:
+        features["autonomous_daydreaming"]["selected"] = False
+        features["autonomous_daydreaming"]["enabled"] = False
+
     for sense, data in features.items():
-        if data["selected"]:
+        if data["selected"] and sense in [
+            "vision",
+            "audio",
+        ]:  # Only run installers for heavy physical sensors
             with Progress(
                 SpinnerColumn(),
                 TextColumn(f"[cyan]Installing {sense.capitalize()} pathways...[/cyan]"),
@@ -272,7 +293,6 @@ def bind_workspace() -> str:
         if not final_path:
             final_path = default_path
 
-    # ⚡ FIX: Route through normalize_path to natively handle symlinks and ~/ user expansions
     workspace_path = normalize_path(final_path)
     workspace_path.mkdir(parents=True, exist_ok=True)
 
@@ -287,7 +307,6 @@ def bind_workspace() -> str:
     for domain, filename in domain_seeds.items():
         domain_dir = workspace_path / domain
         domain_dir.mkdir(parents=True, exist_ok=True)
-
         if filename:
             memory_file = domain_dir / filename
             if not memory_file.exists():
@@ -298,6 +317,34 @@ def bind_workspace() -> str:
                     memory_file.write_text(header, encoding="utf-8")
                 except OSError:
                     pass
+
+    console.print("\n")
+    console.print(
+        Panel(
+            "To be a true shadow partner, CoreTex needs to know what you are trying to achieve.",
+            title="[ THE PRIMARY GOAL ]",
+            border_style="magenta",
+        )
+    )
+
+    if is_headless_setup():
+        primary_goal = "Continuously optimize and maintain the CoreTex OS architecture."
+    else:
+        primary_goal = Prompt.ask(
+            "[cyan]What is your Primary Goal for this workspace?[/cyan]\n[dim](e.g., 'Write a sci-fi novel', 'Build a SaaS app', 'Scale my roofing business')[/dim]"
+        )
+        if not primary_goal:
+            primary_goal = "Optimize and maintain the workspace architecture."
+
+    core_beliefs_path = workspace_path / "Meta" / "Core_Beliefs.md"
+
+    beliefs_content = (
+        f"# Primary Goal\n{primary_goal}\n\n"
+        f"## Active Subgoals\n*(Let the OS generate these tonight, or write your own here)*\n"
+    )
+
+    if not core_beliefs_path.exists():
+        core_beliefs_path.write_text(beliefs_content, encoding="utf-8")
 
     obsidian_panel = f"""Your vault is ready at: [bold green]{workspace_path}[/bold green]
 

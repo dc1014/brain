@@ -44,19 +44,10 @@ def _apply_cognitive_pruning(config: dict[str, Any]) -> dict[str, Any]:
 
     tools = config.get("tools", {})
 
-    # Extensible Registry: Map feature flags to tool groups or specific isolated tools
+    # 1. Hardware Sensory Pruning (Global Scope)
     feature_tool_map = {
-        "vision": {
-            "groups": ["vision"],  # Drops the entire 'vision' group from tools.yaml
-            "tool_names": [],
-        },
-        "audio": {
-            "groups": [],
-            "tool_names": [
-                "speak",
-                "analyze_audio",
-            ],  # Drops specific tools across any group
-        },
+        "vision": {"groups": ["vision"], "tool_names": []},
+        "audio": {"groups": [], "tool_names": ["speak", "analyze_audio"]},
     }
 
     for feature_key, dependencies in feature_tool_map.items():
@@ -64,12 +55,10 @@ def _apply_cognitive_pruning(config: dict[str, Any]) -> dict[str, Any]:
         is_enabled = feature_state.get("enabled", False)
 
         if not is_enabled:
-            # 1. Prune entire tool groups (e.g., dropping all 'vision' tools)
             for group in dependencies.get("groups", []):
                 if group in tools:
                     del tools[group]
 
-            # 2. Prune specific isolated tools (e.g., dropping 'speak' from the 'base' group)
             target_tools = set(dependencies.get("tool_names", []))
             if target_tools:
                 for group_name, tool_list in tools.items():
@@ -81,6 +70,23 @@ def _apply_cognitive_pruning(config: dict[str, Any]) -> dict[str, Any]:
                         ]
 
     config["tools"] = tools
+
+    # 2. Behavioral Pruning (Agent-Specific: Autonomous Daydreaming)
+    if not features.get("autonomous_daydreaming", {}).get("enabled", False):
+        target_tools = {
+            "read_safe_file",
+            "search_vault",
+            "web_search",
+            "scrape_webpage",
+        }
+        for agent_name, agent_data in config.get("agents", {}).items():
+            # Apply pruning exclusively to Daydreamer personas
+            if "daydream" in agent_name.lower() or "dmn" in agent_name.lower():
+                if "tools" in agent_data:
+                    agent_data["tools"] = [
+                        t for t in agent_data["tools"] if t not in target_tools
+                    ]
+
     return config
 
 

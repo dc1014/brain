@@ -1,5 +1,5 @@
-# --- System/tests/autonomic/test_quality.py ---
 import json
+import pytest
 import threading
 from pathlib import Path
 from System.neuroanatomy.cortical.wernicke import (
@@ -122,3 +122,60 @@ def test_write_ahead_log_thread_safety_stress(tmp_path: Path) -> None:
     assert len(lines) == (thread_count * tasks_per_thread) + (
         thread_count * (tasks_per_thread // 2)
     )
+
+
+@pytest.mark.eval
+@pytest.mark.asyncio
+async def test_eval_hippocampus_subgoal_decomposition(tmp_path, mocker):
+    """Tier 2 Eval: Proves the Hippocampus LLM can decompose a Primary Goal into Markdown subgoals."""
+    from System.neuroanatomy.limbic.hippocampus import _extract_and_update_beliefs
+
+    mocker.patch("System.neuroanatomy.limbic.hippocampus.ROOT_DIR", tmp_path)
+    beliefs_file = tmp_path / "Meta" / "Core_Beliefs.md"
+    beliefs_file.parent.mkdir(parents=True)
+
+    # 1. Simulate Day 1 Cold Boot
+    beliefs_file.write_text(
+        "# Primary Goal\nWrite a hard sci-fi novel about AI.\n\n## Active Subgoals\n*(Let the OS generate these tonight, or write your own here)*",
+        encoding="utf-8",
+    )
+
+    # 2. Trigger the Hippocampus with a generic log
+    dummy_logs = "User opened vault. User created a folder named 'Characters'."
+
+    # 3. This executes against the live LLM defined in your config
+    _extract_and_update_beliefs(dummy_logs)
+
+    # 4. Assert the LLM removed the placeholder and generated actionable checkboxes
+    new_beliefs = beliefs_file.read_text(encoding="utf-8")
+    assert "- [ ]" in new_beliefs
+    assert "*(Let the OS generate" not in new_beliefs
+    assert "sci-fi" in new_beliefs.lower()
+
+
+@pytest.mark.eval
+@pytest.mark.asyncio
+async def test_eval_dmn_domain_awareness(tmp_path, mocker):
+    """Tier 2 Eval: Proves the DMN formats Pending Tasks correctly based on Domain Context."""
+    from System.neuroanatomy.autonomic.dmn import trigger_daydreams
+
+    mocker.patch("System.neuroanatomy.autonomic.dmn.ROOT_DIR", tmp_path)
+
+    beliefs_file = tmp_path / "Meta" / "Core_Beliefs.md"
+    beliefs_file.parent.mkdir(parents=True)
+    beliefs_file.write_text(
+        "# Primary Goal\nScale my roofing business.\n## Active Subgoals\n- [ ] Research local SEO strategies.",
+        encoding="utf-8",
+    )
+
+    # Run the DMN in Professional mode
+    trigger_daydreams(domain="PROFESSIONAL")
+
+    # Assert the LLM followed Phase 3 instructions and queued a formatted task
+    pending_file = tmp_path / "Meta" / "Pending_Actions.md"
+    assert pending_file.exists(), "DMN failed to queue a proactive task."
+
+    pending_content = pending_file.read_text(encoding="utf-8")
+    assert "### ⏳ Pending Task" in pending_content
+    assert "**Thalamus Route:** `WORKSPACE`" in pending_content
+    assert "**Domain:** `PROFESSIONAL`" in pending_content
