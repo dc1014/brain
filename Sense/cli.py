@@ -184,5 +184,17 @@ def taste(
     console.print_json(json.dumps(data))
 
 
+@app.command()
+def dermis(
+    port: int = typer.Option(8080, help="Port to bind the Dermis server to."),
+) -> None:
+    """The Skin: Starts the Dermis Webhook Ingress server to receive external stimuli."""
+    from Sense.receptors.dermis import DermisAbstraction
+
+    console.print(f"[bold cyan]🧬 Activating Dermis on port {port}...[/bold cyan]")
+    server = DermisAbstraction(port=port)
+    server.start()
+
+
 if __name__ == "__main__":
     app()

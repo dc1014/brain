@@ -3,8 +3,19 @@ webhooks:
     route_name: "github"
     secret_env_var: "GITHUB_WEBHOOK_SECRET"
     signature_header: "X-Hub-Signature-256"
+    target_action: "exteroceptive"
     payload_mapping:
       repo: "repository.name"
       pusher: "pusher.name"
+      commit_msg: "head_commit.message"
+    template: "Environment Shift: Repository '{repo}' received a push from {pusher}. Commit: {commit_msg}"
+
+  stripe:
+    route_name: "stripe"
+    secret_env_var: "STRIPE_WEBHOOK_SECRET"
+    signature_header: "Stripe-Signature"
     target_action: "exteroceptive"
-    template: "Environment Shift: Repository {repo} received a push from {pusher}."
+    payload_mapping:
+      event_type: "type"
+      customer: "data.object.customer"
+    template: "Financial Event: Stripe reported '{event_type}' for customer {customer}."

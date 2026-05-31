@@ -5,6 +5,10 @@ import ast
 import json
 import time
 import os
+import threading
+import re
+import shutil
+
 from pathlib import Path
 from typing import Dict, Optional
 from rich.console import Console
@@ -144,25 +148,72 @@ def sleep():
 
 
 def expose_dermis(port: int = 8080) -> str:
-    """Somatic Reflex: Opens a temporary secure tunnel to the Dermis using native SSH."""
-    from rich.console import Console
+    """Somatic Reflex: Opens a robust reverse tunnel (Cloudflare) to expose the Dermis webhook receiver."""
 
     console = Console()
+    state_file = ROOT_DIR / "System" / ".dermis_url"
 
     console.print(
-        f"[bold cyan]Opening secure reverse tunnel to Dermis on port {port}...[/bold cyan]"
+        f"[bold cyan]Opening robust reverse tunnel to Dermis on port {port}...[/bold cyan]"
     )
+
+    tunnel_cmd = []
+    use_cloudflared = shutil.which("cloudflared") is not None
+
+    if use_cloudflared:
+        console.print("[dim]Using Cloudflare Quick Tunnels for high stability...[/dim]")
+        tunnel_cmd = ["cloudflared", "tunnel", "--url", f"http://localhost:{port}"]
+    else:
+        console.print(
+            "[dim yellow]cloudflared not found. Falling back to localhost.run...[/dim yellow]"
+        )
+        tunnel_cmd = ["ssh", "-R", f"80:localhost:{port}", "nokey@localhost.run"]
+
     console.print(
         "[dim yellow]Press Ctrl+C to close the tunnel and retract the skin.[/dim yellow]"
     )
 
+    process = None
     try:
-        subprocess.run(["ssh", "-R", f"80:localhost:{port}", "nokey@localhost.run"])
-        return "Tunnel closed successfully."
+        process = subprocess.Popen(
+            tunnel_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+
+        def monitor_output():
+            url_pattern = re.compile(
+                r"(https://[a-zA-Z0-9-]+\.(trycloudflare\.com|lhr\.life|loca\.lt))"
+            )
+            for line in iter(process.stdout.readline, ""):  # type: ignore
+                if not line:
+                    break
+                console.print(f"[dim]{line.strip()}[/dim]")
+                match = url_pattern.search(line)
+                if match:
+                    public_url = match.group(1)
+                    console.print(
+                        f"\n[bold green]🌐 DERMIS EXPOSED AT: {public_url}[/bold green]\n"
+                    )
+                    state_file.write_text(public_url, encoding="utf-8")
+
+        monitor_thread = threading.Thread(target=monitor_output, daemon=True)
+        monitor_thread.start()
+
+        process.wait()
+        return "Tunnel closed normally."
+
     except KeyboardInterrupt:
+        console.print("\n[dim yellow]Retracting Dermis...[/dim yellow]")
+        if process:
+            process.terminate()
         return "Tunnel manually closed by user."
     except Exception as e:
         return f"Tunnel failure: {str(e)}"
+    finally:
+        state_file.unlink(missing_ok=True)
 
 
 def reflex(

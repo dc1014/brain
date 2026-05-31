@@ -79,3 +79,46 @@ def test_reflex_routes_to_sandbox_safely(mocker, tmp_path: Path) -> None:
     mock_print.assert_any_call(
         "[bold green]Reflex completed safely inside the sandbox.[/bold green]"
     )
+
+
+def test_expose_dermis_captures_cloudflare_url(mocker, tmp_path: Path) -> None:
+    """Proves the Dermis tunnel manager correctly parses and saves the public URL."""
+    from System.cli_somatic import expose_dermis
+    import time
+
+    mocker.patch("System.cli_somatic.ROOT_DIR", tmp_path)
+
+    # Mock shutil.which to pretend cloudflared is installed
+    mocker.patch(
+        "System.cli_somatic.shutil.which", return_value="/usr/local/bin/cloudflared"
+    )
+
+    # We need to spy on Path.write_text to prove the URL was saved before cleanup
+    mock_write = mocker.patch("System.cli_somatic.Path.write_text")
+
+    # Create a mock Popen object that simulates Cloudflare's terminal output
+    mock_process = mocker.MagicMock()
+    mock_process.stdout.readline.side_effect = [
+        "INF Starting tunnel...\n",
+        "INF  https://purple-monkey-dishwasher.trycloudflare.com \n",
+        "",  # EOF
+    ]
+
+    def wait_side_effect():
+        time.sleep(0.1)
+        raise KeyboardInterrupt()
+
+    mock_process.wait.side_effect = wait_side_effect
+    mocker.patch("System.cli_somatic.subprocess.Popen", return_value=mock_process)
+
+    result = expose_dermis(8080)
+
+    assert result == "Tunnel manually closed by user."
+
+    # Allow the daemon thread to finish processing the lines
+    time.sleep(0.2)
+
+    # Prove the URL was correctly extracted and saved
+    mock_write.assert_called_once_with(
+        "https://purple-monkey-dishwasher.trycloudflare.com", encoding="utf-8"
+    )
