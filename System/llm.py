@@ -30,7 +30,29 @@ LOG_FILE: Path = LOG_DIR / "agent_interactions.jsonl"
 def clean_json_output(text: str) -> str:
     if not text:
         return "{}"
-    return text.strip("`").removeprefix("json").strip()
+
+    # Strip common markdown blocks
+    text = text.strip("`").removeprefix("json").strip()
+
+    # Find the first occurrence of '{' or '['
+    start_brace = text.find("{")
+    start_bracket = text.find("[")
+
+    start_idx = -1
+    if start_brace != -1 and start_bracket != -1:
+        start_idx = min(start_brace, start_bracket)
+    elif start_brace != -1:
+        start_idx = start_brace
+    elif start_bracket != -1:
+        start_idx = start_bracket
+
+    # Find the corresponding end bracket and slice the string
+    if start_idx != -1:
+        end_idx = text.rfind("}") if text[start_idx] == "{" else text.rfind("]")
+        if end_idx != -1 and end_idx > start_idx:
+            return text[start_idx : end_idx + 1]
+
+    return text
 
 
 @dataclass
