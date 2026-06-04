@@ -1,0 +1,91 @@
+{
+  "properties": {
+    "name": {
+      "description": "The display name of the agent.",
+      "title": "Name",
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "A brief description of the agent's purpose.",
+      "title": "Description"
+    },
+    "model": {
+      "description": "The primary LiteLLM model string (e.g., 'openai/gpt-4o-mini').",
+      "title": "Model",
+      "type": "string"
+    },
+    "fallbacks": {
+      "description": "Ordered list of fallback models if the primary fails.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Fallbacks",
+      "type": "array"
+    },
+    "temperature": {
+      "default": 0.2,
+      "description": "Creativity vs deterministic execution.",
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "title": "Temperature",
+      "type": "number"
+    },
+    "max_tokens": {
+      "default": 4000,
+      "description": "Maximum completion tokens allowed.",
+      "minimum": 1,
+      "title": "Max Tokens",
+      "type": "integer"
+    },
+    "creates_milestone": {
+      "default": true,
+      "description": "Whether this agent creates an episodic memory milestone upon completion.",
+      "title": "Creates Milestone",
+      "type": "boolean"
+    },
+    "tools": {
+      "description": "List of tools or tool groups this agent can use.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Tools",
+      "type": "array"
+    },
+    "env_requirements": {
+      "description": "Environment variables required for this agent to boot.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Env Requirements",
+      "type": "array"
+    },
+    "output_schema": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Strict JSON schema requirement (e.g., 'AgentResponseSchema').",
+      "title": "Output Schema"
+    }
+  },
+  "required": [
+    "name",
+    "model"
+  ],
+  "title": "AgentManifest",
+  "type": "object"
+}

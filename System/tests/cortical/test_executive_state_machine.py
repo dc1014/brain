@@ -40,14 +40,21 @@ async def test_executive_state_machine_qa_fallback(
                     "engineer": {
                         "name": "Engineer",
                         "model": "test",
-                        "system_prompt": "",
+                        "tools": [],
+                        "creates_milestone": False,
                     },
                     "product_manager": {
                         "name": "PM",
                         "model": "test",
-                        "system_prompt": "",
+                        "tools": [],
+                        "creates_milestone": False,
                     },
-                    "qa_auditor": {"name": "QA", "model": "test", "system_prompt": ""},
+                    "qa_auditor": {
+                        "name": "QA Auditor",
+                        "model": "test",
+                        "tools": [],
+                        "creates_milestone": False,
+                    },
                 },
             },
         ),
@@ -69,13 +76,11 @@ async def test_executive_state_machine_qa_fallback(
 @patch("System.neuroanatomy.cortical.executive_loop.persist_pipeline_state")
 @patch("System.neuroanatomy.cortical.executive_loop.validate_metabolic_clearance")
 @patch("System.neuroanatomy.cortical.executive_loop.get_current_metabolism")
-@patch(
-    "System.neuroanatomy.cortical.executive_loop.commit_transaction"
-)  # ⚡ FIX: Mock commit
-@patch(
-    "System.neuroanatomy.cortical.executive_loop.restore_balance"
-)  # ⚡ FIX: Mock restore
+@patch("System.neuroanatomy.cortical.executive_loop.commit_transaction")
+@patch("System.neuroanatomy.cortical.executive_loop.restore_balance")
+@patch("System.neuroanatomy.cortical.executive_loop.clear_pipeline_state")
 async def test_executive_state_machine_vagus_abort(
+    mock_clear_pipeline,  # ⚡ THE FIX: Must be the first argument!
     mock_restore,
     mock_commit,
     mock_metabolism,
@@ -128,13 +133,13 @@ async def test_executive_state_machine_vagus_abort(
                     "engineer": {
                         "name": "Engineer",
                         "model": "test",
-                        "system_prompt": "",
+                        "tools": [],
                         "creates_milestone": False,
                     },
                     "qa_auditor": {
-                        "name": "QA",
+                        "name": "QA Auditor",
                         "model": "test",
-                        "system_prompt": "",
+                        "tools": [],
                         "creates_milestone": False,
                     },
                 },
@@ -160,7 +165,6 @@ async def test_executive_loop_embedded_system_halt(mocker, tmp_path):
         tmp_path / "execution_queue.json",
     )
 
-    # Mock the LLM to return a buried halt string
     mock_response = MagicMock()
     mock_response.text = "I tried to run this command, but I got a security error.\n\n[SYSTEM HALT] SECURITY BLOCK: Unauthorized directory access."
     mock_response.actions = ["[HALTED] Security clearance denied."]
@@ -175,14 +179,31 @@ async def test_executive_loop_embedded_system_halt(mocker, tmp_path):
         return_value={"exhausted": False, "tokens_burned": 0},
     )
     mocker.patch("System.neuroanatomy.cortical.executive_loop.commit_transaction")
-
-    # Bind the patch to a local variable to easily assert it later
     mock_restore = mocker.patch(
         "System.neuroanatomy.cortical.executive_loop.restore_balance"
     )
 
-    # Run a dummy pipeline
     dummy_pipeline = [{"agent": "product_manager", "tools": []}]
+
+    # ⚡ THE FIX: Provide the fully compliant mocked DNA dictionary!
+    mocker.patch(
+        "System.neuroanatomy.cortical.executive_loop.get_dna_config",
+        return_value={
+            "routes": {"CODE_GENERATION": dummy_pipeline},
+            "agents": {
+                "product_manager": {
+                    "name": "Product Manager",
+                    "model": "test_model",
+                    "system_prompt": "",
+                    "tools": [],
+                    "creates_milestone": False,
+                }
+            },
+            "tools": {},
+        },
+    )
+
+    from System.neuroanatomy.cortical.executive_loop import execute_pipeline
 
     await execute_pipeline(
         description="Test Abort",
@@ -191,7 +212,6 @@ async def test_executive_loop_embedded_system_halt(mocker, tmp_path):
         resume_pipeline=dummy_pipeline,
     )
 
-    # Verify the rollback function was triggered because of the abort
     mock_restore.assert_called_once()
     clear_pipeline_state()
 

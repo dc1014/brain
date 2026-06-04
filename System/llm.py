@@ -29,7 +29,8 @@ LOG_FILE: Path = LOG_DIR / "agent_interactions.jsonl"
 
 def clean_json_output(text: str) -> str:
     if not text:
-        return "{}"
+        # ⚡ CRITICAL FIX: Do not hallucinate empty JSON objects when native tool calls leave the text blank!
+        return ""
 
     # Strip common markdown blocks
     text = text.strip("`").removeprefix("json").strip()
@@ -266,9 +267,11 @@ async def run_agent_async(
             message_dict: dict[str, Any] = {"role": "assistant"}
             clean_json = clean_json_output(message.content or "")
 
+            is_synthetic_schema = False
             if clean_json and clean_json.startswith(("{", "[")):
                 try:
                     parsed_schema = AgentResponseSchema.model_validate_json(clean_json)
+                    is_synthetic_schema = True
 
                     human_readable_log = MarkdownTranslator.render_agent_log(
                         parsed_schema
@@ -308,12 +311,17 @@ async def run_agent_async(
                     else:
                         break
 
-                except Exception as e:
-                    console.print(f"[dim red]JSON Schema Parse Error: {e}[/dim red]")
-            else:
+                except Exception:
+                    # ⚡ CRITICAL FIX: If Pydantic throws an error, do NOT crash!
+                    # We flag it as false and fall through to check for native tools!
+                    is_synthetic_schema = False
+
+            # Fall-through logic for empty "{}" responses or native tool calls
+            if not is_synthetic_schema:
                 if message.content:
                     message_dict["content"] = message.content
-                    final_text += str(message.content) + "\n"
+                    if message.content.strip() != "{}":
+                        final_text += str(message.content) + "\n"
 
                 if hasattr(message, "tool_calls") and message.tool_calls:
                     processed_tools = [
@@ -382,7 +390,6 @@ async def run_agent_async(
         raw_error = str(e).lower()
         hint = ""
 
-        # Catch common API key / Authentication issues
         if (
             "authentication" in raw_error
             or "api key" in raw_error
@@ -391,14 +398,10 @@ async def run_agent_async(
         ):
             hint = (
                 "\n\n💡 **[Configuration Hint]**: Your LLM API key was rejected or missing. "
-                "Check your `.env` file. If you are not using OpenRouter (the default), ensure you have provided the correct standard keys (e.g., OPENAI_API_KEY, ANTHROPIC_API_KEY) and that they are active."
+                "Check your `.env` file."
             )
-        # Catch downtime / routing failures
         elif "connection" in raw_error or "timeout" in raw_error or "502" in raw_error:
-            hint = (
-                "\n\n💡 **[Network Hint]**: The upstream LLM provider might be down or unreachable. "
-                "If you enabled `USE_LOCAL_SLM=true`, ensure your local Ollama engine is actually running."
-            )
+            hint = "\n\n💡 **[Network Hint]**: The upstream LLM provider might be down or unreachable. "
 
         safe_error_msg = vault.mask_secrets(f"API/Execution Error: {str(e)}{hint}")
 

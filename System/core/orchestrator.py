@@ -16,7 +16,8 @@ async def dispatch_task(
     obsidian: bool = False,
     predefined_route: str = "WORKSPACE",
     predefined_domain: str = "GENERAL",
-    goal_thread: str | None = None,  # ⚡ NEW: Accepts the Goal UID
+    goal_thread: str | None = None,
+    origin: str = "HUMAN",  # ⚡ FIX: Accept origin from the Spine/Thalamus
 ) -> None:
     """
     The Central Routing Hub.
@@ -29,14 +30,22 @@ async def dispatch_task(
     ):
         is_valid, reason, route_type, domain, _ = await route_sensory_input(description)
 
+    # ... inside dispatch_task ...
     if not is_valid:
         console.print(
             Panel(f"[bold red]Pulse Rejected:[/bold red] {reason}", border_style="red")
         )
         raise ValueError(f"Pulse rejected by pre-flight validation: {reason}")
 
-    final_route = route_type if route_type != "WORKSPACE" else predefined_route
-    final_domain = domain if domain != "NONE" else predefined_domain
+    final_route = (
+        route_type if route_type not in ["WORKSPACE", "UNKNOWN"] else predefined_route
+    )
+    final_domain = domain if domain not in ["NONE", "UNKNOWN"] else predefined_domain
+
+    if final_route == "UNKNOWN":
+        final_route = "FAST"
+    if final_domain == "UNKNOWN":
+        final_domain = "GENERAL"
 
     goal_display = (
         f" | [bold cyan]Goal Thread:[/bold cyan] {goal_thread}" if goal_thread else ""
@@ -47,9 +56,9 @@ async def dispatch_task(
         f"[dim]Goal: {description}\nRoute: {final_route} | Domain: {final_domain}{goal_display}[/dim]"
     )
 
-    # Pass the goal_thread into the pipeline execution
+    # ⚡ FIX: Pass the origin into the pipeline execution so it logs correctly!
     await execute_pipeline(
-        description, final_route, final_domain, goal_thread=goal_thread
+        description, final_route, final_domain, origin=origin, goal_thread=goal_thread
     )
 
 

@@ -1,6 +1,9 @@
 import json
+import os
+import yaml
+
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List
 
 
@@ -183,3 +186,84 @@ class MarkdownTranslator:
             md += f"\n**Response:**\n{response.final_response}\n"
 
         return md
+
+
+class AgentManifest(BaseModel):
+    name: str = Field(..., description="The display name of the agent.")
+    description: Optional[str] = Field(
+        None, description="A brief description of the agent's purpose."
+    )
+    model: str = Field(
+        ...,
+        description="The primary LiteLLM model string (e.g., 'openai/gpt-4o-mini').",
+    )
+    fallbacks: list[str] = Field(
+        default_factory=list,
+        description="Ordered list of fallback models if the primary fails.",
+    )
+    temperature: float = Field(
+        0.2, ge=0.0, le=2.0, description="Creativity vs deterministic execution."
+    )
+    max_tokens: int = Field(
+        4000, ge=1, description="Maximum completion tokens allowed."
+    )
+    creates_milestone: bool = Field(
+        True,
+        description="Whether this agent creates an episodic memory milestone upon completion.",
+    )
+    tools: list[str] = Field(
+        default_factory=list,
+        description="List of tools or tool groups this agent can use.",
+    )
+    env_requirements: list[str] = Field(
+        default_factory=list,
+        description="Environment variables required for this agent to boot.",
+    )
+    output_schema: Optional[str] = Field(
+        None,
+        description="Strict JSON schema requirement (e.g., 'AgentResponseSchema').",
+    )
+
+    @model_validator(mode="after")
+    def validate_environment(self) -> "AgentManifest":
+        missing = [req for req in self.env_requirements if not os.environ.get(req)]
+        if missing:
+            raise ValueError(
+                f"Agent '{self.name}' requires missing environment variables: {', '.join(missing)}"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_tools(self) -> "AgentManifest":
+        from System.core.paths import ROOT_DIR
+
+        tools_path = ROOT_DIR / "System" / "config" / "tools.yaml"
+        if tools_path.exists():
+            with open(tools_path, "r", encoding="utf-8") as f:
+                available = yaml.safe_load(f) or {}
+                valid_tools = set(available.keys())
+                for group, items in available.items():
+                    if isinstance(items, list):
+                        for item in items:
+                            if isinstance(item, str):
+                                valid_tools.add(item)
+                            elif isinstance(item, dict) and "name" in item:
+                                valid_tools.add(item["name"])
+
+                invalid = [t for t in self.tools if t not in valid_tools and t != "all"]
+                if invalid:
+                    raise ValueError(
+                        f"Agent '{self.name}' requested invalid tools/groups: {', '.join(invalid)}"
+                    )
+        return self
+
+
+def export_agent_schema(path: str) -> None:
+    """Exports the Pydantic schema to a JSON schema file for VS Code IntelliSense."""
+    import json
+    from pathlib import Path
+
+    schema_path = Path(path)
+    schema_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(schema_path, "w", encoding="utf-8") as f:
+        json.dump(AgentManifest.model_json_schema(), f, indent=2)

@@ -114,15 +114,44 @@ Once complete, restart your terminal and command the swarm:
 
 ---
 
-## ⚙️ Configuration & Model Tuning
+## 🧬 The Compiled Markdown Engine
 
-Declarative configs via YAML (these will be cleaned up). After setup, you can freely customize your agents, tools, and models without touching code:
+CoreTex OS does not use archaic, monolithic YAML files or hardcoded Python scripts to define its AI agents. It uses a **Zero-Debt Compiled Markdown Engine**, allowing you to manage your entire AI swarm directly from Obsidian.
 
-* **`System/config/system.yaml`**: Change default cloud models (e.g. swap `gpt-4o-mini` for `claude-3-5-sonnet-latest`), set maximum daily token limits, or tweak system behavioral conditions like `dopamine` (increases temperature) and `cortisol` (ignores token budgets).
-* **`System/config/agents.yaml`**: Definitions of system prompts, execution routes, agents (like `fast_responder` or `qa_auditor`), and tool calling lives here.
-* **`System/config/tools.yaml`**: The physical capability registry. Expose new bash commands, define webhooks, or add JSON schemas for entirely new sensory organs.
+Agents are defined as 1-to-1 Markdown files (`System/agents/*.md`), consisting of strict Pydantic-validated frontmatter and Jinja2-compiled prompts.
 
-*(Note: The `setup` script will automatically map your preferred default AI model to `system.yaml` during installation!)*
+```markdown
+---
+name: Subconscious Daydreamer
+model: openai/gpt-4o-mini
+fallbacks:
+  - openrouter/anthropic/claude-3-haiku
+temperature: 0.6
+max_tokens: 4000
+creates_milestone: false
+tools:
+  - read_safe_file
+  - search_vault
+---
+You are the Subconscious Daydreamer of CoreTex OS.
+
+Your execution domain is currently: {{ domain }}
+The system time is: {{ timestamp }}
+
+PHASE 1 (INVESTIGATION): Actively use your tools to gather context on the user's Active Subgoals.
+```
+
+### ⚡ Architectural Highlights
+* **Zero-I/O Hot Reloading:** The OS cryptographically hashes the `agents/` directory. If you hit `CTRL+S` in Obsidian or VS Code, the engine silently hot-reloads the agent into memory in microseconds without needing a system restart.
+* **Native Fallbacks:** If an LLM provider goes down (e.g., a 502 Bad Gateway), the engine natively intercepts the error, falls back to the next model in the agent's `fallbacks` array, and retries seamlessly without dropping the context window.
+* **Shift-Left Validation:** A strict Pydantic validation layer ensures that if you make a typo in an agent's frontmatter (like requesting a tool that doesn't exist), the OS will refuse to boot and throw a precise error pointing to the file.
+* **Jinja Sandboxing:** System prompts are natively compiled using a sandboxed `FileSystemLoader`, preventing arbitrary directory traversal prompt injections.
+
+## 🔀 Separation of Concerns
+CoreTex strictly separates biological hardware limits, execution pipelines, and agent identities:
+1. **`System/agents/*.md`**: Agent Personas, system prompts, and intrinsic baseline tools.
+2. **`System/config/routes.yaml`**: The Execution Switchboard. Dictates swarm order and contextually grants "dangerous" tools (like code execution) based on the principle of least privilege.
+3. **`System/config/system.yaml`**: The Biological limits. Controls token budgets, daily sleep cycles, and error-loop thresholds.
 
 ---
 

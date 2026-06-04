@@ -7,8 +7,7 @@ from rich.panel import Panel
 
 from System.core.paths import ROOT_DIR, normalize_path
 from System.core.dna import get_dna_config
-from System.neuroanatomy.systemic.endocrine import get_resolved_model
-from System.llm import run_agent_async, get_system_context, compress_memory_buffer
+from System.llm import run_agent_async, compress_memory_buffer
 from System.neuroanatomy.autonomic.interoception import (
     get_current_metabolism,
     log_metabolism,
@@ -25,6 +24,35 @@ from System.tools.diagnostic import render_pipeline_diagnostics
 console = Console()
 
 
+def _resolve_tools(requested_tools: list[str], available_tools: dict) -> list[dict]:
+    """
+    Deterministically resolves a mixed list of tool groups and individual tool names
+    into a flat, deduplicated list of LiteLLM JSON schemas.
+    """
+    resolved = []
+    for req in requested_tools:
+        if req in available_tools:
+            resolved.extend(available_tools[req])
+        else:
+            for group, items in available_tools.items():
+                if isinstance(items, list):
+                    for item in items:
+                        name = (
+                            item.get("function", {}).get("name")
+                            if isinstance(item, dict)
+                            else item
+                        )
+                        if name == req:
+                            resolved.append(item)
+
+    unique_tools = {}
+    for t in resolved:
+        name = t.get("function", {}).get("name") if isinstance(t, dict) else t
+        unique_tools[name] = t
+
+    return list(unique_tools.values())
+
+
 async def execute_swarm_cohort(
     swarm_steps: list[dict],
     current_payload: str,
@@ -34,6 +62,7 @@ async def execute_swarm_cohort(
     available_tools: dict,
     pfc_memory: WorkingMemory,
     origin: str = "HUMAN",
+    goal_thread: str | None = None,
 ) -> tuple[dict, list[str]]:
     swarm_metabolism = {}
     agents_invoked = []
@@ -43,24 +72,23 @@ async def execute_swarm_cohort(
 
     async def _task(sub_step):
         a_cfg = get_dna_config()["agents"][sub_step["agent"]]
-        model_str = get_resolved_model(a_cfg["model"], is_exhausted)
-        active_tools = [
-            t
-            for group in sub_step.get("tools", [])
-            for t in available_tools.get(group, [])
-        ]
-        full_sys_prompt = a_cfg["system_prompt"] + get_system_context(
-            sub_step.get("context", []), domain, prompt=current_payload
-        )
+        model_str = a_cfg.get("model", "openai/gpt-4o-mini")
+
+        combined_reqs = a_cfg.get("tools", []) + sub_step.get("tools", [])
+        active_tools = _resolve_tools(combined_reqs, available_tools)
+
         res = await run_agent_async(
             role_name=a_cfg["name"],
             model_string=model_str,
-            system_prompt=full_sys_prompt,
+            system_prompt=a_cfg.get(
+                "system_prompt", ""
+            ),  # ⚡ THE FIX: Restored System Prompt!
             user_prompt=current_payload,
             tools=active_tools if active_tools else None,
             route=route_type,
             domain=domain,
             origin=origin,
+            goal_thread=goal_thread,
         )
         return a_cfg["name"], model_str, res
 
@@ -139,7 +167,10 @@ async def execute_pipeline(
                     t
                     for t in available_tools[group]
                     if (isinstance(t, str) and t not in restricted_tools)
-                    or (isinstance(t, dict) and t.get("name") not in restricted_tools)
+                    or (
+                        isinstance(t, dict)
+                        and t.get("function", {}).get("name") not in restricted_tools
+                    )
                 ]
         console.print(
             "\n[dim yellow]Cognitive Pruning: Code execution tools hidden from active LLM context (Opt-In Required).[/dim yellow]"
@@ -153,7 +184,6 @@ async def execute_pipeline(
     eval_retries: int = 0
     MAX_RETRIES: int = 1
 
-    # ⚡ FIX: Sync the updated metabolism fetching hook
     metabolism_data = get_current_metabolism()
     is_exhausted = metabolism_data.get("exhausted", False)
     tokens_burned = metabolism_data.get("tokens_burned", 0)
@@ -167,8 +197,6 @@ async def execute_pipeline(
     agents_invoked: list[str] = []
     pipeline_aborted = False
     pfc_memory = WorkingMemory(description)
-
-    # ⚡ FIX: Explicitly type annotate the iterator to satisfy strict Mypy bounds
     current_state_idx: int = 0
 
     while current_state_idx < len(pipeline):
@@ -185,7 +213,6 @@ async def execute_pipeline(
             abort_flag.unlink(missing_ok=True)
             break
 
-        # ⚡ NEW GUARDRAIL: Halt if metabolic budget is exceeded mid-flight
         is_clear, clearance_reason = validate_metabolic_clearance()
         if not is_clear:
             console.print(
@@ -218,6 +245,7 @@ async def execute_pipeline(
                 available_tools,
                 pfc_memory,
                 origin,
+                goal_thread,
             )
             for m_id, counts in swarm_metabolism.items():
                 if m_id not in session_metabolism:
@@ -248,13 +276,10 @@ async def execute_pipeline(
             continue
 
         agent_cfg = get_dna_config()["agents"][step["agent"]]
-        model_str = get_resolved_model(agent_cfg["model"], is_exhausted)
-        active_tools = [
-            t for group in step.get("tools", []) for t in available_tools.get(group, [])
-        ]
-        full_system_prompt = agent_cfg["system_prompt"] + get_system_context(
-            step.get("context", []), domain, prompt=current_payload
-        )
+        model_str = agent_cfg.get("model", "openai/gpt-4o-mini")
+
+        combined_reqs = agent_cfg.get("tools", []) + step.get("tools", [])
+        active_tools = _resolve_tools(combined_reqs, available_tools)
 
         console.print(f"\n[bold cyan]{agent_cfg['name']} is working...[/bold cyan]")
         agents_invoked.append(agent_cfg["name"])
@@ -262,13 +287,15 @@ async def execute_pipeline(
         step_result = await run_agent_async(
             role_name=agent_cfg["name"],
             model_string=model_str,
-            system_prompt=full_system_prompt,
+            system_prompt=agent_cfg.get(
+                "system_prompt", ""
+            ),  # ⚡ THE FIX: Restored System Prompt!
             user_prompt=current_payload,
             tools=active_tools if active_tools else None,
             route=route_type,
             domain=domain,
             origin=origin,
-            goal_thread=goal_thread,  # Pipe the Thread ID to the final log writer
+            goal_thread=goal_thread,
         )
 
         usage = getattr(step_result, "usage", {})

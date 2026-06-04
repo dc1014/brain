@@ -10,7 +10,6 @@ import warnings
 from pathlib import Path
 
 # Suppress noisy third-party provider warnings (like LiteLLM / AWS Bedrock)
-# before importing any downstream cognitive modules that trigger them.
 os.environ.setdefault("LITELLM_LOG", "ERROR")
 os.environ.setdefault("LITELLM_TELEMETRY", "False")
 os.environ.setdefault("SUPPRESS_LITELLM_WARNINGS", "True")
@@ -23,13 +22,11 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm
 
-# Standalone Sensory Package Route Mapping Proxy Ingestion Handles
 from Sense.receptors.audio import play_audio, record_audio
 from Sense.receptors.taste import sample_file
 from Sense.receptors.vision import take_screenshot
 from Sense.receptors.web import transduce_web_page
 
-# Import domain function blocks
 from System.cli_somatic import (
     assimilate,
     expose_dermis,
@@ -44,16 +41,15 @@ from System.cli_somatic import (
     sync_mirror,
     watch,
 )
+
 from System.core.concurrency import lock_concurrency_defaults
 from System.core.file_transaction import read_state_sync
 from System.neuroanatomy.sensory.olfactory import process_scent_profile
 
-# Secure prioritize root folder mapping
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-# Lock process allocations before parallel sequences wake
 lock_concurrency_defaults()
 
 if sys.platform.startswith("win") and "pytest" not in sys.modules:
@@ -74,7 +70,6 @@ def graceful_coretex_excepthook(exc_type, exc_value, exc_traceback):
     if exc_type.__name__ == "Exit" or exc_type is SystemExit:
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
-
     error_msg = "".join(traceback.format_exception_only(exc_type, exc_value)).strip()
     console.print()
     console.print(
@@ -93,8 +88,6 @@ sys.excepthook = graceful_coretex_excepthook
 app = typer.Typer(
     help="CoreTex OS: Biomimetic Agentic Operating System", no_args_is_help=True
 )
-
-# Sub-App Domain Subcommands
 cognitive_app = typer.Typer(help="Cognitive Commands (AI Task Execution & Memory)")
 somatic_app = typer.Typer(help="Somatic Commands (Background Daemons & System Status)")
 sense_app = typer.Typer(help="Sensory Commands (Hardware, Vision, and Web Scraping)")
@@ -107,13 +100,9 @@ app.add_typer(sense_app, name="sense")
 @app.callback()
 def main(
     verbose: bool = typer.Option(
-        False,
-        "--verbose",
-        "-v",
-        help="Enable verbose systemic logging for daemons and reflexes",
+        False, "--verbose", "-v", help="Enable verbose logging"
     ),
 ):
-    """Global configuration check parameters."""
     if verbose:
         os.environ["CORETEX_VERBOSE"] = "1"
         console.print(
@@ -126,14 +115,8 @@ def main(
         raise typer.Exit()
 
 
-# ==============================================================================
-# TOP-LEVEL CORE LIFECYCLE MANAGEMENT COMMANDS
-# ==============================================================================
-
-
 @app.command()
 def setup() -> None:
-    """Initializes CoreTex OS (Interactive Onboarding Wizard)."""
     import asyncio
     from System.core.onboarding.genesis import main as run_onboarding
 
@@ -142,7 +125,6 @@ def setup() -> None:
 
 @app.command()
 def live():
-    """Boots the main background daemon and multi-agent loops (Synaptic Resonance)."""
     from System.neuroanatomy.systemic.thymus import ThymusGland
 
     console.print(
@@ -159,7 +141,6 @@ def live():
 
 @app.command()
 def halt():
-    """Emergency Brake: Instantly kills all active background processes and file watchers."""
     from System.neuroanatomy.autonomic.vagus_nerve import trigger_halt
 
     trigger_halt()
@@ -167,7 +148,6 @@ def halt():
 
 @app.command()
 def recover():
-    """Autonomic Recovery: Reboots the systemic daemons and clears locked memory states."""
     from System.neuroanatomy.autonomic.vagus_nerve import trigger_recover
 
     trigger_recover()
@@ -175,115 +155,48 @@ def recover():
 
 @app.command()
 def approve():
-    """Dopaminergic Release: Approves pending agentic tasks waiting in the Obsidian workspace."""
     md_queue = ROOT_DIR / "Meta" / "Pending_Actions.md"
     approved_flag = ROOT_DIR / "Meta" / ".approved"
 
     if not md_queue.exists() or os.path.getsize(md_queue) == 0:
-        console.print(
-            "[dim yellow]No pending tasks found in Meta/Pending_Actions.md to approve.[/dim yellow]"
-        )
+        console.print("[dim yellow]No pending tasks found.[/dim yellow]")
         return
-
     content = md_queue.read_text(encoding="utf-8")
     if "### ⏳ Pending Task" not in content:
-        console.print(
-            "[dim yellow]No valid task blocks found in Meta/Pending_Actions.md.[/dim yellow]"
-        )
+        console.print("[dim yellow]No valid task blocks found.[/dim yellow]")
         return
-
     approved_flag.touch()
-    console.print(
-        "[bold green]Inhibition Released: Tasks approved! The Medulla will begin background processing.[/bold green]"
-    )
+    console.print("[bold green]Inhibition Released: Tasks approved![/bold green]")
 
 
 @app.command()
 def destroy() -> None:
-    """Systemic Apoptosis: Zero-Residue Uninstaller to completely purge local logs and configurations."""
     console.print(
         "[bold red]WARNING: You are about to initiate Systemic Apoptosis.[/bold red]"
     )
-    console.print(
-        "This will permanently erase all memory ledgers, token usage logs, and environment API keys."
-    )
-
     if not Confirm.ask(
         "Are you absolutely sure you want to destroy CoreTex OS?", default=False
     ):
         console.print("[dim green]Apoptosis aborted. The OS survives.[/dim green]")
         return
-
     with console.status("[red]Executing Zero-Residue sequence...[/red]"):
         log_dir = ROOT_DIR / "logs"
         if log_dir.exists():
             shutil.rmtree(log_dir, ignore_errors=True)
-            console.print(
-                "[dim]Deleted episodic ledgers, token tracking, and system logs.[/dim]"
-            )
-
         env_file = ROOT_DIR / ".env"
         if env_file.exists():
             env_file.unlink()
-            console.print("[dim]Deleted environment credentials and API keys.[/dim]")
-
         queue_file = ROOT_DIR / "System" / "execution_queue.json"
         if queue_file.exists():
             queue_file.unlink()
-            console.print("[dim]Flushed pending motor execution queues.[/dim]")
-
-    console.print(
-        "\n[bold green]Systemic Apoptosis complete. CoreTex OS has been purged.[/bold green]"
-    )
+    console.print("\n[bold green]Systemic Apoptosis complete.[/bold green]")
 
 
 # ==============================================================================
-# LAZY COMMAND WRAPPERS
+# DUAL REGISTRATION MATRIX (Properly Typed Wrappers)
 # ==============================================================================
 
 
-def task(*args, **kwargs):
-    from System.cli_cognitive import task as _task
-
-    return _task(*args, **kwargs)
-
-
-def daydream(*args, **kwargs):
-    from System.cli_cognitive import daydream as _daydream
-
-    return _daydream(*args, **kwargs)
-
-
-def evolve(*args, **kwargs):
-    from System.cli_cognitive import evolve as _evolve
-
-    return _evolve(*args, **kwargs)
-
-
-def forage(*args, **kwargs):
-    from System.cli_cognitive import forage as _forage
-
-    return _forage(*args, **kwargs)
-
-
-def compile(*args, **kwargs):
-    from System.cli_cognitive import compile as _compile
-
-    return _compile(*args, **kwargs)
-
-
-def absorb(*args, **kwargs):
-    from System.cli_cognitive import absorb as _absorb
-
-    return _absorb(*args, **kwargs)
-
-
-# ==============================================================================
-# DUAL REGISTRATION MATRIX (Unhidden to expose shortcuts in root help menu)
-# ==============================================================================
-
-
-# Cognitive Registry Hooks
 @cognitive_app.command(name="task")
 @app.command(name="task")
 def run_task(
@@ -303,22 +216,57 @@ def run_task(
     ),
 ):
     """🧠 Executes a cognitive task or objective (Prefrontal Cortex)."""
-    task(description=description, domain=domain, route=route, obsidian=obsidian)
+    import System.cli_cognitive
+
+    System.cli_cognitive.task(
+        description=description, domain=domain, route=route, obsidian=obsidian
+    )
 
 
 @cognitive_app.command(name="daydream")
 @app.command(name="daydream")
 def run_daydream(
-    topic: str = typer.Argument(
-        None,
-        help="An optional topic or theme to anchor the Daydreamer's cognitive focus.",
-    ),
+    topic: str = typer.Argument(None, help="An optional topic or theme."),
     domain: str = typer.Option(
         None, "--domain", "-d", help="Explicitly scope the daydream destination vault."
     ),
 ):
     """🌌 Autonomous background processing and strategic refactoring (Default Mode Network)."""
-    daydream(topic=topic, domain=domain)
+    import System.cli_cognitive
+
+    System.cli_cognitive.daydream(topic=topic, domain=domain)
+
+
+@cognitive_app.command(name="evolve")
+@app.command(name="evolve")
+def run_evolve():
+    """🧬 Analyzes System/logs and codebase evolution routines."""
+    import System.cli_cognitive
+
+    System.cli_cognitive.evolve()
+
+
+@cognitive_app.command(name="forage")
+@app.command(name="forage")
+def run_forage(
+    topic: str = typer.Argument(..., help="The search query or URL to forage."),
+    domain: str = typer.Option(
+        "GENERAL", help="The environmental domain (e.g., STUDIO)."
+    ),
+):
+    """Information foraging and web scraping for a specific topic."""
+    import System.cli_cognitive
+
+    System.cli_cognitive.forage(topic=topic, domain=domain)
+
+
+@cognitive_app.command(name="compile")
+@app.command(name="compile")
+def run_compile():
+    """⚙️ Compiles the most recent successful memory into a Zero-Token Engram."""
+    import System.cli_cognitive
+
+    System.cli_cognitive.compile()
 
 
 @cognitive_app.command(name="absorb")
@@ -335,7 +283,9 @@ def run_absorb(
     ),
 ):
     """🧫 Ingests external data, codebases, or documents into long-term memory (Phagocytosis)."""
-    absorb(path=path, domain=domain, tags=tags)
+    import System.cli_cognitive
+
+    System.cli_cognitive.absorb(path=path, domain=domain, tags=tags)
 
 
 # Somatic Registry Hooks
@@ -366,7 +316,7 @@ app.command(name="imitate")(imitate)
 app.command(name="expose-dermis")(expose_dermis)
 
 
-# Standalone Sensory Package Route Mapping Proxy Ingestion Handles
+# Sensory Registry Hooks
 @sense_app.command(name="scrape")
 @app.command(name="scrape")
 def sense_scrape(url: str = typer.Argument(..., help="Web link target URL.")):

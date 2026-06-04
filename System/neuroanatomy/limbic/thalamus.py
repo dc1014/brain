@@ -1,20 +1,24 @@
 # --- System/neuroanatomy/limbic/thalamus.py ---
-from System.core.paths import ROOT_DIR
-import yaml  # type: ignore
-from litellm import completion  # type: ignore
+import asyncio
 from rich.console import Console
+from pydantic import BaseModel, Field
+from litellm import completion  # type: ignore
+
+from System.core.dna import get_dna_config
 from System.neuroanatomy.systemic.immune_system import vault
+from System.neuroanatomy.autonomic.interoception import log_metabolism
+from System.neuroanatomy.limbic.amygdala import scan_prompt
 
 console = Console()
 
-CONFIG_PATH = ROOT_DIR / "System" / "config" / "agents.yaml"
+
+class DispatcherResult(BaseModel):
+    reasoning: str = Field(description="Step by step logic for routing.")
+    route: str = Field(description="The assigned route.")
+    domain: str = Field(description="The assigned domain.")
 
 
 def filter_attention(prompt: str, raw_memory: str) -> str:
-    """
-    The Thalamus (Semantic Attention Filter).
-    Reads the Neocortex memory and extracts ONLY the tokens relevant to the current task.
-    """
     # 1. Biological Fast-Path: If the memory is small, don't waste time filtering it.
     if len(raw_memory) < 2000:
         return raw_memory
@@ -23,169 +27,148 @@ def filter_attention(prompt: str, raw_memory: str) -> str:
         "[dim magenta][*] Thalamus Active: Filtering context noise...[/dim magenta]"
     )
 
+    # Active Synchronous Token Pruning
     try:
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-            config = yaml.safe_load(f)
+        config = get_dna_config()
+        model = config.get("models", {}).get("fast", "openai/gpt-4o-mini")
 
-        # Use the cheapest possible model for the subconscious filter
-        model = config.get("models", {}).get("gpt_mini", "gpt-4o-mini")
+        routed_model, api_key = vault.resolve_routing(model)
+        gateway_url = vault.get_secret("GATEWAY_BASE_URL")
+        if gateway_url:
+            api_key = vault.get_secret("GATEWAY_API_KEY") or api_key
 
-        # Use the secure vault to check for keys!
-        if vault.get_api_key_for_model(
-            "anthropic/claude-3-haiku"
-        ) and not vault.get_api_key_for_model("openai/gpt-4o-mini"):
-            model = config.get("models", {}).get(
-                "claude_haiku", "claude-3-haiku-20240307"
-            )
-    except Exception:
-        model = "gpt-4o-mini"
-
-    system_prompt = """You are the Thalamus of CoreTex OS.
-Your job is to filter the long-term memory (Neocortex) and extract ONLY the exact bullet points, facts, and context highly relevant to the User's current task.
-Do NOT rewrite the memory. Do NOT answer the prompt.
-Just output the exact lines from the memory that are relevant.
-If absolutely nothing in the memory is relevant to the task, output "No relevant context found."
-Keep it as dense and short as possible."""
-
-    try:
-        response = completion(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
+        kwargs = {
+            "model": routed_model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are the Thalamus. Extract and summarize ONLY the information from the provided memory that is strictly relevant to answering the user's prompt. Discard all other noise to save tokens.",
+                },
                 {
                     "role": "user",
-                    "content": f"USER TASK:\n{prompt}\n\nRAW MEMORY:\n{raw_memory}",
+                    "content": f"USER PROMPT: {prompt}\n\nRAW MEMORY:\n{vault.mask_secrets(raw_memory)}",
                 },
             ],
-            temperature=0.0,
-        )
-        filtered_memory = str(response.choices[0].message.content).strip()
-        return f"--- FILTERED CONTEXT (THALAMUS) ---\n{filtered_memory}"
+            "temperature": 0.1,
+            "max_tokens": 2000,
+            "api_key": api_key,
+        }
+        if gateway_url:
+            kwargs["api_base"] = gateway_url
+
+        response = completion(**kwargs)
+        filtered_text = response.choices[0].message.content
+
+        if hasattr(response, "usage") and response.usage:
+            total_tokens = getattr(response.usage, "total_tokens", 0)
+            log_metabolism(total_tokens)
+
+        return filtered_text.strip() if filtered_text else raw_memory
 
     except Exception as e:
-        console.print(f"[dim red]Thalamus API Error. Bypassing filter. ({e})[/dim red]")
-        # Structural fallback: just grab the most recent 4000 characters
-        return raw_memory[-4000:]
-
-
-def process_sensory_input(source: str, payload: str) -> str:
-    """
-    The Thalamic gateway for ascending sensory data from the Spine.
-    Filters, prioritizes, and formats impulses before they reach the Prefrontal Cortex.
-    """
-    return f"<ascending_stimulus source='{source}'>\n{payload}\n</ascending_stimulus>"
-
-
-def route_public_pulse(sender_id: str, payload: str, signature: str) -> str:
-    """
-    Sensory gating for external network traffic.
-    Instantly routes PUBLIC domain traffic to the Exocortex, keeping it isolated
-    from internal Prefrontal Cortex planning loops.
-    """
-    from rich.console import Console
-
-    Console().print(
-        "[bold magenta][*] Thalamus: Routing external stimulus to Exocortex...[/bold magenta]"
-    )
-
-    from System.neuroanatomy.cortical.exocortex import Exocortex
-
-    exo = Exocortex()
-    return exo.process_inbound_pulse(sender_id, payload, signature)
+        console.print(
+            f"[dim red]Thalamus filtering degraded (Bypassing): {e}[/dim red]"
+        )
+        return raw_memory
 
 
 async def route_sensory_input(prompt: str) -> tuple[bool, str, str, str, dict]:
-    """
-    THALAMUS: The Sensory Switchboard.
-    Analyzes an autonomous prompt using the Dispatcher to determine validity, routing, and domain.
-    """
-    import asyncio
-    from rich.console import Console
-    from System.neuroanatomy.systemic.enteric import get_gut_reaction, save_gut_reaction
-    from System.neuroanatomy.limbic.amygdala import scan_prompt
-    from System.core.dna import get_dna_config
-    from System.llm import acompletion, get_system_context
-    from System.neuroanatomy.systemic.immune_system import vault
-    from System.neuroanatomy.pathways.corpus_callosum import route_hemisphere
-    from System.core.schemas import DispatcherResult
-    from System.neuroanatomy.autonomic.interoception import log_metabolism
+    """Evaluates incoming stimuli, checks reflexes, and assigns an execution route."""
+    from System.llm import run_agent_async, clean_json_output
 
-    console = Console()
-
-    # --- 🦠 ENTERIC NERVOUS SYSTEM (Gut Reaction) ---
-    gut_reflex = await asyncio.to_thread(get_gut_reaction, prompt)
-    if gut_reflex:
-        return gut_reflex
-    zero_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-
-    # --- 🚨 THE AMYGDALA (Threat Detection) ---
-    is_safe, threat_reason = await asyncio.to_thread(scan_prompt, prompt)
-    if not is_safe:
-        return False, threat_reason, "NONE", "NONE", zero_usage
-
-    # --- 🧠 PREFRONTAL DISPATCHER (LLM Routing) ---
-    dispatcher_cfg = get_dna_config()["agents"]["dispatcher"]
-    system_prompt = dispatcher_cfg["system_prompt"] + get_system_context(
-        ["Meta"], prompt=prompt
-    )
+    usage_data = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
     try:
-        base_model = get_dna_config()["models"][dispatcher_cfg["model"]]
-        actual_model = route_hemisphere("DISPATCHER", base_model)
+        from System.neuroanatomy.systemic.enteric import get_gut_reaction
 
-        response = await acompletion(
-            model=actual_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.0,
-            response_format={"type": "json_object"},
-            api_key=vault.get_api_key_for_model(actual_model),
+        gut_reaction = get_gut_reaction(prompt)
+        if gut_reaction:
+            return gut_reaction
+    except Exception:
+        pass
+
+    is_safe, block_reason = scan_prompt(prompt)
+    if not is_safe:
+        return False, block_reason, "NONE", "NONE", usage_data
+
+    # ⚡ THE FIX: Secure dynamic lookup of the Thalamus name to ensure the config maps properly
+    dna = get_dna_config()
+    dispatcher_name = (
+        dna.get("agents", {}).get("dispatcher", {}).get("name", "Thalamus (Dispatcher)")
+    )
+
+    # ⚡ SAFETY NET: Hardcoded fallback prompt if ALL config files are mysteriously missing
+    FALLBACK_PROMPT = """You are the Thalamus (Dispatcher).
+Your job is to analyze the user's prompt and route it to the correct subsystem.
+Output valid JSON matching this schema:
+{
+    "reasoning": "Step-by-step logic",
+    "route": "FAST, WORKSPACE, CODE_FRONTEND, CODE_BACKEND, CODE_FULLSTACK, etc.",
+    "domain": "GENERAL, STUDIO, PERSONAL, etc."
+}
+If the user is just asking a question, making a joke, or chatting, route to FAST.
+"""
+
+    try:
+        response = await run_agent_async(
+            role_name=dispatcher_name,
+            system_prompt=FALLBACK_PROMPT,
+            user_prompt=f"<external_stimulus>\n{prompt}\n</external_stimulus>",
+            model_string="gemini/gemini-2.5-flash",
+            route="FAST",
+            domain="META",
         )
-        raw_text = str(response.choices[0].message.content).strip()
 
-        usage_data = zero_usage.copy()
-        if hasattr(response, "usage") and response.usage:
-            usage_data["prompt_tokens"] = int(
-                getattr(response.usage, "prompt_tokens", 0)
-            )
-            usage_data["completion_tokens"] = int(
-                getattr(response.usage, "completion_tokens", 0)
-            )
-            usage_data["total_tokens"] = int(getattr(response.usage, "total_tokens", 0))
+        usage_data = response.usage
+        raw_text = response.text
 
         if "REJECTED:" in raw_text.upper():
-            reason = raw_text.upper().split("REJECTED:")[1].strip(" \"'}\n").strip()
+            reason = raw_text.upper().split("REJECTED:")[1].strip(" \"'\n").strip()
             return False, reason, "NONE", "NONE", usage_data
 
         try:
-            clean_text = raw_text.strip()
-            if clean_text.startswith("```json"):
-                clean_text = clean_text[7:-3]
-            elif clean_text.startswith("```"):
-                clean_text = clean_text[3:-3]
+            clean_text = clean_json_output(raw_text)
 
-            data = DispatcherResult.model_validate_json(clean_text.strip())
+            data = DispatcherResult.model_validate_json(clean_text)
             route = data.route.strip().upper()
             domain = data.domain.strip().upper()
 
             console.print(
                 f"[dim green][*] Thalamus Reasoning: {data.reasoning}[/dim green]"
             )
+            await asyncio.to_thread(log_metabolism, usage_data.get("total_tokens", 0))
+
+            return True, data.reasoning, route, domain, usage_data
 
         except Exception as e:
-            route = "UNKNOWN"
-            domain = "NONE"
             console.print(f"[dim red]Thalamus Parsing Error: {e}[/dim red]")
-
-        # --- THE VAGUS NERVE: Log metabolism & save memory ---
-        await asyncio.to_thread(log_metabolism, usage_data.get("total_tokens", 0))
-        await asyncio.to_thread(
-            save_gut_reaction, prompt, True, "Approved.", route, domain
-        )
-
-        return True, "Approved.", route, domain, usage_data
+            return (
+                True,
+                "Fallback routing engaged due to parsing error.",
+                "UNKNOWN",
+                "NONE",
+                usage_data,
+            )
 
     except Exception as e:
-        return False, f"Dispatcher API Error: {str(e)}", "NONE", "NONE", zero_usage
+        console.print(f"[dim red]Thalamus Routing Crash: {e}[/dim red]")
+        return (
+            True,
+            "Fallback routing engaged due to API error.",
+            "UNKNOWN",
+            "NONE",
+            usage_data,
+        )
+
+
+def process_sensory_input(source: str, prompt: str) -> None:
+    from System.core.orchestrator import dispatch_task
+
+    asyncio.run(dispatch_task(prompt, origin=source))
+
+
+def route_public_pulse(sender_id: str, payload: str, signature: str) -> str:
+    from System.core.orchestrator import dispatch_task
+
+    asyncio.run(dispatch_task(payload, origin=f"public:{sender_id}"))
+    return "Pulse received and queued."

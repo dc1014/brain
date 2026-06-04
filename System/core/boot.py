@@ -17,6 +17,26 @@ def bootstrap() -> bool:
 
         vault.secure_environment()
 
+        # ⚡ PHASE 4 FIX: Validate all compiled Markdown agents before boot
+        from System.core.dna import get_dna_config
+        from rich.console import Console
+
+        console = Console()
+        try:
+            get_dna_config(force_reload=True)
+        except ValueError as e:
+            console.print(
+                "\n[bold red]🛑 BOOT FAILURE: Agent Configuration Error[/bold red]"
+            )
+            console.print(f"[red]{e}[/red]\n")
+            return False
+        except Exception as e:
+            console.print(
+                "\n[bold red]🛑 BOOT FAILURE: DNA Compiler Crashed[/bold red]"
+            )
+            console.print(f"[red]{e}[/red]\n")
+            return False
+
         # Batch check structural workspace directories using a primary anchor to reduce filesystem operations
         target_dirs = [
             "Studio",

@@ -110,9 +110,9 @@ def test_run_os_retry_circuit_breaker(mocker, monkeypatch, tmp_path) -> None:
     )
     mocker.patch("builtins.input", side_effect=["y", "n", "n", "n"])
 
-    from System.cli import task
+    from System.cli import run_task
 
-    task("FORGE TASK: Test retry circuit breaker", obsidian=False)
+    run_task("FORGE TASK: Test retry circuit breaker", obsidian=False)
     assert any("qa" in agent for agent in agent_calls)
 
 

@@ -43,10 +43,9 @@ async def test_thalamus_pydantic_fallback(mocker, monkeypatch):
     mocker.patch(
         "System.neuroanatomy.systemic.enteric.get_gut_reaction", return_value=None
     )
-    mocker.patch("System.neuroanatomy.systemic.enteric.save_gut_reaction")
     mocker.patch("System.neuroanatomy.autonomic.interoception.log_metabolism")
     mocker.patch(
-        "System.neuroanatomy.limbic.amygdala.scan_prompt", return_value=(True, "Safe")
+        "System.neuroanatomy.limbic.thalamus.scan_prompt", return_value=(True, "Safe")
     )
 
     async def mock_acompletion(*args, **kwargs):
@@ -109,7 +108,7 @@ async def test_thalamus_amygdala_interception(mocker):
         "System.neuroanatomy.systemic.enteric.get_gut_reaction", return_value=None
     )
     mocker.patch(
-        "System.neuroanatomy.limbic.amygdala.scan_prompt",
+        "System.neuroanatomy.limbic.thalamus.scan_prompt",
         return_value=(False, "Threat Detected"),
     )
 
@@ -117,7 +116,6 @@ async def test_thalamus_amygdala_interception(mocker):
 
     assert is_safe is False
     assert reason == "Threat Detected"
-    assert route == "NONE"
 
 
 @pytest.mark.asyncio

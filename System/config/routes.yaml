@@ -1,0 +1,64 @@
+# --- System/config/routes.yaml ---
+routes:
+  FAST:
+    - agent: fast_responder
+
+  WORKSPACE:
+    - agent: archivist
+
+  CODE_SCRIPT:
+    - agent: solo_engineer
+      tools: [execute]
+    - agent: qa_auditor
+      tools: [execute]
+
+  CODE_FRONTEND:
+    - agent: swarm_architect
+    - agent: frontend_engineer
+      tools: [execute, map_spatial_dependencies]
+    - agent: qa_auditor
+      tools: [execute, vision]
+
+  CODE_BACKEND:
+    - agent: swarm_architect
+    - agent: backend_engineer
+      tools: [execute, map_spatial_dependencies]
+    - agent: qa_auditor
+      tools: [execute]
+
+  CODE_FULLSTACK:
+    - agent: swarm_architect
+    - swarm:
+        - agent: frontend_engineer
+          tools: [execute, map_spatial_dependencies]
+        - agent: backend_engineer
+          tools: [execute, map_spatial_dependencies]
+    - agent: qa_auditor
+      tools: [execute, vision]
+
+  DEPLOYMENT:
+    - agent: deployment_ops
+      tools: [execute]
+
+  MEMORY:
+    - agent: archivist
+      tools: [map_spatial_dependencies]
+
+  SENSE:
+    - agent: archivist
+
+  SUBCONSCIOUS_FORAGE:
+    - agent: forager
+
+  SUBCONSCIOUS_DAYDREAM:
+    - agent: daydreamer
+
+  VISION:
+    - agent: artist
+      tools: [vision]
+
+  STATIC_PAGE:
+    - agent: frontend_engineer
+      tools: [execute, map_spatial_dependencies]
+    - agent: qa_auditor
+      tools: [execute]

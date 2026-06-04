@@ -1,130 +1,33 @@
-import json
-from System.core.dna import _compute_dna_hash, _apply_cognitive_pruning
+from System.core.dna import get_dna_config, _hash_directory
 
 
-def test_compute_dna_hash(tmp_path, mocker):
-    """Proves the hash correctly calculates composite checksums of active config files."""
-    mocker.patch("System.core.dna.ROOT_DIR", tmp_path)
+def test_dna_hash_directory(tmp_path, mocker):
+    """Proves the directory hash correctly detects file changes."""
+    mocker.patch("System.core.dna.AGENTS_DIR", tmp_path)
 
-    config_dir = tmp_path / "System" / "config"
-    config_dir.mkdir(parents=True)
+    # Create an agent
+    agent_file = tmp_path / "test_agent.md"
+    agent_file.write_text("---\nname: Test\n---\nBody", encoding="utf-8")
 
-    # Hydrate dummy files
-    (config_dir / "system.yaml").write_text("system: active")
-    (config_dir / "agents.yaml").write_text("agents: active")
-
-    # The hash should resolve deterministically based on file contents
-    h1 = _compute_dna_hash()
+    h1 = _hash_directory(tmp_path)
     assert len(h1) > 0
 
-    # Changing a file should alter the hash
-    (config_dir / "system.yaml").write_text("system: modified")
-    h2 = _compute_dna_hash()
+    # Modify the agent
+    agent_file.write_text("---\nname: Test2\n---\nBody2", encoding="utf-8")
+    h2 = _hash_directory(tmp_path)
+
     assert h1 != h2
 
 
-def test_apply_cognitive_pruning_removes_disabled_tools(tmp_path, mocker):
-    """Proves the feature flag registry correctly strips disabled tools from the LLM context."""
-    mocker.patch("System.core.dna.ROOT_DIR", tmp_path)
+def test_dna_loader_merges_data(mocker):
+    """Proves the DNA config returns the required system structure."""
+    # We mock out the hash to prevent actual disk reads during unit test
+    mocker.patch("System.core.dna._hash_directory", return_value="12345")
 
-    config_dir = tmp_path / "System" / "config"
-    config_dir.mkdir(parents=True)
+    config = get_dna_config(force_reload=True)
 
-    # 1. Setup a mocked features.json where vision and audio are explicitly disabled
-    features_data = {"vision": {"enabled": False}, "audio": {"enabled": False}}
-    (config_dir / "features.json").write_text(
-        json.dumps(features_data), encoding="utf-8"
-    )
-
-    # 2. Setup a dummy tools configuration representing a loaded tools.yaml
-    dummy_config = {
-        "tools": {
-            "base": [
-                {"function": {"name": "read_safe_file"}},
-                {"function": {"name": "speak"}},  # This should be pruned
-            ],
-            "execute": [
-                {"function": {"name": "analyze_audio"}},  # This should be pruned
-            ],
-            "vision": [  # This entire group should be pruned
-                {"function": {"name": "analyze_image"}},
-                {"function": {"name": "capture_screenshot"}},
-            ],
-        }
-    }
-
-    # 3. Apply the pruning
-    pruned_config = _apply_cognitive_pruning(dummy_config)
-
-    # 4. Assertions
-    assert "vision" not in pruned_config["tools"], (
-        "Entire vision group should be removed"
-    )
-
-    base_tool_names = [t["function"]["name"] for t in pruned_config["tools"]["base"]]
-    assert "read_safe_file" in base_tool_names, "Standard tools must remain untouched"
-    assert "speak" not in base_tool_names, (
-        "'speak' tool must be pruned because audio is disabled"
-    )
-
-    execute_tool_names = [
-        t["function"]["name"] for t in pruned_config["tools"]["execute"]
-    ]
-    assert "analyze_audio" not in execute_tool_names, (
-        "'analyze_audio' tool must be pruned"
-    )
-
-
-def test_apply_cognitive_pruning_ignores_enabled_tools(tmp_path, mocker):
-    """Proves that enabled features retain their tools in the LLM context."""
-    mocker.patch("System.core.dna.ROOT_DIR", tmp_path)
-
-    config_dir = tmp_path / "System" / "config"
-    config_dir.mkdir(parents=True)
-
-    # Vision is ENABLED
-    features_data = {"vision": {"enabled": True}}
-    (config_dir / "features.json").write_text(
-        json.dumps(features_data), encoding="utf-8"
-    )
-
-    dummy_config = {"tools": {"vision": [{"function": {"name": "analyze_image"}}]}}
-
-    pruned_config = _apply_cognitive_pruning(dummy_config)
-    assert "vision" in pruned_config["tools"]
-    assert len(pruned_config["tools"]["vision"]) == 1
-
-
-def test_apply_cognitive_pruning_agent_specific_tools(tmp_path, mocker):
-    """Proves that disabling autonomous_daydreaming strips investigation tools exclusively from the DMN agent."""
-    mocker.patch("System.core.dna.ROOT_DIR", tmp_path)
-    config_dir = tmp_path / "System" / "config"
-    config_dir.mkdir(parents=True)
-
-    features_data = {"autonomous_daydreaming": {"enabled": False}}
-    (config_dir / "features.json").write_text(
-        json.dumps(features_data), encoding="utf-8"
-    )
-
-    dummy_config = {
-        "agents": {
-            "executive_assistant": {
-                "tools": ["read_safe_file", "web_search", "append_safe_file"]
-            },
-            "subconscious_daydreamer": {
-                "tools": ["read_safe_file", "web_search", "append_safe_file"]
-            },
-        },
-        "tools": {},
-    }
-
-    pruned = _apply_cognitive_pruning(dummy_config)
-
-    # Assistant should keep all tools
-    assert "read_safe_file" in pruned["agents"]["executive_assistant"]["tools"]
-    assert "web_search" in pruned["agents"]["executive_assistant"]["tools"]
-
-    # Daydreamer should have investigation tools stripped, but keep standard tools
-    assert "read_safe_file" not in pruned["agents"]["subconscious_daydreamer"]["tools"]
-    assert "web_search" not in pruned["agents"]["subconscious_daydreamer"]["tools"]
-    assert "append_safe_file" in pruned["agents"]["subconscious_daydreamer"]["tools"]
+    # Ensure our major dictionaries exist
+    assert "routes" in config
+    assert "tools" in config
+    assert "agents" in config
+    assert "models" in config

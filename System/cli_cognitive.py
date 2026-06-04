@@ -1,3 +1,4 @@
+# --- System/cli_cognitive.py ---
 import asyncio
 import json
 import os
@@ -8,10 +9,8 @@ import typer
 from pathlib import Path
 from typing import Optional
 
-
 from rich.console import Console
 from System.core.paths import ROOT_DIR
-from System.neuroanatomy.cortical.executive_loop import execute_pipeline
 
 console = Console()
 
@@ -112,6 +111,9 @@ def evolve():
                     encoding="utf-8",
                 )
 
+    # ⚡ THE FIX: Inline import defers execution and shatters the circular dependency!
+    from System.neuroanatomy.cortical.executive_loop import execute_pipeline
+
     asyncio.run(
         execute_pipeline(
             "Analyze the codebase and suggest evolutionary structural improvements.",
@@ -131,6 +133,10 @@ def forage(
     # FIX: Rebranded system headless configuration parameters to match CoreTex daemon rules
     os.environ["CORETEX_HEADLESS"] = "1"
     console.print(f"[green]🌿 Foraging for information on:[/green] {topic} in {domain}")
+
+    # ⚡ THE FIX: Inline import
+    from System.neuroanatomy.cortical.executive_loop import execute_pipeline
+
     asyncio.run(
         execute_pipeline(
             f"Search the web and gather comprehensive information about: {topic}",

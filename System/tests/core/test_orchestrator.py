@@ -14,7 +14,10 @@ from System.core.orchestrator import (
 async def test_dispatch_task_success(mock_exec, mock_route):
     mock_route.return_value = (True, "OK", "FORGE", "STUDIO", {})
     await dispatch_task("Build app")
-    mock_exec.assert_called_once_with("Build app", "FORGE", "STUDIO", goal_thread=None)
+
+    mock_exec.assert_called_once_with(
+        "Build app", "FORGE", "STUDIO", origin="HUMAN", goal_thread=None
+    )
 
 
 @pytest.mark.asyncio
