@@ -449,7 +449,7 @@ requires-dist = [
     { name = "playwright", marker = "extra == 'vision'", specifier = ">=1.59.0" },
     { name = "psutil", specifier = ">=7.2.2" },
     { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pypdf", specifier = ">=6.11.0" },
+    { name = "pypdf", specifier = ">=6.15.0" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "pyyaml", specifier = ">=6.0.0" },
     { name = "rich", specifier = ">=15.0.0" },
@@ -1808,11 +1808,11 @@ wheels = [
 
 [[package]]
 name = "pypdf"
-version = "6.12.1"
+version = "6.15.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/54/4d/39e48f5294a5a6bb78313839aae820666c2d30daeadb652ed50bd46cafac/pypdf-6.12.1.tar.gz", hash = "sha256:3953a097b9f26d4e0ead5ff95943d9971377557662a91d8872186053cd71d30a", size = 6467595, upload-time = "2026-05-22T10:07:59.979Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/17/17/ee75a92718ec7212de831e71454d702225aa5e474a805cce169806044453/pypdf-6.15.0.tar.gz", hash = "sha256:d39c4d955a76409284a905e2d65b40076d77ab76129e0faaeeb6612403ecfc79", size = 6993794, upload-time = "2026-08-06T13:06:49.929Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5e/aa/4d17fe9ff165d1341878c570b14f5b7291106d63411adf640942a7e638aa/pypdf-6.12.1-py3-none-any.whl", hash = "sha256:8fa2a2321cf16247ed848bd7c97f193a60c08670d04abed5b0138327e51c43b0", size = 343787, upload-time = "2026-05-22T10:07:57.801Z" },
+    { url = "https://files.pythonhosted.org/packages/af/72/ce3067ac31e214a66388159f8462ddb8c13dd00170f24d555a1f1ae8ee91/pypdf-6.15.0-py3-none-any.whl", hash = "sha256:14e001d6504822cb1ca9c7ed9a69bccb320f59b320730f55af804361abe4d5ee", size = 378123, upload-time = "2026-08-06T13:06:47.709Z" },
 ]
 
 [[package]]
